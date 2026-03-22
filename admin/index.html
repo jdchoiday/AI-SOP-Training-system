@@ -261,11 +261,15 @@
       <div id="sopListView">
         <div class="topbar">
           <h1>SOP 관리</h1>
-          <button class="btn btn-primary" style="padding:10px 20px; font-size:14px;" onclick="createNewSop()">+ 새 SOP 작성</button>
+          <div class="topbar-actions">
+            <button class="btn btn-outline" style="padding:10px 20px; font-size:14px;" onclick="document.getElementById('sopFileInput').click()">&#128196; 파일 업로드</button>
+            <button class="btn btn-primary" style="padding:10px 20px; font-size:14px;" onclick="createNewSop()">+ 새 SOP 작성</button>
+          </div>
+          <input type="file" id="sopFileInput" accept=".txt,.pdf,.doc,.docx,.hwp,.md" multiple style="display:none;" onchange="handleSopFileUpload(event)">
         </div>
 
         <p style="color:var(--gray-500); font-size:14px; margin-bottom:20px;">
-          SOP를 작성하면 AI가 자동으로 교육 영상 스크립트 + 퀴즈를 생성합니다
+          SOP를 작성하거나 파일(TXT, PDF, Word)을 업로드하면 AI가 자동으로 교육 콘텐츠를 생성합니다
         </p>
 
         <!-- 필터 -->
@@ -688,6 +692,181 @@
       btn.classList.add('active');
       currentSopFilter = status;
       renderSopList();
+    }
+
+    // ===== 파일 업로드 → SOP 변환 =====
+    async function handleSopFileUpload(event) {
+      const files = event.target.files;
+      if (!files || files.length === 0) return;
+
+      for (const file of files) {
+        showLoading(`파일 읽는 중: ${file.name}`);
+
+        try {
+          let text = '';
+
+          if (file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+            text = await file.text();
+          } else if (file.name.endsWith('.pdf')) {
+            text = await extractPdfText(file);
+          } else if (file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
+            text = await extractDocText(file);
+          } else if (file.name.endsWith('.hwp')) {
+            text = await file.text(); // HWP는 텍스트만 추출 시도
+          } else {
+            text = await file.text();
+          }
+
+          if (!text || text.trim().length < 20) {
+            alert(`"${file.name}" 에서 텍스트를 추출할 수 없습니다.\nTXT 파일로 변환 후 다시 시도해주세요.`);
+            continue;
+          }
+
+          // AI로 SOP 구조화
+          showLoading(`AI가 SOP로 변환 중: ${file.name}`);
+          const structuredContent = await convertTextToSop(text, file.name);
+
+          // SOP 생성
+          const sops = getSops();
+          const title = file.name.replace(/\.[^/.]+$/, ''); // 확장자 제거
+          const newSop = {
+            id: 'sop-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
+            title: structuredContent.title || title,
+            category: structuredContent.category || '기타',
+            chapter: 'new',
+            status: 'draft',
+            content: structuredContent.html || `<p>${text.replace(/\n/g, '</p><p>')}</p>`,
+            createdAt: new Date().toISOString().slice(0, 10),
+            script: null,
+            quizzes: null
+          };
+          sops.push(newSop);
+          saveSops(sops);
+
+        } catch (e) {
+          console.error('File upload error:', e);
+          alert(`"${file.name}" 처리 중 오류: ${e.message}`);
+        }
+      }
+
+      hideLoading();
+      renderSopList();
+      event.target.value = ''; // 파일 입력 초기화
+      alert(`${files.length}개 파일이 SOP로 변환되었습니다.\n클릭하여 내용을 확인하고 AI 콘텐츠를 생성하세요.`);
+    }
+
+    // PDF 텍스트 추출 (pdf.js CDN)
+    async function extractPdfText(file) {
+      try {
+        if (!window.pdfjsLib) {
+          showLoading('PDF 라이브러리 로딩 중...');
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+          document.head.appendChild(script);
+          await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = () => reject(new Error('PDF 라이브러리 로드 실패'));
+          });
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let text = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map(item => item.str).join(' ') + '\n\n';
+        }
+        return text;
+      } catch (e) {
+        console.error('PDF extraction error:', e);
+        return '';
+      }
+    }
+
+    // Word(docx) 텍스트 추출 (mammoth.js CDN)
+    async function extractDocText(file) {
+      try {
+        if (!window.mammoth) {
+          showLoading('Word 라이브러리 로딩 중...');
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+          document.head.appendChild(script);
+          await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = () => reject(new Error('Word 라이브러리 로드 실패'));
+          });
+        }
+
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.convertToHtml({ arrayBuffer });
+        return result.value; // 이미 HTML 형태
+      } catch (e) {
+        console.error('DOCX extraction error:', e);
+        return '';
+      }
+    }
+
+    // AI로 텍스트 → SOP 구조화
+    async function convertTextToSop(text, filename) {
+      // Gemini가 설정되어 있으면 AI 변환
+      if (AI_CONFIG.scriptProvider === 'gemini' || AI_CONFIG.quizProvider === 'gemini') {
+        try {
+          const prompt = `다음 텍스트를 SOP(표준운영절차) 형식의 HTML로 구조화해주세요.
+
+규칙:
+1. 제목을 추출하세요
+2. 절차를 단계별로 <h3>번호. 단계명</h3><ol><li>상세 내용</li></ol> 형식으로 정리
+3. 주의사항은 <p><strong>⚠️ 주의:</strong> 내용</p>으로 표시
+4. 카테고리를 추정하세요 (오프닝/고객 응대/안전·위생/클로징/비상 대응/기타 중 하나)
+
+JSON으로 응답: {"title":"제목","category":"카테고리","html":"<h3>1. ...</h3><ol>..."}
+
+텍스트:
+${text.slice(0, 3000)}`;
+
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${AI_CONFIG.keys.gemini}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          });
+
+          const data = await response.json();
+          const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+          // JSON 추출
+          const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+          }
+        } catch (e) {
+          console.error('AI SOP conversion error:', e);
+        }
+      }
+
+      // 폴백: 단순 텍스트 → HTML 변환
+      const lines = text.split('\n').filter(l => l.trim());
+      let html = '';
+      let stepNum = 1;
+      lines.forEach(line => {
+        line = line.trim();
+        if (line.length > 30 && stepNum === 1) {
+          // 첫 긴 줄은 건너뛰기 (제목일 수 있음)
+        }
+        if (/^\d+[\.\)]\s/.test(line) || /^[가-힣]+\s*\d/.test(line)) {
+          html += `<h3>${stepNum}. ${line.replace(/^\d+[\.\)]\s*/, '')}</h3><ol>`;
+          stepNum++;
+        } else if (line.length > 5) {
+          html += `<li>${line}</li>`;
+        }
+      });
+
+      return {
+        title: filename.replace(/\.[^/.]+$/, ''),
+        category: '기타',
+        html: html || `<p>${text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`
+      };
     }
 
     // ===== 새 SOP 생성 =====
