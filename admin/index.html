@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOP Training - 관리자</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <link rel="icon" href="../assets/icon-192.svg">
+  <style>
+    /* === 레이아웃 === */
+    .admin-sidebar {
+      position: fixed; left: 0; top: 0;
+      width: 250px; height: 100vh;
+      background: var(--gray-900); color: white;
+      padding: 24px 16px; overflow-y: auto; z-index: 50;
+    }
+    .admin-sidebar h2 { font-size: 18px; margin-bottom: 4px; }
+    .admin-sidebar .sub { font-size: 12px; color: var(--gray-500); margin-bottom: 24px; }
+    .admin-sidebar nav { display: flex; flex-direction: column; gap: 2px; }
+    .sidebar-section { font-size: 11px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; padding: 16px 12px 6px; }
+    .admin-sidebar nav a {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 8px;
+      color: var(--gray-300); text-decoration: none;
+      font-size: 14px; transition: background 0.15s;
+    }
+    .admin-sidebar nav a:hover, .admin-sidebar nav a.active {
+      background: rgba(255,255,255,0.1); color: white;
+    }
+    .admin-sidebar nav a .ic { font-size: 16px; width: 22px; text-align: center; }
+    .admin-main { margin-left: 250px; padding: 24px 32px; min-height: 100vh; }
+
+    /* 모바일 햄버거 */
+    .mobile-header {
+      display: none; position: fixed; top: 0; left: 0; right: 0;
+      background: white; padding: 12px 16px; z-index: 40;
+      border-bottom: 1px solid var(--gray-200);
+      align-items: center; justify-content: space-between;
+    }
+    .hamburger { background: none; border: none; font-size: 24px; cursor: pointer; }
+    .sidebar-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); z-index: 45;
+    }
+    @media (max-width: 768px) {
+      .mobile-header { display: flex; }
+      .admin-sidebar { transform: translateX(-100%); transition: transform 0.3s; }
+      .admin-sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.show { display: block; }
+      .admin-main { margin-left: 0; padding: 72px 16px 16px; }
+    }
+
+    /* === 탑바 === */
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+    .topbar h1 { font-size: 22px; font-weight: 700; }
+    .topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* === 모달 === */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); z-index: 200;
+      align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: white; border-radius: 16px; padding: 32px;
+      width: 100%; max-width: 720px; max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+    }
+    .modal h3 { font-size: 20px; margin-bottom: 20px; }
+
+    /* === SOP 에디터 === */
+    .sop-list-item {
+      display: flex; align-items: center; gap: 16px;
+      padding: 20px; background: white; border-radius: var(--radius);
+      margin-bottom: 12px; box-shadow: var(--shadow); cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .sop-list-item:hover { transform: translateY(-1px); }
+    .sop-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .sop-info { flex: 1; }
+    .sop-info h4 { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+    .sop-info p { font-size: 13px; color: var(--gray-500); }
+    .sop-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    /* SOP 에디터 영역 */
+    .sop-editor-area {
+      border: 1px solid var(--gray-200); border-radius: var(--radius);
+      min-height: 300px; padding: 20px; background: white;
+      font-size: 15px; line-height: 1.8; outline: none;
+    }
+    .sop-editor-area:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+    .sop-editor-area h3 { font-size: 18px; margin: 16px 0 8px; color: var(--gray-900); }
+    .sop-editor-area ol, .sop-editor-area ul { padding-left: 24px; margin: 8px 0; }
+    .sop-editor-area li { margin-bottom: 4px; }
+
+    /* 에디터 툴바 */
+    .editor-toolbar {
+      display: flex; gap: 4px; padding: 8px 12px;
+      background: var(--gray-50); border: 1px solid var(--gray-200);
+      border-bottom: none; border-radius: var(--radius) var(--radius) 0 0;
+      flex-wrap: wrap;
+    }
+    .editor-toolbar button {
+      padding: 6px 10px; border: none; background: none;
+      border-radius: 6px; cursor: pointer; font-size: 14px;
+      color: var(--gray-700); transition: background 0.15s;
+    }
+    .editor-toolbar button:hover { background: var(--gray-200); }
+
+    /* AI 생성 결과 프리뷰 */
+    .ai-result-section {
+      border: 2px solid var(--primary-light); border-radius: var(--radius);
+      margin-top: 20px; overflow: hidden;
+    }
+    .ai-result-header {
+      background: var(--primary-light); padding: 12px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .ai-result-header h4 { font-size: 15px; color: var(--primary-dark); font-weight: 600; }
+    .ai-result-body { padding: 20px; }
+
+    .script-scene {
+      padding: 16px; border-left: 3px solid var(--primary);
+      margin-bottom: 12px; background: var(--gray-50); border-radius: 0 8px 8px 0;
+    }
+    .script-scene .scene-num {
+      font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 4px;
+    }
+    .script-scene .narration { font-size: 14px; line-height: 1.6; }
+    .script-scene .visual-note {
+      font-size: 12px; color: var(--gray-500); margin-top: 6px; font-style: italic;
+    }
+
+    .quiz-preview-item {
+      padding: 12px 16px; background: var(--gray-50);
+      border-radius: 8px; margin-bottom: 8px;
+    }
+    .quiz-preview-item .q-text { font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+    .quiz-preview-item .q-options { display: flex; flex-wrap: wrap; gap: 6px; }
+    .quiz-preview-item .q-opt {
+      font-size: 12px; padding: 4px 10px; border-radius: 6px;
+    }
+    .q-opt.correct { background: #dcfce7; color: var(--success); font-weight: 600; }
+    .q-opt.wrong { background: var(--gray-100); color: var(--gray-700); }
+
+    /* 상태 플로우 */
+    .status-flow {
+      display: flex; align-items: center; gap: 8px; margin: 16px 0;
+    }
+    .flow-step {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 20px;
+      font-size: 13px; font-weight: 600;
+    }
+    .flow-step.done { background: #dcfce7; color: var(--success); }
+    .flow-step.current { background: var(--primary-light); color: var(--primary); }
+    .flow-step.pending { background: var(--gray-100); color: var(--gray-500); }
+    .flow-arrow { color: var(--gray-300); }
+
+    /* 검색/필터 */
+    .search-box {
+      padding: 10px 16px; border: 1px solid var(--gray-300);
+      border-radius: 8px; font-size: 14px; width: 240px; outline: none;
+    }
+    .search-box:focus { border-color: var(--primary); }
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .filter-chip {
+      padding: 6px 14px; border-radius: 20px; border: 1px solid var(--gray-200);
+      background: white; font-size: 13px; cursor: pointer; transition: all 0.15s;
+    }
+    .filter-chip:hover, .filter-chip.active { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+    /* 탭 */
+    .tab-bar { display: flex; gap: 0; border-bottom: 2px solid var(--gray-200); margin-bottom: 24px; overflow-x: auto; }
+    .tab-bar button {
+      padding: 10px 20px; border: none; background: none;
+      font-size: 14px; font-weight: 600; color: var(--gray-500);
+      cursor: pointer; border-bottom: 2px solid transparent;
+      margin-bottom: -2px; transition: all 0.15s; white-space: nowrap;
+    }
+    .tab-bar button.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    /* 생성 중 로딩 */
+    .generating-overlay {
+      text-align: center; padding: 60px 20px;
+    }
+    .generating-overlay .big-spinner {
+      width: 48px; height: 48px; border: 4px solid var(--gray-200);
+      border-top-color: var(--primary); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto 20px;
+    }
+  </style>
+</head>
+<body style="background:var(--gray-50);">
+
+  <!-- 모바일 헤더 -->
+  <div class="mobile-header">
+    <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <strong>SOP Training 관리자</strong>
+    <div></div>
+  </div>
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+  <!-- ===== 사이드바 ===== -->
+  <div class="admin-sidebar" id="sidebar">
+    <h2>SOP Training</h2>
+    <p class="sub">관리자 대시보드</p>
+    <nav>
+      <div class="sidebar-section">콘텐츠</div>
+      <a href="#" class="active" onclick="showPage('sop', event)"><span class="ic">&#128221;</span> SOP 관리</a>
+      <a href="#" onclick="showPage('content', event)"><span class="ic">&#127910;</span> 생성된 콘텐츠</a>
+
+      <div class="sidebar-section">운영</div>
+      <a href="#" onclick="showPage('dashboard', event)"><span class="ic">&#128202;</span> 대시보드</a>
+      <a href="#" onclick="showPage('employees', event)"><span class="ic">&#128101;</span> 직원 관리</a>
+      <a href="#" onclick="showPage('reports', event)"><span class="ic">&#128200;</span> 리포트</a>
+
+      <div class="sidebar-section">시스템</div>
+      <a href="#" onclick="showPage('settings', event)"><span class="ic">&#9881;</span> AI 설정</a>
+    </nav>
+    <div style="position:absolute; bottom:24px; left:16px; right:16px;">
+      <a href="#" onclick="doLogout()" style="color:var(--gray-500); text-decoration:none; font-size:13px;">&#8592; 로그아웃</a>
+    </div>
+  </div>
+
+  <!-- ===== 메인 영역 ===== -->
+  <div class="admin-main">
+
+    <!-- ========================================== -->
+    <!-- ========== SOP 관리 (메인 기능) ========== -->
+    <!-- ========================================== -->
+    <div id="page-sop">
+      <!-- SOP 목록 뷰 -->
+      <div id="sopListView">
+        <div class="topbar">
+          <h1>SOP 관리</h1>
+          <button class="btn btn-primary" style="padding:10px 20px; font-size:14px;" onclick="createNewSop()">+ 새 SOP 작성</button>
+        </div>
+
+        <p style="color:var(--gray-500); font-size:14px; margin-bottom:20px;">
+          SOP를 작성하면 AI가 자동으로 교육 영상 스크립트 + 퀴즈를 생성합니다
+        </p>
+
+        <!-- 필터 -->
+        <div class="filter-bar">
+          <button class="filter-chip active" onclick="filterSop('all', this)">전체</button>
+          <button class="filter-chip" onclick="filterSop('draft', this)">작성 중</button>
+          <button class="filter-chip" onclick="filterSop('generated', this)">콘텐츠 생성됨</button>
+          <button class="filter-chip" onclick="filterSop('published', this)">배포 완료</button>
+        </div>
+
+        <div id="sopList"></div>
+      </div>
+
+      <!-- SOP 에디터 뷰 -->
+      <div id="sopEditorView" style="display:none;">
+        <div class="topbar">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <a href="#" onclick="closeSopEditor(); return false;" style="color:var(--gray-500); text-decoration:none; font-size:20px;">&#8592;</a>
+            <div>
+              <input type="text" id="sopTitleInput" value="" placeholder="SOP 제목을 입력하세요"
+                style="border:none; font-size:22px; font-weight:700; outline:none; width:400px; background:transparent;">
+              <div id="sopStatusFlow" class="status-flow"></div>
+            </div>
+          </div>
+          <div class="topbar-actions">
+            <button class="btn btn-outline" style="padding:8px 16px; font-size:13px; color:var(--danger); border-color:var(--danger);" onclick="deleteSop()">삭제</button>
+            <button class="btn btn-outline" style="padding:8px 16px; font-size:13px;" onclick="saveSop()">&#128190; 저장</button>
+            <button class="btn btn-primary" style="padding:8px 16px; font-size:13px;" id="generateBtn" onclick="generateContent()">&#9889; AI 콘텐츠 생성</button>
+          </div>
+        </div>
+
+        <!-- 챕터 소속 선택 -->
+        <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+          <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+            <label>챕터</label>
+            <select id="sopChapterSelect">
+              <option value="new">+ 새 챕터로 생성</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+            <label>카테고리</label>
+            <select id="sopCategory">
+              <option>오프닝</option><option>고객 응대</option><option>안전/위생</option><option>클로징</option><option>비상 대응</option><option>기타</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 에디터 -->
+        <div class="editor-toolbar">
+          <button onclick="execCmd('bold')" title="굵게"><b>B</b></button>
+          <button onclick="execCmd('italic')" title="기울임"><i>I</i></button>
+          <button onclick="execCmd('insertOrderedList')" title="번호 목록">1.</button>
+          <button onclick="execCmd('insertUnorderedList')" title="점 목록">&bull;</button>
+          <button onclick="insertHeading()" title="제목">H</button>
+          <button onclick="insertStep()" title="절차 단계" style="font-size:12px;">+ 절차</button>
+          <button onclick="insertWarning()" title="주의사항" style="font-size:12px;">&#9888; 주의</button>
+        </div>
+        <div class="sop-editor-area" id="sopEditor" contenteditable="true"
+             style="border-top-left-radius:0; border-top-right-radius:0;">
+        </div>
+
+        <p style="font-size:12px; color:var(--gray-500); margin-top:8px;">
+          &#128161; 팁: 절차를 1, 2, 3 순서로 명확하게 작성하면 AI가 더 좋은 스크립트를 생성합니다
+        </p>
+
+        <!-- AI 생성 결과 영역 -->
+        <div id="aiResultArea"></div>
+      </div>
+    </div>
+
+    <!-- ========== 생성된 콘텐츠 ========== -->
+    <div id="page-content" style="display:none;">
+      <div class="topbar"><h1>생성된 콘텐츠</h1></div>
+      <p style="color:var(--gray-500); margin-bottom:20px;">SOP에서 AI가 생성한 스크립트, 퀴즈, 영상 현황</p>
+      <div id="generatedContentList"></div>
+    </div>
+
+    <!-- ========== 대시보드 ========== -->
+    <div id="page-dashboard" style="display:none;">
+      <div class="topbar">
+        <h1>대시보드</h1>
+        <button class="btn btn-outline" style="padding:8px 16px; font-size:13px;" onclick="exportAllCSV()">&#128229; 내보내기</button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><p class="label">전체 직원</p><p class="value" id="statTotalEmp">0</p></div>
+        <div class="stat-card"><p class="label">학습 완료</p><p class="value" style="color:var(--success);" id="statCompleted">0</p></div>
+        <div class="stat-card"><p class="label">진행 중</p><p class="value" style="color:var(--warning);" id="statInProgress">0</p></div>
+        <div class="stat-card"><p class="label">미시작</p><p class="value" style="color:var(--danger);" id="statNotStarted">0</p></div>
+      </div>
+      <!-- 차트: 지점별 + 학습 상태 -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
+        <div class="card">
+          <h4 style="font-size:14px; color:var(--gray-500); margin-bottom:16px;">학습 상태 분포</h4>
+          <div id="statusChart" style="display:flex; align-items:end; gap:12px; height:120px;"></div>
+        </div>
+        <div class="card">
+          <h4 style="font-size:14px; color:var(--gray-500); margin-bottom:16px;">지점별 평균 진행률</h4>
+          <div id="branchChart" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div style="padding:20px 20px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <h3 style="font-size:18px;">직원 학습 현황</h3>
+          <input type="text" class="search-box" placeholder="이름/지점 검색..." id="empSearch" oninput="filterEmployees()">
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" style="margin-top:16px;">
+            <thead><tr><th>이름</th><th>지점</th><th>진행률</th><th>퀴즈 평균</th><th>최근 활동</th><th>상태</th></tr></thead>
+            <tbody id="empTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 직원 관리 ========== -->
+    <div id="page-employees" style="display:none;">
+      <div class="topbar">
+        <h1>직원 관리</h1>
+        <button class="btn btn-primary" style="padding:10px 20px; font-size:14px;" onclick="openModal('addEmployee')">+ 직원 추가</button>
+      </div>
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div style="overflow-x:auto;">
+          <table class="data-table"><thead><tr><th>이름</th><th>이메일</th><th>지점</th><th>역할</th><th>등록일</th><th>관리</th></tr></thead>
+          <tbody id="empManageBody"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 리포트 ========== -->
+    <div id="page-reports" style="display:none;">
+      <div class="topbar"><h1>리포트</h1>
+        <button class="btn btn-outline" style="padding:8px 16px; font-size:13px;" onclick="exportAllCSV()">&#128229; CSV 다운로드</button>
+      </div>
+      <div class="card"><h3 style="font-size:16px; font-weight:600; margin-bottom:16px;">지점별 학습 현황</h3><div id="branchReport"></div></div>
+      <div class="card" style="margin-top:16px;"><h3 style="font-size:16px; font-weight:600; margin-bottom:16px;">챕터별 통과율</h3><div id="chapterReport"></div></div>
+    </div>
+
+    <!-- ========== AI 설정 ========== -->
+    <div id="page-settings" style="display:none;">
+      <div class="topbar"><h1>AI 설정</h1></div>
+
+      <!-- 현재 상태 -->
+      <div class="card" style="border-left:3px solid var(--primary);">
+        <h4 style="font-size:15px; margin-bottom:12px;">현재 AI 구성</h4>
+        <div id="aiStatusDisplay"></div>
+        <p style="font-size:13px; color:var(--gray-500); margin-top:12px;" id="aiCostDisplay"></p>
+      </div>
+
+      <!-- 제공자 설정 -->
+      <div class="card" style="margin-top:16px;">
+        <h4 style="font-size:15px; margin-bottom:16px;">기능별 AI 제공자 선택</h4>
+
+        <div class="form-group">
+          <label>스크립트 생성 (SOP → 영상 나레이션)</label>
+          <select id="setScript" onchange="updateAiConfig()">
+            <option value="local">Local — 무료, 자체 처리</option>
+            <option value="gemini">Google Gemini — 무료 티어, 고품질</option>
+            <option value="groq">Groq (Llama) — 무료, 빠름</option>
+            <option value="openai">OpenAI GPT-4o-mini — 유료, 최고 품질</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>퀴즈 생성 (SOP → 4지선다 문제)</label>
+          <select id="setQuiz" onchange="updateAiConfig()">
+            <option value="local">Local — 무료, 자체 처리</option>
+            <option value="gemini">Google Gemini — 무료 티어</option>
+            <option value="groq">Groq (Llama) — 무료</option>
+            <option value="openai">OpenAI GPT-4o-mini — 유료</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>AI 챗봇 (직원 SOP 질의응답)</label>
+          <select id="setChat" onchange="updateAiConfig()">
+            <option value="local">Local — 무료, 키워드 매칭</option>
+            <option value="gemini">Google Gemini — 무료 티어, 자연어 답변</option>
+            <option value="groq">Groq (Llama) — 무료, 자연어 답변</option>
+            <option value="openai">OpenAI GPT-4o-mini — 유료, 최고 품질</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>영상 생성 (스크립트 → 720p AI 영상)</label>
+          <select id="setVideo" onchange="updateAiConfig()">
+            <option value="none">미사용 — 텍스트 나레이션으로 학습</option>
+            <option value="wan">Wan 2.2 (SiliconFlow) — $0.29/클립, 720p, 추천</option>
+            <option value="vidu">Vidu Q3-Turbo — ~$0.20/클립, 빠름</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- API 키 -->
+      <div class="card" style="margin-top:16px;">
+        <h4 style="font-size:15px; margin-bottom:16px;">API 키 설정</h4>
+        <p style="font-size:13px; color:var(--gray-500); margin-bottom:16px;">
+          Local(무료) 모드에서는 키가 필요 없습니다. 외부 AI를 사용할 때만 해당 키를 입력하세요.
+        </p>
+
+        <div class="form-group">
+          <label>Google Gemini 키 <a href="https://aistudio.google.com" target="_blank" style="font-size:12px;">(무료 발급)</a></label>
+          <input type="password" id="keyGemini" placeholder="AIza..." onchange="updateAiKeys()">
+        </div>
+
+        <div class="form-group">
+          <label>Groq 키 <a href="https://console.groq.com" target="_blank" style="font-size:12px;">(무료 발급)</a></label>
+          <input type="password" id="keyGroq" placeholder="gsk_..." onchange="updateAiKeys()">
+        </div>
+
+        <div class="form-group">
+          <label>OpenAI 키 <a href="https://platform.openai.com" target="_blank" style="font-size:12px;">(유료)</a></label>
+          <input type="password" id="keyOpenai" placeholder="sk-..." onchange="updateAiKeys()">
+        </div>
+
+        <div class="form-group">
+          <label>SiliconFlow 키 — Wan 영상 생성 <a href="https://siliconflow.com" target="_blank" style="font-size:12px;">(발급)</a></label>
+          <input type="password" id="keySiliconflow" placeholder="sf-..." onchange="updateAiKeys()">
+        </div>
+      </div>
+
+      <!-- 비용 가이드 -->
+      <div class="card" style="margin-top:16px; background:var(--gray-50);">
+        <h4 style="font-size:15px; margin-bottom:12px;">비용 가이드</h4>
+        <table class="data-table" style="font-size:13px; box-shadow:none;">
+          <thead><tr><th>구성</th><th>월 비용</th><th>포함 기능</th></tr></thead>
+          <tbody>
+            <tr><td><strong>무비용</strong></td><td style="color:var(--success); font-weight:700;">$0</td><td>Local 전부 (스크립트+퀴즈+챗봇 텍스트)</td></tr>
+            <tr><td><strong>가성비 추천</strong></td><td style="color:var(--success); font-weight:700;">$0</td><td>Gemini 무료 티어 (고품질 스크립트+챗봇)</td></tr>
+            <tr><td><strong>영상 포함</strong></td><td style="color:var(--primary); font-weight:700;">~$1.50/SOP</td><td>위 + Wan 2.2 영상 (5씬 기준, 1회성)</td></tr>
+            <tr><td><strong>프리미엄</strong></td><td style="color:var(--warning); font-weight:700;">~$5/월</td><td>GPT-4o-mini + Wan 영상 (SOP 5개, 직원 50명)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /admin-main -->
+
+  <!-- 모달 -->
+  <div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal" id="modalContent"></div>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/ai-provider.js"></script>
+  <script src="../js/sop-content-kids.js"></script>
+  <script src="../js/demo-data.js"></script>
+  <script>
+    // ===== 관리자 확인 =====
+    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    if (!user || user.role !== 'admin') { window.location.href = '../index.html'; }
+
+    // ===== SOP 데이터 (localStorage) =====
+    function getSops() { return JSON.parse(localStorage.getItem('sop_documents') || '[]'); }
+    function saveSops(sops) { localStorage.setItem('sop_documents', JSON.stringify(sops)); }
+
+    // 초기 데모 SOP가 없으면 생성
+    if (getSops().length === 0) {
+      saveSops([
+        {
+          id: 'sop-1', title: '매장 오픈 절차', category: '오프닝', chapter: 'ch1',
+          status: 'published', // draft | generated | reviewed | published
+          content: '<h3>1. 출근 및 체크인</h3><ol><li>정시 10분 전까지 도착합니다</li><li>출근 체크인을 완료합니다</li><li>유니폼으로 갈아입고, 명찰을 반드시 부착합니다</li></ol><h3>2. 장비 점검</h3><ol><li>체크리스트를 꺼내 모든 장비의 작동 상태를 확인합니다</li><li>냉장고 온도를 확인합니다 (0~5°C)</li><li>이상 발견 시 즉시 매니저에게 보고합니다</li></ol><h3>3. 청소 및 위생</h3><ol><li>빗자루로 바닥 쓸기</li><li>물걸레로 닦기</li><li>소독제로 테이블, 문손잡이 소독</li><li>화장실 점검 및 비품 보충</li></ol><h3>4. 최종 오픈 확인</h3><ol><li>조명 및 음악 세팅</li><li>메뉴판, POP 진열 확인</li><li>입구 청결 상태 확인</li><li>POS 시스템 정상 작동 확인</li></ol><p><strong>⚠️ 주의:</strong> 오픈 30분 전까지 모든 준비를 완료해야 합니다.</p>',
+          createdAt: '2026-03-15',
+          script: [
+            { scene: 1, narration: '안녕하세요. 이 영상에서는 매장 오픈 절차를 배우겠습니다. 먼저 출근과 체크인부터 시작합니다.', visual: '매장 외관 → 직원이 걸어 들어오는 장면' },
+            { scene: 2, narration: '정시 10분 전까지 도착하여 출근 체크인을 완료합니다. 유니폼으로 갈아입고, 명찰을 반드시 부착해주세요.', visual: '태블릿으로 체크인 → 유니폼 착용 → 명찰 클로즈업' },
+            { scene: 3, narration: '다음은 장비 점검입니다. 체크리스트를 꺼내 모든 장비의 작동 상태를 확인합니다. 냉장고 온도는 0도에서 5도 사이어야 합니다.', visual: '체크리스트 작성 장면 → 냉장고 온도계 클로즈업' },
+            { scene: 4, narration: '이상을 발견하면 즉시 매니저에게 보고합니다. 절대 혼자 판단하지 마세요.', visual: '직원이 매니저에게 보고하는 장면' },
+            { scene: 5, narration: '청소 순서를 지켜주세요. 빗자루, 물걸레, 소독 순서로 진행합니다. 테이블과 문손잡이도 소독합니다.', visual: '청소 과정 타임랩스 → 소독 스프레이 사용' },
+            { scene: 6, narration: '마지막으로 조명, 음악, 메뉴판, POS를 확인합니다. 오픈 30분 전까지 모든 준비를 완료해야 합니다.', visual: '조명 켜지는 장면 → POS 테스트 → "OPEN" 사인 켜기' },
+          ],
+          quizzes: [
+            { question: '출근 시 가장 먼저 해야 할 일은?', options: ['청소 시작', '출근 체크인 및 유니폼 착용', '장비 점검', '고객 맞이'], correct: 1 },
+            { question: '냉장고 적정 온도 범위는?', options: ['-5~0°C', '0~5°C', '5~10°C', '10~15°C'], correct: 1 },
+            { question: '청소 올바른 순서는?', options: ['소독→빗자루→물걸레', '빗자루→물걸레→소독', '물걸레→빗자루→소독', '빗자루→소독→물걸레'], correct: 1 },
+            { question: '오픈 준비는 언제까지 완료해야 하나요?', options: ['오픈 직전', '오픈 10분 전', '오픈 30분 전', '오픈 1시간 전'], correct: 2 },
+            { question: '장비 이상 발견 시 올바른 조치는?', options: ['직접 수리', '무시하고 진행', '매니저에게 즉시 보고', '퇴근 후 보고'], correct: 2 },
+          ]
+        },
+        {
+          id: 'sop-2', title: '불만 고객 응대 절차', category: '고객 응대', chapter: 'ch2',
+          status: 'generated',
+          content: '<h3>1. 경청</h3><ol><li>고객의 말을 끊지 않고 끝까지 듣습니다</li><li>눈을 맞추고 고개를 끄덕이며 경청합니다</li><li>메모가 필요하면 양해를 구하고 기록합니다</li></ol><h3>2. 공감 표현</h3><ol><li>"불편하셨겠습니다"라고 진심으로 말합니다</li><li>고객의 감정을 인정합니다</li><li>절대 변명이나 핑계를 대지 않습니다</li></ol><h3>3. 해결 방안 제시</h3><ol><li>가능한 범위에서 즉시 조치합니다</li><li>시간이 필요하면 구체적 시간을 안내합니다</li><li>직접 해결이 어려우면 매니저에게 인계합니다</li></ol><h3>4. 후속 조치</h3><ol><li>해결 후 고객에게 만족 여부를 확인합니다</li><li>매니저에게 상황을 보고합니다</li><li>재발 방지를 위해 기록합니다</li></ol>',
+          createdAt: '2026-03-17',
+          script: [
+            { scene: 1, narration: '불만 고객을 만나면 당황하지 마세요. 4단계 절차를 따르면 대부분 해결됩니다.', visual: '화난 고객 일러스트 → 4단계 아이콘' },
+            { scene: 2, narration: '첫 번째, 경청입니다. 고객의 말을 절대 끊지 마세요. 눈을 맞추고 고개를 끄덕이며 들어주세요.', visual: '직원이 경청하는 장면' },
+            { scene: 3, narration: '두 번째, 공감입니다. 불편하셨겠습니다 라고 진심으로 말해주세요. 변명은 절대 금물입니다.', visual: '"공감 표현" 자막 + 올바른/잘못된 예시 비교' },
+            { scene: 4, narration: '세 번째, 해결합니다. 가능하면 즉시 조치하고, 시간이 필요하면 구체적으로 안내합니다.', visual: '직원이 문제 해결하는 장면' },
+            { scene: 5, narration: '마지막으로 후속 조치입니다. 고객 만족을 확인하고, 매니저에게 보고한 뒤 재발 방지를 위해 기록합니다.', visual: '보고서 작성 장면 → 체크리스트' },
+          ],
+          quizzes: [
+            { question: '불만 고객 응대의 첫 번째 단계는?', options: ['사과하기', '경청하기', '매니저 호출', '할인 제공'], correct: 1 },
+            { question: '공감 표현으로 적절하지 않은 것은?', options: ['"불편하셨겠습니다"', '"규정이라서요"', '"죄송합니다"', '"이해합니다"'], correct: 1 },
+            { question: '해결이 어려울 때 올바른 행동은?', options: ['무시', '매니저에게 인계', '고객 탓하기', '그냥 사과만'], correct: 1 },
+          ]
+        },
+        {
+          id: 'sop-3', title: '화재 비상 대응', category: '비상 대응', chapter: 'ch5',
+          status: 'draft',
+          content: '<h3>1. 화재 발견 시</h3><ol><li>큰 소리로 "불이야!" 알립니다</li><li>화재 경보 버튼을 누릅니다</li></ol><h3>2. 신고 및 대피</h3><ol><li>119에 신고합니다 (주소, 상황 전달)</li><li>고객과 직원을 비상구로 대피시킵니다</li></ol><p><em>작성 중...</em></p>',
+          createdAt: '2026-03-20',
+          script: null,
+          quizzes: null
+        }
+      ]);
+    }
+
+    // ===== 현재 편집 중인 SOP =====
+    let currentSopId = null;
+
+    // ===== 페이지 전환 =====
+    function showPage(page, event) {
+      if (event) event.preventDefault();
+      ['sop', 'content', 'dashboard', 'employees', 'reports', 'settings'].forEach(p => {
+        const el = document.getElementById('page-' + p);
+        if (el) el.style.display = p === page ? 'block' : 'none';
+      });
+      document.querySelectorAll('.admin-sidebar nav a').forEach(a => a.classList.remove('active'));
+      if (event) event.currentTarget.classList.add('active');
+
+      if (page === 'sop') renderSopList();
+      if (page === 'content') renderGeneratedContent();
+      if (page === 'dashboard') renderDashboard();
+      if (page === 'employees') renderEmployeeManage();
+      if (page === 'reports') renderReports();
+      if (page === 'settings') renderSettings();
+
+      // 모바일 사이드바 닫기
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebarOverlay').classList.remove('show');
+    }
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('show');
+    }
+
+    // ===== SOP 필터 상태 =====
+    let currentSopFilter = 'all';
+
+    // ===== SOP 목록 렌더링 =====
+    function renderSopList() {
+      document.getElementById('sopListView').style.display = 'block';
+      document.getElementById('sopEditorView').style.display = 'none';
+
+      let sops = getSops();
+      if (currentSopFilter !== 'all') {
+        sops = sops.filter(s => s.status === currentSopFilter);
+      }
+      const container = document.getElementById('sopList');
+
+      if (sops.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:60px; color:var(--gray-500);">
+            <p style="font-size:48px; margin-bottom:12px;">&#128221;</p>
+            <p style="font-size:16px; font-weight:600; margin-bottom:4px;">아직 작성된 SOP가 없습니다</p>
+            <p style="font-size:14px;">위의 "새 SOP 작성" 버튼을 눌러 시작하세요</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = sops.map(sop => {
+        const statusMap = {
+          draft: { label: '작성 중', color: 'var(--gray-500)', bg: 'var(--gray-100)' },
+          generated: { label: 'AI 생성 완료', color: 'var(--primary)', bg: 'var(--primary-light)' },
+          reviewed: { label: '검토 완료', color: '#92400e', bg: '#fef3c7' },
+          published: { label: '배포됨', color: 'var(--success)', bg: '#dcfce7' },
+        };
+        const st = statusMap[sop.status] || statusMap.draft;
+        const hasScript = sop.script && sop.script.length > 0;
+        const hasQuiz = sop.quizzes && sop.quizzes.length > 0;
+
+        return `
+          <div class="sop-list-item" onclick="openSopEditor('${sop.id}')">
+            <div class="sop-icon" style="background:${st.bg}; color:${st.color};">&#128221;</div>
+            <div class="sop-info">
+              <h4>${sop.title}</h4>
+              <p>${sop.category} · ${sop.createdAt}</p>
+              <div class="sop-badges" style="margin-top:6px;">
+                <span class="badge" style="background:${st.bg}; color:${st.color};">${st.label}</span>
+                ${hasScript ? '<span class="badge" style="background:var(--primary-light); color:var(--primary);">스크립트 ✓</span>' : ''}
+                ${hasQuiz ? '<span class="badge" style="background:#dcfce7; color:var(--success);">퀴즈 ' + sop.quizzes.length + '문제</span>' : ''}
+              </div>
+            </div>
+            <span style="color:var(--gray-300);">&#8250;</span>
+          </div>`;
+      }).join('');
+    }
+
+    function filterSop(status, btn) {
+      document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentSopFilter = status;
+      renderSopList();
+    }
+
+    // ===== 새 SOP 생성 =====
+    function createNewSop() {
+      const sops = getSops();
+      const newSop = {
+        id: 'sop-' + Date.now(),
+        title: '새 SOP',
+        category: '기타',
+        chapter: 'new',
+        status: 'draft',
+        content: '<h3>1. 첫 번째 절차</h3><ol><li>여기에 상세 단계를 입력하세요</li><li>구체적일수록 AI가 더 좋은 스크립트를 생성합니다</li></ol><h3>2. 두 번째 절차</h3><ol><li>단계를 추가하세요</li></ol>',
+        createdAt: new Date().toISOString().slice(0, 10),
+        script: null,
+        quizzes: null
+      };
+      sops.push(newSop);
+      saveSops(sops);
+      openSopEditor(newSop.id);
+    }
+
+    // ===== SOP 에디터 열기 =====
+    function openSopEditor(sopId) {
+      currentSopId = sopId;
+      const sops = getSops();
+      const sop = sops.find(s => s.id === sopId);
+      if (!sop) return;
+
+      document.getElementById('sopListView').style.display = 'none';
+      document.getElementById('sopEditorView').style.display = 'block';
+      document.getElementById('sopTitleInput').value = sop.title;
+      document.getElementById('sopEditor').innerHTML = sop.content;
+      document.getElementById('sopCategory').value = sop.category || '기타';
+
+      // 상태 플로우
+      renderStatusFlow(sop.status);
+
+      // AI 결과 표시
+      renderAiResults(sop);
+
+      window.scrollTo(0, 0);
+    }
+
+    function deleteSop() {
+      if (!currentSopId) return;
+      if (!confirm('이 SOP를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+      const sops = getSops().filter(s => s.id !== currentSopId);
+      saveSops(sops);
+      currentSopId = null;
+      document.getElementById('sopListView').style.display = 'block';
+      document.getElementById('sopEditorView').style.display = 'none';
+      renderSopList();
+    }
+
+    function closeSopEditor() {
+      saveSop();
+      document.getElementById('sopListView').style.display = 'block';
+      document.getElementById('sopEditorView').style.display = 'none';
+      currentSopId = null;
+      renderSopList();
+    }
+
+    function renderStatusFlow(status) {
+      const steps = [
+        { key: 'draft', label: 'SOP 작성' },
+        { key: 'generated', label: 'AI 생성' },
+        { key: 'reviewed', label: '검토' },
+        { key: 'published', label: '배포' },
+      ];
+      const statusOrder = ['draft', 'generated', 'reviewed', 'published'];
+      const currentIdx = statusOrder.indexOf(status);
+
+      document.getElementById('sopStatusFlow').innerHTML = steps.map((s, i) => {
+        let cls = 'pending';
+        if (i < currentIdx) cls = 'done';
+        if (i === currentIdx) cls = 'current';
+        return `${i > 0 ? '<span class="flow-arrow">→</span>' : ''}
+          <span class="flow-step ${cls}">${cls === 'done' ? '✓ ' : ''}${s.label}</span>`;
+      }).join('');
+    }
+
+    // ===== SOP 저장 =====
+    function saveSop() {
+      if (!currentSopId) return;
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+
+      sops[idx].title = document.getElementById('sopTitleInput').value || '제목 없음';
+      sops[idx].content = document.getElementById('sopEditor').innerHTML;
+      sops[idx].category = document.getElementById('sopCategory').value;
+      saveSops(sops);
+    }
+
+    // ===== 에디터 명령 =====
+    function execCmd(cmd) { document.execCommand(cmd, false, null); }
+    function insertHeading() { document.execCommand('formatBlock', false, 'h3'); }
+    function insertStep() {
+      const num = document.getElementById('sopEditor').querySelectorAll('h3').length + 1;
+      document.execCommand('insertHTML', false,
+        `<h3>${num}. 새 절차</h3><ol><li>단계를 입력하세요</li></ol>`);
+    }
+    function insertWarning() {
+      document.execCommand('insertHTML', false,
+        '<p><strong>⚠️ 주의:</strong> 주의사항을 입력하세요</p>');
+    }
+
+    // ===== AI 콘텐츠 생성 (시뮬레이션) =====
+    function generateContent() {
+      saveSop();
+      const sops = getSops();
+      const sop = sops.find(s => s.id === currentSopId);
+      if (!sop) return;
+
+      const content = sop.content;
+      if (content.length < 50) {
+        alert('SOP 내용이 너무 짧습니다. 좀 더 상세하게 작성해주세요.');
+        return;
+      }
+
+      // 로딩 표시
+      document.getElementById('aiResultArea').innerHTML = `
+        <div class="ai-result-section" style="margin-top:20px;">
+          <div class="generating-overlay">
+            <div class="big-spinner"></div>
+            <h3 style="margin-bottom:4px;">AI가 콘텐츠를 생성하고 있습니다...</h3>
+            <p style="color:var(--gray-500); font-size:14px;">SOP를 분석하여 영상 스크립트와 퀴즈를 만들고 있어요</p>
+          </div>
+        </div>`;
+
+      document.getElementById('generateBtn').disabled = true;
+
+      // AI Provider를 통한 생성 (local이면 즉시, API면 비동기)
+      (async () => {
+        try {
+          const [script, quizzes] = await Promise.all([
+            AI.generateScript(sop.title, sop.content),
+            AI.generateQuiz(sop.title, sop.content),
+          ]);
+
+          const idx = sops.findIndex(s => s.id === currentSopId);
+          sops[idx].script = script;
+          sops[idx].quizzes = quizzes;
+          sops[idx].status = 'generated';
+          saveSops(sops);
+
+          renderStatusFlow('generated');
+          renderAiResults(sops[idx]);
+        } catch (e) {
+          alert('AI 생성 중 오류: ' + e.message);
+        } finally {
+          document.getElementById('generateBtn').disabled = false;
+          document.getElementById('generateBtn').innerHTML = '&#128260; 다시 생성';
+        }
+      })();
+    }
+
+    // ===== AI 결과 렌더링 =====
+    function renderAiResults(sop) {
+      const area = document.getElementById('aiResultArea');
+
+      if (!sop.script || sop.script.length === 0) {
+        area.innerHTML = '';
+        return;
+      }
+
+      let html = '';
+
+      // 스크립트 프리뷰
+      html += `
+        <div class="ai-result-section" style="margin-top:24px;">
+          <div class="ai-result-header">
+            <h4>&#127910; AI 생성 스크립트 (${sop.script.length}개 씬)</h4>
+            <span style="font-size:12px; color:var(--primary);">예상 영상 길이: 약 ${Math.round(sop.script.length * 0.7)}분</span>
+          </div>
+          <div class="ai-result-body">
+            ${sop.script.map(s => `
+              <div class="script-scene">
+                <div class="scene-num">씬 ${s.scene}</div>
+                <div class="narration">${s.narration}</div>
+                <div class="visual-note">&#127909; ${s.visual}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+
+      // 퀴즈 프리뷰
+      if (sop.quizzes && sop.quizzes.length > 0) {
+        html += `
+          <div class="ai-result-section" style="margin-top:16px;">
+            <div class="ai-result-header">
+              <h4>&#10067; AI 생성 퀴즈 (${sop.quizzes.length}문제)</h4>
+            </div>
+            <div class="ai-result-body">
+              ${sop.quizzes.map((q, i) => `
+                <div class="quiz-preview-item">
+                  <div class="q-text">Q${i + 1}. ${q.question}</div>
+                  <div class="q-options">
+                    ${q.options.map((o, oi) => `<span class="q-opt ${oi === q.correct ? 'correct' : 'wrong'}">${o}</span>`).join('')}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>`;
+      }
+
+      // 액션 버튼
+      const isPublished = sop.status === 'published';
+      const videoEnabled = AI_CONFIG.videoProvider !== 'none';
+      html += `
+        <div style="display:flex; gap:8px; margin-top:20px; flex-wrap:wrap;">
+          ${!isPublished ? `
+            <button class="btn btn-success" style="padding:12px 24px;" onclick="publishSop()">
+              &#9989; 검토 완료 → 직원에게 배포
+            </button>
+          ` : `
+            <div class="alert alert-success" style="flex:1;">
+              &#9989; 이 SOP는 직원에게 배포되었습니다
+            </div>
+          `}
+          <button class="btn btn-outline" style="padding:12px 24px;" onclick="generateContent()">
+            &#128260; 스크립트/퀴즈 다시 생성
+          </button>
+          ${videoEnabled ? `
+            <button class="btn btn-primary" style="padding:12px 24px; background:#7c3aed;" onclick="generateSopVideos()">
+              &#127910; AI 영상 생성 (${sop.script.length}씬)
+            </button>
+          ` : `
+            <button class="btn btn-outline" style="padding:12px 24px; font-size:13px;" onclick="showPage('settings')">
+              &#127910; 영상 생성하려면 → AI 설정
+            </button>
+          `}
+        </div>`;
+
+      area.innerHTML = html;
+    }
+
+    // ===== 배포 =====
+    function publishSop() {
+      if (!currentSopId) return;
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+
+      sops[idx].status = 'published';
+      saveSops(sops);
+      renderStatusFlow('published');
+      renderAiResults(sops[idx]);
+
+      // 성공 알림
+      const area = document.getElementById('aiResultArea');
+      area.insertAdjacentHTML('afterbegin', `
+        <div class="alert alert-success" style="margin-bottom:16px; font-size:15px; font-weight:600;">
+          &#127881; 배포 완료! 직원들이 이제 이 교육을 학습할 수 있습니다.
+        </div>
+      `);
+    }
+
+    // ===== 생성된 콘텐츠 목록 =====
+    function renderGeneratedContent() {
+      const sops = getSops().filter(s => s.script && s.script.length > 0);
+      const container = document.getElementById('generatedContentList');
+
+      if (sops.length === 0) {
+        container.innerHTML = '<p style="color:var(--gray-500); text-align:center; padding:40px;">아직 생성된 콘텐츠가 없습니다. SOP를 작성하고 AI 생성을 실행해보세요.</p>';
+        return;
+      }
+
+      container.innerHTML = sops.map(sop => {
+        const statusMap = {
+          generated: { label: '검토 필요', color: 'var(--warning)', bg: '#fef3c7' },
+          reviewed: { label: '검토 완료', color: 'var(--primary)', bg: 'var(--primary-light)' },
+          published: { label: '배포됨', color: 'var(--success)', bg: '#dcfce7' },
+        };
+        const st = statusMap[sop.status] || statusMap.generated;
+
+        return `
+          <div class="card" style="margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px;">
+              <div>
+                <h4 style="font-size:16px;">${sop.title}</h4>
+                <p style="font-size:13px; color:var(--gray-500);">${sop.category} · 스크립트 ${sop.script.length}씬 · 퀴즈 ${sop.quizzes?.length || 0}문제</p>
+              </div>
+              <span class="badge" style="background:${st.bg}; color:${st.color};">${st.label}</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="openSopEditor('${sop.id}')">상세 보기</button>
+              ${sop.status !== 'published' ? `<button class="btn btn-primary" style="padding:6px 14px; font-size:13px;" onclick="currentSopId='${sop.id}'; publishSop(); renderGeneratedContent();">배포하기</button>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ===== 대시보드 (실데이터) =====
+    function getEmployeesWithProgress() {
+      return Progress.getAllEmployeesProgress();
+    }
+
+    function renderDashboard() {
+      const emps = getEmployeesWithProgress();
+      const c = emps.filter(e => e.status === 'completed').length;
+      const p = emps.filter(e => e.status === 'in_progress').length;
+      const n = emps.filter(e => e.status === 'not_started').length;
+      document.getElementById('statTotalEmp').textContent = emps.length;
+      document.getElementById('statCompleted').textContent = c;
+      document.getElementById('statInProgress').textContent = p;
+      document.getElementById('statNotStarted').textContent = n;
+      renderEmployeeTable(emps);
+
+      // 상태 분포 바 차트
+      const total = emps.length || 1;
+      const statusChart = document.getElementById('statusChart');
+      if (statusChart) {
+        statusChart.innerHTML = [
+          { label: '완료', val: c, color: 'var(--success)' },
+          { label: '진행중', val: p, color: 'var(--warning)' },
+          { label: '미시작', val: n, color: 'var(--danger)' },
+        ].map(s => `<div style="flex:1;text-align:center;">
+          <div style="background:${s.color};width:100%;height:${Math.max((s.val/total)*100, 5)}%;border-radius:6px 6px 0 0;min-height:8px;transition:height 0.3s;"></div>
+          <div style="font-size:20px;font-weight:700;margin-top:8px;">${s.val}</div>
+          <div style="font-size:11px;color:var(--gray-500);">${s.label}</div>
+        </div>`).join('');
+      }
+
+      // 지점별 진행률 차트
+      const branches = {};
+      emps.forEach(e => {
+        if (!branches[e.branch]) branches[e.branch] = { sum: 0, count: 0 };
+        branches[e.branch].sum += e.progress;
+        branches[e.branch].count++;
+      });
+      const branchChart = document.getElementById('branchChart');
+      if (branchChart) {
+        branchChart.innerHTML = Object.entries(branches).map(([name, d]) => {
+          const avg = Math.round(d.sum / d.count);
+          return `<div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px;">
+              <span>${name}</span><span style="font-weight:600;">${avg}%</span>
+            </div>
+            <div class="progress-bar" style="height:6px;"><div class="fill ${avg>=100?'success':''}" style="width:${avg}%"></div></div>
+          </div>`;
+        }).join('');
+      }
+    }
+
+    function renderEmployeeTable(employees) {
+      document.getElementById('empTableBody').innerHTML = employees.map(emp => {
+        const badge = emp.status === 'completed' ? '<span class="badge badge-success">완료</span>'
+          : emp.status === 'in_progress' ? '<span class="badge badge-warning">진행중</span>'
+          : '<span class="badge badge-danger">미시작</span>';
+        const last = emp.lastActive ? formatDate(emp.lastActive) : '-';
+        return `<tr style="cursor:pointer;" onclick="showEmployeeDetail('${emp.id}')">
+          <td><strong>${emp.name}</strong></td><td style="font-size:13px;">${emp.branch}</td>
+          <td><div style="display:flex;align-items:center;gap:8px;"><div class="progress-bar" style="width:80px;"><div class="fill ${emp.progress>=100?'success':''}" style="width:${emp.progress}%"></div></div><span style="font-size:13px;">${emp.progress}%</span></div></td>
+          <td style="font-size:13px;">${emp.avgScore?emp.avgScore+'점':'-'}</td><td style="font-size:13px;color:var(--gray-500);">${last}</td><td>${badge}</td></tr>`;
+      }).join('');
+    }
+
+    function filterEmployees() {
+      const q = document.getElementById('empSearch').value.toLowerCase();
+      const emps = getEmployeesWithProgress();
+      renderEmployeeTable(emps.filter(e => e.name.toLowerCase().includes(q) || e.branch.toLowerCase().includes(q)));
+    }
+
+    // ===== 직원 상세 (클릭 시 모달) =====
+    function showEmployeeDetail(empId) {
+      const emp = EmployeeStore.getById(empId);
+      const prog = Progress.getEmployeeProgress(empId);
+      if (!emp) return;
+
+      const chapters = SopStore.getChapters();
+      const badge = prog.status === 'completed' ? '<span class="badge badge-success">완료</span>'
+        : prog.status === 'in_progress' ? '<span class="badge badge-warning">진행중</span>'
+        : '<span class="badge badge-danger">미시작</span>';
+
+      let chaptersHTML = chapters.map((ch, i) => {
+        const videos = SopStore.getVideos(ch.id);
+        const result = prog.chapterResults[ch.id];
+        const passed = result?.passed === true;
+        const videoDone = videos.filter(v => prog.completedVideoIds.includes(v.id)).length;
+
+        let statusText = '미시작';
+        let statusColor = 'var(--gray-500)';
+        if (passed) { statusText = `통과 (${result.score}점)`; statusColor = 'var(--success)'; }
+        else if (videoDone > 0) { statusText = `${videoDone}/${videos.length} 시청`; statusColor = 'var(--warning)'; }
+
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--gray-100);">
+          <div><strong style="font-size:14px;">${i+1}. ${ch.title}</strong>
+            <div style="font-size:12px;color:var(--gray-500);">${videos.length}개 씬</div></div>
+          <span style="font-size:13px;font-weight:600;color:${statusColor};">${statusText}</span>
+        </div>`;
+      }).join('');
+
+      const m = document.getElementById('modalContent');
+      m.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:20px;">
+          <div>
+            <h3 style="margin-bottom:4px;">${emp.name}</h3>
+            <p style="font-size:14px;color:var(--gray-500);">${emp.email} · ${emp.branch}</p>
+          </div>
+          ${badge}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
+          <div style="text-align:center;padding:16px;background:var(--gray-50);border-radius:8px;">
+            <div style="font-size:24px;font-weight:700;color:var(--primary);">${prog.progress}%</div>
+            <div style="font-size:12px;color:var(--gray-500);">진행률</div>
+          </div>
+          <div style="text-align:center;padding:16px;background:var(--gray-50);border-radius:8px;">
+            <div style="font-size:24px;font-weight:700;color:var(--success);">${prog.passedChapters}/${prog.totalChapters}</div>
+            <div style="font-size:12px;color:var(--gray-500);">통과 챕터</div>
+          </div>
+          <div style="text-align:center;padding:16px;background:var(--gray-50);border-radius:8px;">
+            <div style="font-size:24px;font-weight:700;">${prog.avgScore || '-'}</div>
+            <div style="font-size:12px;color:var(--gray-500);">평균 점수</div>
+          </div>
+        </div>
+        <h4 style="font-size:15px;margin-bottom:8px;">챕터별 상세</h4>
+        ${chaptersHTML}
+        <p style="font-size:12px;color:var(--gray-500);margin-top:12px;">최근 활동: ${prog.lastActive ? new Date(prog.lastActive).toLocaleString('ko-KR') : '없음'}</p>
+        <button class="btn btn-outline" style="width:100%;margin-top:16px;" onclick="closeModal()">닫기</button>
+      `;
+      document.getElementById('modalOverlay').classList.add('show');
+    }
+
+    // ===== 직원 관리 =====
+    function renderEmployeeManage() {
+      const emps = getEmployeesWithProgress();
+      document.getElementById('empManageBody').innerHTML = emps.map(emp =>
+        `<tr><td><strong>${emp.name}</strong></td><td style="font-size:13px;">${emp.email}</td><td style="font-size:13px;">${emp.branch}</td>
+        <td><span class="badge" style="background:${emp.role==='branch_manager'?'var(--primary-light)':'var(--gray-100)'}; color:${emp.role==='branch_manager'?'var(--primary)':'var(--gray-700)'};">${emp.role==='branch_manager'?'지점장':'직원'}</span></td>
+        <td style="font-size:13px;color:var(--gray-500);">${emp.created}</td>
+        <td><button class="btn btn-outline" style="padding:4px 12px;font-size:12px;" onclick="showEmployeeDetail('${emp.id}')">상세</button></td></tr>`
+      ).join('');
+    }
+
+    // ===== 리포트 (실데이터) =====
+    function renderReports() {
+      const emps = getEmployeesWithProgress();
+      const branches = {};
+      emps.forEach(e => {
+        if (!branches[e.branch]) branches[e.branch] = {total:0,completed:0,avg:0};
+        branches[e.branch].total++;
+        if (e.status==='completed') branches[e.branch].completed++;
+        branches[e.branch].avg += e.progress;
+      });
+      document.getElementById('branchReport').innerHTML = Object.entries(branches).map(([n,d]) => {
+        const a = Math.round(d.avg/d.total);
+        return `<div style="display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--gray-100);">
+          <div style="width:140px;font-weight:600;font-size:14px;">${n}</div>
+          <div style="flex:1;"><div class="progress-bar"><div class="fill ${a>=100?'success':''}" style="width:${a}%"></div></div></div>
+          <div style="width:50px;text-align:right;font-size:14px;font-weight:600;">${a}%</div>
+          <div style="width:80px;text-align:right;font-size:13px;color:var(--gray-500);">${d.completed}/${d.total}명</div></div>`;
+      }).join('');
+
+      // 챕터별 통과율 (실데이터)
+      const chapters = SopStore.getChapters();
+      document.getElementById('chapterReport').innerHTML = chapters.length > 0
+        ? chapters.map((ch, i) => {
+          const passCount = emps.filter(e => Progress.getEmployeeProgress(e.id).chapterResults[ch.id]?.passed).length;
+          const rate = emps.length > 0 ? Math.round((passCount / emps.length) * 100) : 0;
+          return `<div style="display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--gray-100);">
+            <div style="width:180px;font-size:14px;"><strong>${i+1}.</strong> ${ch.title}</div>
+            <div style="flex:1;"><div class="progress-bar"><div class="fill ${rate>=80?'success':''}" style="width:${rate}%"></div></div></div>
+            <div style="width:50px;text-align:right;font-size:14px;font-weight:600;">${rate}%</div>
+            <div style="width:60px;text-align:right;font-size:12px;color:var(--gray-500);">${passCount}/${emps.length}명</div></div>`;
+        }).join('')
+        : '<p style="color:var(--gray-500);">배포된 SOP가 없습니다</p>';
+    }
+
+    // ===== 모달/CSV =====
+    function openModal(type) {
+      const m = document.getElementById('modalContent');
+      if (type==='addEmployee') {
+        m.innerHTML=`<h3>직원 추가</h3>
+          <div class="form-group"><label>이름</label><input type="text" id="newEmpName" placeholder="홍길동"></div>
+          <div class="form-group"><label>이메일</label><input type="email" id="newEmpEmail" placeholder="name@company.com"></div>
+          <div class="form-group"><label>지점</label><select id="newEmpBranch"><option>서울 강남점</option><option>서울 홍대점</option><option>부산 해운대점</option><option>호치민 1호점</option><option>하노이 1호점</option></select></div>
+          <div class="form-group"><label>역할</label><select id="newEmpRole"><option value="staff">직원</option><option value="branch_manager">지점장</option></select></div>
+          <div style="display:flex;gap:8px;margin-top:24px;">
+            <button class="btn btn-primary" style="flex:1;" onclick="addEmployee()">추가</button>
+            <button class="btn btn-outline" onclick="closeModal()">취소</button>
+          </div>
+          <hr style="margin:24px 0;border:none;border-top:1px solid var(--gray-200);">
+          <h4 style="font-size:15px;margin-bottom:12px;">CSV 일괄 등록</h4>
+          <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">형식: <code>이름,이메일,지점,역할</code></p>
+          <textarea id="csvInput" rows="5" style="width:100%;padding:12px;border:1px solid var(--gray-300);border-radius:8px;font-family:monospace;font-size:13px;" placeholder="홍길동,hong@co.com,서울 강남점,staff&#10;Nguyen A,nguyen@co.com,호치민 1호점,staff"></textarea>
+          <button class="btn btn-primary" style="margin-top:8px;width:100%;" onclick="bulkAddEmployees()">일괄 등록</button>`;
+      }
+      document.getElementById('modalOverlay').classList.add('show');
+    }
+
+    function bulkAddEmployees() {
+      const csv = document.getElementById('csvInput').value.trim();
+      if (!csv) { alert('CSV 데이터를 입력하세요'); return; }
+      const emps = EmployeeStore.getAll();
+      let added = 0;
+      csv.split('\n').filter(l => l.trim()).forEach(line => {
+        const [name, email, branch, role] = line.split(',').map(s => s.trim());
+        if (name && email && !emps.find(e => e.email === email)) {
+          emps.push({ id: 'emp-' + Date.now() + '-' + added, name, email, branch: branch || '미지정', role: role || 'staff', created: new Date().toISOString().slice(0, 10) });
+          added++;
+        }
+      });
+      EmployeeStore.save(emps);
+      closeModal();
+      renderEmployeeManage();
+      alert(added + '명의 직원이 등록되었습니다.');
+    }
+
+    function addEmployee() {
+      const name = document.getElementById('newEmpName').value.trim();
+      const email = document.getElementById('newEmpEmail').value.trim();
+      const branch = document.getElementById('newEmpBranch').value;
+      const role = document.getElementById('newEmpRole').value;
+      if (!name || !email) { alert('이름과 이메일을 입력하세요'); return; }
+
+      const emps = EmployeeStore.getAll();
+      emps.push({
+        id: 'emp-' + Date.now(),
+        name, email, branch, role,
+        created: new Date().toISOString().slice(0, 10)
+      });
+      EmployeeStore.save(emps);
+      closeModal();
+      renderEmployeeManage();
+    }
+
+    function closeModal(){document.getElementById('modalOverlay').classList.remove('show');}
+
+    function exportAllCSV() {
+      const emps = getEmployeesWithProgress();
+      const h='이름,이메일,지점,진행률,퀴즈평균,상태\n';
+      const r = emps.map(e => {
+        const st = e.status==='completed'?'완료':e.status==='in_progress'?'진행중':'미시작';
+        return `${e.name},${e.email},${e.branch},${e.progress}%,${e.avgScore||0},${st}`;
+      }).join('\n');
+      const b=new Blob(['\uFEFF'+h+r],{type:'text/csv;charset=utf-8;'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`sop_report_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+    }
+
+    function doLogout() {
+      localStorage.removeItem('sop_user');
+      window.location.href = '../index.html';
+    }
+
+    // ===== AI 영상 생성 =====
+    async function generateSopVideos() {
+      if (!currentSopId) return;
+      const sop = getSops().find(s => s.id === currentSopId);
+      if (!sop || !sop.script) return;
+
+      const cost = AI_CONFIG.videoProvider === 'wan'
+        ? `$${(sop.script.length * 0.29).toFixed(2)}`
+        : `$${(sop.script.length * 0.20).toFixed(2)}`;
+
+      if (!confirm(`${sop.script.length}개 씬의 영상을 생성합니다.\n예상 비용: ${cost}\n\n진행하시겠습니까?`)) return;
+
+      // 생성 시작 UI
+      const area = document.getElementById('aiResultArea');
+      area.insertAdjacentHTML('afterbegin', `
+        <div class="ai-result-section" id="videoGenStatus" style="margin-bottom:16px;">
+          <div class="ai-result-header" style="background:#f5f3ff;">
+            <h4 style="color:#7c3aed;">&#127910; AI 영상 생성 중...</h4>
+            <span style="font-size:12px; color:#7c3aed;" id="videoGenProgress">0/${sop.script.length}</span>
+          </div>
+          <div class="ai-result-body" id="videoGenLog" style="max-height:300px; overflow-y:auto;">
+          </div>
+        </div>
+      `);
+
+      const log = document.getElementById('videoGenLog');
+      const progress = document.getElementById('videoGenProgress');
+
+      for (let i = 0; i < sop.script.length; i++) {
+        const scene = sop.script[i];
+        const prompt = `교육 영상. ${scene.visual}. 깨끗한 매장, 유니폼 직원, 전문적 분위기. 720p.`;
+
+        log.innerHTML += `<div style="padding:8px 0; border-bottom:1px solid var(--gray-100); font-size:13px;">
+          <strong>씬 ${scene.scene}</strong>: 생성 요청 중... <span class="spinner" style="width:14px;height:14px;"></span>
+        </div>`;
+        progress.textContent = `${i}/${sop.script.length}`;
+
+        const result = await AI.generateVideo(prompt, { turbo: true });
+
+        // 로그 업데이트
+        const lastLog = log.lastElementChild;
+        if (result.status === 'submitted') {
+          lastLog.innerHTML = `<strong>씬 ${scene.scene}</strong>: &#9989; 요청 완료 (${result.estimatedCost}) — ID: ${result.requestId?.slice(0,8) || 'N/A'}`;
+        } else if (result.status === 'error') {
+          lastLog.innerHTML = `<strong>씬 ${scene.scene}</strong>: &#10060; ${result.message}`;
+        } else if (result.status === 'skip') {
+          lastLog.innerHTML = `<strong>씬 ${scene.scene}</strong>: &#9888; ${result.message}`;
+          break;
+        }
+      }
+
+      progress.textContent = `${sop.script.length}/${sop.script.length} 완료`;
+      log.innerHTML += `<div style="padding:12px 0; font-size:14px; font-weight:600; color:#7c3aed;">
+        &#127881; 모든 씬의 영상 생성이 요청되었습니다. 1~3분 후 완료됩니다.
+      </div>`;
+    }
+
+    // ===== AI 설정 페이지 =====
+    function renderSettings() {
+      // 현재 값을 셀렉트에 반영
+      document.getElementById('setScript').value = AI_CONFIG.scriptProvider;
+      document.getElementById('setQuiz').value = AI_CONFIG.quizProvider;
+      document.getElementById('setChat').value = AI_CONFIG.chatProvider;
+      document.getElementById('setVideo').value = AI_CONFIG.videoProvider;
+
+      // 저장된 키 반영 (마스킹)
+      const saved = JSON.parse(localStorage.getItem('sop_ai_keys') || '{}');
+      ['gemini','groq','openai','siliconflow'].forEach(k => {
+        const input = document.getElementById('key' + k.charAt(0).toUpperCase() + k.slice(1));
+        if (input && saved[k]) input.value = saved[k];
+      });
+
+      updateAiStatusDisplay();
+    }
+
+    function updateAiConfig() {
+      AI_CONFIG.scriptProvider = document.getElementById('setScript').value;
+      AI_CONFIG.quizProvider = document.getElementById('setQuiz').value;
+      AI_CONFIG.chatProvider = document.getElementById('setChat').value;
+      AI_CONFIG.videoProvider = document.getElementById('setVideo').value;
+
+      // localStorage에 설정 저장
+      localStorage.setItem('sop_ai_config', JSON.stringify({
+        scriptProvider: AI_CONFIG.scriptProvider,
+        quizProvider: AI_CONFIG.quizProvider,
+        chatProvider: AI_CONFIG.chatProvider,
+        videoProvider: AI_CONFIG.videoProvider,
+      }));
+
+      updateAiStatusDisplay();
+    }
+
+    function updateAiKeys() {
+      const keys = {
+        gemini: document.getElementById('keyGemini').value.trim(),
+        groq: document.getElementById('keyGroq').value.trim(),
+        openai: document.getElementById('keyOpenai').value.trim(),
+        siliconflow: document.getElementById('keySiliconflow').value.trim(),
+      };
+
+      // AI_CONFIG에 반영
+      Object.assign(AI_CONFIG.keys, keys);
+
+      // localStorage에 저장
+      localStorage.setItem('sop_ai_keys', JSON.stringify(keys));
+
+      updateAiStatusDisplay();
+    }
+
+    function updateAiStatusDisplay() {
+      const status = AI.getStatus();
+      const display = document.getElementById('aiStatusDisplay');
+      if (!display) return;
+
+      display.innerHTML = Object.entries(status).filter(([k]) => k !== 'monthlyCost').map(([k, v]) => {
+        const labels = { script: '스크립트', quiz: '퀴즈', chat: '챗봇', tts: 'TTS', video: '영상' };
+        const isActive = !v.includes('미사용') && !v.includes('none');
+        const color = v.includes('무료') ? 'var(--success)' : v.includes('미사용') ? 'var(--gray-500)' : 'var(--primary)';
+        return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);">
+          <span style="font-size:14px;">${labels[k] || k}</span>
+          <span style="font-size:13px;font-weight:600;color:${color};">${v}</span>
+        </div>`;
+      }).join('');
+
+      const costEl = document.getElementById('aiCostDisplay');
+      if (costEl) costEl.textContent = `예상 월 비용: ${status.monthlyCost}`;
+    }
+
+    // 저장된 AI 설정 복원
+    (function restoreAiConfig() {
+      const saved = JSON.parse(localStorage.getItem('sop_ai_config') || 'null');
+      if (saved) {
+        Object.assign(AI_CONFIG, saved);
+      }
+      const keys = JSON.parse(localStorage.getItem('sop_ai_keys') || 'null');
+      if (keys) {
+        Object.assign(AI_CONFIG.keys, keys);
+      }
+    })();
+
+    // ===== 초기화 =====
+    renderSopList();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOP Training System - 로그인</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="icon" href="assets/icon-192.svg">
+</head>
+<body>
+
+  <div class="login-container">
+    <div class="login-card">
+      <!-- 로고 영역 -->
+      <div class="logo">&#128218;</div>
+      <h1>SOP Training</h1>
+      <p class="subtitle">직원 교육 시스템에 로그인하세요</p>
+
+      <!-- 에러 메시지 (숨겨져 있다가 에러시 표시) -->
+      <div id="errorMsg" class="alert alert-error" style="display:none;"></div>
+
+      <!-- 로그인 폼 -->
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email">이메일</label>
+          <input
+            type="email"
+            id="email"
+            placeholder="name@company.com"
+            required
+            autocomplete="email"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password">비밀번호</label>
+          <input
+            type="password"
+            id="password"
+            placeholder="비밀번호 입력"
+            required
+            autocomplete="current-password"
+          >
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="loginBtn">
+          로그인
+        </button>
+      </form>
+
+      <!-- 언어 전환 -->
+      <div style="text-align:center; margin-top:24px;">
+        <button onclick="setLang('ko')" class="btn btn-outline" style="padding:8px 16px; font-size:13px;">한국어</button>
+        <button onclick="setLang('en')" class="btn btn-outline" style="padding:8px 16px; font-size:13px;">English</button>
+        <button onclick="setLang('vi')" class="btn btn-outline" style="padding:8px 16px; font-size:13px;">Tiếng Việt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PWA Service Worker -->
+  <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
+  <!-- 스크립트 -->
+  <script src="js/config.js"></script>
+  <script>
+    // ===== 다국어 텍스트 =====
+    const TEXTS = {
+      ko: {
+        title: 'SOP Training',
+        subtitle: '직원 교육 시스템에 로그인하세요',
+        email: '이메일',
+        password: '비밀번호',
+        login: '로그인',
+        emailPlaceholder: 'name@company.com',
+        passwordPlaceholder: '비밀번호 입력',
+        errorInvalid: '이메일 또는 비밀번호가 올바르지 않습니다.',
+        errorNetwork: '네트워크 오류가 발생했습니다. 다시 시도해주세요.',
+      },
+      en: {
+        title: 'SOP Training',
+        subtitle: 'Sign in to your training account',
+        email: 'Email',
+        password: 'Password',
+        login: 'Sign In',
+        emailPlaceholder: 'name@company.com',
+        passwordPlaceholder: 'Enter password',
+        errorInvalid: 'Invalid email or password.',
+        errorNetwork: 'Network error. Please try again.',
+      },
+      vi: {
+        title: 'SOP Training',
+        subtitle: 'Đăng nhập vào hệ thống đào tạo',
+        email: 'Email',
+        password: 'Mật khẩu',
+        login: 'Đăng nhập',
+        emailPlaceholder: 'name@company.com',
+        passwordPlaceholder: 'Nhập mật khẩu',
+        errorInvalid: 'Email hoặc mật khẩu không đúng.',
+        errorNetwork: 'Lỗi mạng. Vui lòng thử lại.',
+      }
+    };
+
+    let currentLang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
+
+    function setLang(lang) {
+      currentLang = lang;
+      localStorage.setItem('sop_lang', lang);
+      updateTexts();
+    }
+
+    function updateTexts() {
+      const t = TEXTS[currentLang];
+      document.querySelector('.login-card h1').textContent = t.title;
+      document.querySelector('.login-card .subtitle').textContent = t.subtitle;
+      document.querySelector('label[for="email"]').textContent = t.email;
+      document.querySelector('label[for="password"]').textContent = t.password;
+      document.getElementById('email').placeholder = t.emailPlaceholder;
+      document.getElementById('password').placeholder = t.passwordPlaceholder;
+      document.getElementById('loginBtn').textContent = t.login;
+    }
+
+    // 페이지 로드시 언어 적용
+    updateTexts();
+
+    // ===== 로그인 처리 =====
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('loginBtn');
+      const errorDiv = document.getElementById('errorMsg');
+
+      // 버튼 로딩 상태
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>';
+      errorDiv.style.display = 'none';
+
+      try {
+        // === Supabase 연결 전 데모 모드 ===
+        // Supabase 설정 후 아래 코드를 실제 로그인으로 교체합니다
+        if (CONFIG.SUPABASE_URL === 'https://YOUR_PROJECT.supabase.co') {
+          // 데모: admin@test.com / 1234 로 로그인
+          if (email === 'admin@test.com' && password === '1234') {
+            localStorage.setItem('sop_user', JSON.stringify({
+              id: 'demo-admin',
+              email: email,
+              role: 'admin',
+              name: '관리자',
+            }));
+            window.location.href = 'admin/index.html';
+            return;
+          } else if (email === 'staff@test.com' && password === '1234') {
+            localStorage.setItem('sop_user', JSON.stringify({
+              id: 'demo-staff',
+              email: email,
+              role: 'staff',
+              name: '직원1',
+            }));
+            window.location.href = 'app.html';
+            return;
+          } else {
+            throw new Error('invalid');
+          }
+        }
+
+        // === 실제 Supabase 로그인 (설정 후 활성화) ===
+        // const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        // if (error) throw error;
+        // window.location.href = 'app.html';
+
+      } catch (err) {
+        const t = TEXTS[currentLang];
+        errorDiv.textContent = err.message === 'invalid'
+          ? t.errorInvalid
+          : t.errorNetwork;
+        errorDiv.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = TEXTS[currentLang].login;
+      }
+    });
+  </script>
+
+</body>
+</html>

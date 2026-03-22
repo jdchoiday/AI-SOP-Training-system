@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOP Training - 내 결과</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <link rel="icon" href="assets/icon-192.svg">
+  <style>
+    .result-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .result-summary .mini-stat {
+      background: white;
+      border-radius: var(--radius);
+      padding: 16px 12px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .mini-stat .num { font-size: 28px; font-weight: 700; line-height: 1; }
+    .mini-stat .label { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
+
+    .chapter-result {
+      background: white; border-radius: var(--radius);
+      padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow);
+    }
+    .chapter-result-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+    }
+    .chapter-result-header h4 { font-size: 15px; font-weight: 600; }
+    .video-dots { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .video-dot {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600;
+    }
+    .video-dot.done { background: #dcfce7; color: var(--success); }
+    .video-dot.pending { background: var(--gray-100); color: var(--gray-500); }
+
+    .certificate {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #7c3aed 100%);
+      border-radius: 16px; padding: 40px 24px; text-align: center;
+      color: white; margin: 24px 0; position: relative; overflow: hidden;
+    }
+    .certificate::before {
+      content: ''; position: absolute; top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.03) 10px, rgba(255,255,255,0.03) 20px);
+    }
+    .certificate * { position: relative; }
+    .certificate .cert-icon { font-size: 48px; margin-bottom: 12px; }
+    .certificate h2 { font-size: 22px; margin-bottom: 4px; }
+    .certificate .cert-name {
+      font-size: 28px; font-weight: 700; margin: 16px 0 4px; padding: 8px 0;
+      border-top: 1px solid rgba(255,255,255,0.3);
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+    }
+    .certificate .cert-detail { font-size: 13px; opacity: 0.8; margin-top: 12px; }
+    .certificate .cert-date { font-size: 14px; margin-top: 16px; opacity: 0.9; }
+  </style>
+</head>
+<body>
+
+  <div class="bottom-nav">
+    <a href="app.html"><span class="nav-icon">&#127968;</span> 홈</a>
+    <a href="ai-chat.html"><span class="nav-icon">&#129302;</span> AI 질문</a>
+    <a href="my-results.html" class="active"><span class="nav-icon">&#127942;</span> 내 결과</a>
+  </div>
+
+  <div class="app-container">
+    <div class="app-header">
+      <h2>내 결과</h2>
+      <div class="user-avatar" id="userAvatar">?</div>
+    </div>
+
+    <div class="result-summary">
+      <div class="mini-stat">
+        <p class="num" style="color:var(--primary);" id="statProgress">0%</p>
+        <p class="label">전체 진행률</p>
+      </div>
+      <div class="mini-stat">
+        <p class="num" style="color:var(--success);" id="statPassed">0</p>
+        <p class="label">통과 챕터</p>
+      </div>
+      <div class="mini-stat">
+        <p class="num" style="color:var(--warning);" id="statVideos">0</p>
+        <p class="label">시청 완료</p>
+      </div>
+    </div>
+
+    <div id="certificateArea"></div>
+
+    <h3 style="margin-bottom:12px; font-size:16px; color:var(--gray-700);">챕터별 결과</h3>
+    <div id="chapterResults"></div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/ai-provider.js"></script>
+  <script src="js/sop-content-kids.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script>
+    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    if (!user) { window.location.href = 'index.html'; }
+    document.getElementById('userAvatar').textContent = (user.name || '?')[0];
+
+    const chapters = SopStore.getChapters();
+    const allResults = Progress.getAllResults();
+    const totalProgress = Progress.getTotalProgress();
+    const passedChapters = chapters.filter(ch => Progress.isChapterPassed(ch.id));
+    const completedVideoCount = allResults.completedVideos.length;
+
+    document.getElementById('statProgress').textContent = totalProgress + '%';
+    document.getElementById('statPassed').textContent = passedChapters.length;
+    document.getElementById('statVideos').textContent = completedVideoCount;
+
+    // 수료증
+    if (totalProgress >= 100) {
+      const lastDate = Object.values(allResults.chapterResults).map(r => r.date).sort().pop();
+      const dateStr = lastDate
+        ? new Date(lastDate).toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' })
+        : new Date().toLocaleDateString('ko-KR');
+      const scores = Object.values(allResults.chapterResults).map(r => r.score).filter(s => s > 0);
+      const avg = scores.length > 0 ? Math.round(scores.reduce((a,b) => a+b, 0) / scores.length) : 0;
+      const totalVids = chapters.reduce((sum, ch) => sum + SopStore.getVideos(ch.id).length, 0);
+
+      document.getElementById('certificateArea').innerHTML = `
+        <div class="certificate">
+          <div class="cert-icon">&#127942;</div>
+          <h2>SOP Training 수료증</h2>
+          <p style="opacity:0.8;">Certificate of Completion</p>
+          <p class="cert-name">${user.name || '직원'}</p>
+          <p style="font-size:14px;">위 사람은 SOP Training의 모든 과정을<br>성공적으로 이수하였음을 증명합니다.</p>
+          <p class="cert-detail">총 ${chapters.length}개 챕터 · ${totalVids}개 학습 · 평균 점수 ${avg}점</p>
+          <p class="cert-date">${dateStr}</p>
+        </div>`;
+    }
+
+    // 챕터별 결과
+    const container = document.getElementById('chapterResults');
+    chapters.forEach((ch, index) => {
+      const videos = SopStore.getVideos(ch.id);
+      const passed = Progress.isChapterPassed(ch.id);
+      const result = allResults.chapterResults[ch.id];
+      const unlocked = Progress.isChapterUnlocked(index);
+
+      let dotsHTML = videos.map(v => {
+        const done = Progress.isVideoCompleted(v.id);
+        return `<div class="video-dot ${done ? 'done' : 'pending'}">${done ? '✓' : v.order_num}</div>`;
+      }).join('');
+
+      let badge = '';
+      if (passed) {
+        badge = `<span class="badge badge-success">통과 ${result?.score || 0}점</span>`;
+      } else if (!unlocked) {
+        badge = `<span class="badge" style="background:var(--gray-100);color:var(--gray-500);">잠김</span>`;
+      } else {
+        const pct = Progress.getChapterVideoProgress(ch.id);
+        badge = pct > 0
+          ? `<span class="badge badge-warning">진행중 ${pct}%</span>`
+          : `<span class="badge" style="background:var(--gray-100);color:var(--gray-500);">미시작</span>`;
+      }
+
+      container.innerHTML += `
+        <div class="chapter-result" ${!unlocked ? 'style="opacity:0.5;"' : ''}>
+          <div class="chapter-result-header">
+            <h4>${index + 1}. ${getLocalizedText(ch, 'title')}</h4>
+            ${badge}
+          </div>
+          <div class="video-dots">${dotsHTML}</div>
+        </div>`;
+    });
+
+    // 로그아웃
+    document.getElementById('userAvatar').addEventListener('click', () => {
+      if (confirm('로그아웃 하시겠습니까?')) {
+        localStorage.removeItem('sop_user');
+        window.location.href = 'index.html';
+      }
+    });
+  </script>
+</body>
+</html>

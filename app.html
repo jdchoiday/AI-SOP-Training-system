@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOP Training - 내 학습</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <link rel="icon" href="assets/icon-192.svg">
+</head>
+<body>
+
+  <!-- PC에서는 상단 탭으로, 모바일에서는 하단 탭으로 표시 -->
+  <div class="bottom-nav">
+    <a href="app.html" class="active">
+      <span class="nav-icon">&#127968;</span> 홈
+    </a>
+    <a href="ai-chat.html">
+      <span class="nav-icon">&#129302;</span> AI 질문
+    </a>
+    <a href="my-results.html">
+      <span class="nav-icon">&#127942;</span> 내 결과
+    </a>
+  </div>
+
+  <div class="app-container">
+
+    <!-- ===== 상단 헤더 ===== -->
+    <div class="app-header">
+      <h2>SOP Training</h2>
+      <div class="user-avatar" id="userAvatar" title="로그아웃">?</div>
+    </div>
+
+    <!-- ===== 환영 카드 ===== -->
+    <div class="card">
+      <h3 style="margin-bottom:4px;" id="welcomeMsg">안녕하세요!</h3>
+      <p style="color:var(--gray-500); font-size:14px;" id="progressSummary">학습을 시작해보세요</p>
+      <div class="progress-bar" style="margin-top:12px;">
+        <div class="fill" id="totalProgress" style="width:0%"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-top:6px;">
+        <span style="font-size:12px; color:var(--gray-500);" id="progressLabel">전체 진행률</span>
+        <span style="font-size:12px; font-weight:600; color:var(--primary);" id="progressPercent">0%</span>
+      </div>
+    </div>
+
+    <!-- ===== 오늘의 할 일 카드 ===== -->
+    <div class="card" id="nextActionCard" style="border-left:3px solid var(--primary);">
+      <p style="font-size:12px; color:var(--gray-500); margin-bottom:4px;">다음 할 일</p>
+      <p style="font-weight:600;" id="nextActionText">챕터 1 시작하기</p>
+    </div>
+
+    <!-- ===== 챕터 목록 ===== -->
+    <h3 style="margin:20px 0 12px; font-size:16px; color:var(--gray-700);">학습 챕터</h3>
+
+    <div id="chapterList">
+      <!-- JS에서 동적 생성 -->
+    </div>
+
+    <!-- 모바일 하단 네비 중복은 CSS가 처리 -->
+
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/ai-provider.js"></script>
+  <script src="js/sop-content-kids.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script>
+    // ===== 로그인 확인 =====
+    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    if (!user) {
+      window.location.href = 'index.html';
+    } else {
+      document.getElementById('userAvatar').textContent = (user.name || '?')[0];
+      document.getElementById('welcomeMsg').textContent =
+        `안녕하세요, ${user.name || '직원'}님!`;
+    }
+
+    // ===== 챕터 데이터 (SOP에서 자동 생성) =====
+    const chapters = SopStore.getChapters();
+
+    // ===== 전체 진행률 =====
+    function updateProgress() {
+      const pct = Progress.getTotalProgress();
+      document.getElementById('totalProgress').style.width = pct + '%';
+      document.getElementById('progressPercent').textContent = pct + '%';
+
+      const passedCount = chapters.filter(ch => Progress.isChapterPassed(ch.id)).length;
+      document.getElementById('progressSummary').textContent =
+        `${chapters.length}개 챕터 중 ${passedCount}개 완료`;
+
+      if (pct >= 100) {
+        document.getElementById('totalProgress').classList.add('success');
+      }
+    }
+
+    // ===== 다음 할 일 표시 =====
+    function updateNextAction() {
+      let nextText = '모든 학습을 완료했습니다!';
+      const card = document.getElementById('nextActionCard');
+
+      for (let i = 0; i < chapters.length; i++) {
+        const ch = chapters[i];
+        if (!Progress.isChapterPassed(ch.id)) {
+          if (!Progress.isChapterUnlocked(i)) {
+            nextText = '이전 챕터를 먼저 완료하세요';
+          } else if (!Progress.isChapterAllVideosComplete(ch.id)) {
+            const videos = SopStore.getVideos(ch.id);
+            const nextVideo = videos.find(v => !Progress.isVideoCompleted(v.id));
+            nextText = nextVideo
+              ? `${getLocalizedText(ch, 'title')} → 씬 ${nextVideo.order_num}`
+              : `${getLocalizedText(ch, 'title')} 퀴즈 도전!`;
+          } else {
+            nextText = `${getLocalizedText(ch, 'title')} 퀴즈 도전!`;
+          }
+          card.style.borderLeftColor = 'var(--primary)';
+          break;
+        }
+      }
+
+      if (Progress.getTotalProgress() >= 100) {
+        card.style.borderLeftColor = 'var(--success)';
+      }
+
+      document.getElementById('nextActionText').textContent = nextText;
+    }
+
+    // ===== 챕터 목록 렌더링 =====
+    function renderChapters() {
+      const container = document.getElementById('chapterList');
+      container.innerHTML = '';
+      container.className = 'chapter-grid';
+
+      if (chapters.length === 0) {
+        container.innerHTML = '<div class="card" style="text-align:center; color:var(--gray-500); padding:40px;"><p>아직 배포된 교육이 없습니다.</p><p style="font-size:13px;">관리자가 SOP를 배포하면 여기에 표시됩니다.</p></div>';
+        return;
+      }
+
+      chapters.forEach((ch, index) => {
+        const unlocked = Progress.isChapterUnlocked(index);
+        const passed = Progress.isChapterPassed(ch.id);
+        const videoProgress = Progress.getChapterVideoProgress(ch.id);
+        const videos = SopStore.getVideos(ch.id);
+        const totalDuration = videos.reduce((sum, v) => sum + v.duration, 0);
+
+        let statusClass = unlocked ? '' : 'locked';
+        if (passed) statusClass = 'completed';
+
+        let statusIcon = '';
+        if (passed) {
+          statusIcon = '<span style="color:var(--success);font-size:20px;">&#9989;</span>';
+        } else if (!unlocked) {
+          statusIcon = '<svg width="20" height="20" fill="none" stroke="var(--gray-300)" stroke-width="2"><path d="M10 2a4 4 0 014 4v2H6V6a4 4 0 014-4zM4 10h12v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z"/></svg>';
+        } else {
+          statusIcon = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 4l8 8-8 8"/></svg>';
+        }
+
+        const subtitle = !unlocked
+          ? '이전 챕터를 완료하세요'
+          : passed
+            ? '완료! 점수: ' + (Progress.getAllResults().chapterResults[ch.id]?.score || 0) + '점'
+            : `${videos.length}개 씬 · 약 ${ch.estimatedMinutes}분`;
+
+        const progressHTML = unlocked && !passed && videoProgress > 0
+          ? `<div class="progress-bar" style="margin-top:8px;height:4px;"><div class="fill" style="width:${videoProgress}%"></div></div>`
+          : '';
+
+        const link = unlocked ? `chapter.html?id=${ch.id}` : '#';
+
+        container.innerHTML += `
+          <a class="chapter-item ${statusClass}" href="${link}" ${!unlocked ? 'onclick="return false;"' : ''}>
+            <div class="chapter-num">${index + 1}</div>
+            <div class="chapter-info">
+              <h3>${getLocalizedText(ch, 'title')}</h3>
+              <p>${subtitle}</p>
+              ${progressHTML}
+            </div>
+            ${statusIcon}
+          </a>
+        `;
+      });
+    }
+
+    // ===== 초기화 =====
+    updateProgress();
+    updateNextAction();
+    renderChapters();
+
+    // 로그아웃
+    document.getElementById('userAvatar').addEventListener('click', () => {
+      if (confirm('로그아웃 하시겠습니까?')) {
+        localStorage.removeItem('sop_user');
+        window.location.href = 'index.html';
+      }
+    });
+  </script>
+
+</body>
+</html>
