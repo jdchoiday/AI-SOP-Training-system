@@ -51,6 +51,20 @@
         </button>
       </form>
 
+      <!-- 비밀번호 찾기 -->
+      <p style="text-align:center; margin-top:16px;">
+        <a href="#" onclick="showPasswordReset(); return false;" style="color:var(--primary); font-size:13px; text-decoration:none;" id="forgotLink">비밀번호를 잊으셨나요?</a>
+      </p>
+
+      <!-- 비밀번호 재설정 폼 (숨김) -->
+      <div id="resetForm" style="display:none; margin-top:16px; padding:16px; background:var(--gray-50); border-radius:10px;">
+        <p style="font-size:14px; font-weight:600; margin-bottom:8px;" id="resetTitle">비밀번호 재설정</p>
+        <p style="font-size:13px; color:var(--gray-500); margin-bottom:12px;" id="resetDesc">관리자에게 문의하거나 아래에서 이메일을 확인하세요</p>
+        <input type="email" id="resetEmail" placeholder="가입한 이메일" style="width:100%;padding:10px;border:1px solid var(--gray-200);border-radius:8px;margin-bottom:8px;">
+        <button onclick="handlePasswordReset()" class="btn btn-primary" style="width:100%;padding:10px;">확인</button>
+        <p id="resetResult" style="font-size:13px; margin-top:8px; display:none;"></p>
+      </div>
+
       <!-- 언어 전환 -->
       <div style="text-align:center; margin-top:24px;">
         <button onclick="setLang('ko')" class="btn btn-outline" style="padding:8px 16px; font-size:13px;">한국어</button>
@@ -131,6 +145,45 @@
 
     // 페이지 로드시 언어 적용
     updateTexts();
+
+    // ===== 비밀번호 재설정 =====
+    function showPasswordReset() {
+      const form = document.getElementById('resetForm');
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+    async function handlePasswordReset() {
+      const email = document.getElementById('resetEmail').value.trim();
+      const result = document.getElementById('resetResult');
+      if (!email) { result.textContent = '이메일을 입력하세요.'; result.style.color = '#dc2626'; result.style.display = 'block'; return; }
+
+      // Supabase에서 직원 조회
+      if (SupabaseMode._ready) {
+        try {
+          const { data } = await SupabaseMode.client.from('employees').select('name,email').eq('email', email).single();
+          if (data) {
+            result.innerHTML = `✅ <strong>${data.name}</strong>님의 계정이 확인되었습니다.<br>관리자에게 비밀번호 초기화를 요청하세요.`;
+            result.style.color = '#166534';
+          } else {
+            result.textContent = '해당 이메일로 등록된 계정이 없습니다.';
+            result.style.color = '#dc2626';
+          }
+        } catch {
+          result.textContent = '해당 이메일로 등록된 계정이 없습니다.';
+          result.style.color = '#dc2626';
+        }
+      } else {
+        // 데모 모드
+        if (email === 'admin@test.com' || email === 'staff@test.com') {
+          result.innerHTML = '✅ 데모 계정입니다. 비밀번호는 <strong>1234</strong> 입니다.';
+          result.style.color = '#166534';
+        } else {
+          result.textContent = '해당 이메일로 등록된 계정이 없습니다.';
+          result.style.color = '#dc2626';
+        }
+      }
+      result.style.display = 'block';
+    }
 
     // ===== 로그인 처리 =====
     document.getElementById('loginForm').addEventListener('submit', async (e) => {

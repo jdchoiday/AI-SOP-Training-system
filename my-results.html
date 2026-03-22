@@ -138,6 +138,7 @@
           <p style="font-size:14px;">위 사람은 SOP Training의 모든 과정을<br>성공적으로 이수하였음을 증명합니다.</p>
           <p class="cert-detail">총 ${chapters.length}개 챕터 · ${totalVids}개 학습 · 평균 점수 ${avg}점</p>
           <p class="cert-date">${dateStr}</p>
+          <button onclick="downloadCertificate()" style="margin-top:20px; background:white; color:#2563eb; border:none; border-radius:8px; padding:12px 32px; font-size:15px; font-weight:700; cursor:pointer;">📥 수료증 저장</button>
         </div>`;
     }
 
@@ -175,6 +176,93 @@
           <div class="video-dots">${dotsHTML}</div>
         </div>`;
     });
+
+    // 수료증 이미지 저장
+    function downloadCertificate() {
+      const cert = document.querySelector('.certificate');
+      if (!cert) return;
+
+      // Create canvas from certificate
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 800;
+      canvas.height = 500;
+
+      // Background gradient
+      const grad = ctx.createLinearGradient(0, 0, 800, 500);
+      grad.addColorStop(0, '#1e3a5f');
+      grad.addColorStop(0.5, '#2563eb');
+      grad.addColorStop(1, '#7c3aed');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 800, 500);
+
+      // Border
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(20, 20, 760, 460);
+      ctx.strokeRect(30, 30, 740, 440);
+
+      // Text
+      ctx.fillStyle = 'white';
+      ctx.textAlign = 'center';
+
+      ctx.font = '40px serif';
+      ctx.fillText('🏆', 400, 80);
+
+      ctx.font = 'bold 28px sans-serif';
+      ctx.fillText('SOP Training 수료증', 400, 130);
+
+      ctx.font = '16px sans-serif';
+      ctx.globalAlpha = 0.8;
+      ctx.fillText('Certificate of Completion', 400, 160);
+      ctx.globalAlpha = 1;
+
+      // Line
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(200, 200);
+      ctx.lineTo(600, 200);
+      ctx.stroke();
+
+      // Name
+      ctx.font = 'bold 36px sans-serif';
+      ctx.fillText(user.name || '직원', 400, 250);
+
+      // Line
+      ctx.beginPath();
+      ctx.moveTo(200, 275);
+      ctx.lineTo(600, 275);
+      ctx.stroke();
+
+      // Description
+      ctx.font = '16px sans-serif';
+      ctx.fillText('위 사람은 SOP Training의 모든 과정을', 400, 315);
+      ctx.fillText('성공적으로 이수하였음을 증명합니다.', 400, 340);
+
+      // Stats
+      const scores = Object.values(allResults.chapterResults).map(r => r.score).filter(s => s > 0);
+      const avg = scores.length > 0 ? Math.round(scores.reduce((a,b) => a+b, 0) / scores.length) : 0;
+      const totalVids = chapters.reduce((sum, ch) => sum + SopStore.getVideos(ch.id).length, 0);
+      ctx.font = '14px sans-serif';
+      ctx.globalAlpha = 0.8;
+      ctx.fillText(`총 ${chapters.length}개 챕터 · ${totalVids}개 학습 · 평균 점수 ${avg}점`, 400, 385);
+      ctx.globalAlpha = 1;
+
+      // Date
+      const lastDate = Object.values(allResults.chapterResults).map(r => r.date).sort().pop();
+      const dateStr = lastDate
+        ? new Date(lastDate).toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' })
+        : new Date().toLocaleDateString('ko-KR');
+      ctx.font = '15px sans-serif';
+      ctx.fillText(dateStr, 400, 420);
+
+      // Download
+      const link = document.createElement('a');
+      link.download = `SOP_수료증_${user.name || '직원'}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
 
     // 로그아웃
     document.getElementById('userAvatar').addEventListener('click', () => {

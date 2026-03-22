@@ -296,6 +296,7 @@
     // ===== 비디오 열기 =====
     function openVideo(videoId) {
       currentVideoId = videoId;
+      localStorage.setItem('sop_last_video_' + chapterId, videoId);
       const video = videos.find(v => v.id === videoId);
       if (!video) return;
 
@@ -329,7 +330,7 @@
 
     // ===== 시청 완료 =====
     document.getElementById('completeVideoBtn').addEventListener('click', () => {
-      Progress.completeVideo(currentVideoId);
+      Progress.completeVideo(currentVideoId, chapterId);
       document.getElementById('videoPlayer').src = '';
       showView('videoListView');
       renderVideoList();
@@ -365,6 +366,9 @@
       const optionsDiv = document.getElementById('quizOptions');
       optionsDiv.innerHTML = '';
 
+      const existingExplanation = document.getElementById('quizExplanation');
+      if (existingExplanation) existingExplanation.remove();
+
       const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
       const options = (lang === 'en' && q.options_en) ? q.options_en
         : (lang === 'vi' && q.options_vn) ? q.options_vn
@@ -383,8 +387,8 @@
 
     function handleAnswer(selected, correct) {
       const options = document.querySelectorAll('.quiz-option');
+      const q = currentQuiz[quizIndex];
       options.forEach((opt, i) => {
-        // 클릭 비활성화
         opt.style.pointerEvents = 'none';
         if (i === correct) {
           opt.classList.add('correct');
@@ -395,6 +399,28 @@
       });
 
       if (selected === correct) quizCorrect++;
+
+      // Show explanation
+      let explanationDiv = document.getElementById('quizExplanation');
+      if (!explanationDiv) {
+        explanationDiv = document.createElement('div');
+        explanationDiv.id = 'quizExplanation';
+        explanationDiv.style.cssText = 'margin-top:12px; padding:14px; border-radius:10px; font-size:14px; line-height:1.6;';
+        document.getElementById('quizOptions').after(explanationDiv);
+      }
+
+      const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
+      const opts = (lang === 'en' && q.options_en) ? q.options_en : (lang === 'vi' && q.options_vn) ? q.options_vn : q.options;
+
+      if (selected === correct) {
+        explanationDiv.style.background = '#dcfce7';
+        explanationDiv.style.color = '#166534';
+        explanationDiv.innerHTML = '✅ <strong>정답입니다!</strong>';
+      } else {
+        explanationDiv.style.background = '#fef2f2';
+        explanationDiv.style.color = '#991b1b';
+        explanationDiv.innerHTML = `❌ <strong>오답입니다.</strong><br>정답: <strong>${opts[correct]}</strong>`;
+      }
 
       const nextBtn = document.getElementById('quizNextBtn');
       nextBtn.style.display = 'block';
@@ -464,6 +490,17 @@
 
     // ===== 초기 렌더링 =====
     renderVideoList();
+
+    // Auto-resume: scroll to last watched video
+    const lastVideo = localStorage.getItem('sop_last_video_' + chapterId);
+    if (lastVideo) {
+      const items = document.querySelectorAll('.video-item');
+      const idx = videos.findIndex(v => v.id === lastVideo);
+      if (idx >= 0 && items[idx]) {
+        items[idx].style.boxShadow = '0 0 0 2px var(--primary)';
+        items[idx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
   </script>
 
 </body>
