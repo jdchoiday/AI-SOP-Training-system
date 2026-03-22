@@ -22,13 +22,13 @@ const CONFIG = {
   // 'groq'   = Groq (무료 티어 가능, Llama 모델)
   AI: {
     // 스크립트 생성: SOP → 영상 나레이션
-    scriptProvider: 'local',    // 'local' 추천 (무료, 충분한 품질)
+    scriptProvider: 'gemini',   // Gemini 무료 티어 (고품질 스크립트)
 
     // 퀴즈 생성: SOP → 4지선다 문제
-    quizProvider: 'local',      // 'local' 추천 (무료)
+    quizProvider: 'gemini',     // Gemini 무료 티어 (고품질 퀴즈)
 
     // 챗봇: 직원 SOP 질의응답
-    chatProvider: 'local',      // 'gemini' 추천 (무료 티어로 고품질)
+    chatProvider: 'gemini',     // Gemini 무료 티어 (고품질 챗봇)
 
     // TTS: 나레이션 음성
     ttsProvider: 'none',        // 'edge' 추천 (무료+고품질)
@@ -39,7 +39,7 @@ const CONFIG = {
 
     // API 키 (사용할 제공자만 입력)
     keys: {
-      gemini: '',        // https://aistudio.google.com 에서 무료 발급
+      gemini: 'AIzaSyBCsnJr0WTvLUa7AuZKAloafg5d97EH_VI',        // https://aistudio.google.com 에서 무료 발급
       openai: '',        // https://platform.openai.com 에서 발급 (유료)
       groq: '',          // https://console.groq.com 에서 무료 발급
       siliconflow: '',   // https://siliconflow.com 에서 발급 (Wan 영상 생성)

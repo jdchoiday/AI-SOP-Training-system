@@ -64,7 +64,15 @@
   <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
   <!-- 스크립트 -->
   <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
   <script>
+    // Supabase 초기화
+    SupabaseMode.init().then(connected => {
+      if (connected) {
+        console.log('[Login] Supabase 모드 활성화');
+      }
+    });
+
     // ===== 다국어 텍스트 =====
     const TEXTS = {
       ko: {
@@ -139,37 +147,38 @@
       errorDiv.style.display = 'none';
 
       try {
-        // === Supabase 연결 전 데모 모드 ===
-        // Supabase 설정 후 아래 코드를 실제 로그인으로 교체합니다
-        if (CONFIG.SUPABASE_URL === 'https://YOUR_PROJECT.supabase.co') {
-          // 데모: admin@test.com / 1234 로 로그인
+        let user = null;
+
+        // Supabase 모드: DB에서 직원 조회
+        if (SupabaseMode._ready) {
+          user = await SupabaseMode.login(email, password);
+        }
+
+        // Supabase에서 못 찾으면 데모 로그인 시도
+        if (!user) {
           if (email === 'admin@test.com' && password === '1234') {
-            localStorage.setItem('sop_user', JSON.stringify({
-              id: 'demo-admin',
-              email: email,
-              role: 'admin',
-              name: '관리자',
-            }));
-            window.location.href = 'admin/index.html';
-            return;
+            user = { id: 'demo-admin', email, role: 'admin', name: '관리자' };
           } else if (email === 'staff@test.com' && password === '1234') {
-            localStorage.setItem('sop_user', JSON.stringify({
-              id: 'demo-staff',
-              email: email,
-              role: 'staff',
-              name: '직원1',
-            }));
-            window.location.href = 'app.html';
-            return;
-          } else {
-            throw new Error('invalid');
+            user = { id: 'demo-staff', email, role: 'staff', name: '직원1' };
           }
         }
 
-        // === 실제 Supabase 로그인 (설정 후 활성화) ===
-        // const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        // if (error) throw error;
-        // window.location.href = 'app.html';
+        if (!user) throw new Error('invalid');
+
+        // 로그인 성공 → 세션 저장
+        localStorage.setItem('sop_user', JSON.stringify(user));
+
+        // Supabase에서 데이터 동기화
+        if (SupabaseMode._ready) {
+          await SupabaseMode.syncAll();
+        }
+
+        // 역할별 페이지 이동
+        if (user.role === 'admin') {
+          window.location.href = 'admin/index.html';
+        } else {
+          window.location.href = 'app.html';
+        }
 
       } catch (err) {
         const t = TEXTS[currentLang];

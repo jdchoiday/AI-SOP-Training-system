@@ -63,6 +63,7 @@
   </div>
 
   <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
   <script src="js/ai-provider.js"></script>
   <script src="js/sop-content-kids.js"></script>
   <script src="js/demo-data.js"></script>
@@ -75,6 +76,18 @@
       document.getElementById('userAvatar').textContent = (user.name || '?')[0];
       document.getElementById('welcomeMsg').textContent =
         `안녕하세요, ${user.name || '직원'}님!`;
+    }
+
+    // Supabase 초기화 (최초 1회만 동기화)
+    if (!sessionStorage.getItem('sb_synced')) {
+      SupabaseMode.init().then(connected => {
+        if (connected) {
+          SupabaseMode.syncAll().then(() => {
+            sessionStorage.setItem('sb_synced', '1');
+            location.reload();
+          });
+        }
+      });
     }
 
     // ===== 챕터 데이터 (SOP에서 자동 생성) =====
