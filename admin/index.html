@@ -355,6 +355,12 @@
         <div class="stat-card"><p class="label">진행 중</p><p class="value" style="color:var(--warning);" id="statInProgress">0</p></div>
         <div class="stat-card"><p class="label">미시작</p><p class="value" style="color:var(--danger);" id="statNotStarted">0</p></div>
       </div>
+      <!-- 마감일 알림 -->
+      <div id="deadlineAlerts" class="card" style="margin-bottom:16px; display:none; border-left:3px solid var(--warning);">
+        <h4 style="font-size:14px; color:var(--warning); margin-bottom:8px;">⏰ 학습 마감 임박</h4>
+        <div id="deadlineList"></div>
+      </div>
+
       <!-- 차트: 지점별 + 학습 상태 -->
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
         <div class="card">
@@ -386,6 +392,7 @@
       <div class="topbar">
         <h1>직원 관리</h1>
         <button class="btn btn-primary" style="padding:10px 20px; font-size:14px;" onclick="openModal('addEmployee')">+ 직원 추가</button>
+        <button class="btn btn-outline" style="padding:10px 20px; font-size:14px;" onclick="openModal('inviteLink')">🔗 초대 링크</button>
       </div>
       <div class="card" style="padding:0; overflow:hidden;">
         <div style="overflow-x:auto;">
@@ -398,7 +405,10 @@
     <!-- ========== 리포트 ========== -->
     <div id="page-reports" style="display:none;">
       <div class="topbar"><h1>리포트</h1>
-        <button class="btn btn-outline" style="padding:8px 16px; font-size:13px;" onclick="exportAllCSV()">&#128229; CSV 다운로드</button>
+        <div class="topbar-actions">
+          <button class="btn btn-outline" style="padding:8px 16px; font-size:13px;" onclick="openModal('setDeadline')">⏰ 마감일 설정</button>
+          <button class="btn btn-outline" style="padding:8px 16px; font-size:13px;" onclick="exportAllCSV()">&#128229; CSV 다운로드</button>
+        </div>
       </div>
       <div class="card"><h3 style="font-size:16px; font-weight:600; margin-bottom:16px;">지점별 학습 현황</h3><div id="branchReport"></div></div>
       <div class="card" style="margin-top:16px;"><h3 style="font-size:16px; font-weight:600; margin-bottom:16px;">챕터별 통과율</h3><div id="chapterReport"></div></div>
@@ -1003,6 +1013,7 @@
     }
 
     function renderDashboard() {
+      checkDeadlineAlerts();
       const emps = getEmployeesWithProgress();
       const c = emps.filter(e => e.status === 'completed').length;
       const p = emps.filter(e => e.status === 'in_progress').length;
@@ -1192,6 +1203,47 @@
           <textarea id="csvInput" rows="5" style="width:100%;padding:12px;border:1px solid var(--gray-300);border-radius:8px;font-family:monospace;font-size:13px;" placeholder="홍길동,hong@co.com,서울 강남점,staff&#10;Nguyen A,nguyen@co.com,호치민 1호점,staff"></textarea>
           <button class="btn btn-primary" style="margin-top:8px;width:100%;" onclick="bulkAddEmployees()">일괄 등록</button>`;
       }
+      else if (type==='inviteLink') {
+  const code = 'INV-' + Math.random().toString(36).substr(2,8).toUpperCase();
+  const baseUrl = window.location.origin || 'https://your-domain.vercel.app';
+  const link = baseUrl + '/register.html?code=' + code;
+  m.innerHTML=`<h3>🔗 직원 초대 링크 생성</h3>
+    <p style="font-size:14px;color:var(--gray-500);margin-bottom:16px;">이 링크를 직원에게 공유하면 스스로 가입할 수 있습니다</p>
+    <div class="form-group"><label>지점 지정</label>
+      <select id="inviteBranch"><option>서울 강남점</option><option>서울 홍대점</option><option>부산 해운대점</option><option>호치민 1호점</option><option>하노이 1호점</option></select></div>
+    <div class="form-group"><label>최대 사용 횟수</label>
+      <select id="inviteMax"><option value="5">5명</option><option value="10" selected>10명</option><option value="20">20명</option><option value="50">50명</option></select></div>
+    <div style="background:var(--gray-50);padding:16px;border-radius:8px;margin:16px 0;">
+      <label style="font-size:12px;color:var(--gray-500);display:block;margin-bottom:4px;">초대 링크</label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="inviteLinkUrl" value="${link}" readonly style="flex:1;padding:10px;border:1px solid var(--gray-300);border-radius:8px;font-size:13px;font-family:monospace;">
+        <button class="btn btn-primary" style="padding:10px 16px;white-space:nowrap;" onclick="copyInviteLink()">복사</button>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--gray-500);">⚠️ 이 링크로 가입한 직원은 자동으로 선택한 지점에 배정됩니다</p>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="saveInvitation('${code}')">링크 활성화</button>
+      <button class="btn btn-outline" onclick="closeModal()">닫기</button>
+    </div>`;
+}
+      else if (type==='setDeadline') {
+        const sops = getSops().filter(s => s.status === 'published');
+        const sopOptions = sops.map(s => `<option value="${s.id}">${s.title}</option>`).join('');
+        m.innerHTML=`<h3>⏰ 학습 마감일 설정</h3>
+          <p style="font-size:14px;color:var(--gray-500);margin-bottom:16px;">배포된 SOP에 학습 마감일을 설정합니다</p>
+          <div class="form-group"><label>대상 SOP</label>
+            <select id="deadlineSop">${sopOptions || '<option disabled>배포된 SOP가 없습니다</option>'}</select></div>
+          <div class="form-group"><label>대상 지점</label>
+            <select id="deadlineBranch"><option value="all">전체 지점</option><option>서울 강남점</option><option>서울 홍대점</option><option>부산 해운대점</option><option>호치민 1호점</option><option>하노이 1호점</option></select></div>
+          <div class="form-group"><label>마감일</label>
+            <input type="date" id="deadlineDate" min="${new Date().toISOString().slice(0,10)}"></div>
+          <div style="display:flex;gap:8px;margin-top:20px;">
+            <button class="btn btn-primary" style="flex:1;" onclick="saveDeadline()">마감일 설정</button>
+            <button class="btn btn-outline" onclick="closeModal()">취소</button>
+          </div>
+          <div id="existingDeadlines" style="margin-top:20px;"></div>`;
+        renderExistingDeadlines();
+      }
       document.getElementById('modalOverlay').classList.add('show');
     }
 
@@ -1227,11 +1279,42 @@
         created: new Date().toISOString().slice(0, 10)
       });
       EmployeeStore.save(emps);
+
+      // Supabase에도 저장
+      if (SupabaseMode._ready) {
+        SupabaseMode.addEmployee({ name, email, password: '1234', branch, role }).catch(e => console.error('Employee Supabase sync:', e));
+      }
+
       closeModal();
       renderEmployeeManage();
     }
 
     function closeModal(){document.getElementById('modalOverlay').classList.remove('show');}
+
+function copyInviteLink() {
+  const input = document.getElementById('inviteLinkUrl');
+  input.select();
+  document.execCommand('copy');
+  alert('링크가 복사되었습니다!');
+}
+
+function saveInvitation(code) {
+  const branch = document.getElementById('inviteBranch').value;
+  const maxUses = parseInt(document.getElementById('inviteMax').value);
+  const invites = JSON.parse(localStorage.getItem('sop_invitations') || '[]');
+  invites.push({ code, branch, maxUses, usedCount: 0, createdAt: new Date().toISOString() });
+  localStorage.setItem('sop_invitations', JSON.stringify(invites));
+
+  // Supabase에도 저장
+  if (SupabaseMode._ready) {
+    SupabaseMode.client.from('invitations').insert({
+      code, branch, max_uses: maxUses, used_count: 0, created_by: user?.id
+    }).catch(e => console.error('Invitation save error:', e));
+  }
+
+  alert('초대 링크가 활성화되었습니다!\n직원에게 링크를 공유하세요.');
+  closeModal();
+}
 
     function exportAllCSV() {
       const emps = getEmployeesWithProgress();
@@ -1242,6 +1325,58 @@
       }).join('\n');
       const b=new Blob(['\uFEFF'+h+r],{type:'text/csv;charset=utf-8;'});
       const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`sop_report_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+    }
+
+    // ===== 마감일 관리 =====
+    function saveDeadline() {
+      const sopId = document.getElementById('deadlineSop').value;
+      const branch = document.getElementById('deadlineBranch').value;
+      const date = document.getElementById('deadlineDate').value;
+      if (!sopId || !date) { alert('SOP와 마감일을 선택하세요'); return; }
+
+      const deadlines = JSON.parse(localStorage.getItem('sop_deadlines') || '[]');
+      const sop = getSops().find(s => s.id === sopId);
+      deadlines.push({ id: 'dl-'+Date.now(), sopId, sopTitle: sop?.title || '', branch, deadlineAt: date, createdAt: new Date().toISOString() });
+      localStorage.setItem('sop_deadlines', JSON.stringify(deadlines));
+
+      if (SupabaseMode._ready) {
+        SupabaseMode.client.from('deadlines').insert({ sop_id: sopId, branch: branch === 'all' ? '' : branch, deadline_at: date + 'T23:59:59Z' }).catch(e => console.error('Deadline save:', e));
+      }
+
+      alert('마감일이 설정되었습니다!');
+      renderExistingDeadlines();
+    }
+
+    function renderExistingDeadlines() {
+      const container = document.getElementById('existingDeadlines');
+      if (!container) return;
+      const deadlines = JSON.parse(localStorage.getItem('sop_deadlines') || '[]');
+      if (deadlines.length === 0) { container.innerHTML = '<p style="font-size:13px;color:var(--gray-500);">설정된 마감일이 없습니다</p>'; return; }
+      container.innerHTML = '<h4 style="font-size:14px;margin-bottom:8px;">설정된 마감일</h4>' + deadlines.map(d => {
+        const daysLeft = Math.ceil((new Date(d.deadlineAt) - new Date()) / (1000*60*60*24));
+        const color = daysLeft <= 3 ? 'var(--danger)' : daysLeft <= 7 ? 'var(--warning)' : 'var(--gray-700)';
+        return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100);font-size:13px;">
+          <span>${d.sopTitle} (${d.branch === 'all' ? '전체' : d.branch})</span>
+          <span style="color:${color};font-weight:600;">${d.deadlineAt} (${daysLeft > 0 ? daysLeft + '일 남음' : '만료'})</span>
+        </div>`;
+      }).join('');
+    }
+
+    function checkDeadlineAlerts() {
+      const deadlines = JSON.parse(localStorage.getItem('sop_deadlines') || '[]');
+      const upcoming = deadlines.filter(d => {
+        const days = Math.ceil((new Date(d.deadlineAt) - new Date()) / (1000*60*60*24));
+        return days > 0 && days <= 7;
+      });
+      const container = document.getElementById('deadlineAlerts');
+      const list = document.getElementById('deadlineList');
+      if (!container || !list) return;
+      if (upcoming.length === 0) { container.style.display = 'none'; return; }
+      container.style.display = 'block';
+      list.innerHTML = upcoming.map(d => {
+        const days = Math.ceil((new Date(d.deadlineAt) - new Date()) / (1000*60*60*24));
+        return `<div style="font-size:13px;padding:4px 0;"><strong>${d.sopTitle}</strong> (${d.branch === 'all' ? '전체' : d.branch}) — <span style="color:var(--danger);font-weight:600;">${days}일 남음</span></div>`;
+      }).join('');
     }
 
     function doLogout() {
