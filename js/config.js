@@ -34,7 +34,7 @@ const CONFIG = {
     ttsProvider: 'none',        // 'edge' 추천 (무료+고품질)
 
     // 영상 생성: SOP 스크립트 → 720p AI 영상
-    videoProvider: 'none',      // 'wan' 추천 ($0.29/클립, 720p, 가성비 최고)
+    videoProvider: 'wan',       // Wan 2.2 ($0.29/클립, 720p, 가성비 최고)
                                 // 'vidu' 대안 ($0.20/클립, 빠름)
 
     // API 키 (사용할 제공자만 입력)
@@ -42,7 +42,7 @@ const CONFIG = {
       gemini: 'AIzaSyBCsnJr0WTvLUa7AuZKAloafg5d97EH_VI',        // https://aistudio.google.com 에서 무료 발급
       openai: '',        // https://platform.openai.com 에서 발급 (유료)
       groq: '',          // https://console.groq.com 에서 무료 발급
-      siliconflow: '',   // https://siliconflow.com 에서 발급 (Wan 영상 생성)
+      siliconflow: 'sk-folxwzzqfasjqmdodvystwesgbatjztmxwkezfuvfglvhyvs',   // SiliconFlow (Wan 영상 생성)
       vidu: '',          // Vidu API 키 (WaveSpeedAI 또는 Atlas Cloud)
     },
 
