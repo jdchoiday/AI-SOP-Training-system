@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOP Training - 직원 가입</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <link rel="icon" href="assets/icon-192.svg">
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <div class="logo">📋</div>
+      <h1>직원 가입</h1>
+      <p class="subtitle" id="inviteInfo">초대 링크를 확인하고 있습니다...</p>
+
+      <div id="errorMsg" class="alert alert-error" style="display:none;"></div>
+
+      <form id="registerForm" style="display:none;">
+        <div class="form-group">
+          <label for="regName">이름</label>
+          <input type="text" id="regName" placeholder="홍길동" required>
+        </div>
+        <div class="form-group">
+          <label for="regEmail">이메일</label>
+          <input type="email" id="regEmail" placeholder="name@company.com" required>
+        </div>
+        <div class="form-group">
+          <label for="regPassword">비밀번호</label>
+          <input type="password" id="regPassword" placeholder="4자리 이상" required minlength="4">
+        </div>
+        <div class="form-group">
+          <label>지점</label>
+          <input type="text" id="regBranch" readonly style="background:var(--gray-50);color:var(--gray-700);">
+        </div>
+        <button type="submit" class="btn btn-primary">가입하기</button>
+      </form>
+
+      <div id="invalidMsg" style="display:none; text-align:center; padding:20px;">
+        <p style="font-size:48px; margin-bottom:12px;">🚫</p>
+        <p style="font-size:16px; font-weight:600; margin-bottom:8px;">유효하지 않은 초대 링크입니다</p>
+        <p style="font-size:14px; color:var(--gray-500);">관리자에게 새 초대 링크를 요청하세요</p>
+        <a href="index.html" class="btn btn-outline" style="margin-top:16px; display:inline-block;">로그인 페이지로</a>
+      </div>
+
+      <div id="successMsg" style="display:none; text-align:center; padding:20px;">
+        <p style="font-size:48px; margin-bottom:12px;">🎉</p>
+        <p style="font-size:16px; font-weight:600; margin-bottom:8px;">가입이 완료되었습니다!</p>
+        <p style="font-size:14px; color:var(--gray-500);">로그인하여 교육을 시작하세요</p>
+        <a href="index.html" class="btn btn-primary" style="margin-top:16px; display:inline-block; padding:12px 32px;">로그인 하기</a>
+      </div>
+
+      <div style="text-align:center; margin-top:24px;">
+        <a href="index.html" style="color:var(--gray-500); font-size:13px; text-decoration:none;">이미 계정이 있나요? 로그인</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteCode = urlParams.get('code');
+    let currentInvite = null;
+
+    async function init() {
+      if (!inviteCode) {
+        showInvalid();
+        return;
+      }
+
+      // Supabase 초기화
+      await SupabaseMode.init();
+
+      // 초대 코드 검증
+      let invite = null;
+
+      // 1) Supabase에서 확인
+      if (SupabaseMode._ready) {
+        try {
+          const { data } = await SupabaseMode.client
+            .from('invitations')
+            .select('*')
+            .eq('code', inviteCode)
+            .single();
+          if (data && data.used_count < data.max_uses) {
+            invite = {
+              code: data.code,
+              branch: data.branch,
+              maxUses: data.max_uses,
+              usedCount: data.used_count
+            };
+          }
+        } catch(e) { console.log('Supabase invite check:', e); }
+      }
+
+      // 2) localStorage에서 확인 (폴백)
+      if (!invite) {
+        const invites = JSON.parse(localStorage.getItem('sop_invitations') || '[]');
+        const local = invites.find(i => i.code === inviteCode && i.usedCount < i.maxUses);
+        if (local) invite = local;
+      }
+
+      if (!invite) {
+        showInvalid();
+        return;
+      }
+
+      currentInvite = invite;
+      document.getElementById('inviteInfo').textContent = invite.branch + ' 직원 가입';
+      document.getElementById('regBranch').value = invite.branch;
+      document.getElementById('registerForm').style.display = 'block';
+    }
+
+    function showInvalid() {
+      document.getElementById('inviteInfo').style.display = 'none';
+      document.getElementById('invalidMsg').style.display = 'block';
+    }
+
+    document.getElementById('registerForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const name = document.getElementById('regName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value;
+
+      if (!name || !email || password.length < 4) {
+        document.getElementById('errorMsg').textContent = '모든 필드를 올바르게 입력하세요';
+        document.getElementById('errorMsg').style.display = 'block';
+        return;
+      }
+
+      // 이메일 중복 체크
+      const existing = EmployeeStore.getAll();
+      if (existing.find(e => e.email === email)) {
+        document.getElementById('errorMsg').textContent = '이미 등록된 이메일입니다';
+        document.getElementById('errorMsg').style.display = 'block';
+        return;
+      }
+
+      // 직원 등록
+      const newEmp = {
+        id: 'emp-' + Date.now(),
+        name, email, branch: currentInvite.branch,
+        role: 'staff',
+        created: new Date().toISOString().slice(0, 10)
+      };
+
+      existing.push(newEmp);
+      EmployeeStore.save(existing);
+
+      // Supabase에도 저장
+      if (SupabaseMode._ready) {
+        try {
+          await SupabaseMode.client.from('employees').insert({
+            name, email, password_hash: password,
+            branch: currentInvite.branch, role: 'staff'
+          });
+
+          // 초대 사용 횟수 증가
+          await SupabaseMode.client.from('invitations')
+            .update({ used_count: currentInvite.usedCount + 1 })
+            .eq('code', currentInvite.code);
+        } catch(e) { console.error('Supabase register error:', e); }
+      }
+
+      // localStorage 초대 사용 횟수 업데이트
+      const invites = JSON.parse(localStorage.getItem('sop_invitations') || '[]');
+      const idx = invites.findIndex(i => i.code === currentInvite.code);
+      if (idx !== -1) {
+        invites[idx].usedCount++;
+        localStorage.setItem('sop_invitations', JSON.stringify(invites));
+      }
+
+      // 성공 표시
+      document.getElementById('registerForm').style.display = 'none';
+      document.getElementById('inviteInfo').style.display = 'none';
+      document.getElementById('successMsg').style.display = 'block';
+    });
+
+    init();
+  </script>
+</body>
+</html>
