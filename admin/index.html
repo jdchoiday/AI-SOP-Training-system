@@ -490,6 +490,7 @@
   </div>
 
   <script src="../js/config.js"></script>
+  <script src="../js/supabase-client.js"></script>
   <script src="../js/ai-provider.js"></script>
   <script src="../js/sop-content-kids.js"></script>
   <script src="../js/demo-data.js"></script>
@@ -498,9 +499,24 @@
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
     if (!user || user.role !== 'admin') { window.location.href = '../index.html'; }
 
-    // ===== SOP 데이터 (localStorage) =====
+    // Supabase 초기화 + 데이터 동기화
+    SupabaseMode.init().then(connected => {
+      if (connected) {
+        SupabaseMode.syncAll().then(() => {
+          renderSopList();
+          renderTrainingReport();
+        });
+      }
+    });
+
+    // ===== SOP 데이터 (localStorage + Supabase 동기화) =====
     function getSops() { return JSON.parse(localStorage.getItem('sop_documents') || '[]'); }
-    function saveSops(sops) { localStorage.setItem('sop_documents', JSON.stringify(sops)); }
+    function saveSops(sops) {
+      localStorage.setItem('sop_documents', JSON.stringify(sops));
+      if (SupabaseMode._ready) {
+        SupabaseMode.saveAllSops(sops).catch(e => console.error('Admin SOP sync:', e));
+      }
+    }
 
     // 초기 데모 SOP가 없으면 생성
     if (getSops().length === 0) {

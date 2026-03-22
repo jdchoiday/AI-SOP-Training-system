@@ -14,6 +14,10 @@ const SopStore = {
 
   save(sops) {
     localStorage.setItem(this._key, JSON.stringify(sops));
+    // Supabase 동기화
+    if (typeof SupabaseMode !== 'undefined' && SupabaseMode._ready) {
+      SupabaseMode.saveAllSops(sops).catch(e => console.error('SOP sync error:', e));
+    }
   },
 
   getById(id) {
@@ -210,6 +214,7 @@ const EmployeeStore = {
 
   save(emps) {
     localStorage.setItem(this._key, JSON.stringify(emps));
+    // Supabase 동기화 (직원 추가 시)
   },
 
   getById(id) {
@@ -272,13 +277,17 @@ const Progress = {
   },
 
   // --- 현재 로그인 직원용 ---
-  completeVideo(videoId) {
+  completeVideo(videoId, chapterId) {
     const empId = this._currentEmpId();
     if (!empId) return;
     const d = this._getEmpData(empId);
     if (!d.completedVideos.includes(videoId)) d.completedVideos.push(videoId);
     d.lastActive = new Date().toISOString();
     this._saveEmpData(empId, d);
+    // Supabase 동기화
+    if (typeof SupabaseMode !== 'undefined' && SupabaseMode._ready) {
+      SupabaseMode.saveVideoProgress(empId, videoId, chapterId || '').catch(() => {});
+    }
   },
 
   isVideoCompleted(videoId) {
@@ -303,6 +312,10 @@ const Progress = {
     d.chapterResults[chapterId] = { score, passed, date: new Date().toISOString() };
     d.lastActive = new Date().toISOString();
     this._saveEmpData(empId, d);
+    // Supabase 동기화
+    if (typeof SupabaseMode !== 'undefined' && SupabaseMode._ready) {
+      SupabaseMode.saveChapterResult(empId, chapterId, score, passed).catch(() => {});
+    }
   },
 
   isChapterPassed(chapterId) {
