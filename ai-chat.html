@@ -208,6 +208,7 @@
     document.getElementById('userAvatar').addEventListener('click', () => {
       if (confirm('로그아웃 하시겠습니까?')) {
         localStorage.removeItem('sop_user');
+        sessionStorage.removeItem('sb_synced');
         window.location.href = 'index.html';
       }
     });

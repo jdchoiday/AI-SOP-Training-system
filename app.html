@@ -134,6 +134,8 @@
 
       if (Progress.getTotalProgress() >= 100) {
         card.style.borderLeftColor = 'var(--success)';
+        card.style.cursor = 'pointer';
+        card.onclick = () => window.location.href = 'my-results.html';
       }
 
       document.getElementById('nextActionText').textContent = nextText;
@@ -182,7 +184,7 @@
         const link = unlocked ? `chapter.html?id=${ch.id}` : '#';
 
         container.innerHTML += `
-          <a class="chapter-item ${statusClass}" href="${link}" ${!unlocked ? 'onclick="return false;"' : ''}>
+          <a class="chapter-item ${statusClass}" href="${link}" ${!unlocked ? 'onclick="showToast(\'이전 챕터를 먼저 통과해야 합니다\'); return false;"' : ''}>
             <div class="chapter-num">${index + 1}</div>
             <div class="chapter-info">
               <h3>${getLocalizedText(ch, 'title')}</h3>
@@ -193,6 +195,20 @@
           </a>
         `;
       });
+    }
+
+    // Toast notification
+    function showToast(msg) {
+      let toast = document.getElementById('toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.style.cssText = 'position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#1e293b; color:white; padding:12px 24px; border-radius:10px; font-size:14px; z-index:9999; opacity:0; transition:opacity 0.3s; pointer-events:none; text-align:center; max-width:80%;';
+        document.body.appendChild(toast);
+      }
+      toast.textContent = msg;
+      toast.style.opacity = '1';
+      setTimeout(() => { toast.style.opacity = '0'; }, 2500);
     }
 
     // ===== 초기화 =====
