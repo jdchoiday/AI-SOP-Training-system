@@ -36,29 +36,29 @@
 <body>
 
   <div class="bottom-nav">
-    <a href="app.html"><span class="nav-icon">&#127968;</span> 홈</a>
-    <a href="ai-chat.html" class="active"><span class="nav-icon">&#129302;</span> AI 질문</a>
-    <a href="my-results.html"><span class="nav-icon">&#127942;</span> 내 결과</a>
+    <a href="app.html"><span class="nav-icon">&#127968;</span> <span class="nav-label-home">홈</span></a>
+    <a href="ai-chat.html" class="active"><span class="nav-icon">&#129302;</span> <span class="nav-label-chat">AI 질문</span></a>
+    <a href="my-results.html"><span class="nav-icon">&#127942;</span> <span class="nav-label-results">내 결과</span></a>
   </div>
 
   <div class="app-container">
     <div class="app-header">
-      <h2>AI SOP 도우미</h2>
+      <h2 id="pageTitle">AI SOP 도우미</h2>
       <div class="user-avatar" id="userAvatar">?</div>
     </div>
 
     <div class="chat-container">
       <div class="chat-messages" id="chatMessages">
         <div class="chat-bubble ai">
-          <div class="ai-label">AI 도우미</div>
-          안녕하세요! SOP에 대해 궁금한 것을 질문해주세요.<br>
-          등록된 SOP 내용을 기반으로 답변해드립니다.
+          <div class="ai-label" id="aiLabelInit">AI 도우미</div>
+          <span id="welcomeText">안녕하세요! SOP에 대해 궁금한 것을 질문해주세요.<br>
+          등록된 SOP 내용을 기반으로 답변해드립니다.</span>
         </div>
         <div class="quick-questions" id="quickQuestions"></div>
       </div>
 
       <div class="chat-input-area">
-        <input type="text" id="chatInput" placeholder="SOP에 대해 질문하세요..." onkeydown="if(event.key==='Enter')sendMessage()">
+        <input type="text" id="chatInput" placeholder="" onkeydown="if(event.key==='Enter')sendMessage()">
         <button class="chat-send-btn" onclick="sendMessage()">&#10148;</button>
       </div>
     </div>
@@ -70,6 +70,54 @@
   <script src="js/sop-content-kids.js"></script>
   <script src="js/demo-data.js"></script>
   <script>
+    // ===== 다국어 텍스트 =====
+    const T = {
+      ko: {
+        home: '홈', aiChat: 'AI 질문', myResults: '내 결과',
+        pageTitle: 'AI SOP 도우미', aiLabel: 'AI 도우미',
+        welcome: '안녕하세요! SOP에 대해 궁금한 것을 질문해주세요.<br>등록된 SOP 내용을 기반으로 답변해드립니다.',
+        placeholder: 'SOP에 대해 질문하세요...',
+        noMatch: '해당 질문에 맞는 SOP를 찾지 못했습니다.',
+        sopList: '등록된 SOP 목록:',
+        askAbove: '위 주제에 대해 질문해보세요!',
+        logoutConfirm: '로그아웃 하시겠습니까?',
+        askProcedure: (title) => `${title} 절차를 알려줘`,
+      },
+      en: {
+        home: 'Home', aiChat: 'AI Q&A', myResults: 'Results',
+        pageTitle: 'AI SOP Assistant', aiLabel: 'AI Assistant',
+        welcome: 'Hello! Ask me anything about SOPs.<br>I\'ll answer based on the registered SOP content.',
+        placeholder: 'Ask about SOPs...',
+        noMatch: 'No matching SOP found for your question.',
+        sopList: 'Available SOPs:',
+        askAbove: 'Try asking about one of the topics above!',
+        logoutConfirm: 'Are you sure you want to log out?',
+        askProcedure: (title) => `Tell me about the ${title} procedure`,
+      },
+      vi: {
+        home: 'Trang chủ', aiChat: 'Hỏi AI', myResults: 'Kết quả',
+        pageTitle: 'Trợ lý AI SOP', aiLabel: 'Trợ lý AI',
+        welcome: 'Xin chào! Hãy hỏi bất cứ điều gì về SOP.<br>Tôi sẽ trả lời dựa trên nội dung SOP đã đăng ký.',
+        placeholder: 'Hỏi về SOP...',
+        noMatch: 'Không tìm thấy SOP phù hợp với câu hỏi của bạn.',
+        sopList: 'Danh sách SOP:',
+        askAbove: 'Hãy thử hỏi về một trong các chủ đề trên!',
+        logoutConfirm: 'Bạn có chắc muốn đăng xuất?',
+        askProcedure: (title) => `Cho tôi biết quy trình ${title}`,
+      }
+    };
+    const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
+    const t = T[lang] || T.ko;
+
+    // Apply static labels
+    document.querySelector('.nav-label-home').textContent = t.home;
+    document.querySelector('.nav-label-chat').textContent = t.aiChat;
+    document.querySelector('.nav-label-results').textContent = t.myResults;
+    document.getElementById('pageTitle').textContent = t.pageTitle;
+    document.getElementById('aiLabelInit').textContent = t.aiLabel;
+    document.getElementById('welcomeText').innerHTML = t.welcome;
+    document.getElementById('chatInput').placeholder = t.placeholder;
+
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
     if (!user) { window.location.href = 'index.html'; }
     document.getElementById('userAvatar').textContent = (user.name || '?')[0];
@@ -132,7 +180,7 @@
       const btn = document.createElement('button');
       btn.className = 'quick-q';
       btn.textContent = sop.title;
-      btn.onclick = () => askQuick(sop.title + ' 절차를 알려줘');
+      btn.onclick = () => askQuick(t.askProcedure(sop.title));
       quickDiv.appendChild(btn);
     });
 
@@ -146,7 +194,7 @@
 
       const typing = document.createElement('div');
       typing.className = 'chat-bubble ai';
-      typing.innerHTML = '<div class="ai-label">AI 도우미</div><div class="typing-indicator"><span></span><span></span><span></span></div>';
+      typing.innerHTML = `<div class="ai-label">${t.aiLabel}</div><div class="typing-indicator"><span></span><span></span><span></span></div>`;
       chatMessages.appendChild(typing);
       chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -169,7 +217,7 @@
       bubble.className = 'chat-bubble ' + type;
       if (type === 'ai') {
         let html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-        bubble.innerHTML = '<div class="ai-label">AI 도우미</div>' + html;
+        bubble.innerHTML = `<div class="ai-label">${t.aiLabel}</div>` + html;
       } else {
         bubble.textContent = text;
       }
@@ -201,12 +249,12 @@
 
       // 매칭 안 되면 등록된 SOP 목록 안내
       const sopList = SopStore.getPublished().map(s => `- ${s.title}`).join('\n');
-      return `해당 질문에 맞는 SOP를 찾지 못했습니다.\n\n**등록된 SOP 목록:**\n${sopList}\n\n위 주제에 대해 질문해보세요!`;
+      return `${t.noMatch}\n\n**${t.sopList}**\n${sopList}\n\n${t.askAbove}`;
     }
 
     // 로그아웃
     document.getElementById('userAvatar').addEventListener('click', () => {
-      if (confirm('로그아웃 하시겠습니까?')) {
+      if (confirm(t.logoutConfirm)) {
         localStorage.removeItem('sop_user');
         sessionStorage.removeItem('sb_synced');
         window.location.href = 'index.html';

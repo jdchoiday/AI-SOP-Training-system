@@ -13,47 +13,47 @@
   <div class="login-container">
     <div class="login-card">
       <div class="logo">📋</div>
-      <h1>직원 가입</h1>
-      <p class="subtitle" id="inviteInfo">초대 링크를 확인하고 있습니다...</p>
+      <h1 id="regPageTitle">직원 가입</h1>
+      <p class="subtitle" id="inviteInfo"></p>
 
       <div id="errorMsg" class="alert alert-error" style="display:none;"></div>
 
       <form id="registerForm" style="display:none;">
         <div class="form-group">
-          <label for="regName">이름</label>
-          <input type="text" id="regName" placeholder="홍길동" required>
+          <label for="regName" id="labelName">이름</label>
+          <input type="text" id="regName" placeholder="" required>
         </div>
         <div class="form-group">
-          <label for="regEmail">이메일</label>
+          <label for="regEmail" id="labelEmail">이메일</label>
           <input type="email" id="regEmail" placeholder="name@company.com" required>
         </div>
         <div class="form-group">
-          <label for="regPassword">비밀번호</label>
-          <input type="password" id="regPassword" placeholder="4자리 이상" required minlength="4">
+          <label for="regPassword" id="labelPassword">비밀번호</label>
+          <input type="password" id="regPassword" placeholder="" required minlength="4">
         </div>
         <div class="form-group">
-          <label>지점</label>
+          <label id="labelBranch">지점</label>
           <input type="text" id="regBranch" readonly style="background:var(--gray-50);color:var(--gray-700);">
         </div>
-        <button type="submit" class="btn btn-primary">가입하기</button>
+        <button type="submit" class="btn btn-primary" id="submitBtn">가입하기</button>
       </form>
 
       <div id="invalidMsg" style="display:none; text-align:center; padding:20px;">
         <p style="font-size:48px; margin-bottom:12px;">🚫</p>
-        <p style="font-size:16px; font-weight:600; margin-bottom:8px;">유효하지 않은 초대 링크입니다</p>
-        <p style="font-size:14px; color:var(--gray-500);">관리자에게 새 초대 링크를 요청하세요</p>
-        <a href="index.html" class="btn btn-outline" style="margin-top:16px; display:inline-block;">로그인 페이지로</a>
+        <p style="font-size:16px; font-weight:600; margin-bottom:8px;" id="invalidTitle">유효하지 않은 초대 링크입니다</p>
+        <p style="font-size:14px; color:var(--gray-500);" id="invalidDesc">관리자에게 새 초대 링크를 요청하세요</p>
+        <a href="index.html" class="btn btn-outline" style="margin-top:16px; display:inline-block;" id="goLoginBtn">로그인 페이지로</a>
       </div>
 
       <div id="successMsg" style="display:none; text-align:center; padding:20px;">
         <p style="font-size:48px; margin-bottom:12px;">🎉</p>
-        <p style="font-size:16px; font-weight:600; margin-bottom:8px;">가입이 완료되었습니다!</p>
-        <p style="font-size:14px; color:var(--gray-500);">로그인하여 교육을 시작하세요</p>
-        <a href="index.html" class="btn btn-primary" style="margin-top:16px; display:inline-block; padding:12px 32px;">로그인 하기</a>
+        <p style="font-size:16px; font-weight:600; margin-bottom:8px;" id="successTitle">가입이 완료되었습니다!</p>
+        <p style="font-size:14px; color:var(--gray-500);" id="successDesc">로그인하여 교육을 시작하세요</p>
+        <a href="index.html" class="btn btn-primary" style="margin-top:16px; display:inline-block; padding:12px 32px;" id="loginBtn">로그인 하기</a>
       </div>
 
       <div style="text-align:center; margin-top:24px;">
-        <a href="index.html" style="color:var(--gray-500); font-size:13px; text-decoration:none;">이미 계정이 있나요? 로그인</a>
+        <a href="index.html" style="color:var(--gray-500); font-size:13px; text-decoration:none;" id="alreadyHaveAccount">이미 계정이 있나요? 로그인</a>
       </div>
     </div>
   </div>
@@ -62,6 +62,81 @@
   <script src="js/supabase-client.js"></script>
   <script src="js/demo-data.js"></script>
   <script>
+    // ===== 다국어 텍스트 =====
+    const T = {
+      ko: {
+        pageTitle: '직원 가입', checkingInvite: '초대 링크를 확인하고 있습니다...',
+        staffRegistration: (branch) => `${branch} 직원 가입`,
+        name: '이름', namePlaceholder: '홍길동',
+        email: '이메일', password: '비밀번호', passwordPlaceholder: '4자리 이상',
+        branch: '지점', submit: '가입하기',
+        invalidInvite: '유효하지 않은 초대 링크입니다',
+        invalidDesc: '관리자에게 새 초대 링크를 요청하세요',
+        goLogin: '로그인 페이지로',
+        successTitle: '가입이 완료되었습니다!',
+        successDesc: '로그인하여 교육을 시작하세요',
+        loginBtn: '로그인 하기',
+        alreadyHaveAccount: '이미 계정이 있나요? 로그인',
+        fillAllFields: '모든 필드를 올바르게 입력하세요',
+        emailExists: '이미 등록된 이메일입니다',
+        expired: '초대 코드가 만료되었습니다',
+      },
+      en: {
+        pageTitle: 'Staff Registration', checkingInvite: 'Verifying invitation link...',
+        staffRegistration: (branch) => `${branch} — Staff Registration`,
+        name: 'Name', namePlaceholder: 'John Doe',
+        email: 'Email', password: 'Password', passwordPlaceholder: 'At least 4 characters',
+        branch: 'Branch', submit: 'Register',
+        invalidInvite: 'Invalid invitation link',
+        invalidDesc: 'Please request a new invitation link from your admin',
+        goLogin: 'Go to Login',
+        successTitle: 'Registration complete!',
+        successDesc: 'Log in to start your training',
+        loginBtn: 'Log In',
+        alreadyHaveAccount: 'Already have an account? Log in',
+        fillAllFields: 'Please fill in all fields correctly',
+        emailExists: 'This email is already registered',
+        expired: 'Invitation code has expired',
+      },
+      vi: {
+        pageTitle: 'Đăng ký nhân viên', checkingInvite: 'Đang xác minh liên kết mời...',
+        staffRegistration: (branch) => `Đăng ký nhân viên ${branch}`,
+        name: 'Họ tên', namePlaceholder: 'Nguyễn Văn A',
+        email: 'Email', password: 'Mật khẩu', passwordPlaceholder: 'Ít nhất 4 ký tự',
+        branch: 'Chi nhánh', submit: 'Đăng ký',
+        invalidInvite: 'Liên kết mời không hợp lệ',
+        invalidDesc: 'Vui lòng yêu cầu quản trị viên gửi liên kết mời mới',
+        goLogin: 'Đến trang đăng nhập',
+        successTitle: 'Đăng ký thành công!',
+        successDesc: 'Đăng nhập để bắt đầu đào tạo',
+        loginBtn: 'Đăng nhập',
+        alreadyHaveAccount: 'Đã có tài khoản? Đăng nhập',
+        fillAllFields: 'Vui lòng điền đầy đủ thông tin',
+        emailExists: 'Email này đã được đăng ký',
+        expired: 'Mã mời đã hết hạn',
+      }
+    };
+    const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
+    const t = T[lang] || T.ko;
+
+    // Apply static labels
+    document.getElementById('regPageTitle').textContent = t.pageTitle;
+    document.getElementById('inviteInfo').textContent = t.checkingInvite;
+    document.getElementById('labelName').textContent = t.name;
+    document.getElementById('regName').placeholder = t.namePlaceholder;
+    document.getElementById('labelEmail').textContent = t.email;
+    document.getElementById('labelPassword').textContent = t.password;
+    document.getElementById('regPassword').placeholder = t.passwordPlaceholder;
+    document.getElementById('labelBranch').textContent = t.branch;
+    document.getElementById('submitBtn').textContent = t.submit;
+    document.getElementById('invalidTitle').textContent = t.invalidInvite;
+    document.getElementById('invalidDesc').textContent = t.invalidDesc;
+    document.getElementById('goLoginBtn').textContent = t.goLogin;
+    document.getElementById('successTitle').textContent = t.successTitle;
+    document.getElementById('successDesc').textContent = t.successDesc;
+    document.getElementById('loginBtn').textContent = t.loginBtn;
+    document.getElementById('alreadyHaveAccount').textContent = t.alreadyHaveAccount;
+
     const urlParams = new URLSearchParams(window.location.search);
     const inviteCode = urlParams.get('code');
     let currentInvite = null;
@@ -87,11 +162,16 @@
             .eq('code', inviteCode)
             .single();
           if (data && data.used_count < data.max_uses) {
+            if (data.expires_at && new Date(data.expires_at) < new Date()) {
+              showExpired();
+              return;
+            }
             invite = {
               code: data.code,
               branch: data.branch,
               maxUses: data.max_uses,
-              usedCount: data.used_count
+              usedCount: data.used_count,
+              expiresAt: data.expires_at
             };
           }
         } catch(e) { console.log('Supabase invite check:', e); }
@@ -101,7 +181,13 @@
       if (!invite) {
         const invites = JSON.parse(localStorage.getItem('sop_invitations') || '[]');
         const local = invites.find(i => i.code === inviteCode && i.usedCount < i.maxUses);
-        if (local) invite = local;
+        if (local) {
+          if (local.expiresAt && new Date(local.expiresAt) < new Date()) {
+            showExpired();
+            return;
+          }
+          invite = local;
+        }
       }
 
       if (!invite) {
@@ -110,7 +196,7 @@
       }
 
       currentInvite = invite;
-      document.getElementById('inviteInfo').textContent = invite.branch + ' 직원 가입';
+      document.getElementById('inviteInfo').textContent = t.staffRegistration(invite.branch);
       document.getElementById('regBranch').value = invite.branch;
       document.getElementById('registerForm').style.display = 'block';
     }
@@ -120,6 +206,14 @@
       document.getElementById('invalidMsg').style.display = 'block';
     }
 
+    function showExpired() {
+      document.getElementById('inviteInfo').style.display = 'none';
+      document.getElementById('errorMsg').textContent = t.expired;
+      document.getElementById('errorMsg').style.display = 'block';
+      document.getElementById('invalidMsg').style.display = 'block';
+      document.getElementById('invalidTitle').textContent = t.expired;
+    }
+
     document.getElementById('registerForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const name = document.getElementById('regName').value.trim();
@@ -127,7 +221,7 @@
       const password = document.getElementById('regPassword').value;
 
       if (!name || !email || password.length < 4) {
-        document.getElementById('errorMsg').textContent = '모든 필드를 올바르게 입력하세요';
+        document.getElementById('errorMsg').textContent = t.fillAllFields;
         document.getElementById('errorMsg').style.display = 'block';
         return;
       }
@@ -135,7 +229,7 @@
       // 이메일 중복 체크
       const existing = EmployeeStore.getAll();
       if (existing.find(e => e.email === email)) {
-        document.getElementById('errorMsg').textContent = '이미 등록된 이메일입니다';
+        document.getElementById('errorMsg').textContent = t.emailExists;
         document.getElementById('errorMsg').style.display = 'block';
         return;
       }

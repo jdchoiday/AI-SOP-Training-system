@@ -53,15 +53,18 @@ const SopStore = {
     const sop = this.getById(sopId);
     if (!sop || !sop.script) return [];
 
-    return sop.script.map((scene, i) => ({
+    return sop.script.map((scene, i) => {
+      const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
+      const sceneLabel = lang === 'en' ? 'Scene' : lang === 'vi' ? 'Cảnh' : '씬';
+      return {
       id: `${sopId}-v${i + 1}`,
-      title: `씬 ${scene.scene}: ${scene.narration.slice(0, 30)}...`,
+      title: `${sceneLabel} ${scene.scene}: ${scene.narration.slice(0, 30)}...`,
       title_full: scene.narration,
       visual: scene.visual,
       video_url: '', // AI 영상 생성 후 URL 연결
       duration: 45 + Math.floor(scene.narration.length / 3), // 나레이션 길이 기반 예상
       order_num: i + 1,
-    }));
+    };});
   },
 
   // SOP의 퀴즈 가져오기
@@ -466,8 +469,11 @@ const Progress = {
 
 // ===== 유틸리티 =====
 function formatDuration(seconds) {
+  const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
+  if (lang === 'en') return `${m} min ${s > 0 ? s + ' sec' : ''}`;
+  if (lang === 'vi') return `${m} phút ${s > 0 ? s + ' giây' : ''}`;
   return `${m}분 ${s > 0 ? s + '초' : ''}`;
 }
 
@@ -480,8 +486,10 @@ function getLocalizedText(item, field) {
 
 function formatDate(isoStr) {
   if (!isoStr) return '-';
+  const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
+  const locale = lang === 'en' ? 'en-US' : lang === 'vi' ? 'vi-VN' : 'ko-KR';
   const d = new Date(isoStr);
-  return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
 // ===== 초기화 =====

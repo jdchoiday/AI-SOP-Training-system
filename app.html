@@ -14,13 +14,13 @@
   <!-- PC에서는 상단 탭으로, 모바일에서는 하단 탭으로 표시 -->
   <div class="bottom-nav">
     <a href="app.html" class="active">
-      <span class="nav-icon">&#127968;</span> 홈
+      <span class="nav-icon">&#127968;</span> <span class="nav-label-home">홈</span>
     </a>
     <a href="ai-chat.html">
-      <span class="nav-icon">&#129302;</span> AI 질문
+      <span class="nav-icon">&#129302;</span> <span class="nav-label-chat">AI 질문</span>
     </a>
     <a href="my-results.html">
-      <span class="nav-icon">&#127942;</span> 내 결과
+      <span class="nav-icon">&#127942;</span> <span class="nav-label-results">내 결과</span>
     </a>
   </div>
 
@@ -35,24 +35,24 @@
     <!-- ===== 환영 카드 ===== -->
     <div class="card">
       <h3 style="margin-bottom:4px;" id="welcomeMsg">안녕하세요!</h3>
-      <p style="color:var(--gray-500); font-size:14px;" id="progressSummary">학습을 시작해보세요</p>
+      <p style="color:var(--gray-500); font-size:14px;" id="progressSummary"></p>
       <div class="progress-bar" style="margin-top:12px;">
         <div class="fill" id="totalProgress" style="width:0%"></div>
       </div>
       <div style="display:flex; justify-content:space-between; margin-top:6px;">
-        <span style="font-size:12px; color:var(--gray-500);" id="progressLabel">전체 진행률</span>
+        <span style="font-size:12px; color:var(--gray-500);" id="progressLabel"></span>
         <span style="font-size:12px; font-weight:600; color:var(--primary);" id="progressPercent">0%</span>
       </div>
     </div>
 
     <!-- ===== 오늘의 할 일 카드 ===== -->
     <div class="card" id="nextActionCard" style="border-left:3px solid var(--primary);">
-      <p style="font-size:12px; color:var(--gray-500); margin-bottom:4px;">다음 할 일</p>
-      <p style="font-weight:600;" id="nextActionText">챕터 1 시작하기</p>
+      <p style="font-size:12px; color:var(--gray-500); margin-bottom:4px;" id="nextTodoLabel"></p>
+      <p style="font-weight:600;" id="nextActionText"></p>
     </div>
 
     <!-- ===== 챕터 목록 ===== -->
-    <h3 style="margin:20px 0 12px; font-size:16px; color:var(--gray-700);">학습 챕터</h3>
+    <h3 style="margin:20px 0 12px; font-size:16px; color:var(--gray-700);" id="chapterListTitle"></h3>
 
     <div id="chapterList">
       <!-- JS에서 동적 생성 -->
@@ -68,14 +68,79 @@
   <script src="js/sop-content-kids.js"></script>
   <script src="js/demo-data.js"></script>
   <script>
+    // ===== 다국어 텍스트 =====
+    const T = {
+      ko: {
+        home: '홈', aiChat: 'AI 질문', myResults: '내 결과',
+        logout: '로그아웃', logoutConfirm: '로그아웃 하시겠습니까?',
+        welcome: (name) => `안녕하세요, ${name || '직원'}님!`,
+        startLearning: '학습을 시작해보세요',
+        progressLabel: '전체 진행률',
+        chapterProgress: (total, passed) => `${total}개 챕터 중 ${passed}개 완료`,
+        nextTodo: '다음 할 일',
+        startChapter: (n) => `챕터 ${n} 시작하기`,
+        allComplete: '모든 학습을 완료했습니다!',
+        completePrevious: '이전 챕터를 먼저 완료하세요',
+        scenePrefix: '씬',
+        quizChallenge: (title) => `${title} 퀴즈 도전!`,
+        learningChapters: '학습 챕터',
+        noSop: '아직 배포된 교육이 없습니다.',
+        noSopSub: '관리자가 SOP를 배포하면 여기에 표시됩니다.',
+        completePreviousChapter: '이전 챕터를 먼저 통과해야 합니다',
+        completedScore: (score) => `완료! 점수: ${score}점`,
+        scenesInfo: (scenes, mins) => `${scenes}개 씬 · 약 ${mins}분`,
+      },
+      en: {
+        home: 'Home', aiChat: 'AI Q&A', myResults: 'Results',
+        logout: 'Logout', logoutConfirm: 'Are you sure you want to log out?',
+        welcome: (name) => `Hello, ${name || 'Staff'}!`,
+        startLearning: 'Start your training',
+        progressLabel: 'Overall progress',
+        chapterProgress: (total, passed) => `${passed} of ${total} chapters completed`,
+        nextTodo: 'Next to do',
+        startChapter: (n) => `Start Chapter ${n}`,
+        allComplete: 'All training completed!',
+        completePrevious: 'Complete the previous chapter first',
+        scenePrefix: 'Scene',
+        quizChallenge: (title) => `${title} — Take Quiz!`,
+        learningChapters: 'Training Chapters',
+        noSop: 'No training materials published yet.',
+        noSopSub: 'Courses will appear here once an admin publishes SOPs.',
+        completePreviousChapter: 'You must pass the previous chapter first',
+        completedScore: (score) => `Completed! Score: ${score}`,
+        scenesInfo: (scenes, mins) => `${scenes} scenes · ~${mins} min`,
+      },
+      vi: {
+        home: 'Trang chủ', aiChat: 'Hỏi AI', myResults: 'Kết quả',
+        logout: 'Đăng xuất', logoutConfirm: 'Bạn có chắc muốn đăng xuất?',
+        welcome: (name) => `Xin chào, ${name || 'Nhân viên'}!`,
+        startLearning: 'Bắt đầu học tập',
+        progressLabel: 'Tiến độ tổng thể',
+        chapterProgress: (total, passed) => `Hoàn thành ${passed}/${total} chương`,
+        nextTodo: 'Việc tiếp theo',
+        startChapter: (n) => `Bắt đầu Chương ${n}`,
+        allComplete: 'Đã hoàn thành tất cả bài học!',
+        completePrevious: 'Hãy hoàn thành chương trước',
+        scenePrefix: 'Cảnh',
+        quizChallenge: (title) => `${title} — Làm bài kiểm tra!`,
+        learningChapters: 'Các chương học tập',
+        noSop: 'Chưa có tài liệu đào tạo nào.',
+        noSopSub: 'Các khóa học sẽ hiển thị khi quản trị viên phát hành SOP.',
+        completePreviousChapter: 'Bạn phải vượt qua chương trước',
+        completedScore: (score) => `Hoàn thành! Điểm: ${score}`,
+        scenesInfo: (scenes, mins) => `${scenes} cảnh · ~${mins} phút`,
+      }
+    };
+    const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
+    const t = T[lang] || T.ko;
+
     // ===== 로그인 확인 =====
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
     if (!user) {
       window.location.href = 'index.html';
     } else {
       document.getElementById('userAvatar').textContent = (user.name || '?')[0];
-      document.getElementById('welcomeMsg').textContent =
-        `안녕하세요, ${user.name || '직원'}님!`;
+      document.getElementById('welcomeMsg').textContent = t.welcome(user.name);
     }
 
     // Supabase 초기화 (최초 1회만 동기화)
@@ -90,8 +155,21 @@
       });
     }
 
-    // ===== 챕터 데이터 (SOP에서 자동 생성) =====
-    const chapters = SopStore.getChapters();
+    // ===== 챕터 데이터 (SOP에서 자동 생성, 학습 경로 필터 적용) =====
+    const chapters = (() => {
+      const allChapters = SopStore.getChapters();
+      if (!user) return allChapters;
+      // Get employee's branch
+      const emp = typeof EmployeeStore !== 'undefined' ? EmployeeStore.getCurrentEmployee() : null;
+      const branch = emp?.branch || user.branch;
+      if (!branch) return allChapters;
+      // Check learning path assignments
+      const paths = JSON.parse(localStorage.getItem('sop_learning_paths') || '{}');
+      const assigned = paths[branch]; // undefined = all SOPs
+      if (!assigned) return allChapters; // no specific path = show all
+      if (assigned.length === 0) return allChapters; // empty array = show all (fallback)
+      return allChapters.filter(ch => assigned.includes(ch.id));
+    })();
 
     // ===== 전체 진행률 =====
     function updateProgress() {
@@ -101,7 +179,7 @@
 
       const passedCount = chapters.filter(ch => Progress.isChapterPassed(ch.id)).length;
       document.getElementById('progressSummary').textContent =
-        `${chapters.length}개 챕터 중 ${passedCount}개 완료`;
+        t.chapterProgress(chapters.length, passedCount);
 
       if (pct >= 100) {
         document.getElementById('totalProgress').classList.add('success');
@@ -110,22 +188,22 @@
 
     // ===== 다음 할 일 표시 =====
     function updateNextAction() {
-      let nextText = '모든 학습을 완료했습니다!';
+      let nextText = t.allComplete;
       const card = document.getElementById('nextActionCard');
 
       for (let i = 0; i < chapters.length; i++) {
         const ch = chapters[i];
         if (!Progress.isChapterPassed(ch.id)) {
           if (!Progress.isChapterUnlocked(i)) {
-            nextText = '이전 챕터를 먼저 완료하세요';
+            nextText = t.completePrevious;
           } else if (!Progress.isChapterAllVideosComplete(ch.id)) {
             const videos = SopStore.getVideos(ch.id);
             const nextVideo = videos.find(v => !Progress.isVideoCompleted(v.id));
             nextText = nextVideo
-              ? `${getLocalizedText(ch, 'title')} → 씬 ${nextVideo.order_num}`
-              : `${getLocalizedText(ch, 'title')} 퀴즈 도전!`;
+              ? `${getLocalizedText(ch, 'title')} → ${t.scenePrefix} ${nextVideo.order_num}`
+              : t.quizChallenge(getLocalizedText(ch, 'title'));
           } else {
-            nextText = `${getLocalizedText(ch, 'title')} 퀴즈 도전!`;
+            nextText = t.quizChallenge(getLocalizedText(ch, 'title'));
           }
           card.style.borderLeftColor = 'var(--primary)';
           break;
@@ -148,7 +226,7 @@
       container.className = 'chapter-grid';
 
       if (chapters.length === 0) {
-        container.innerHTML = '<div class="card" style="text-align:center; color:var(--gray-500); padding:40px;"><p>아직 배포된 교육이 없습니다.</p><p style="font-size:13px;">관리자가 SOP를 배포하면 여기에 표시됩니다.</p></div>';
+        container.innerHTML = `<div class="card" style="text-align:center; color:var(--gray-500); padding:40px;"><p>${t.noSop}</p><p style="font-size:13px;">${t.noSopSub}</p></div>`;
         return;
       }
 
@@ -172,19 +250,20 @@
         }
 
         const subtitle = !unlocked
-          ? '이전 챕터를 완료하세요'
+          ? t.completePrevious
           : passed
-            ? '완료! 점수: ' + (Progress.getAllResults().chapterResults[ch.id]?.score || 0) + '점'
-            : `${videos.length}개 씬 · 약 ${ch.estimatedMinutes}분`;
+            ? t.completedScore(Progress.getAllResults().chapterResults[ch.id]?.score || 0)
+            : t.scenesInfo(videos.length, ch.estimatedMinutes);
 
         const progressHTML = unlocked && !passed && videoProgress > 0
           ? `<div class="progress-bar" style="margin-top:8px;height:4px;"><div class="fill" style="width:${videoProgress}%"></div></div>`
           : '';
 
         const link = unlocked ? `chapter.html?id=${ch.id}` : '#';
+        const lockMsg = t.completePreviousChapter.replace(/'/g, "\\'");
 
         container.innerHTML += `
-          <a class="chapter-item ${statusClass}" href="${link}" ${!unlocked ? 'onclick="showToast(\'이전 챕터를 먼저 통과해야 합니다\'); return false;"' : ''}>
+          <a class="chapter-item ${statusClass}" href="${link}" ${!unlocked ? `onclick="showToast('${lockMsg}'); return false;"` : ''}>
             <div class="chapter-num">${index + 1}</div>
             <div class="chapter-info">
               <h3>${getLocalizedText(ch, 'title')}</h3>
@@ -211,6 +290,16 @@
       setTimeout(() => { toast.style.opacity = '0'; }, 2500);
     }
 
+    // ===== 다국어 적용 =====
+    document.querySelector('.nav-label-home').textContent = t.home;
+    document.querySelector('.nav-label-chat').textContent = t.aiChat;
+    document.querySelector('.nav-label-results').textContent = t.myResults;
+    document.getElementById('progressLabel').textContent = t.progressLabel;
+    document.getElementById('progressSummary').textContent = t.startLearning;
+    document.getElementById('nextTodoLabel').textContent = t.nextTodo;
+    document.getElementById('chapterListTitle').textContent = t.learningChapters;
+    document.getElementById('userAvatar').title = t.logout;
+
     // ===== 초기화 =====
     updateProgress();
     updateNextAction();
@@ -218,7 +307,7 @@
 
     // 로그아웃
     document.getElementById('userAvatar').addEventListener('click', () => {
-      if (confirm('로그아웃 하시겠습니까?')) {
+      if (confirm(t.logoutConfirm)) {
         localStorage.removeItem('sop_user');
         window.location.href = 'index.html';
       }

@@ -236,10 +236,29 @@ ${sopContext}
   async _callLLM(provider, prompt) {
     const key = AI_CONFIG.keys[provider];
     const model = AI_CONFIG.models[provider];
+    const useProxy = typeof CONFIG !== 'undefined' && CONFIG.useProxy;
 
-    if (!key) throw new Error(`API key not set for ${provider}`);
+    if (!useProxy && !key) throw new Error(`API key not set for ${provider}`);
 
     if (provider === 'gemini') {
+      if (useProxy) {
+        // Proxy route: send to /api/gemini, API key stays server-side
+        const res = await fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt,
+            model,
+            generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+          })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message || data.error);
+        return data.candidates[0].content.parts[0].text;
+      }
+
+      // Direct API call (local dev fallback)
+      if (!key) throw new Error(`API key not set for ${provider}`);
       const url = AI_CONFIG.endpoints.gemini
         .replace('{model}', model)
         .replace('{key}', key);
@@ -378,27 +397,41 @@ ${sopContext}
 
   // Wan 2.2 via SiliconFlow API
   async _generateVideoWan(prompt, options = {}) {
+    const useProxy = typeof CONFIG !== 'undefined' && CONFIG.useProxy;
     const key = AI_CONFIG.keys.siliconflow;
-    if (!key) return { status: 'error', message: 'SiliconFlow API 키가 설정되지 않았습니다.' };
+    if (!useProxy && !key) return { status: 'error', message: 'SiliconFlow API 키가 설정되지 않았습니다.' };
 
     const model = options.turbo ? AI_CONFIG.models.wan_turbo : AI_CONFIG.models.wan;
     const resolution = options.resolution || '720';
 
     try {
       // 1단계: 영상 생성 요청
-      const submitRes = await fetch(AI_CONFIG.endpoints.siliconflow, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key}`
-        },
-        body: JSON.stringify({
-          model: model,
-          prompt: prompt,
-          image_size: resolution === '720' ? '1280x720' : '854x480',
-          // seed: options.seed || undefined,  // 재현성
-        })
-      });
+      let submitRes;
+      if (useProxy) {
+        submitRes = await fetch('/api/siliconflow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'submit',
+            model: model,
+            prompt: prompt,
+            image_size: resolution === '720' ? '1280x720' : '854x480',
+          })
+        });
+      } else {
+        submitRes = await fetch(AI_CONFIG.endpoints.siliconflow, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key}`
+          },
+          body: JSON.stringify({
+            model: model,
+            prompt: prompt,
+            image_size: resolution === '720' ? '1280x720' : '854x480',
+          })
+        });
+      }
       const submitData = await submitRes.json();
 
       if (submitData.error) throw new Error(submitData.error.message || JSON.stringify(submitData.error));
@@ -422,18 +455,28 @@ ${sopContext}
 
   // 영상 생성 상태 확인 (SiliconFlow 비동기 방식)
   async checkVideoStatus(requestId) {
+    const useProxy = typeof CONFIG !== 'undefined' && CONFIG.useProxy;
     const key = AI_CONFIG.keys.siliconflow;
-    if (!key) return { status: 'error', message: 'API 키 없음' };
+    if (!useProxy && !key) return { status: 'error', message: 'API 키 없음' };
 
     try {
-      const res = await fetch(AI_CONFIG.endpoints.siliconflow_status, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key}`
-        },
-        body: JSON.stringify({ requestId })
-      });
+      let res;
+      if (useProxy) {
+        res = await fetch('/api/siliconflow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'status', requestId })
+        });
+      } else {
+        res = await fetch(AI_CONFIG.endpoints.siliconflow_status, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key}`
+          },
+          body: JSON.stringify({ requestId })
+        });
+      }
       const data = await res.json();
 
       if (data.status === 'Succeed' || data.status === 'completed') {
@@ -510,6 +553,65 @@ ${sopContext}
     };
   },
 };
+
+// ===== TTS (Text-to-Speech) — 브라우저 내장 Web Speech API =====
+
+AI.generateTTS = function(text, lang = 'ko-KR') {
+  return new Promise((resolve, reject) => {
+    if (!window.speechSynthesis) {
+      return reject(new Error('이 브라우저는 음성 합성을 지원하지 않습니다.'));
+    }
+
+    // 이전 음성 중지
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    // 해당 언어에 맞는 음성 선택 시도
+    const voices = window.speechSynthesis.getVoices();
+    const match = voices.find(v => v.lang === lang) || voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+    if (match) utterance.voice = match;
+
+    utterance.onend = () => resolve();
+    utterance.onerror = (e) => reject(e);
+
+    window.speechSynthesis.speak(utterance);
+  });
+};
+
+AI.stopTTS = function() {
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+};
+
+AI.isTTSSpeaking = function() {
+  return window.speechSynthesis && window.speechSynthesis.speaking;
+};
+
+AI.getTTSVoices = function() {
+  if (!window.speechSynthesis) return {};
+  const voices = window.speechSynthesis.getVoices();
+  const langMap = { 'ko-KR': [], 'en-US': [], 'vi-VN': [] };
+  voices.forEach(v => {
+    Object.keys(langMap).forEach(lang => {
+      if (v.lang === lang || v.lang.startsWith(lang.split('-')[0])) {
+        langMap[lang].push({ name: v.name, lang: v.lang, local: v.localService });
+      }
+    });
+  });
+  return langMap;
+};
+
+// 음성 목록은 비동기 로드될 수 있으므로 미리 트리거
+if (window.speechSynthesis) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+}
 
 // ===== AI 제공자 상태 확인 =====
 AI.getStatus = function() {
