@@ -1609,16 +1609,37 @@ function saveInvitation(code) {
         // 로그 업데이트
         const lastLog = log.lastElementChild;
         if (result.status === 'submitted') {
-          lastLog.innerHTML = `<strong>씬 ${scene.scene}</strong>: &#9989; 요청 완료 (${result.estimatedCost}) — ID: ${result.requestId?.slice(0,8) || 'N/A'}`;
+          lastLog.innerHTML = `<strong>씬 ${scene.scene}</strong>: ⏳ 생성 중... (${result.estimatedCost}) — ID: ${result.requestId?.slice(0,8) || 'N/A'}`;
+
+          // 폴링으로 완료 대기
+          const pollResult = await AI.pollVideoUntilDone(result.requestId, (status, attempt) => {
+            if (status.status === 'processing') {
+              lastLog.innerHTML = `<strong>씬 ${scene.scene}</strong>: ⏳ 생성 중... (${attempt * 10}초 경과)`;
+            }
+          }, 18); // 최대 3분 대기
+
+          if (pollResult.status === 'completed' && pollResult.videoUrl) {
+            lastLog.innerHTML = `<strong>씬 ${scene.scene}</strong>: ✅ 완료! <a href="${pollResult.videoUrl}" target="_blank" style="color:var(--primary);">영상 보기</a>`;
+            // SOP에 영상 URL 저장
+            if (!sop.script[i].videoUrl) sop.script[i].videoUrl = pollResult.videoUrl;
+          } else if (pollResult.status === 'timeout') {
+            lastLog.innerHTML = `<strong>씬 ${scene.scene}</strong>: ⏰ 시간 초과 — 나중에 확인 필요 (ID: ${result.requestId?.slice(0,8)})`;
+          } else {
+            lastLog.innerHTML = `<strong>씬 ${scene.scene}</strong>: ❌ ${pollResult.message || '생성 실패'}`;
+          }
         } else if (result.status === 'error') {
-          lastLog.innerHTML = `<strong>씬 ${scene.scene}</strong>: &#10060; ${result.message}`;
+          lastLog.innerHTML = `<strong>씬 ${scene.scene}</strong>: ❌ ${result.message}`;
         } else if (result.status === 'skip') {
-          lastLog.innerHTML = `<strong>씬 ${scene.scene}</strong>: &#9888; ${result.message}`;
+          lastLog.innerHTML = `<strong>씬 ${scene.scene}</strong>: ⚠️ ${result.message}`;
           break;
         }
       }
 
       progress.textContent = `${sop.script.length}/${sop.script.length} 완료`;
+      // 영상 URL이 저장된 SOP 업데이트
+      const allSops = getSops();
+      const sopIdx = allSops.findIndex(s => s.id === currentSopId);
+      if (sopIdx !== -1) { allSops[sopIdx] = sop; saveSops(allSops); }
       log.innerHTML += `<div style="padding:12px 0; font-size:14px; font-weight:600; color:#7c3aed;">
         &#127881; 모든 씬의 영상 생성이 요청되었습니다. 1~3분 후 완료됩니다.
       </div>`;
