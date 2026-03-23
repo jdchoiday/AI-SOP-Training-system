@@ -162,6 +162,12 @@
     document.getElementById('chapterResultsTitle').textContent = t.chapterResults;
 
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    const loginTime = parseInt(localStorage.getItem('sop_login_time') || '0');
+    if (Date.now() - loginTime > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem('sop_user');
+      localStorage.removeItem('sop_login_time');
+      window.location.href = 'index.html';
+    }
     if (!user) { window.location.href = 'index.html'; }
     document.getElementById('userAvatar').textContent = (user.name || '?')[0];
 
@@ -223,11 +229,33 @@
           : `<span class="badge" style="background:var(--gray-100);color:var(--gray-500);">${t.notStarted}</span>`;
       }
 
+      // Exam grade badge
+      let gradeBadge = '';
+      if (passed && user?.email) {
+        const examRaw = localStorage.getItem('sop_exam_results_' + user.email + '_' + ch.id);
+        if (examRaw) {
+          try {
+            const examData = JSON.parse(examRaw);
+            const examScore = examData.score != null ? examData.score : (typeof examData === 'number' ? examData : null);
+            if (examScore != null) {
+              const gradeColors = { S: '#b8860b', A: '#16a34a', B: '#2563eb', C: '#ca8a04', D: '#ea580c', F: '#dc2626' };
+              let grade = 'F';
+              if (examScore >= 95) grade = 'S';
+              else if (examScore >= 85) grade = 'A';
+              else if (examScore >= 75) grade = 'B';
+              else if (examScore >= 65) grade = 'C';
+              else if (examScore >= 50) grade = 'D';
+              gradeBadge = `<span style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:6px;font-size:13px;font-weight:700;color:white;background:${gradeColors[grade]};">${grade}</span>`;
+            }
+          } catch(e) {}
+        }
+      }
+
       container.innerHTML += `
         <div class="chapter-result" ${!unlocked ? 'style="opacity:0.5;"' : ''}>
           <div class="chapter-result-header">
             <h4>${index + 1}. ${getLocalizedText(ch, 'title')}</h4>
-            ${badge}
+            <div>${badge}${gradeBadge}</div>
           </div>
           <div class="video-dots">${dotsHTML}</div>
         </div>`;
@@ -325,6 +353,7 @@
     document.getElementById('userAvatar').addEventListener('click', () => {
       if (confirm(t.logoutConfirm)) {
         localStorage.removeItem('sop_user');
+        localStorage.removeItem('sop_login_time');
         window.location.href = 'index.html';
       }
     });
