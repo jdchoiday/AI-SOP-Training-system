@@ -314,14 +314,24 @@
           <h1>SOP 관리</h1>
           <div class="topbar-actions">
             <button class="btn btn-outline" style="padding:10px 20px; font-size:14px;" onclick="document.getElementById('sopFileInput').click()">&#128196; 파일 업로드</button>
+            <button class="btn btn-outline" style="padding:10px 20px; font-size:14px;" onclick="document.getElementById('sopFolderInput').click()">&#128193; 폴더 업로드</button>
             <button class="btn btn-primary" style="padding:10px 20px; font-size:14px;" onclick="createNewSop()">+ 새 SOP 작성</button>
           </div>
           <input type="file" id="sopFileInput" accept=".txt,.pdf,.doc,.docx,.hwp,.md" multiple style="display:none;" onchange="handleSopFileUpload(event)">
+          <input type="file" id="sopFolderInput" webkitdirectory multiple style="display:none;" onchange="handleSopFolderUpload(event)">
         </div>
 
-        <p style="color:var(--gray-500); font-size:14px; margin-bottom:20px;">
-          SOP를 작성하거나 파일(TXT, PDF, Word)을 업로드하면 AI가 자동으로 교육 콘텐츠를 생성합니다
-        </p>
+        <!-- 드래그앤드롭 영역 -->
+        <div id="sopDropZone" style="border:2px dashed var(--gray-300); border-radius:12px; padding:30px; text-align:center; margin-bottom:20px; cursor:pointer; transition:all 0.3s;"
+          ondragover="event.preventDefault(); this.style.borderColor='var(--primary)'; this.style.background='rgba(79,70,229,0.05)';"
+          ondragleave="this.style.borderColor='var(--gray-300)'; this.style.background='transparent';"
+          ondrop="handleSopDrop(event); this.style.borderColor='var(--gray-300)'; this.style.background='transparent';">
+          <div style="font-size:36px; margin-bottom:8px;">&#128203;</div>
+          <p style="color:var(--gray-500); font-size:14px; margin:0;">
+            파일 또는 폴더를 여기에 끌어다 놓으세요<br>
+            <span style="font-size:12px;">TXT, PDF, Word, HWP 지원 | 여러 파일을 한번에 업로드하면 AI가 자동으로 챕터별 SOP로 정리합니다</span>
+          </p>
+        </div>
 
         <!-- 필터 -->
         <div class="filter-bar">
@@ -972,6 +982,172 @@
       } else {
         alert(`파일 변환에 실패했습니다.\nTXT 파일로 변환 후 다시 시도하거나, 직접 작성해주세요.`);
       }
+    }
+
+    // ===== 폴더 업로드 =====
+    async function handleSopFolderUpload(event) {
+      const files = Array.from(event.target.files).filter(f =>
+        /\.(txt|md|pdf|doc|docx|hwp)$/i.test(f.name) && !f.name.startsWith('.')
+      );
+      if (!files.length) { alert('지원되는 파일이 없습니다 (TXT, PDF, Word, HWP)'); return; }
+      await processMultipleFiles(files);
+      event.target.value = '';
+    }
+
+    // ===== 드래그앤드롭 =====
+    async function handleSopDrop(event) {
+      event.preventDefault();
+      const items = event.dataTransfer.items;
+      const files = [];
+
+      async function traverseEntry(entry) {
+        if (entry.isFile) {
+          const file = await new Promise(resolve => entry.file(resolve));
+          if (/\.(txt|md|pdf|doc|docx|hwp)$/i.test(file.name)) files.push(file);
+        } else if (entry.isDirectory) {
+          const reader = entry.createReader();
+          const entries = await new Promise(resolve => reader.readEntries(resolve));
+          for (const e of entries) await traverseEntry(e);
+        }
+      }
+
+      showLoading('파일 탐색 중...');
+      for (const item of items) {
+        const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+        if (entry) await traverseEntry(entry);
+        else if (item.kind === 'file') {
+          const file = item.getAsFile();
+          if (/\.(txt|md|pdf|doc|docx|hwp)$/i.test(file.name)) files.push(file);
+        }
+      }
+      hideLoading();
+
+      if (!files.length) { alert('지원되는 파일이 없습니다 (TXT, PDF, Word, HWP)'); return; }
+      await processMultipleFiles(files);
+    }
+
+    // ===== 다중 파일 → AI 자동 챕터 분류 =====
+    async function processMultipleFiles(files) {
+      showLoading(`${files.length}개 파일 읽는 중...`);
+
+      // 1. 모든 파일 텍스트 추출
+      const fileContents = [];
+      for (const file of files) {
+        try {
+          showLoading(`텍스트 추출 중: ${file.name}`);
+          let text = '';
+          if (/\.(txt|md|hwp)$/i.test(file.name)) text = await file.text();
+          else if (/\.pdf$/i.test(file.name)) text = await extractPdfText(file);
+          else if (/\.(doc|docx)$/i.test(file.name)) text = await extractDocText(file);
+          if (text && text.trim().length > 10) {
+            // 폴더 경로에서 카테고리 추출
+            const pathParts = (file.webkitRelativePath || file.name).split('/');
+            const folder = pathParts.length > 1 ? pathParts[pathParts.length - 2] : '';
+            fileContents.push({ name: file.name, folder, text: text.slice(0, 2000) });
+          }
+        } catch(e) { console.error('Extract error:', file.name, e); }
+      }
+
+      if (!fileContents.length) { hideLoading(); alert('텍스트를 추출할 수 있는 파일이 없습니다.'); return; }
+
+      // 2. AI로 챕터 자동 분류
+      showLoading(`AI가 ${fileContents.length}개 파일을 챕터별로 분류 중...`);
+      let organized;
+      try {
+        organized = await aiOrganizeFiles(fileContents);
+      } catch(e) {
+        console.error('AI organize error:', e);
+        // 폴백: 폴더명 또는 파일명 기준 분류
+        organized = fallbackOrganize(fileContents);
+      }
+
+      // 3. SOP로 저장
+      const sops = getSops();
+      const chapters = SopStore ? SopStore.getChapters() : [];
+      let created = 0;
+
+      for (const group of organized) {
+        // 챕터가 없으면 생성
+        let chapterId = chapters.find(c => c.title === group.chapter)?.id;
+        if (!chapterId) {
+          chapterId = 'ch-' + Date.now() + '-' + Math.random().toString(36).substr(2,4);
+          const newChapter = { id: chapterId, title: group.chapter, order: chapters.length + 1 };
+          chapters.push(newChapter);
+          localStorage.setItem('sop_chapters_custom', JSON.stringify(chapters));
+        }
+
+        const newSop = {
+          id: 'sop-' + Date.now() + '-' + (++created) + Math.random().toString(36).substr(2,3),
+          title: group.title,
+          category: group.category || '기타',
+          chapter: chapterId,
+          status: 'draft',
+          content: group.html,
+          createdAt: new Date().toISOString().slice(0, 10),
+          script: null, quizzes: null
+        };
+        sops.push(newSop);
+      }
+
+      saveSops(sops);
+      hideLoading();
+      renderSopList();
+      alert(`${created}개 SOP가 생성되었습니다.\n\nAI가 다음과 같이 분류했습니다:\n${organized.map(g => `• [${g.chapter}] ${g.title}`).join('\n')}\n\n각 SOP를 확인하고 "AI 콘텐츠 생성"을 클릭하세요.`);
+    }
+
+    // AI 파일 분류
+    async function aiOrganizeFiles(fileContents) {
+      const fileList = fileContents.map((f, i) => `[${i}] "${f.name}" (폴더: ${f.folder || '없음'})\n내용 미리보기: ${f.text.slice(0, 300)}`).join('\n\n');
+
+      const prompt = `다음 ${fileContents.length}개의 교육 자료 파일을 SOP 챕터별로 분류하고 구조화해주세요.
+
+파일 목록:
+${fileList}
+
+규칙:
+1. 관련된 파일끼리 하나의 챕터로 묶으세요
+2. 각 챕터에는 명확한 제목을 붙이세요 (예: "출근 및 매장 오픈", "고객 응대", "안전 관리")
+3. 각 파일의 내용을 SOP HTML로 구조화하세요
+4. 카테고리: 오프닝/고객 응대/안전·위생/클로징/비상 대응/기타
+
+JSON 배열로 응답:
+[{"chapter":"챕터명","title":"SOP 제목","category":"카테고리","html":"<h3>1. 절차</h3><ol><li>내용</li></ol>","fileIndices":[0,1]}]`;
+
+      let response;
+      if (typeof CONFIG !== 'undefined' && CONFIG.useProxy) {
+        response = await fetch('/api/gemini', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, model: 'gemini-2.0-flash', generationConfig: { temperature: 0.5, maxOutputTokens: 4096 } })
+        });
+      } else {
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${AI_CONFIG.keys.gemini}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.5, maxOutputTokens: 4096 } })
+        });
+      }
+
+      const data = await response.json();
+      let aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text || '';
+      const jsonMatch = aiText.match(/\[[\s\S]*\]/);
+      if (jsonMatch) return JSON.parse(jsonMatch[0]);
+      throw new Error('AI 응답 파싱 실패');
+    }
+
+    // 폴백: 폴더명/파일명 기준 분류
+    function fallbackOrganize(fileContents) {
+      const groups = {};
+      fileContents.forEach(f => {
+        const key = f.folder || '일반';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(f);
+      });
+
+      return Object.entries(groups).map(([folder, items]) => ({
+        chapter: folder === '일반' ? '교육 자료' : folder,
+        title: items.length === 1 ? items[0].name.replace(/\.[^/.]+$/, '') : `${folder} SOP`,
+        category: '기타',
+        html: items.map(f => `<h3>${f.name.replace(/\.[^/.]+$/, '')}</h3><p>${f.text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`).join('\n')
+      }));
     }
 
     // PDF 텍스트 추출 (pdf.js CDN)
