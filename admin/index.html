@@ -672,6 +672,9 @@
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
     if (!user || user.role !== 'admin') { window.location.href = '../index.html'; }
 
+    // ===== AI 설정 바인딩 =====
+    const AI_CONFIG = (typeof CONFIG !== 'undefined' && CONFIG.AI) ? CONFIG.AI : { scriptProvider:'gemini', quizProvider:'gemini', chatProvider:'gemini', videoProvider:'none', keys:{ gemini:'', siliconflow:'' }, models:{ gemini:'gemini-2.0-flash', wan:'Wan-AI/Wan2.2-T2V-A14B' } };
+
     // ===== 멀티 관리자 역할 시스템 =====
     const adminRole = user.adminRole || 'superadmin';
     const adminBranch = user.adminBranch || '';
