@@ -19,6 +19,10 @@
     .chat-input-area input { flex: 1; padding: 12px 16px; border: 1px solid var(--gray-300); border-radius: 24px; font-size: 15px; outline: none; }
     .chat-input-area input:focus { border-color: var(--primary); }
     .chat-send-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--primary); color: white; border: none; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .chat-usage-bar { display: flex; justify-content: space-between; align-items: center; padding: 6px 4px 0; font-size: 12px; color: var(--gray-500); }
+    .chat-usage-bar .usage-count { font-weight: 600; color: var(--primary); }
+    .chat-usage-bar .usage-note { color: var(--gray-400); font-style: italic; }
+    .chat-limit-msg { text-align: center; padding: 16px; color: var(--danger, #e53e3e); font-weight: 600; font-size: 14px; }
     .quick-questions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
     .quick-q { padding: 8px 14px; background: white; border: 1px solid var(--gray-200); border-radius: 20px; font-size: 13px; color: var(--gray-700); cursor: pointer; transition: all 0.15s; }
     .quick-q:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
@@ -61,6 +65,10 @@
         <input type="text" id="chatInput" placeholder="" onkeydown="if(event.key==='Enter')sendMessage()">
         <button class="chat-send-btn" onclick="sendMessage()">&#10148;</button>
       </div>
+      <div class="chat-usage-bar">
+        <span class="usage-count" id="usageCounter"></span>
+        <span class="usage-note" id="usageNote"></span>
+      </div>
     </div>
   </div>
 
@@ -82,6 +90,9 @@
         askAbove: '위 주제에 대해 질문해보세요!',
         logoutConfirm: '로그아웃 하시겠습니까?',
         askProcedure: (title) => `${title} 절차를 알려줘`,
+        dailyLimitReached: '오늘의 질문 횟수를 모두 사용했습니다. 내일 다시 이용해주세요.',
+        remainingQuestions: (r, m) => `오늘 남은 질문: ${r}/${m}`,
+        workOnlyNote: '업무 관련 질문만 가능합니다',
       },
       en: {
         home: 'Home', aiChat: 'AI Q&A', myResults: 'Results',
@@ -93,6 +104,9 @@
         askAbove: 'Try asking about one of the topics above!',
         logoutConfirm: 'Are you sure you want to log out?',
         askProcedure: (title) => `Tell me about the ${title} procedure`,
+        dailyLimitReached: 'You have used all your questions for today. Please try again tomorrow.',
+        remainingQuestions: (r, m) => `Questions remaining today: ${r}/${m}`,
+        workOnlyNote: 'Work-related questions only',
       },
       vi: {
         home: 'Trang chủ', aiChat: 'Hỏi AI', myResults: 'Kết quả',
@@ -104,6 +118,9 @@
         askAbove: 'Hãy thử hỏi về một trong các chủ đề trên!',
         logoutConfirm: 'Bạn có chắc muốn đăng xuất?',
         askProcedure: (title) => `Cho tôi biết quy trình ${title}`,
+        dailyLimitReached: 'Bạn đã sử dụng hết số câu hỏi hôm nay. Vui lòng thử lại vào ngày mai.',
+        remainingQuestions: (r, m) => `Câu hỏi còn lại hôm nay: ${r}/${m}`,
+        workOnlyNote: 'Chỉ câu hỏi liên quan đến công việc',
       }
     };
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
@@ -124,6 +141,78 @@
 
     const chatMessages = document.getElementById('chatMessages');
     const chatInput = document.getElementById('chatInput');
+
+    // ===== Daily usage limit =====
+    const DAILY_LIMIT = 50;
+    function getTodayKey() {
+      const d = new Date();
+      const dateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      return `sop_chat_count_${user.email || 'unknown'}_${dateStr}`;
+    }
+    function getDailyCount() { return parseInt(localStorage.getItem(getTodayKey()) || '0', 10); }
+    function incrementDailyCount() {
+      const c = getDailyCount() + 1;
+      localStorage.setItem(getTodayKey(), c);
+      updateUsageUI();
+      return c;
+    }
+    function getRemainingQuestions() { return Math.max(0, DAILY_LIMIT - getDailyCount()); }
+    function updateUsageUI() {
+      const remaining = getRemainingQuestions();
+      document.getElementById('usageCounter').textContent = t.remainingQuestions(remaining, DAILY_LIMIT);
+      document.getElementById('usageNote').textContent = t.workOnlyNote;
+      // Disable input when limit reached
+      const inp = document.getElementById('chatInput');
+      if (remaining <= 0) {
+        inp.disabled = true;
+        inp.placeholder = t.dailyLimitReached;
+      }
+    }
+    updateUsageUI();
+
+    // ===== Industry-restricted system prompt =====
+    const SYSTEM_PROMPT = 'You are a helpful assistant for service industry employees. Only answer questions related to: store operations, customer service, food safety, hygiene, emergency procedures, work schedules, equipment usage, and employee policies. For unrelated questions, politely redirect: "업무와 관련된 질문만 답변 가능합니다."';
+
+    const WORK_KEYWORDS = [
+      '매장','고객','위생','청소','안전','응급','소방','화재','근무','스케줄','장비','기계','정책','규정','절차','sop',
+      'store','customer','hygiene','clean','safety','emergency','fire','schedule','equipment','policy','procedure',
+      '음식','식품','조리','냉장','냉동','재고','주문','배달','유통기한','알레르기','서비스','교육','훈련','매뉴얼',
+      'food','cook','refriger','inventory','order','delivery','expir','allerg','service','training','manual',
+      'cửa hàng','khách hàng','vệ sinh','an toàn','thiết bị','quy trình'
+    ];
+    function isWorkRelated(text) {
+      const q = text.toLowerCase();
+      return WORK_KEYWORDS.some(kw => q.includes(kw));
+    }
+
+    // ===== Conversation logging =====
+    const CHAT_LOGS_KEY = 'sop_chat_logs';
+    const MAX_LOGS = 500;
+    function saveChatLog(question, answer) {
+      const logs = JSON.parse(localStorage.getItem(CHAT_LOGS_KEY) || '[]');
+      const entry = {
+        email: user.email || '',
+        name: user.name || '',
+        timestamp: new Date().toISOString(),
+        question: question,
+        answer: answer,
+        flagged: false
+      };
+      logs.push(entry);
+      // Keep only last MAX_LOGS entries
+      while (logs.length > MAX_LOGS) logs.shift();
+      localStorage.setItem(CHAT_LOGS_KEY, JSON.stringify(logs));
+
+      // Sync to Supabase if available
+      syncLogToSupabase(entry);
+    }
+    async function syncLogToSupabase(entry) {
+      try {
+        if (typeof SupabaseClient !== 'undefined' && SupabaseClient.client) {
+          await SupabaseClient.client.from('chat_logs').insert([entry]);
+        }
+      } catch(e) { /* silent fail - Supabase may not have the table */ }
+    }
 
     // ===== SOP 데이터에서 동적 KB 생성 =====
     function buildKnowledgeBase() {
@@ -188,9 +277,19 @@
     function sendMessage() {
       const text = chatInput.value.trim();
       if (!text) return;
+
+      // Check daily limit
+      if (getRemainingQuestions() <= 0) {
+        addBubble(t.dailyLimitReached, 'ai');
+        return;
+      }
+
       document.getElementById('quickQuestions').style.display = 'none';
       addBubble(text, 'user');
       chatInput.value = '';
+
+      // Increment usage count
+      incrementDailyCount();
 
       const typing = document.createElement('div');
       typing.className = 'chat-bubble ai';
@@ -202,11 +301,22 @@
       (async () => {
         let answer = null;
         try {
-          answer = await AI.chat(text, SopStore.getPublished());
-        } catch(e) { /* 폴백 */ }
+          // Prepend system prompt for industry restriction
+          const augmentedText = SYSTEM_PROMPT + '\n\nUser question: ' + text;
+          answer = await AI.chat(augmentedText, SopStore.getPublished());
+        } catch(e) {
+          // Fallback mode: check work-related keywords
+          if (!isWorkRelated(text)) {
+            answer = '업무와 관련된 질문만 답변 가능합니다.';
+          }
+        }
 
         chatMessages.removeChild(typing);
-        addBubble(answer || findAnswer(text), 'ai');
+        const finalAnswer = answer || findAnswer(text);
+        addBubble(finalAnswer, 'ai');
+
+        // Log conversation
+        saveChatLog(text, finalAnswer);
       })();
     }
 
@@ -227,6 +337,12 @@
 
     function findAnswer(query) {
       const q = query.toLowerCase();
+
+      // In fallback mode, check if work-related
+      if (!isWorkRelated(query)) {
+        return '업무와 관련된 질문만 답변 가능합니다.';
+      }
+
       let bestMatch = null;
       let bestScore = 0;
 

@@ -76,6 +76,149 @@
       padding: 12px 32px; font-size: 16px; font-weight: 700;
       cursor: pointer;
     }
+
+    /* ===== Chapter Final Exam Styles ===== */
+    .exam-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px; padding-bottom: 12px;
+      border-bottom: 2px solid var(--primary);
+    }
+    .exam-header h3 { font-size: 18px; font-weight: 700; color: var(--primary); margin: 0; }
+    .exam-counter { font-size: 14px; color: var(--gray-500); font-weight: 600; }
+
+    .exam-progress-bar {
+      width: 100%; height: 8px; background: var(--gray-100);
+      border-radius: 4px; margin-bottom: 20px; overflow: hidden;
+    }
+    .exam-progress-bar .fill {
+      height: 100%; background: var(--primary);
+      border-radius: 4px; transition: width 0.3s ease;
+    }
+
+    .exam-type-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 12px;
+      font-size: 12px; font-weight: 700; margin-bottom: 12px;
+    }
+    .exam-type-badge.mc { background: #dbeafe; color: #1d4ed8; }
+    .exam-type-badge.sa { background: #fef3c7; color: #92400e; }
+
+    .exam-question-text {
+      font-size: 17px; font-weight: 600; line-height: 1.6;
+      color: var(--gray-900); margin-bottom: 20px;
+    }
+
+    .exam-option {
+      display: block; width: 100%; text-align: left;
+      padding: 14px 16px; margin-bottom: 10px;
+      background: white; border: 2px solid var(--gray-200);
+      border-radius: 10px; font-size: 15px; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .exam-option:hover { border-color: var(--primary); background: var(--primary-light); }
+    .exam-option.selected { border-color: var(--primary); background: var(--primary-light); color: var(--primary); font-weight: 600; }
+
+    .exam-sa-input {
+      width: 100%; padding: 14px 16px; border: 2px solid var(--gray-200);
+      border-radius: 10px; font-size: 15px; line-height: 1.6;
+      resize: vertical; min-height: 100px; box-sizing: border-box;
+      transition: border-color 0.15s;
+    }
+    .exam-sa-input:focus { outline: none; border-color: var(--primary); }
+
+    .exam-nav {
+      display: flex; gap: 10px; margin-top: 24px;
+    }
+    .exam-nav button {
+      flex: 1; padding: 14px; border-radius: 10px; font-size: 15px;
+      font-weight: 700; cursor: pointer; border: none; transition: opacity 0.15s;
+    }
+    .exam-nav .btn-prev { background: var(--gray-100); color: var(--gray-600); }
+    .exam-nav .btn-next { background: var(--primary); color: white; }
+    .exam-nav .btn-submit { background: #059669; color: white; }
+    .exam-nav button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .exam-question-dots {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;
+    }
+    .exam-question-dots .dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; cursor: pointer;
+      border: 2px solid var(--gray-200); background: white; color: var(--gray-500);
+      transition: all 0.15s;
+    }
+    .exam-question-dots .dot.answered { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+    .exam-question-dots .dot.current { border-color: var(--primary); background: var(--primary); color: white; }
+
+    /* Exam result styles */
+    .grade-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 100px; height: 100px; border-radius: 50%;
+      font-size: 48px; font-weight: 900; margin: 0 auto 16px;
+    }
+    .grade-S { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: white; box-shadow: 0 0 30px rgba(245,158,11,0.4); }
+    .grade-A { background: linear-gradient(135deg, #34d399, #059669); color: white; box-shadow: 0 0 20px rgba(5,150,105,0.3); }
+    .grade-B { background: linear-gradient(135deg, #60a5fa, #2563eb); color: white; box-shadow: 0 0 20px rgba(37,99,235,0.3); }
+    .grade-C { background: linear-gradient(135deg, #a78bfa, #7c3aed); color: white; }
+    .grade-D { background: linear-gradient(135deg, #fb923c, #ea580c); color: white; }
+    .grade-F { background: linear-gradient(135deg, #f87171, #dc2626); color: white; }
+
+    .exam-score-breakdown {
+      display: flex; gap: 12px; justify-content: center; margin: 16px 0;
+    }
+    .exam-score-breakdown .score-box {
+      flex: 1; max-width: 160px; padding: 14px; border-radius: 12px;
+      text-align: center; background: var(--gray-50);
+    }
+    .exam-score-breakdown .score-box .label { font-size: 12px; color: var(--gray-500); margin-bottom: 4px; }
+    .exam-score-breakdown .score-box .value { font-size: 24px; font-weight: 800; }
+
+    .exam-wrong-list {
+      text-align: left; margin-top: 20px;
+    }
+    .exam-wrong-item {
+      padding: 14px; margin-bottom: 10px; border-radius: 10px;
+      background: #fef2f2; border-left: 4px solid #ef4444;
+    }
+    .exam-wrong-item .q-num { font-size: 12px; color: #991b1b; font-weight: 700; margin-bottom: 4px; }
+    .exam-wrong-item .q-text { font-size: 14px; color: var(--gray-900); margin-bottom: 6px; }
+    .exam-wrong-item .q-answer { font-size: 13px; color: #166534; }
+    .exam-wrong-item .q-yours { font-size: 13px; color: #991b1b; margin-bottom: 2px; }
+
+    .exam-grade-inline {
+      display: inline-block; padding: 2px 8px; border-radius: 6px;
+      font-size: 13px; font-weight: 800; vertical-align: middle;
+    }
+
+    .exam-start-btn {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white; border: none; border-radius: 8px;
+      padding: 12px 32px; font-size: 16px; font-weight: 700;
+      cursor: pointer; margin-top: 12px;
+    }
+    .mini-quiz-card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
+    .mini-quiz-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--gray-200); }
+    .mini-quiz-header .icon { font-size: 24px; }
+    .mini-quiz-header h3 { font-size: 16px; font-weight: 700; flex: 1; margin: 0; }
+    .mini-quiz-header .mq-progress { font-size: 13px; color: var(--gray-500); font-weight: 600; }
+    .mq-question { font-size: 15px; font-weight: 600; line-height: 1.6; margin-bottom: 14px; color: var(--gray-900); }
+    .mq-option { display: block; width: 100%; text-align: left; padding: 12px 14px; margin-bottom: 8px; border: 1.5px solid var(--gray-200); border-radius: 10px; background: white; font-size: 14px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+    .mq-option:hover { border-color: var(--primary); background: var(--primary-light); }
+    .mq-option.mq-correct { border-color: var(--success); background: #dcfce7; pointer-events: none; }
+    .mq-option.mq-wrong { border-color: #ef4444; background: #fef2f2; pointer-events: none; }
+    .mq-option.mq-disabled { pointer-events: none; opacity: 0.6; }
+    .mq-feedback { margin-top: 10px; padding: 12px; border-radius: 10px; font-size: 14px; line-height: 1.5; }
+    .mq-feedback.correct { background: #dcfce7; color: #166534; }
+    .mq-feedback.wrong { background: #fef2f2; color: #991b1b; }
+    .mq-next-btn { margin-top: 14px; width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; display: none; background: var(--primary); color: white; }
+    .mq-result-card { text-align: center; padding: 30px 20px; background: white; border-radius: var(--radius); box-shadow: var(--shadow); }
+    .mq-result-card .mq-score-icon { font-size: 48px; margin-bottom: 8px; }
+    .mq-result-card h3 { font-size: 20px; margin-bottom: 4px; }
+    .mq-result-card p { font-size: 14px; color: var(--gray-500); margin-bottom: 16px; }
+    .mq-result-card button { width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; background: var(--success); color: white; }
+    .mq-loading { text-align: center; padding: 40px 20px; }
+    .mq-loading .spinner { width: 36px; height: 36px; border: 3px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: mqspin 0.8s linear infinite; margin: 0 auto 12px; }
+    @keyframes mqspin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -157,6 +300,11 @@
       </div>
     </div>
 
+    <!-- ===== 2.5 미니 퀴즈 뷰 (per-video) ===== -->
+    <div id="miniQuizView" style="display:none;">
+      <div id="miniQuizContent"></div>
+    </div>
+
     <!-- ===== 3. 퀴즈 뷰 ===== -->
     <div id="quizView" style="display:none;">
       <div class="quiz-header">
@@ -181,6 +329,56 @@
       <p style="color:var(--gray-500); font-size:13px; margin-bottom:24px;" id="resultDetail"></p>
       <button class="btn btn-primary" id="resultBackBtn"></button>
       <button class="btn btn-outline" id="resultRetryBtn" style="margin-top:8px; width:100%; display:none;"></button>
+      <button class="btn exam-start-btn" id="resultExamBtn" style="margin-top:8px; width:100%; display:none;"></button>
+    </div>
+
+    <!-- ===== 5. 챕터 종합시험 뷰 ===== -->
+    <div id="chapterExamView" style="display:none;">
+      <div class="exam-header">
+        <h3 id="examTitle">챕터 종합시험</h3>
+        <span class="exam-counter" id="examCounter">1 / 20</span>
+      </div>
+
+      <div class="exam-progress-bar">
+        <div class="fill" id="examProgressFill" style="width:0%"></div>
+      </div>
+
+      <div class="exam-question-dots" id="examDots"></div>
+
+      <div id="examQuestionArea">
+        <span class="exam-type-badge mc" id="examTypeBadge">객관식</span>
+        <p class="exam-question-text" id="examQuestionText"></p>
+        <div id="examOptionsArea"></div>
+      </div>
+
+      <div class="exam-nav">
+        <button class="btn-prev" id="examPrevBtn" onclick="examNavigate(-1)">← </button>
+        <button class="btn-next" id="examNextBtn" onclick="examNavigate(1)">→ </button>
+      </div>
+    </div>
+
+    <!-- ===== 6. 종합시험 결과 뷰 ===== -->
+    <div id="examResultView" style="display:none; text-align:center; padding:30px 0;">
+      <div class="grade-badge" id="examGradeBadge">S</div>
+      <h2 id="examResultTitle" style="margin-bottom:4px;"></h2>
+      <p style="color:var(--gray-500); font-size: 15px; margin-bottom: 4px;" id="examResultScore"></p>
+      <p style="color:var(--gray-500); font-size: 13px; margin-bottom: 16px;" id="examResultGradeText"></p>
+
+      <div class="exam-score-breakdown" id="examScoreBreakdown">
+        <div class="score-box">
+          <div class="label" id="examMCLabel">객관식</div>
+          <div class="value" id="examMCScore" style="color:var(--primary);">0%</div>
+        </div>
+        <div class="score-box">
+          <div class="label" id="examSALabel">주관식</div>
+          <div class="value" id="examSAScore" style="color:#7c3aed;">0%</div>
+        </div>
+      </div>
+
+      <div class="exam-wrong-list" id="examWrongList"></div>
+
+      <button class="btn btn-primary" id="examResultBackBtn" style="margin-top:20px; width:100%;"></button>
+      <button class="btn btn-outline" id="examRetryBtn" style="margin-top:8px; width:100%; display:none;"></button>
     </div>
 
   </div>
@@ -220,6 +418,40 @@
         quizFailed: '아쉬워요 😔',
         needScore: (score) => `${score}% 이상이어야 통과합니다`,
         resultDetail: (total, correct, score) => `${total}문제 중 ${correct}개 정답 (${score}점)`,
+        // Mini quiz (per-video)
+        mqTitle: '내용 확인 퀴즈',
+        mqLoading: '퀴즈를 생성하고 있습니다...',
+        mqNext: '다음 문제',
+        mqFinish: '완료',
+        mqResultTitle: (c, t) => `${c}/${t} 정답!`,
+        mqResultMsg: '학습 내용을 확인했습니다.',
+        mqContinue: '계속하기',
+        mqCorrect: '정답!',
+        mqWrong: '오답',
+        mqCorrectIs: (ans) => `정답: ${ans}`,
+        // Exam translations
+        examTitle: '챕터 종합시험',
+        examMC: '객관식',
+        examSA: '주관식',
+        examPrev: '← 이전',
+        examNext: '다음 →',
+        examSubmit: '시험 제출',
+        examStartBtn: '📝 챕터 종합시험 보기',
+        examGenerating: '시험 문제를 생성중입니다...',
+        examOverallScore: '종합 점수',
+        examGradeText: (grade) => `등급: ${grade}`,
+        examPassed: '🎉 종합시험 합격!',
+        examFailed: '불합격 — 재시험이 필요합니다',
+        examRetry: '재시험 보기',
+        examBackToList: '목록으로 돌아가기',
+        examWrongTitle: '오답 목록',
+        examYourAnswer: '내 답변',
+        examCorrectAnswer: '정답',
+        examNoAnswer: '(미답변)',
+        examKeywords: '핵심 키워드',
+        examConfirmSubmit: '아직 답하지 않은 문제가 있습니다. 제출하시겠습니까?',
+        examExistingGrade: (grade) => `종합시험 등급: ${grade}`,
+        examRetakeAvailable: '재시험 가능',
       },
       en: {
         home: 'Home', aiChat: 'AI Q&A', myResults: 'Results',
@@ -248,6 +480,40 @@
         quizFailed: 'Not quite 😔',
         needScore: (score) => `You need ${score}% or higher to pass`,
         resultDetail: (total, correct, score) => `${correct} of ${total} correct (${score} points)`,
+        // Mini quiz (per-video)
+        mqTitle: 'Quick Check',
+        mqLoading: 'Generating quiz...',
+        mqNext: 'Next',
+        mqFinish: 'Done',
+        mqResultTitle: (c, t) => `${c}/${t} Correct!`,
+        mqResultMsg: 'Content review complete.',
+        mqContinue: 'Continue',
+        mqCorrect: 'Correct!',
+        mqWrong: 'Incorrect',
+        mqCorrectIs: (ans) => `Answer: ${ans}`,
+        // Exam translations
+        examTitle: 'Chapter Final Exam',
+        examMC: 'Multiple Choice',
+        examSA: 'Short Answer',
+        examPrev: '← Previous',
+        examNext: 'Next →',
+        examSubmit: 'Submit Exam',
+        examStartBtn: '📝 Take Chapter Final Exam',
+        examGenerating: 'Generating exam questions...',
+        examOverallScore: 'Overall Score',
+        examGradeText: (grade) => `Grade: ${grade}`,
+        examPassed: '🎉 Exam Passed!',
+        examFailed: 'Failed — Retake required',
+        examRetry: 'Retake Exam',
+        examBackToList: 'Back to List',
+        examWrongTitle: 'Wrong Answers',
+        examYourAnswer: 'Your answer',
+        examCorrectAnswer: 'Correct answer',
+        examNoAnswer: '(No answer)',
+        examKeywords: 'Key terms',
+        examConfirmSubmit: 'Some questions are unanswered. Submit anyway?',
+        examExistingGrade: (grade) => `Exam Grade: ${grade}`,
+        examRetakeAvailable: 'Retake available',
       },
       vi: {
         home: 'Trang chủ', aiChat: 'Hỏi AI', myResults: 'Kết quả',
@@ -276,6 +542,40 @@
         quizFailed: 'Tiếc quá 😔',
         needScore: (score) => `Cần đạt ${score}% trở lên để vượt qua`,
         resultDetail: (total, correct, score) => `Đúng ${correct}/${total} câu (${score} điểm)`,
+        // Mini quiz (per-video)
+        mqTitle: 'Kiểm tra nhanh',
+        mqLoading: 'Đang tạo câu hỏi...',
+        mqNext: 'Tiếp',
+        mqFinish: 'Xong',
+        mqResultTitle: (c, t) => `${c}/${t} Đúng!`,
+        mqResultMsg: 'Đã xem xong nội dung.',
+        mqContinue: 'Tiếp tục',
+        mqCorrect: 'Đúng!',
+        mqWrong: 'Sai',
+        mqCorrectIs: (ans) => `Đáp án: ${ans}`,
+        // Exam translations
+        examTitle: 'Bài thi tổng hợp chương',
+        examMC: 'Trắc nghiệm',
+        examSA: 'Tự luận',
+        examPrev: '← Trước',
+        examNext: 'Tiếp →',
+        examSubmit: 'Nộp bài',
+        examStartBtn: '📝 Làm bài thi tổng hợp',
+        examGenerating: 'Đang tạo câu hỏi thi...',
+        examOverallScore: 'Điểm tổng',
+        examGradeText: (grade) => `Xếp hạng: ${grade}`,
+        examPassed: '🎉 Đã đạt bài thi!',
+        examFailed: 'Không đạt — Cần thi lại',
+        examRetry: 'Thi lại',
+        examBackToList: 'Quay lại danh sách',
+        examWrongTitle: 'Câu trả lời sai',
+        examYourAnswer: 'Câu trả lời của bạn',
+        examCorrectAnswer: 'Đáp án đúng',
+        examNoAnswer: '(Chưa trả lời)',
+        examKeywords: 'Từ khóa chính',
+        examConfirmSubmit: 'Còn câu chưa trả lời. Nộp bài luôn?',
+        examExistingGrade: (grade) => `Xếp hạng thi: ${grade}`,
+        examRetakeAvailable: 'Có thể thi lại',
       }
     };
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
@@ -323,7 +623,7 @@
 
     // ===== 뷰 전환 =====
     function showView(viewId) {
-      ['videoListView', 'videoPlayerView', 'quizView', 'resultView'].forEach(id => {
+      ['videoListView', 'videoPlayerView', 'miniQuizView', 'quizView', 'resultView', 'chapterExamView', 'examResultView'].forEach(id => {
         document.getElementById(id).style.display = id === viewId ? 'block' : 'none';
       });
       window.scrollTo(0, 0);
@@ -344,11 +644,19 @@
 
         // 나레이션 미리보기 (처음 40자)
         const preview = (video.title_full || video.title || '').slice(0, 50);
+        const mqScoreData = localStorage.getItem('sop_miniquiz_score_' + video.id);
+        let mqBadge = '';
+        if (mqScoreData) {
+          try {
+            const mqs = JSON.parse(mqScoreData);
+            mqBadge = `<span style="font-size:11px;color:var(--primary);font-weight:700;margin-left:6px;">${t.mqTitle} ${mqs.score}/${mqs.total}</span>`;
+          } catch(e) {}
+        }
         container.innerHTML += `
           <div class="video-item ${completed ? 'completed' : ''}" onclick="openVideo('${video.id}')">
             <div class="video-thumb">${completed ? '&#10003;' : (i + 1)}</div>
             <div class="video-info">
-              <h4>${t.scene} ${i + 1}</h4>
+              <h4>${t.scene} ${i + 1}${mqBadge}</h4>
               <p style="color:var(--gray-500); font-size:13px;">${preview}...</p>
             </div>
             <span style="color:${completed ? 'var(--success)' : 'var(--gray-300)'}; font-size:18px;">
@@ -373,12 +681,33 @@
       const passed = Progress.isChapterPassed(chapterId);
       const result = Progress.getAllResults().chapterResults[chapterId];
 
+      // Check for existing exam results
+      const examResult = getExamResult(chapterId);
+
       if (passed) {
+        let examStatusHtml = '';
+        if (examResult && examResult.grade) {
+          const gradeClass = 'grade-' + examResult.grade;
+          examStatusHtml = `
+            <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--gray-200);">
+              <span class="exam-grade-inline ${gradeClass}" style="padding:4px 12px;">${t.examExistingGrade(examResult.grade)}</span>
+              <p style="color:var(--gray-500); font-size:12px; margin-top:4px;">${t.examOverallScore}: ${examResult.score}%</p>
+              ${examResult.grade === 'F' ? `<button class="exam-start-btn" style="margin-top:8px; font-size:14px; padding:8px 20px;" onclick="startChapterExam()">${t.examRetry}</button>` : ''}
+            </div>
+          `;
+        } else {
+          examStatusHtml = `
+            <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--gray-200);">
+              <button class="exam-start-btn" onclick="startChapterExam()">${t.examStartBtn}</button>
+            </div>
+          `;
+        }
         area.innerHTML = `
           <div class="card" style="text-align:center; border: 2px solid var(--success); margin-top:20px;">
             <span style="font-size:40px;">&#127942;</span>
             <h3 style="color:var(--success); margin:8px 0 4px;">${t.chapterTestPassed}</h3>
             <p style="color:var(--gray-500);">${t.scoreLabel}: ${result?.score || 0}</p>
+            ${examStatusHtml}
           </div>
         `;
       } else if (allComplete) {
@@ -490,18 +819,235 @@
         setTimeout(() => toast.remove(), 2500);
         return;
       }
-      Progress.completeVideo(currentVideoId, chapterId);
+      // Show mini quiz instead of completing directly
+      AI.stopTTS();
+      document.getElementById('videoPlayer').src = '';
+      showMiniQuiz(currentVideoId);
+    });
 
-      // Supabase에도 저장
+    // ===== 미니 퀴즈 (per-video) =====
+    let mqQuestions = [];
+    let mqIndex = 0;
+    let mqCorrect = 0;
+    let mqVideoId = null;
+
+    function completeMiniQuizVideo() {
+      Progress.completeVideo(mqVideoId, chapterId);
       const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
       if (user?.id && window.SupabaseMode?._ready) {
-        SupabaseMode.saveVideoProgress(user.id, currentVideoId, chapterId);
+        SupabaseMode.saveVideoProgress(user.id, mqVideoId, chapterId);
       }
-
-      document.getElementById('videoPlayer').src = '';
       showView('videoListView');
       renderVideoList();
-    });
+    }
+
+    async function showMiniQuiz(videoId) {
+      mqVideoId = videoId;
+      mqIndex = 0;
+      mqCorrect = 0;
+      const container = document.getElementById('miniQuizContent');
+
+      // Show loading
+      container.innerHTML = `<div class="mq-loading"><div class="spinner"></div><p style="font-size:14px;color:var(--gray-500);">${t.mqLoading}</p></div>`;
+      showView('miniQuizView');
+
+      // Try to get cached quiz
+      const cacheKey = 'sop_miniquiz_' + videoId;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          mqQuestions = JSON.parse(cached);
+          if (mqQuestions.length > 0) { renderMiniQuizQuestion(); return; }
+        } catch(e) {}
+      }
+
+      // Generate quiz
+      mqQuestions = await generateMiniQuiz(videoId);
+      if (mqQuestions.length > 0) {
+        localStorage.setItem(cacheKey, JSON.stringify(mqQuestions));
+        renderMiniQuizQuestion();
+      } else {
+        // No quiz could be generated - just complete
+        completeMiniQuizVideo();
+      }
+    }
+
+    async function generateMiniQuiz(videoId) {
+      const video = videos.find(v => v.id === videoId);
+      if (!video) return [];
+      const narration = video.title_full || video.title || '';
+      if (narration.length < 20) return [];
+
+      // Try AI generation first
+      const provider = AI_CONFIG.quizProvider || AI_CONFIG.scriptProvider;
+      if (provider && provider !== 'local' && provider !== 'none') {
+        try {
+          const prompt = `아래 교육 내용을 기반으로 간단한 확인 퀴즈 2문제를 JSON 배열로 생성하세요.
+각 항목 형식: { "question": "질문", "options": ["A","B","C","D"], "correct": 정답인덱스(0-3), "explanation": "간단설명" }
+
+교육 내용:
+${narration.slice(0, 1500)}
+
+규칙:
+- 정확히 2문제
+- 핵심 내용 확인 문제
+- 4지선다
+- JSON 배열만 출력`;
+          const result = await AI._callLLM(provider, prompt);
+          const parsed = JSON.parse(result.match(/\[[\s\S]*\]/)?.[0] || '[]');
+          if (parsed.length >= 2) return parsed.slice(0, 2);
+        } catch(e) {
+          console.warn('Mini quiz AI generation failed, using fallback:', e.message);
+        }
+      }
+
+      // Fallback: extract key facts from narration
+      return generateLocalMiniQuiz(narration);
+    }
+
+    function generateLocalMiniQuiz(narration) {
+      const sentences = narration.replace(/\n/g, '. ').split(/[.!?。]+/).map(s => s.trim()).filter(s => s.length > 8);
+      if (sentences.length < 2) return [];
+
+      const questions = [];
+      // Pick up to 2 key sentences
+      const picks = sentences.length <= 4 ? [0, Math.min(1, sentences.length - 1)] :
+        [Math.floor(sentences.length * 0.25), Math.floor(sentences.length * 0.7)];
+
+      picks.forEach((idx, qi) => {
+        if (qi >= 2) return;
+        const sentence = sentences[idx];
+        // Extract a keyword (longest word or phrase)
+        const words = sentence.split(/[\s,]+/).filter(w => w.length > 1);
+        if (words.length < 2) return;
+
+        const keyIdx = words.reduce((best, w, i) => w.length > words[best].length ? i : best, 0);
+        const keyword = words[keyIdx];
+
+        // Create a fill-in-the-blank style question
+        const q = {
+          question: lang === 'en' ? `Which is correct about the content?`
+            : lang === 'vi' ? `Nội dung nào đúng?`
+            : `다음 중 내용과 일치하는 것은?`,
+          options: [],
+          correct: 0,
+          explanation: sentence.slice(0, 60)
+        };
+
+        // Correct answer = original sentence (truncated)
+        q.options.push(sentence.slice(0, 50) + (sentence.length > 50 ? '...' : ''));
+
+        // Generate 3 wrong options by modifying the sentence
+        const wrongPrefixes = lang === 'en'
+          ? ['Always avoid ', 'Never do ', 'It is optional to ']
+          : lang === 'vi'
+          ? ['Luôn tránh ', 'Không bao giờ ', 'Tùy chọn: ']
+          : ['항상 피해야 하는 ', '절대 하면 안 되는 ', '선택 사항인 '];
+
+        for (let i = 0; i < 3; i++) {
+          const otherIdx = (idx + i + 1) % sentences.length;
+          const otherSentence = sentences[otherIdx] || (wrongPrefixes[i] + keyword);
+          const wrong = otherSentence.slice(0, 50) + (otherSentence.length > 50 ? '...' : '');
+          if (wrong !== q.options[0]) {
+            q.options.push(wrong);
+          } else {
+            q.options.push(wrongPrefixes[i] + keyword);
+          }
+        }
+
+        // Shuffle options and track correct
+        const correctText = q.options[0];
+        for (let i = q.options.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [q.options[i], q.options[j]] = [q.options[j], q.options[i]];
+        }
+        q.correct = q.options.indexOf(correctText);
+
+        questions.push(q);
+      });
+
+      return questions.slice(0, 2);
+    }
+
+    function renderMiniQuizQuestion() {
+      const container = document.getElementById('miniQuizContent');
+      const q = mqQuestions[mqIndex];
+
+      container.innerHTML = `
+        <div class="mini-quiz-card">
+          <div class="mini-quiz-header">
+            <span class="icon">&#128221;</span>
+            <h3>${t.mqTitle}</h3>
+            <span class="mq-progress">${mqIndex + 1}/${mqQuestions.length}</span>
+          </div>
+          <p class="mq-question">${q.question}</p>
+          <div id="mqOptions"></div>
+          <div id="mqFeedback"></div>
+          <button class="mq-next-btn" id="mqNextBtn">${mqIndex < mqQuestions.length - 1 ? t.mqNext : t.mqFinish}</button>
+        </div>
+      `;
+
+      const optDiv = document.getElementById('mqOptions');
+      q.options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'mq-option';
+        btn.textContent = opt;
+        btn.addEventListener('click', () => handleMiniQuizAnswer(i));
+        optDiv.appendChild(btn);
+      });
+
+      document.getElementById('mqNextBtn').addEventListener('click', () => {
+        mqIndex++;
+        if (mqIndex < mqQuestions.length) {
+          renderMiniQuizQuestion();
+        } else {
+          showMiniQuizResult();
+        }
+      });
+    }
+
+    function handleMiniQuizAnswer(selected) {
+      const q = mqQuestions[mqIndex];
+      const btns = document.querySelectorAll('.mq-option');
+      btns.forEach((btn, i) => {
+        if (i === q.correct) btn.classList.add('mq-correct');
+        if (i === selected && i !== q.correct) btn.classList.add('mq-wrong');
+        if (i !== q.correct && i !== selected) btn.classList.add('mq-disabled');
+      });
+      if (selected === q.correct) mqCorrect++;
+
+      const fb = document.getElementById('mqFeedback');
+      if (selected === q.correct) {
+        fb.innerHTML = `<div class="mq-feedback correct">&#9989; ${t.mqCorrect}</div>`;
+      } else {
+        fb.innerHTML = `<div class="mq-feedback wrong">&#10060; ${t.mqWrong} &mdash; ${t.mqCorrectIs(q.options[q.correct].slice(0, 40))}</div>`;
+      }
+
+      document.getElementById('mqNextBtn').style.display = 'block';
+    }
+
+    function showMiniQuizResult() {
+      const container = document.getElementById('miniQuizContent');
+      const icon = mqCorrect === mqQuestions.length ? '&#127881;' : '&#128077;';
+      container.innerHTML = `
+        <div class="mq-result-card">
+          <div class="mq-score-icon">${icon}</div>
+          <h3>${t.mqResultTitle(mqCorrect, mqQuestions.length)}</h3>
+          <p>${t.mqResultMsg}</p>
+          <button id="mqContinueBtn">${t.mqContinue}</button>
+        </div>
+      `;
+
+      // Save mini quiz score
+      localStorage.setItem('sop_miniquiz_score_' + mqVideoId, JSON.stringify({
+        score: mqCorrect, total: mqQuestions.length, date: new Date().toISOString()
+      }));
+      Progress.saveQuizScore(mqVideoId, Math.round((mqCorrect / mqQuestions.length) * 100));
+
+      document.getElementById('mqContinueBtn').addEventListener('click', () => {
+        completeMiniQuizVideo();
+      });
+    }
 
     // ===== 챕터 퀴즈 시작 (SOP에서 생성된 퀴즈) =====
     function startChapterTest() {
@@ -641,6 +1187,16 @@
       const retryBtn = document.getElementById('resultRetryBtn');
       retryBtn.style.display = (!passed && isChapterTest) ? 'block' : 'none';
 
+      // 종합시험 버튼 (챕터 테스트 통과 시)
+      const examBtn = document.getElementById('resultExamBtn');
+      if (isChapterTest && passed) {
+        examBtn.style.display = 'block';
+        examBtn.textContent = t.examStartBtn;
+        examBtn.onclick = () => startChapterExam();
+      } else {
+        examBtn.style.display = 'none';
+      }
+
       showView('resultView');
     }
 
@@ -654,6 +1210,212 @@
     document.getElementById('resultRetryBtn').addEventListener('click', () => {
       startChapterTest();
     });
+
+    // ===== 챕터 종합시험 =====
+    var examQuestions = [], examAnswers = [], examCurrentIndex = 0, examLoading = false;
+
+    function getExamResult(chId) { try { return JSON.parse(localStorage.getItem('sop_exam_results_' + chId) || 'null'); } catch(e) { return null; } }
+    function saveExamResult(chId, r) { localStorage.setItem('sop_exam_results_' + chId, JSON.stringify(r)); }
+    function calcGrade(s) { return s>=95?'S':s>=90?'A':s>=80?'B':s>=70?'C':s>=60?'D':'F'; }
+
+    function extractKeywords(html) {
+      if (!html) return [];
+      var txt = html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+      var words = txt.match(/[가-힣]{2,}|[a-zA-Z]{3,}/g) || [];
+      var stop = {그리고:1,하고:1,에서:1,으로:1,부터:1,까지:1,이상:1,이하:1,대한:1,위해:1,통해:1,있습니다:1,합니다:1,됩니다:1,않습니다:1,the:1,and:1,for:1,are:1,with:1,that:1,this:1,from:1,will:1,have:1,been:1,your:1,all:1};
+      var freq = {};
+      words.forEach(function(w){ var lw=w.toLowerCase(); if(!stop[lw]) freq[lw]=(freq[lw]||0)+1; });
+      return Object.keys(freq).sort(function(a,b){return freq[b]-freq[a];}).slice(0,40);
+    }
+
+    async function generateChapterExam(chId) {
+      var sd = SopStore.getById(chId); if(!sd) return [];
+      var ct = sd.content ? sd.content.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim() : '';
+      var kws = extractKeywords(sd.content), eq = SopStore.getQuizzes(chId);
+      try {
+        var prov = CONFIG.AI && CONFIG.AI.quizProvider;
+        if (prov && prov !== 'local' && typeof AI !== 'undefined' && AI._callLLM) {
+          var p = '당신은 직원 교육 종합시험 출제 전문가입니다.\n\n아래 SOP 문서를 기반으로 종합시험 문제를 JSON 배열로 생성하세요.\n\n총 20문제:\n- 처음 15개: 객관식 (4지선다)\n  형식: { "type": "mc", "question": "문제", "options": ["A","B","C","D"], "correct": 정답인덱스(0~3), "explanation": "설명" }\n- 마지막 5개: 주관식 (단답형)\n  형식: { "type": "sa", "question": "문제", "keywords": ["핵심단어1","핵심단어2","핵심단어3"], "sampleAnswer": "모범답안" }\n\nSOP 제목: '+sd.title+'\nSOP 내용:\n'+ct.slice(0,3000)+'\n\n규칙:\n- SOP의 핵심 절차, 안전 수칙, 주의사항을 골고루 출제\n- 객관식 정답은 0~3 골고루 분포\n- 주관식 keywords는 채점 시 답에 포함되어야 할 핵심 단어 3~5개\n- JSON 배열만 출력';
+          var res = await AI._callLLM(prov, p);
+          var m = res.match(/\[[\s\S]*\]/);
+          var arr = JSON.parse((m&&m[0])||'[]');
+          if(arr.length>=15) return arr.slice(0,20);
+        }
+      } catch(e) { console.warn('AI exam fail, fallback:', e.message); }
+      return generateFallbackExam(eq, ct, kws, sd.title);
+    }
+
+    function generateFallbackExam(eq, ct, kws, title) {
+      var qs=[], sh=eq.slice().sort(function(){return Math.random()-0.5;});
+      for(var i=0;i<15;i++){
+        if(i<sh.length){
+          var q=sh[i], opts=(q.options||[]).slice(), cTxt=opts[q.correct];
+          var so=opts.slice().sort(function(){return Math.random()-0.5;}), nc=so.indexOf(cTxt);
+          qs.push({type:'mc',question:getLocalizedText(q,'question')||q.question,options:so,correct:nc,explanation:q.explanation||''});
+        } else {
+          var ki=i%Math.max(kws.length,1), kw=kws[ki]||'SOP';
+          var wp=kws.filter(function(k){return k!==kw;}), wo=[];
+          while(wo.length<3&&wp.length>0){var ri=Math.floor(Math.random()*wp.length);wo.push(wp.splice(ri,1)[0]);}
+          while(wo.length<3) wo.push('N/A');
+          var ao=[kw].concat(wo).sort(function(){return Math.random()-0.5;});
+          var qt=lang==='en'?'Which term is related to the correct procedure: "'+kw+'"?':lang==='vi'?'Thuat ngu nao lien quan den quy trinh dung: "'+kw+'"?':'이 SOP에서 올바른 절차와 관련된 용어는: "'+kw+'"?';
+          qs.push({type:'mc',question:qt,options:ao,correct:ao.indexOf(kw),explanation:''});
+        }
+      }
+      var st=lang==='en'?[
+        function(t){return 'Describe the most important safety rules in "'+t+'" SOP.';},
+        function(t){return 'Briefly describe the correct order of procedures in "'+t+'".';},
+        function(t){return 'What is the proper response when an issue is found during "'+t+'"?';},
+        function(t){return 'What must be checked before starting "'+t+'"?';},
+        function(t){return 'Explain the key hygiene rules in "'+t+'" procedure.';}
+      ]:lang==='vi'?[
+        function(t){return 'Mo ta quy tac an toan quan trong nhat trong SOP "'+t+'".';},
+        function(t){return 'Mo ta ngan gon thu tu dung cua quy trinh "'+t+'".';},
+        function(t){return 'Phai xu ly the nao khi phat hien bat thuong trong "'+t+'"?';},
+        function(t){return 'Can kiem tra gi truoc khi bat dau quy trinh "'+t+'"?';},
+        function(t){return 'Giai thich cac quy tac ve sinh chinh trong "'+t+'".';}
+      ]:[
+        function(t){return '"'+t+'" SOP에서 가장 중요한 안전 수칙을 설명하세요.';},
+        function(t){return t+' 절차의 올바른 순서를 간략히 서술하세요.';},
+        function(t){return t+'에서 이상 발견 시 올바른 대처 방법은?';},
+        function(t){return t+' 업무 시작 전 반드시 확인해야 할 사항을 적으세요.';},
+        function(t){return t+' 절차에서 위생 관련 주요 규칙을 설명하세요.';}
+      ];
+      for(var j=0;j<5;j++){
+        var rk=kws.slice(j*5,j*5+5); if(rk.length===0) rk=kws.slice(0,3); if(rk.length===0) rk=['SOP'];
+        qs.push({type:'sa',question:st[j](title),keywords:rk,sampleAnswer:rk.join(', ')});
+      }
+      return qs;
+    }
+
+    async function startChapterExam() {
+      if(examLoading) return;
+      if(!Progress.isChapterPassed(chapterId)){
+        alert(lang==='en'?'Pass the chapter quiz first.':lang==='vi'?'Ban phai vuot qua bai kiem tra chuong truoc.':'먼저 챕터 퀴즈를 통과해야 합니다.');
+        return;
+      }
+      examLoading=true;
+      var toast=document.createElement('div');
+      toast.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.85);color:white;padding:24px 40px;border-radius:16px;z-index:9999;font-size:15px;font-weight:600;text-align:center;';
+      toast.innerHTML='<div style="font-size:32px;margin-bottom:8px;">&#9203;</div>'+t.examGenerating;
+      document.body.appendChild(toast);
+      try {
+        examQuestions=await generateChapterExam(chapterId);
+        if(!examQuestions.length) throw new Error('empty');
+      } catch(e) {
+        var sd=SopStore.getById(chapterId);
+        examQuestions=generateFallbackExam(SopStore.getQuizzes(chapterId),(sd&&sd.content||'').replace(/<[^>]+>/g,' '),extractKeywords(sd&&sd.content),(sd&&sd.title)||'');
+      }
+      toast.remove(); examLoading=false;
+      examAnswers=new Array(examQuestions.length).fill(null); examCurrentIndex=0;
+      document.getElementById('examTitle').textContent=t.examTitle;
+      document.getElementById('examPrevBtn').textContent=t.examPrev;
+      showView('chapterExamView'); renderExamQuestion(0);
+    }
+
+    function renderExamQuestion(idx) {
+      examCurrentIndex=idx; var q=examQuestions[idx]; if(!q) return;
+      document.getElementById('examCounter').textContent=(idx+1)+' / '+examQuestions.length;
+      var ans=examAnswers.filter(function(a){return a!==null;}).length;
+      document.getElementById('examProgressFill').style.width=Math.round((ans/examQuestions.length)*100)+'%';
+
+      var dd=document.getElementById('examDots'); dd.innerHTML='';
+      for(var di=0;di<examQuestions.length;di++){(function(i){
+        var d=document.createElement('span');
+        d.className='dot'+(examAnswers[i]!==null?' answered':'')+(i===idx?' current':'');
+        d.textContent=i+1; d.onclick=function(){renderExamQuestion(i);}; dd.appendChild(d);
+      })(di);}
+
+      var bg=document.getElementById('examTypeBadge');
+      if(q.type==='mc'){bg.className='exam-type-badge mc';bg.textContent=t.examMC;}
+      else{bg.className='exam-type-badge sa';bg.textContent=t.examSA;}
+      document.getElementById('examQuestionText').textContent=q.question;
+
+      var ar=document.getElementById('examOptionsArea'); ar.innerHTML='';
+      if(q.type==='mc'){
+        for(var oi=0;oi<q.options.length;oi++){(function(oidx){
+          var b=document.createElement('button');
+          b.className='exam-option'+(examAnswers[idx]===oidx?' selected':'');
+          b.textContent=q.options[oidx];
+          b.onclick=function(){examAnswers[idx]=oidx;renderExamQuestion(idx);};
+          ar.appendChild(b);
+        })(oi);}
+      } else {
+        var ta=document.createElement('textarea'); ta.className='exam-sa-input';
+        ta.placeholder=lang==='en'?'Type your answer here...':lang==='vi'?'Nhap cau tra loi o day...':'답변을 입력하세요...';
+        ta.value=examAnswers[idx]||'';
+        ta.oninput=function(){examAnswers[idx]=ta.value.trim()||null; updateExamDots(); updateExamProgress();};
+        ar.appendChild(ta);
+      }
+
+      document.getElementById('examPrevBtn').disabled=(idx===0);
+      var nb=document.getElementById('examNextBtn');
+      if(idx===examQuestions.length-1){nb.className='btn-submit';nb.textContent=t.examSubmit;nb.onclick=function(){submitExam();};}
+      else{nb.className='btn-next';nb.textContent=t.examNext;nb.onclick=function(){examNavigate(1);};}
+    }
+
+    function updateExamDots(){
+      var ds=document.querySelectorAll('.exam-question-dots .dot');
+      for(var i=0;i<ds.length;i++) ds[i].className='dot'+(examAnswers[i]!==null?' answered':'')+(i===examCurrentIndex?' current':'');
+    }
+    function updateExamProgress(){
+      var a=examAnswers.filter(function(x){return x!==null;}).length;
+      document.getElementById('examProgressFill').style.width=Math.round((a/examQuestions.length)*100)+'%';
+    }
+    function examNavigate(dir){var ni=examCurrentIndex+dir;if(ni>=0&&ni<examQuestions.length)renderExamQuestion(ni);}
+
+    function submitExam(){
+      var un=examAnswers.filter(function(a){return a===null;}).length;
+      if(un>0&&!confirm(t.examConfirmSubmit)) return;
+      var mcC=0,mcT=0,saS=0,saT=0;
+      var da=examQuestions.map(function(q,i){
+        var ua=examAnswers[i];
+        if(q.type==='mc'){
+          mcT++;var ic=ua===q.correct;if(ic)mcC++;
+          return{index:i,type:'mc',question:q.question,userAnswer:ua!==null?q.options[ua]:null,correctAnswer:q.options[q.correct],isCorrect:ic,explanation:q.explanation||''};
+        }else{
+          saT++;var kw=q.keywords||[],mt=0;
+          if(ua&&typeof ua==='string'&&ua.length>0){var al=ua.toLowerCase();kw.forEach(function(k){if(al.includes(k.toLowerCase()))mt++;});}
+          var ks=kw.length>0?Math.round((mt/kw.length)*100):0; saS+=ks;
+          return{index:i,type:'sa',question:q.question,userAnswer:ua||'',keywords:kw,matchedKeywords:mt,totalKeywords:kw.length,score:ks,sampleAnswer:q.sampleAnswer||kw.join(', '),isCorrect:ks>=60};
+        }
+      });
+      var mp=mcT>0?Math.round((mcC/mcT)*100):0, sp=saT>0?Math.round(saS/saT):0;
+      var os=Math.round(mp*0.7+sp*0.3), gr=calcGrade(os);
+      saveExamResult(chapterId,{score:os,mcScore:mp,saScore:sp,answers:da,completedAt:new Date().toISOString(),grade:gr});
+      showExamResults(os,mp,sp,gr,da);
+    }
+
+    function showExamResults(score,mcPct,saPct,grade,answers){
+      var be=document.getElementById('examGradeBadge');be.textContent=grade;be.className='grade-badge grade-'+grade;
+      var ep=grade!=='F';
+      document.getElementById('examResultTitle').textContent=ep?t.examPassed:t.examFailed;
+      document.getElementById('examResultScore').textContent=t.examOverallScore+': '+score+'%';
+      document.getElementById('examResultGradeText').textContent=t.examGradeText(grade);
+      document.getElementById('examMCLabel').textContent=t.examMC;
+      document.getElementById('examSALabel').textContent=t.examSA;
+      document.getElementById('examMCScore').textContent=mcPct+'%';
+      document.getElementById('examSAScore').textContent=saPct+'%';
+
+      var wd=document.getElementById('examWrongList');
+      var wa=answers.filter(function(a){return!a.isCorrect;});
+      if(wa.length>0){
+        var h='<h4 style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--gray-700);">'+t.examWrongTitle+' ('+wa.length+')</h4>';
+        wa.forEach(function(a){
+          if(a.type==='mc') h+='<div class="exam-wrong-item"><div class="q-num">Q'+(a.index+1)+' &middot; '+t.examMC+'</div><div class="q-text">'+a.question+'</div><div class="q-yours">'+t.examYourAnswer+': '+(a.userAnswer||t.examNoAnswer)+'</div><div class="q-answer">'+t.examCorrectAnswer+': '+a.correctAnswer+'</div></div>';
+          else h+='<div class="exam-wrong-item"><div class="q-num">Q'+(a.index+1)+' &middot; '+t.examSA+' ('+a.score+'%)</div><div class="q-text">'+a.question+'</div><div class="q-yours">'+t.examYourAnswer+': '+(a.userAnswer||t.examNoAnswer)+'</div><div class="q-answer">'+t.examKeywords+': '+a.keywords.join(', ')+'</div></div>';
+        });
+        wd.innerHTML=h;
+      } else {
+        wd.innerHTML='<p style="color:var(--success);font-weight:600;">&#127881; '+(lang==='en'?'Perfect score!':lang==='vi'?'Diem tuyet doi!':'만점입니다!')+'</p>';
+      }
+      document.getElementById('examResultBackBtn').textContent=t.examBackToList;
+      document.getElementById('examResultBackBtn').onclick=function(){showView('videoListView');renderVideoList();};
+      var rb=document.getElementById('examRetryBtn');
+      if(!ep){rb.style.display='block';rb.textContent=t.examRetry;rb.onclick=function(){startChapterExam();};}
+      else rb.style.display='none';
+      showView('examResultView');
+    }
 
     // ===== 초기 렌더링 =====
     renderVideoList();

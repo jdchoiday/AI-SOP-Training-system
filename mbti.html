@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOP Training - MBTI</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <link rel="icon" href="assets/icon-192.svg">
+  <style>
+    /* ===== MBTI Test Styles ===== */
+    .mbti-container { padding-bottom: 100px; }
+
+    /* Welcome Screen */
+    .mbti-welcome { text-align: center; padding: 20px 0; }
+    .mbti-welcome .hero-icon { font-size: 72px; margin-bottom: 16px; }
+    .mbti-welcome h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .mbti-welcome p { color: var(--gray-500); font-size: 14px; line-height: 1.7; margin-bottom: 16px; }
+    .mbti-welcome .feature-list {
+      text-align: left; background: white; border-radius: var(--radius);
+      padding: 16px 20px; margin: 16px 0; box-shadow: var(--shadow);
+    }
+    .mbti-welcome .feature-list li {
+      list-style: none; padding: 8px 0; font-size: 14px; color: var(--gray-700);
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .mbti-welcome .feature-list li:last-child { border-bottom: none; }
+    .mbti-welcome .feature-list li::before { content: ''; margin-right: 8px; }
+
+    .btn-start-mbti {
+      display: inline-block; background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white; border: none; padding: 16px 48px; border-radius: 50px;
+      font-size: 17px; font-weight: 700; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(99,102,241,0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-start-mbti:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,102,241,0.5); }
+
+    /* Progress Bar */
+    .mbti-progress-wrap {
+      background: var(--gray-200); border-radius: 20px; height: 8px;
+      margin-bottom: 20px; overflow: hidden;
+    }
+    .mbti-progress-fill {
+      height: 100%; border-radius: 20px;
+      background: linear-gradient(90deg, #6366f1, #a78bfa);
+      transition: width 0.4s ease;
+    }
+    .mbti-progress-text {
+      display: flex; justify-content: space-between; margin-bottom: 8px;
+      font-size: 13px; color: var(--gray-500); font-weight: 600;
+    }
+
+    /* Question Screen */
+    .mbti-question-screen { display: none; }
+    .mbti-question-screen.active { display: block; }
+    .mbti-dimension-badge {
+      display: inline-block; background: var(--primary-light); color: var(--primary);
+      font-size: 12px; font-weight: 700; padding: 4px 12px;
+      border-radius: 20px; margin-bottom: 12px;
+    }
+    .mbti-question-text {
+      font-size: 18px; font-weight: 700; color: var(--gray-900);
+      line-height: 1.6; margin-bottom: 24px; min-height: 60px;
+    }
+    .mbti-options { display: flex; flex-direction: column; gap: 14px; }
+    .mbti-option-btn {
+      display: flex; align-items: center; gap: 14px;
+      background: white; border: 2px solid var(--gray-200);
+      border-radius: var(--radius); padding: 18px 20px;
+      font-size: 15px; color: var(--gray-700); cursor: pointer;
+      transition: all 0.25s ease; text-align: left; line-height: 1.5;
+    }
+    .mbti-option-btn:hover { border-color: #6366f1; background: #f5f3ff; }
+    .mbti-option-btn.selected {
+      border-color: #6366f1; background: #ede9fe; color: #4338ca; font-weight: 600;
+    }
+    .mbti-option-label {
+      display: flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; min-width: 36px;
+      border-radius: 50%; background: var(--gray-100);
+      font-weight: 700; font-size: 15px; color: var(--gray-500);
+      transition: all 0.25s;
+    }
+    .mbti-option-btn.selected .mbti-option-label {
+      background: #6366f1; color: white;
+    }
+
+    /* Navigation */
+    .mbti-nav-row {
+      display: flex; gap: 12px; margin-top: 24px; justify-content: space-between;
+    }
+    .mbti-nav-btn {
+      flex: 1; padding: 14px; border-radius: 10px; font-size: 15px;
+      font-weight: 600; cursor: pointer; border: none; transition: all 0.2s;
+    }
+    .mbti-nav-btn.prev { background: var(--gray-100); color: var(--gray-700); }
+    .mbti-nav-btn.next {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white;
+      box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+    }
+    .mbti-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Result Screen */
+    .mbti-result-screen { display: none; text-align: center; }
+    .mbti-result-screen.active { display: block; }
+
+    .mbti-reveal-anim {
+      animation: mbtiReveal 0.8s ease-out;
+    }
+    @keyframes mbtiReveal {
+      0% { opacity: 0; transform: scale(0.7) translateY(30px); }
+      50% { transform: scale(1.05) translateY(-5px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes confettiFall {
+      0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
+    }
+
+    .mbti-type-badge {
+      display: inline-block; font-size: 48px; font-weight: 900;
+      background: linear-gradient(135deg, #6366f1, #a78bfa, #c084fc);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; margin: 16px 0 4px; letter-spacing: 4px;
+    }
+    .mbti-type-icon { font-size: 64px; margin-bottom: 8px; }
+    .mbti-type-name {
+      font-size: 18px; font-weight: 700; color: var(--gray-700); margin-bottom: 20px;
+    }
+
+    .mbti-result-card {
+      background: white; border-radius: var(--radius); padding: 20px;
+      margin-bottom: 16px; box-shadow: var(--shadow); text-align: left;
+    }
+    .mbti-result-card h4 {
+      font-size: 14px; font-weight: 700; color: #6366f1;
+      margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+    }
+    .mbti-result-card p, .mbti-result-card li {
+      font-size: 14px; color: var(--gray-700); line-height: 1.7;
+    }
+    .mbti-result-card ul { padding-left: 20px; }
+    .mbti-result-card li { margin-bottom: 4px; }
+
+    /* Score Bars */
+    .mbti-score-bars { margin-top: 8px; }
+    .mbti-score-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+    }
+    .mbti-score-label {
+      font-size: 13px; font-weight: 700; width: 22px; text-align: center;
+    }
+    .mbti-score-label.active-dim { color: #6366f1; }
+    .mbti-score-bar-bg {
+      flex: 1; height: 10px; background: var(--gray-100);
+      border-radius: 10px; overflow: hidden; position: relative;
+    }
+    .mbti-score-bar-fill {
+      height: 100%; border-radius: 10px;
+      background: linear-gradient(90deg, #6366f1, #a78bfa);
+      transition: width 1s ease;
+    }
+    .mbti-score-pct {
+      font-size: 12px; font-weight: 600; color: var(--gray-500); width: 36px;
+      text-align: right;
+    }
+
+    .btn-home {
+      display: inline-block; background: var(--gray-100); color: var(--gray-700);
+      border: none; padding: 14px 36px; border-radius: 50px;
+      font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px;
+      transition: background 0.2s;
+    }
+    .btn-home:hover { background: var(--gray-200); }
+
+    .btn-retake {
+      display: inline-block; background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white; border: none; padding: 14px 36px; border-radius: 50px;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(99,102,241,0.3); margin-top: 8px;
+      transition: transform 0.2s;
+    }
+    .btn-retake:hover { transform: translateY(-1px); }
+
+    /* Confetti overlay */
+    .confetti-container {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 9999; overflow: hidden;
+    }
+    .confetti-piece {
+      position: absolute; width: 10px; height: 10px; border-radius: 2px;
+      animation: confettiFall 2s ease-out forwards;
+    }
+
+    /* Previous result banner */
+    .mbti-prev-result {
+      background: linear-gradient(135deg, #ede9fe, #dbeafe);
+      border-radius: var(--radius); padding: 16px; margin-bottom: 20px;
+      text-align: center;
+    }
+    .mbti-prev-result .prev-type {
+      font-size: 28px; font-weight: 900; color: #6366f1; letter-spacing: 2px;
+    }
+    .mbti-prev-result .prev-date {
+      font-size: 12px; color: var(--gray-500); margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Bottom Navigation -->
+  <div class="bottom-nav">
+    <a href="app.html">
+      <span class="nav-icon">&#127968;</span> <span class="nav-label-home"></span>
+    </a>
+    <a href="ai-chat.html">
+      <span class="nav-icon">&#129302;</span> <span class="nav-label-chat"></span>
+    </a>
+    <a href="my-results.html">
+      <span class="nav-icon">&#127942;</span> <span class="nav-label-results"></span>
+    </a>
+  </div>
+
+  <div class="app-container mbti-container">
+
+    <!-- Header -->
+    <div class="app-header">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <a href="app.html" style="color:var(--gray-500); text-decoration:none; font-size:20px;">&larr;</a>
+        <h2 id="pageTitle">MBTI</h2>
+      </div>
+      <div class="user-avatar" id="userAvatar" title="">?</div>
+    </div>
+
+    <!-- ===== SCREEN 1: Welcome ===== -->
+    <div id="welcomeScreen" class="mbti-welcome">
+      <div class="hero-icon">&#129504;</div>
+      <h2 id="welcomeTitle"></h2>
+      <p id="welcomeDesc"></p>
+
+      <!-- Previous result -->
+      <div id="prevResultBanner" class="mbti-prev-result" style="display:none;">
+        <div id="prevResultLabel" style="font-size:13px; color:var(--gray-500); margin-bottom:4px;"></div>
+        <div class="prev-type" id="prevResultType"></div>
+        <div class="prev-date" id="prevResultDate"></div>
+      </div>
+
+      <div class="feature-list">
+        <ul id="featureList"></ul>
+      </div>
+      <p style="font-size:13px; color:var(--gray-500); margin-bottom:24px;" id="timeEstimate"></p>
+      <button class="btn-start-mbti" id="btnStart"></button>
+    </div>
+
+    <!-- ===== SCREEN 2: Questions ===== -->
+    <div id="questionScreen" style="display:none;">
+      <div class="mbti-progress-text">
+        <span id="qProgress"></span>
+        <span id="qDimension"></span>
+      </div>
+      <div class="mbti-progress-wrap">
+        <div class="mbti-progress-fill" id="progressFill" style="width:0%"></div>
+      </div>
+
+      <div class="card" style="padding:24px;">
+        <div class="mbti-dimension-badge" id="dimBadge"></div>
+        <div class="mbti-question-text" id="qText"></div>
+        <div class="mbti-options">
+          <button class="mbti-option-btn" id="optA" onclick="selectOption('A')">
+            <span class="mbti-option-label">A</span>
+            <span id="optAText"></span>
+          </button>
+          <button class="mbti-option-btn" id="optB" onclick="selectOption('B')">
+            <span class="mbti-option-label">B</span>
+            <span id="optBText"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="mbti-nav-row">
+        <button class="mbti-nav-btn prev" id="btnPrev" onclick="prevQuestion()"></button>
+        <button class="mbti-nav-btn next" id="btnNext" onclick="nextQuestion()"></button>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 3: Result ===== -->
+    <div id="resultScreen" class="mbti-result-screen">
+      <div class="mbti-reveal-anim">
+        <div class="mbti-type-icon" id="resultIcon"></div>
+        <div class="mbti-type-badge" id="resultType"></div>
+        <div class="mbti-type-name" id="resultName"></div>
+      </div>
+
+      <!-- Description -->
+      <div class="mbti-result-card" id="cardDesc">
+        <h4 id="cardDescTitle"></h4>
+        <p id="resultDesc"></p>
+      </div>
+
+      <!-- Score Bars -->
+      <div class="mbti-result-card">
+        <h4 id="cardScoreTitle"></h4>
+        <div class="mbti-score-bars" id="scoreBars"></div>
+      </div>
+
+      <!-- Work Style -->
+      <div class="mbti-result-card" id="cardWork">
+        <h4 id="cardWorkTitle"></h4>
+        <ul id="resultWork"></ul>
+      </div>
+
+      <!-- Communication Tips -->
+      <div class="mbti-result-card" id="cardComm">
+        <h4 id="cardCommTitle"></h4>
+        <ul id="resultComm"></ul>
+      </div>
+
+      <!-- Buttons -->
+      <div style="margin-top:24px; display:flex; flex-direction:column; gap:10px; align-items:center;">
+        <button class="btn-retake" id="btnRetake" onclick="retakeTest()"></button>
+        <button class="btn-home" id="btnGoHome" onclick="location.href='app.html'"></button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script>
+  // ===== Multi-language =====
+  const MBTI_T = {
+    ko: {
+      home: '홈', aiChat: 'AI 질문', myResults: '내 결과',
+      pageTitle: 'MBTI 성격유형 검사',
+      welcomeTitle: '나의 업무 성격유형은?',
+      welcomeDesc: 'MBTI 검사를 통해 나의 성격유형을 알아보고,\n팀에서 나의 강점과 소통 방식을 발견해보세요.',
+      features: [
+        '20개 문항, 약 5분 소요',
+        '서비스업 맞춤 질문으로 구성',
+        '나의 업무 스타일 & 강점 분석',
+        '팀 소통 팁 제공'
+      ],
+      timeEstimate: '약 5분 소요 | 총 20문항',
+      btnStart: '검사 시작하기',
+      prevResult: '이전 검사 결과',
+      qOf: (c, t) => `${c} / ${t}`,
+      dimensions: { EI: 'E/I 외향·내향', SN: 'S/N 감각·직관', TF: 'T/F 사고·감정', JP: 'J/P 판단·인식' },
+      btnPrev: '이전',
+      btnNext: '다음',
+      btnSubmit: '결과 보기',
+      selectFirst: '답변을 선택해주세요',
+      cardDesc: '&#128218; 성격유형 설명',
+      cardScore: '&#128202; 성향 점수',
+      cardWork: '&#128188; 업무 스타일 강점',
+      cardComm: '&#128172; 소통 팁 (매니저용)',
+      btnRetake: '다시 검사하기',
+      btnGoHome: '홈으로 돌아가기',
+    },
+    en: {
+      home: 'Home', aiChat: 'AI Q&A', myResults: 'Results',
+      pageTitle: 'MBTI Personality Test',
+      welcomeTitle: 'What is your work personality?',
+      welcomeDesc: 'Discover your MBTI personality type\nand find your strengths and communication style at work.',
+      features: [
+        '20 questions, about 5 minutes',
+        'Tailored for service industry',
+        'Work style & strength analysis',
+        'Team communication tips'
+      ],
+      timeEstimate: 'About 5 min | 20 questions',
+      btnStart: 'Start Test',
+      prevResult: 'Previous Result',
+      qOf: (c, t) => `${c} / ${t}`,
+      dimensions: { EI: 'E/I Extraversion·Introversion', SN: 'S/N Sensing·Intuition', TF: 'T/F Thinking·Feeling', JP: 'J/P Judging·Perceiving' },
+      btnPrev: 'Previous',
+      btnNext: 'Next',
+      btnSubmit: 'See Results',
+      selectFirst: 'Please select an answer',
+      cardDesc: '&#128218; Personality Description',
+      cardScore: '&#128202; Dimension Scores',
+      cardWork: '&#128188; Work Style Strengths',
+      cardComm: '&#128172; Communication Tips (for Managers)',
+      btnRetake: 'Retake Test',
+      btnGoHome: 'Back to Home',
+    },
+    vi: {
+      home: 'Trang chu', aiChat: 'Hoi AI', myResults: 'Ket qua',
+      pageTitle: 'Bai kiem tra MBTI',
+      welcomeTitle: 'Tinh cach lam viec cua ban?',
+      welcomeDesc: 'Kham pha loai tinh cach MBTI cua ban\nva tim ra diem manh va phong cach giao tiep tai noi lam viec.',
+      features: [
+        '20 cau hoi, khoang 5 phut',
+        'Cau hoi danh cho nganh dich vu',
+        'Phan tich phong cach & diem manh',
+        'Meo giao tiep nhom'
+      ],
+      timeEstimate: 'Khoang 5 phut | 20 cau hoi',
+      btnStart: 'Bat dau kiem tra',
+      prevResult: 'Ket qua truoc',
+      qOf: (c, t) => `${c} / ${t}`,
+      dimensions: { EI: 'E/I Huong ngoai·Huong noi', SN: 'S/N Cam giac·Truc giac', TF: 'T/F Tu duy·Cam xuc', JP: 'J/P Phan doan·Nhan thuc' },
+      btnPrev: 'Truoc',
+      btnNext: 'Tiep',
+      btnSubmit: 'Xem ket qua',
+      selectFirst: 'Vui long chon cau tra loi',
+      cardDesc: '&#128218; Mo ta tinh cach',
+      cardScore: '&#128202; Diem cac chieu',
+      cardWork: '&#128188; Diem manh cong viec',
+      cardComm: '&#128172; Meo giao tiep (cho quan ly)',
+      btnRetake: 'Lam lai',
+      btnGoHome: 'Ve trang chu',
+    }
+  };
+
+  const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
+  const t = MBTI_T[lang] || MBTI_T.ko;
+
+  // ===== Login check =====
+  const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+  if (!user) { window.location.href = 'index.html'; }
+  else { document.getElementById('userAvatar').textContent = (user.name || '?')[0]; }
+
+  // ===== Nav labels =====
+  document.querySelector('.nav-label-home').textContent = t.home;
+  document.querySelector('.nav-label-chat').textContent = t.aiChat;
+  document.querySelector('.nav-label-results').textContent = t.myResults;
+
+  // ===== 20 MBTI Questions (service industry focused) =====
+  const QUESTIONS = [
+    // E/I (1-5)
+    { dim: 'EI', a: 'E', b: 'I',
+      ko: { q: '새로운 동료를 만났을 때 나는?', a: '먼저 반갑게 인사하고 말을 건다', b: '상대가 먼저 말해주길 기다린다' },
+      en: { q: 'When meeting a new colleague, I...', a: 'Greet them first and start a conversation', b: 'Wait for them to approach me first' },
+      vi: { q: 'Khi gap dong nghiep moi, toi...', a: 'Chao ho truoc va bat chuyen', b: 'Doi ho den noi chuyen truoc' }
+    },
+    { dim: 'EI', a: 'E', b: 'I',
+      ko: { q: '바쁜 근무 중 에너지를 충전하는 방법은?', a: '동료들과 대화하며 활기를 찾는다', b: '잠시 조용한 곳에서 혼자 쉰다' },
+      en: { q: 'How do you recharge during a busy shift?', a: 'Chat with coworkers to feel energized', b: 'Take a quiet break alone' },
+      vi: { q: 'Ban nap nang luong the nao khi lam viec ban?', a: 'Noi chuyen voi dong nghiep', b: 'Nghi mot minh o noi yen tinh' }
+    },
+    { dim: 'EI', a: 'E', b: 'I',
+      ko: { q: '팀 회의에서 나는?', a: '적극적으로 의견을 먼저 말한다', b: '다른 사람 의견을 듣고 정리 후 말한다' },
+      en: { q: 'In team meetings, I tend to...', a: 'Speak up first with my ideas', b: 'Listen to others and share after organizing thoughts' },
+      vi: { q: 'Trong cuoc hop nhom, toi...', a: 'Phat bieu y kien truoc', b: 'Lang nghe roi moi noi' }
+    },
+    { dim: 'EI', a: 'E', b: 'I',
+      ko: { q: '고객이 많은 피크 시간에 나는?', a: '활기가 넘치고 더 집중된다', b: '빨리 끝나길 바라며 지친다' },
+      en: { q: 'During peak hours with many customers, I feel...', a: 'Energized and more focused', b: 'Drained and hoping it ends soon' },
+      vi: { q: 'Trong gio cao diem dong khach, toi cam thay...', a: 'Tran day nang luong', b: 'Met moi va muon het som' }
+    },
+    { dim: 'EI', a: 'E', b: 'I',
+      ko: { q: '업무 후 퇴근할 때 선호하는 것은?', a: '동료들과 함께 식사나 모임', b: '집에서 혼자 조용히 보내기' },
+      en: { q: 'After work, I prefer to...', a: 'Go out with coworkers for a meal', b: 'Go home and relax alone' },
+      vi: { q: 'Sau gio lam, toi thich...', a: 'Di an voi dong nghiep', b: 'Ve nha nghi ngoi mot minh' }
+    },
+    // S/N (6-10)
+    { dim: 'SN', a: 'S', b: 'N',
+      ko: { q: '업무 지시를 받을 때 선호하는 방식은?', a: '구체적이고 단계별 지시', b: '전체 목표와 방향만 알려주면 된다' },
+      en: { q: 'When receiving work instructions, I prefer...', a: 'Specific step-by-step directions', b: 'Just the overall goal and direction' },
+      vi: { q: 'Khi nhan chi dan cong viec, toi thich...', a: 'Huong dan cu the tung buoc', b: 'Chi can biet muc tieu chung' }
+    },
+    { dim: 'SN', a: 'S', b: 'N',
+      ko: { q: '문제가 발생했을 때 나는?', a: '과거 경험과 매뉴얼을 참고한다', b: '새로운 방법을 창의적으로 생각해본다' },
+      en: { q: 'When a problem occurs, I tend to...', a: 'Refer to past experience and manuals', b: 'Think of creative new solutions' },
+      vi: { q: 'Khi co van de xay ra, toi...', a: 'Tham khao kinh nghiem va huong dan', b: 'Nghi ra cach giai quyet moi' }
+    },
+    { dim: 'SN', a: 'S', b: 'N',
+      ko: { q: '새로운 메뉴나 서비스를 배울 때?', a: '실제로 해보며 익힌다', b: '전체 원리를 먼저 이해하고 싶다' },
+      en: { q: 'When learning a new menu or service, I...', a: 'Learn by doing it hands-on', b: 'Want to understand the concept first' },
+      vi: { q: 'Khi hoc mon moi hoac dich vu moi, toi...', a: 'Hoc bang cach thuc hanh', b: 'Muon hieu nguyen ly truoc' }
+    },
+    { dim: 'SN', a: 'S', b: 'N',
+      ko: { q: '업무 개선을 위해 제안할 때?', a: '현재 작업의 구체적 개선점을 제안한다', b: '완전히 새로운 방식을 제안한다' },
+      en: { q: 'When suggesting improvements at work, I...', a: 'Suggest specific improvements to current processes', b: 'Propose entirely new approaches' },
+      vi: { q: 'Khi de xuat cai tien cong viec, toi...', a: 'De xuat cai tien cu the quy trinh hien tai', b: 'De xuat phuong phap hoan toan moi' }
+    },
+    { dim: 'SN', a: 'S', b: 'N',
+      ko: { q: '일할 때 더 중요하게 생각하는 것은?', a: '정확한 사실과 구체적인 데이터', b: '전체적인 흐름과 가능성' },
+      en: { q: 'At work, I value more...', a: 'Accurate facts and concrete data', b: 'The big picture and possibilities' },
+      vi: { q: 'Trong cong viec, toi coi trong...', a: 'Du lieu va su kien chinh xac', b: 'Buc tranh tong the va kha nang' }
+    },
+    // T/F (11-15)
+    { dim: 'TF', a: 'T', b: 'F',
+      ko: { q: '동료가 실수했을 때 나는?', a: '객관적으로 문제점을 지적한다', b: '먼저 감정을 배려하고 부드럽게 말한다' },
+      en: { q: 'When a coworker makes a mistake, I...', a: 'Point out the issue objectively', b: 'Consider their feelings and speak gently' },
+      vi: { q: 'Khi dong nghiep mac loi, toi...', a: 'Chi ra van de mot cach khach quan', b: 'Quan tam cam xuc ho va noi nhe nhang' }
+    },
+    { dim: 'TF', a: 'T', b: 'F',
+      ko: { q: '고객 불만을 처리할 때 나는?', a: '논리적으로 해결방법을 찾는다', b: '먼저 고객 감정에 공감하고 위로한다' },
+      en: { q: 'When handling a customer complaint, I first...', a: 'Look for a logical solution', b: 'Empathize with the customer first' },
+      vi: { q: 'Khi xu ly khieu nai cua khach, truoc tien toi...', a: 'Tim giai phap hop ly', b: 'Dong cam voi cam xuc cua khach' }
+    },
+    { dim: 'TF', a: 'T', b: 'F',
+      ko: { q: '업무 결정을 내릴 때 기준은?', a: '효율성과 논리적 근거', b: '팀 분위기와 구성원 감정' },
+      en: { q: 'When making work decisions, I base them on...', a: 'Efficiency and logical reasoning', b: 'Team morale and people\'s feelings' },
+      vi: { q: 'Khi dua ra quyet dinh cong viec, toi dua vao...', a: 'Hieu qua va ly le logic', b: 'Tinh than nhom va cam xuc moi nguoi' }
+    },
+    { dim: 'TF', a: 'T', b: 'F',
+      ko: { q: '칭찬을 받았을 때 더 기분 좋은 것은?', a: '"일 처리가 정확하고 빠르다"', b: '"같이 일하면 분위기가 좋다"' },
+      en: { q: 'Which compliment makes you happier?', a: '"Your work is accurate and fast"', b: '"It\'s great working with you"' },
+      vi: { q: 'Loi khen nao lam ban vui hon?', a: '"Ban lam viec chinh xac va nhanh"', b: '"Lam viec voi ban rat vui"' }
+    },
+    { dim: 'TF', a: 'T', b: 'F',
+      ko: { q: '팀에서 의견 충돌이 있을 때?', a: '옳은 답을 찾는 것이 중요하다', b: '모두가 수긍할 수 있는 합의가 중요하다' },
+      en: { q: 'When there\'s a disagreement in the team...', a: 'Finding the right answer is most important', b: 'Reaching a consensus everyone accepts matters more' },
+      vi: { q: 'Khi co bat dong trong nhom...', a: 'Tim ra dap an dung la quan trong nhat', b: 'Dat duoc su dong thuan la quan trong hon' }
+    },
+    // J/P (16-20)
+    { dim: 'JP', a: 'J', b: 'P',
+      ko: { q: '근무 전 나는?', a: '오늘 할 일을 미리 계획하고 정리한다', b: '상황에 맞게 유연하게 대응한다' },
+      en: { q: 'Before my shift, I...', a: 'Plan and organize the day\'s tasks in advance', b: 'Prefer to go with the flow and adapt' },
+      vi: { q: 'Truoc ca lam, toi...', a: 'Len ke hoach va sap xep cong viec truoc', b: 'Linh hoat ung bien theo tinh huong' }
+    },
+    { dim: 'JP', a: 'J', b: 'P',
+      ko: { q: '마감 기한이 있는 업무에서 나는?', a: '미리미리 끝내야 안심이 된다', b: '마감 직전에 집중력이 올라간다' },
+      en: { q: 'With a deadline, I tend to...', a: 'Finish early to feel at ease', b: 'Work best under last-minute pressure' },
+      vi: { q: 'Voi han chot, toi thuong...', a: 'Hoan thanh som de yen tam', b: 'Tap trung tot nhat vao phut cuoi' }
+    },
+    { dim: 'JP', a: 'J', b: 'P',
+      ko: { q: '갑작스런 업무 변경이 생기면?', a: '스트레스를 받고 불편하다', b: '괜찮다, 변화에 빠르게 적응한다' },
+      en: { q: 'When there\'s a sudden change in plans...', a: 'I feel stressed and uncomfortable', b: 'I\'m fine, I adapt quickly' },
+      vi: { q: 'Khi co thay doi dot ngot...', a: 'Toi cam thay cang thang', b: 'Toi thich ung nhanh chong' }
+    },
+    { dim: 'JP', a: 'J', b: 'P',
+      ko: { q: '작업 공간(테이블, 주방 등)을 어떻게 관리하나요?', a: '항상 정리정돈 되어있다', b: '좀 어질러져도 필요한 건 찾을 수 있다' },
+      en: { q: 'How do you manage your workspace?', a: 'Always neat and organized', b: 'A bit messy but I know where things are' },
+      vi: { q: 'Ban quan ly khong gian lam viec the nao?', a: 'Luon gon gang va ngan nap', b: 'Hoi lon xon nhung biet do dau' }
+    },
+    { dim: 'JP', a: 'J', b: 'P',
+      ko: { q: '여러 업무가 동시에 주어지면?', a: '우선순위를 정해 하나씩 처리한다', b: '여러 가지를 동시에 왔다 갔다 한다' },
+      en: { q: 'When multiple tasks come at once, I...', a: 'Prioritize and handle them one by one', b: 'Switch between tasks flexibly' },
+      vi: { q: 'Khi nhieu viec den cung luc, toi...', a: 'Uu tien va xu ly tung viec mot', b: 'Lam nhieu viec cung luc linh hoat' }
+    }
+  ];
+
+  // ===== 16 MBTI Type Data =====
+  const TYPES = {
+    ISTJ: {
+      icon: '&#128221;', color: '#2563eb',
+      ko: { name: '청렴결백한 논리주의자', desc: '책임감이 강하고 꼼꼼하며, 정해진 규칙과 절차를 철저히 따릅니다. 서비스 매뉴얼을 완벽하게 숙지하고, 일관된 품질을 유지하는 데 탁월합니다. 조용히 맡은 바를 묵묵히 해내는 믿음직한 팀원입니다.',
+        work: ['매뉴얼과 절차를 정확히 준수', '재고 관리, 마감 정산 등 꼼꼼한 업무에 강함', '일관된 서비스 품질 유지'],
+        comm: ['명확하고 구체적인 지시를 선호합니다', '갑작스런 변경보다 사전 공지가 효과적', '논리적 근거와 함께 피드백하면 좋습니다'] },
+      en: { name: 'The Inspector', desc: 'Responsible and thorough, strictly follows rules and procedures. Excels at maintaining consistent quality and mastering service manuals. A reliable team member who quietly gets the job done.',
+        work: ['Follows manuals and procedures precisely', 'Strong at inventory, closing, and detail work', 'Maintains consistent service quality'],
+        comm: ['Prefers clear, specific instructions', 'Advance notice works better than sudden changes', 'Provide logical reasoning with feedback'] },
+      vi: { name: 'Nguoi kiem tra', desc: 'Co trach nhiem va ky luong, tuan thu quy tac va quy trinh. Xuat sac trong viec duy tri chat luong dich vu nhat quan.',
+        work: ['Tuan thu chinh xac huong dan', 'Gioi quan ly kho va cong viec chi tiet', 'Duy tri chat luong dich vu on dinh'],
+        comm: ['Thich chi dan ro rang, cu the', 'Thong bao truoc hieu qua hon thay doi dot ngot', 'Phan hoi kem ly do logic'] }
+    },
+    ISFJ: {
+      icon: '&#128591;', color: '#059669',
+      ko: { name: '용감한 수호자', desc: '따뜻하고 헌신적이며, 동료와 고객을 세심하게 배려합니다. 맡은 업무에 성실하고, 팀의 조화를 중요하게 여기는 조용한 서포터입니다. 반복 업무도 꾸준히 잘 해냅니다.',
+        work: ['고객 응대에서 세심한 배려 발휘', '팀 분위기를 안정시키는 역할', '반복 업무를 꾸준히 수행하는 끈기'],
+        comm: ['개인적으로 감사를 표현하면 동기부여 됨', '공개 비판보다 1:1 피드백 선호', '안정적인 환경에서 최고의 성과'] },
+      en: { name: 'The Protector', desc: 'Warm and devoted, shows genuine care for colleagues and customers. Diligent and values team harmony as a quiet supporter.',
+        work: ['Shows thoughtful care in customer service', 'Stabilizes team atmosphere', 'Persistent with routine tasks'],
+        comm: ['Motivated by personal appreciation', 'Prefers private 1:1 feedback over public criticism', 'Performs best in stable environments'] },
+      vi: { name: 'Nguoi bao ve', desc: 'Am ap va tan tuy, quan tam dong nghiep va khach hang. Cham chi va coi trong su hoa hop nhom.',
+        work: ['Chu dao trong phuc vu khach hang', 'On dinh bau khong khi nhom', 'Kien tri voi cong viec thuong ngay'],
+        comm: ['Dong luc tu loi cam on ca nhan', 'Thich phan hoi rieng 1:1', 'Lam tot nhat trong moi truong on dinh'] }
+    },
+    INFJ: {
+      icon: '&#127800;', color: '#7c3aed',
+      ko: { name: '선의의 옹호자', desc: '통찰력 있고 이상주의적이며, 깊은 공감 능력으로 동료와 고객의 필요를 직관적으로 파악합니다. 의미 있는 일에 열정을 가지며 조용히 팀에 영향력을 발휘합니다.',
+        work: ['고객의 숨은 니즈를 직관적으로 파악', '팀원들의 감정 변화를 잘 감지', '서비스 개선 아이디어 제안 능력'],
+        comm: ['업무의 의미와 목적을 함께 설명해주세요', '조용하지만 깊은 생각을 가지고 있습니다', '1:1 대화에서 더 솔직한 의견을 나눕니다'] },
+      en: { name: 'The Advocate', desc: 'Insightful and idealistic, intuitively understands needs through deep empathy. Passionate about meaningful work and quietly influences the team.',
+        work: ['Intuitively senses hidden customer needs', 'Detects emotional changes in teammates', 'Proposes meaningful service improvements'],
+        comm: ['Explain the meaning and purpose behind tasks', 'Quiet but has deep thoughts', 'More open in private 1:1 conversations'] },
+      vi: { name: 'Nguoi ung ho', desc: 'Sau sac va ly tuong, hieu nhu cau qua su dong cam. Dam me voi cong viec co y nghia.',
+        work: ['Nam bat nhu cau an cua khach hang', 'Nhan ra thay doi cam xuc dong nghiep', 'De xuat cai tien dich vu co y nghia'],
+        comm: ['Giai thich y nghia va muc dich cong viec', 'Tram lang nhung co suy nghi sau sac', 'Coi mo hon trong tro chuyen rieng'] }
+    },
+    INTJ: {
+      icon: '&#9883;', color: '#1e40af',
+      ko: { name: '용의주도한 전략가', desc: '전략적 사고와 높은 기준을 가진 독립적인 유형입니다. 비효율을 싫어하고, 시스템과 프로세스를 개선하는 데 뛰어납니다. 장기적 관점에서 업무를 바라봅니다.',
+        work: ['업무 프로세스 개선과 효율화 제안', '논리적 문제 해결 능력', '장기적 목표 설정과 계획 수립'],
+        comm: ['논리적 근거를 제시하며 소통하세요', '자율성을 존중해주면 더 좋은 결과를 냅니다', '불필요한 회의보다 효율적인 의사소통 선호'] },
+      en: { name: 'The Architect', desc: 'Strategic thinker with high standards. Hates inefficiency and excels at improving systems and processes.',
+        work: ['Suggests process improvements', 'Strong logical problem-solving', 'Sets long-term goals and plans'],
+        comm: ['Communicate with logical reasoning', 'Respect their autonomy for better results', 'Prefers efficient communication over meetings'] },
+      vi: { name: 'Kien truc su', desc: 'Tu duy chien luoc voi tieu chuan cao. Ghet su kem hieu qua va gioi cai tien he thong.',
+        work: ['De xuat cai tien quy trinh', 'Giai quyet van de logic', 'Dat muc tieu va ke hoach dai han'],
+        comm: ['Giao tiep bang ly le logic', 'Ton trong su tu chu', 'Thich giao tiep hieu qua hon hop'] }
+    },
+    ISTP: {
+      icon: '&#128295;', color: '#0891b2',
+      ko: { name: '만능 재주꾼', desc: '실용적이고 적응력이 뛰어나며, 문제가 생기면 즉시 해결하는 능력이 탁월합니다. 장비 관리나 기술적 업무에 강하며, 위기 상황에서 침착합니다.',
+        work: ['장비 고장 등 돌발 상황 대처 능력 탁월', '실용적이고 효율적인 작업 방식', '기술적 문제 해결에 강함'],
+        comm: ['긴 설명보다 간결한 지시를 선호합니다', '직접 해보면서 배우는 것을 좋아합니다', '자유로운 작업 환경에서 역량 발휘'] },
+      en: { name: 'The Craftsman', desc: 'Practical and adaptable, excellent at immediate problem-solving. Strong with equipment and stays calm in crises.',
+        work: ['Handles equipment failures and emergencies', 'Practical and efficient work style', 'Strong technical problem-solving'],
+        comm: ['Prefers concise instructions over long explanations', 'Learns best by hands-on experience', 'Thrives in autonomous work environments'] },
+      vi: { name: 'Nguoi thu cong', desc: 'Thuc te va linh hoat, giai quyet van de nhanh chong. Gioi voi thiet bi va binh tinh trong khung hoang.',
+        work: ['Xu ly su co thiet bi va tinh huong khan cap', 'Phong cach lam viec thuc te hieu qua', 'Giai quyet van de ky thuat tot'],
+        comm: ['Thich chi dan ngan gon', 'Hoc tot nhat qua thuc hanh', 'Phat huy nang luc khi duoc tu chu'] }
+    },
+    ISFP: {
+      icon: '&#127912;', color: '#be185d',
+      ko: { name: '호기심 많은 예술가', desc: '조용하고 따뜻하며, 현재 순간에 충실합니다. 미적 감각이 뛰어나고, 고객에게 세심한 서비스를 제공합니다. 자신만의 방식으로 업무에 창의성을 더합니다.',
+        work: ['매장 디스플레이, 플레이팅 등 미적 업무에 강함', '고객에게 따뜻하고 자연스러운 서비스', '팀 내 부드러운 분위기 조성'],
+        comm: ['강압적 지시보다 부드러운 요청이 효과적', '창의성을 발휘할 기회를 주세요', '개인 공간과 시간을 존중해주세요'] },
+      en: { name: 'The Adventurer', desc: 'Quiet, warm, and present-focused. Has great aesthetic sense and provides attentive customer service.',
+        work: ['Strong at display, plating, and visual tasks', 'Warm and natural customer service', 'Creates a gentle team atmosphere'],
+        comm: ['Gentle requests work better than strict orders', 'Give opportunities for creativity', 'Respect their personal space and time'] },
+      vi: { name: 'Nguoi phieu luu', desc: 'Tram lang, am ap va song trong hien tai. Co gu tham my tot va phuc vu khach hang chu dao.',
+        work: ['Gioi trang tri, bay tri va cong viec thi giac', 'Dich vu khach hang am ap tu nhien', 'Tao bau khong khi nhom de chiu'],
+        comm: ['Yeu cau nhe nhang hieu qua hon menh lenh', 'Tao co hoi phat huy sang tao', 'Ton trong khong gian ca nhan'] }
+    },
+    INFP: {
+      icon: '&#127752;', color: '#6d28d9',
+      ko: { name: '열정적인 중재자', desc: '이상주의적이고 공감능력이 높으며, 진정성 있는 서비스를 추구합니다. 동료의 감정을 잘 이해하고, 팀 내 갈등 해결에 도움을 줍니다.',
+        work: ['진심 어린 고객 응대로 단골 고객 확보', '팀 내 갈등 중재 역할', '서비스에 감성적 가치를 더함'],
+        comm: ['업무의 의미와 가치를 함께 전달해주세요', '비판보다 격려가 더 효과적입니다', '개인적 성장 기회를 제공하면 동기부여 됩니다'] },
+      en: { name: 'The Mediator', desc: 'Idealistic with high empathy, seeks authentic service. Understands feelings and helps resolve team conflicts.',
+        work: ['Builds loyal customers through genuine care', 'Mediates team conflicts', 'Adds emotional value to service'],
+        comm: ['Share the meaning and value of work', 'Encouragement works better than criticism', 'Personal growth opportunities motivate them'] },
+      vi: { name: 'Nguoi hoa giai', desc: 'Ly tuong va dong cam cao, tim kiem dich vu chan thuc. Hieu cam xuc va giai quyet xung dot nhom.',
+        work: ['Xay dung khach hang trung thanh', 'Hoa giai xung dot nhom', 'Them gia tri cam xuc vao dich vu'],
+        comm: ['Chia se y nghia va gia tri cong viec', 'Khuyen khich hieu qua hon chi trich', 'Co hoi phat trien ca nhan tao dong luc'] }
+    },
+    INTP: {
+      icon: '&#128300;', color: '#4338ca',
+      ko: { name: '논리적인 사색가', desc: '분석적이고 호기심이 많으며, 복잡한 문제를 깊이 파고드는 것을 좋아합니다. 시스템의 비효율을 발견하고 개선 방안을 제시하는 데 뛰어납니다.',
+        work: ['복잡한 업무 시스템 분석 및 개선', 'POS, 재고 시스템 등 기술적 이해도 높음', '논리적 사고로 근본적 문제 해결'],
+        comm: ['충분한 사고 시간을 주세요', '왜 그래야 하는지 이유를 설명해주세요', '독립적으로 일할 수 있는 환경 선호'] },
+      en: { name: 'The Logician', desc: 'Analytical and curious, loves solving complex problems. Finds inefficiencies and suggests improvements.',
+        work: ['Analyzes and improves work systems', 'High technical understanding of POS/inventory', 'Solves root causes with logical thinking'],
+        comm: ['Give sufficient time to think', 'Explain the why behind requests', 'Prefers working independently'] },
+      vi: { name: 'Nha logic', desc: 'Phan tich va to mo, thich giai quyet van de phuc tap. Phat hien va cai tien he thong.',
+        work: ['Phan tich va cai tien he thong', 'Hieu biet ky thuat POS/kho hang', 'Giai quyet nguyen nhan goc bang logic'],
+        comm: ['Cho du thoi gian suy nghi', 'Giai thich ly do yeu cau', 'Thich lam viec doc lap'] }
+    },
+    ESTP: {
+      icon: '&#9889;', color: '#dc2626',
+      ko: { name: '모험을 즐기는 사업가', desc: '에너지 넘치고 현실적이며, 즉각적인 행동력이 강점입니다. 빠르게 변하는 서비스 환경에서 빛을 발하며, 고객과의 소통을 즐깁니다.',
+        work: ['빠른 상황 판단과 즉각 대응', '활기찬 고객 응대와 세일즈 능력', '위기 상황에서 침착한 리더십'],
+        comm: ['행동 중심의 피드백을 선호합니다', '긴 이론보다 실전 경험을 중시합니다', '자유롭게 움직일 수 있는 역할이 적합합니다'] },
+      en: { name: 'The Entrepreneur', desc: 'Energetic and realistic with strong action skills. Shines in fast-paced service environments.',
+        work: ['Quick situation assessment and response', 'Energetic customer service and sales', 'Calm leadership in crises'],
+        comm: ['Prefers action-oriented feedback', 'Values hands-on experience over theory', 'Best in roles with freedom to move'] },
+      vi: { name: 'Doanh nhan', desc: 'Nang dong va thuc te, hanh dong nhanh. Toa sang trong moi truong dich vu nhip do nhanh.',
+        work: ['Danh gia va phan ung nhanh', 'Phuc vu khach hang nang dong', 'Lanh dao binh tinh trong khung hoang'],
+        comm: ['Thich phan hoi huong hanh dong', 'Coi trong kinh nghiem thuc te', 'Phu hop vai tro tu do di chuyen'] }
+    },
+    ESFP: {
+      icon: '&#127881;', color: '#ea580c',
+      ko: { name: '자유로운 연예인', desc: '밝고 사교적이며, 주변 사람들을 즐겁게 만드는 재능이 있습니다. 고객 서비스의 달인으로, 분위기를 활기차게 만들고 팀 사기를 높입니다.',
+        work: ['뛰어난 고객 응대와 분위기 메이킹', '팀 사기를 높이는 에너지 담당', '이벤트, 프로모션 업무에 강함'],
+        comm: ['재미있고 활기찬 업무 환경을 만들어주세요', '칭찬과 인정에 큰 동기부여를 받습니다', '단조로운 반복 업무보다 다양한 역할 선호'] },
+      en: { name: 'The Entertainer', desc: 'Bright and sociable, naturally makes people happy. A customer service star who energizes the team.',
+        work: ['Excellent customer interaction and mood-making', 'Team energy booster', 'Strong at events and promotions'],
+        comm: ['Create a fun and lively work environment', 'Highly motivated by praise and recognition', 'Prefers variety over monotonous routines'] },
+      vi: { name: 'Nguoi bieu dien', desc: 'Tuoi sang va hoa dong, lam moi nguoi vui ve. Ngoi sao dich vu khach hang, nang cao tinh than nhom.',
+        work: ['Tuong tac khach hang tuyet voi', 'Nguon nang luong cua nhom', 'Gioi to chuc su kien va khuyen mai'],
+        comm: ['Tao moi truong lam viec vui ve', 'Dong luc lon tu loi khen va cong nhan', 'Thich da dang hon la lap di lap lai'] }
+    },
+    ENFP: {
+      icon: '&#127774;', color: '#f59e0b',
+      ko: { name: '재기발랄한 활동가', desc: '열정적이고 창의적이며, 새로운 아이디어와 가능성을 끊임없이 탐색합니다. 사람들과의 교류를 즐기고, 팀에 영감과 활력을 불어넣습니다.',
+        work: ['새로운 서비스 아이디어 제안', '고객과의 자연스러운 소통 능력', '팀에 열정과 에너지를 전파'],
+        comm: ['창의적 제안을 경청하고 격려해주세요', '지나친 규칙 강조보다 자유로운 환경 선호', '다양한 프로젝트 참여 기회를 주세요'] },
+      en: { name: 'The Campaigner', desc: 'Enthusiastic and creative, constantly explores new ideas. Enjoys connecting with people and inspires the team.',
+        work: ['Suggests new service ideas', 'Natural communication with customers', 'Spreads passion and energy to the team'],
+        comm: ['Listen to and encourage their creative ideas', 'Prefers freedom over strict rules', 'Give opportunities to join various projects'] },
+      vi: { name: 'Nguoi van dong', desc: 'Nhiet tinh va sang tao, lien tuc kham pha y tuong moi. Truyen cam hung va nang luong cho nhom.',
+        work: ['De xuat y tuong dich vu moi', 'Giao tiep tu nhien voi khach hang', 'Truyen nhiet huyet cho nhom'],
+        comm: ['Lang nghe va khuyen khich y tuong sang tao', 'Thich tu do hon quy tac nghiem ngat', 'Cho co hoi tham gia nhieu du an'] }
+    },
+    ENTP: {
+      icon: '&#128161;', color: '#0284c7',
+      ko: { name: '뜨거운 논쟁을 즐기는 변론가', desc: '똑똒하고 호기심이 많으며, 기존 방식에 도전하는 것을 즐깁니다. 빠른 사고력으로 다양한 상황에 대처하며, 혁신적인 해결책을 제시합니다.',
+        work: ['기존 프로세스에 대한 혁신적 개선안 제안', '다양한 고객 유형에 유연한 대응', '문제를 다각도로 분석하는 능력'],
+        comm: ['아이디어 토론의 기회를 만들어주세요', '규칙보다 이유를 설명하면 더 잘 따릅니다', '도전적인 과제를 부여하면 동기부여 됩니다'] },
+      en: { name: 'The Debater', desc: 'Smart and curious, enjoys challenging conventions. Quick thinker who proposes innovative solutions.',
+        work: ['Suggests innovative process improvements', 'Flexibly handles diverse customer types', 'Analyzes problems from multiple angles'],
+        comm: ['Create opportunities for idea discussions', 'Explain reasons rather than just rules', 'Challenging tasks motivate them'] },
+      vi: { name: 'Nguoi tranh luan', desc: 'Thong minh va to mo, thich thach thuc truyen thong. Tu duy nhanh va de xuat giai phap sang tao.',
+        work: ['De xuat cai tien quy trinh sang tao', 'Linh hoat xu ly nhieu loai khach hang', 'Phan tich van de da chieu'],
+        comm: ['Tao co hoi thao luan y tuong', 'Giai thich ly do thay vi quy tac', 'Nhiem vu thach thuc tao dong luc'] }
+    },
+    ESTJ: {
+      icon: '&#128188;', color: '#b91c1c',
+      ko: { name: '엄격한 관리자', desc: '조직적이고 책임감이 강하며, 규칙과 질서를 중시합니다. 팀을 체계적으로 이끌고, 목표 달성을 위해 효율적으로 일합니다.',
+        work: ['팀 운영과 일정 관리에 뛰어남', '표준 절차 수립과 실행력', '목표 지향적 업무 처리'],
+        comm: ['명확한 목표와 역할을 제시하면 좋습니다', '결과 중심의 피드백을 선호합니다', '리더십 역할을 맡기면 책임감 있게 수행합니다'] },
+      en: { name: 'The Executive', desc: 'Organized and responsible, values rules and order. Leads teams systematically toward goals.',
+        work: ['Excellent at team operations and scheduling', 'Establishes and executes standard procedures', 'Goal-oriented task management'],
+        comm: ['Set clear goals and roles', 'Prefers results-focused feedback', 'Takes leadership roles responsibly'] },
+      vi: { name: 'Nguoi dieu hanh', desc: 'Co to chuc va trach nhiem, coi trong quy tac va trat tu. Dan dat nhom co he thong.',
+        work: ['Gioi van hanh nhom va quan ly lich trinh', 'Thiet lap va thuc hien quy trinh chuan', 'Quan ly cong viec huong muc tieu'],
+        comm: ['Dat muc tieu va vai tro ro rang', 'Thich phan hoi tap trung vao ket qua', 'Dam nhan vai tro lanh dao co trach nhiem'] }
+    },
+    ESFJ: {
+      icon: '&#128149;', color: '#be185d',
+      ko: { name: '사교적인 외교관', desc: '따뜻하고 사교적이며, 주변 사람들의 필요를 먼저 챙깁니다. 팀의 화합을 위해 노력하고, 고객에게 친절하고 세심한 서비스를 제공합니다.',
+        work: ['고객 만족도를 높이는 친절한 서비스', '팀워크와 협업의 핵심 역할', '신입 직원 교육과 멘토링에 적합'],
+        comm: ['노력과 기여를 인정해주세요', '팀 내 역할과 소속감이 중요합니다', '갈등 상황에서 중재 역할을 잘 합니다'] },
+      en: { name: 'The Consul', desc: 'Warm and sociable, naturally cares for others. Works for team harmony and provides friendly service.',
+        work: ['Friendly service that boosts satisfaction', 'Core role in teamwork and collaboration', 'Great for training and mentoring new staff'],
+        comm: ['Recognize their efforts and contributions', 'Role and belonging in the team matter', 'Good at mediating conflicts'] },
+      vi: { name: 'Nguoi tu van', desc: 'Am ap va hoa dong, tu nhien quan tam nguoi khac. No luc vi su hoa hop nhom.',
+        work: ['Dich vu than thien tang su hai long', 'Vai tro nong cot trong lam viec nhom', 'Phu hop dao tao va huong dan nhan vien moi'],
+        comm: ['Cong nhan no luc va dong gop', 'Vai tro va su thuoc ve nhom quan trong', 'Gioi hoa giai xung dot'] }
+    },
+    ENFJ: {
+      icon: '&#127775;', color: '#7c3aed',
+      ko: { name: '언변능숙한 사회운동가', desc: '카리스마 있고 영감을 주는 리더형입니다. 사람들의 잠재력을 발견하고 이끌어내며, 팀 전체의 성장을 위해 헌신합니다.',
+        work: ['팀원의 성장을 돕는 자연스러운 리더십', '고객과 깊은 유대감 형성', '팀 비전 설정과 동기부여'],
+        comm: ['리더십 기회를 제공하면 큰 성과를 냅니다', '팀원들의 성장에 관심이 많습니다', '비전과 목적을 공유하면 더 열심히 합니다'] },
+      en: { name: 'The Protagonist', desc: 'Charismatic and inspiring leader. Discovers potential in others and is devoted to team growth.',
+        work: ['Natural leadership that helps others grow', 'Builds deep bonds with customers', 'Sets team vision and motivates'],
+        comm: ['Provide leadership opportunities for great results', 'Cares deeply about teammates\' growth', 'Shares vision and purpose for extra motivation'] },
+      vi: { name: 'Nhan vat chinh', desc: 'Lanh dao co suc thu hut va truyen cam hung. Phat hien tiem nang va tan tuy voi su phat trien nhom.',
+        work: ['Lanh dao tu nhien giup nguoi khac phat trien', 'Xay dung moi quan he sau voi khach hang', 'Dat tam nhin nhom va tao dong luc'],
+        comm: ['Co hoi lanh dao mang lai ket qua lon', 'Quan tam su phat trien cua dong nghiep', 'Chia se tam nhin va muc dich'] }
+    },
+    ENTJ: {
+      icon: '&#128081;', color: '#1e3a5f',
+      ko: { name: '대담한 통솔자', desc: '결단력 있고 자신감 넘치는 전략적 리더입니다. 효율적인 시스템을 구축하고, 팀을 목표를 향해 강력하게 이끕니다.',
+        work: ['효율적인 업무 시스템 구축', '목표 달성을 위한 강력한 추진력', '전략적 의사결정과 문제 해결'],
+        comm: ['권한과 책임을 함께 부여하세요', '능력을 인정하고 도전적 과제를 주세요', '비효율적인 것에 대한 불만을 경청해주세요'] },
+      en: { name: 'The Commander', desc: 'Decisive and confident strategic leader. Builds efficient systems and drives teams toward goals.',
+        work: ['Builds efficient work systems', 'Strong drive toward goal achievement', 'Strategic decisions and problem-solving'],
+        comm: ['Give authority along with responsibility', 'Recognize abilities and assign challenges', 'Listen to their frustrations about inefficiency'] },
+      vi: { name: 'Nguoi chi huy', desc: 'Quyet doan va tu tin, lanh dao chien luoc. Xay dung he thong hieu qua va dan dat nhom.',
+        work: ['Xay dung he thong lam viec hieu qua', 'Dong luc manh me dat muc tieu', 'Ra quyet dinh chien luoc va giai quyet van de'],
+        comm: ['Giao quyen han cung trach nhiem', 'Cong nhan nang luc va giao thach thuc', 'Lang nghe su bat man ve kem hieu qua'] }
+    }
+  };
+
+  // ===== State =====
+  let currentQ = 0;
+  let answers = new Array(20).fill(null); // 'A' or 'B'
+
+  // ===== Init Page =====
+  function initPage() {
+    document.getElementById('pageTitle').textContent = t.pageTitle;
+    document.getElementById('welcomeTitle').textContent = t.welcomeTitle;
+    document.getElementById('welcomeDesc').textContent = t.welcomeDesc;
+    document.getElementById('timeEstimate').textContent = t.timeEstimate;
+    document.getElementById('btnStart').textContent = t.btnStart;
+
+    const fl = document.getElementById('featureList');
+    fl.innerHTML = t.features.map(f => `<li>${f}</li>`).join('');
+
+    // Check previous result
+    const prevKey = `sop_mbti_${user?.email || 'guest'}`;
+    const prev = JSON.parse(localStorage.getItem(prevKey) || 'null');
+    if (prev) {
+      document.getElementById('prevResultBanner').style.display = 'block';
+      document.getElementById('prevResultLabel').textContent = t.prevResult;
+      document.getElementById('prevResultType').textContent = prev.type;
+      const d = new Date(prev.completedAt);
+      document.getElementById('prevResultDate').textContent = d.toLocaleDateString(lang === 'ko' ? 'ko-KR' : lang === 'vi' ? 'vi-VN' : 'en-US');
+    }
+  }
+  initPage();
+
+  // ===== Start Test =====
+  document.getElementById('btnStart').addEventListener('click', () => {
+    document.getElementById('welcomeScreen').style.display = 'none';
+    document.getElementById('questionScreen').style.display = 'block';
+    answers = new Array(20).fill(null);
+    currentQ = 0;
+    renderQuestion();
+  });
+
+  // ===== Render Question =====
+  function renderQuestion() {
+    const q = QUESTIONS[currentQ];
+    const ql = q[lang] || q.ko;
+    const total = QUESTIONS.length;
+
+    // Progress
+    document.getElementById('qProgress').textContent = t.qOf(currentQ + 1, total);
+    const dimKey = q.dim;
+    document.getElementById('qDimension').textContent = t.dimensions[dimKey];
+    document.getElementById('progressFill').style.width = ((currentQ + 1) / total * 100) + '%';
+    document.getElementById('dimBadge').textContent = t.dimensions[dimKey];
+
+    // Question text
+    document.getElementById('qText').textContent = ql.q;
+    document.getElementById('optAText').textContent = ql.a;
+    document.getElementById('optBText').textContent = ql.b;
+
+    // Selection state
+    document.getElementById('optA').classList.toggle('selected', answers[currentQ] === 'A');
+    document.getElementById('optB').classList.toggle('selected', answers[currentQ] === 'B');
+
+    // Nav buttons
+    document.getElementById('btnPrev').textContent = t.btnPrev;
+    document.getElementById('btnPrev').style.display = currentQ === 0 ? 'none' : 'block';
+
+    const isLast = currentQ === total - 1;
+    document.getElementById('btnNext').textContent = isLast ? t.btnSubmit : t.btnNext;
+  }
+
+  function selectOption(opt) {
+    answers[currentQ] = opt;
+    document.getElementById('optA').classList.toggle('selected', opt === 'A');
+    document.getElementById('optB').classList.toggle('selected', opt === 'B');
+  }
+
+  function prevQuestion() {
+    if (currentQ > 0) { currentQ--; renderQuestion(); }
+  }
+
+  function nextQuestion() {
+    if (answers[currentQ] === null) {
+      alert(t.selectFirst);
+      return;
+    }
+    if (currentQ < QUESTIONS.length - 1) {
+      currentQ++;
+      renderQuestion();
+    } else {
+      showResult();
+    }
+  }
+
+  // ===== Calculate Result =====
+  function calculateMBTI() {
+    const scores = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
+    const dimCounts = { EI: 0, SN: 0, TF: 0, JP: 0 };
+
+    QUESTIONS.forEach((q, i) => {
+      const ans = answers[i];
+      if (!ans) return;
+      const chosen = ans === 'A' ? q.a : q.b;
+      scores[chosen]++;
+      dimCounts[q.dim]++;
+    });
+
+    // Convert to percentages
+    const pct = {};
+    [['E','I','EI'],['S','N','SN'],['T','F','TF'],['J','P','JP']].forEach(([a,b,dim]) => {
+      const total = dimCounts[dim] || 1;
+      pct[a] = Math.round((scores[a] / total) * 100);
+      pct[b] = Math.round((scores[b] / total) * 100);
+    });
+
+    const type = (pct.E >= pct.I ? 'E' : 'I') +
+                 (pct.S >= pct.N ? 'S' : 'N') +
+                 (pct.T >= pct.F ? 'T' : 'F') +
+                 (pct.J >= pct.P ? 'J' : 'P');
+
+    return { type, scores: pct };
+  }
+
+  // ===== Show Result =====
+  function showResult() {
+    const { type, scores } = calculateMBTI();
+    const td = TYPES[type];
+    const tl = td[lang] || td.ko;
+
+    document.getElementById('questionScreen').style.display = 'none';
+    document.getElementById('resultScreen').classList.add('active');
+
+    document.getElementById('resultIcon').innerHTML = td.icon;
+    document.getElementById('resultType').textContent = type;
+    document.getElementById('resultName').textContent = tl.name;
+
+    document.getElementById('cardDescTitle').innerHTML = t.cardDesc;
+    document.getElementById('resultDesc').textContent = tl.desc;
+
+    document.getElementById('cardScoreTitle').innerHTML = t.cardScore;
+
+    // Score bars
+    const dims = [['E','I'],['S','N'],['T','F'],['J','P']];
+    let barsHTML = '';
+    dims.forEach(([a,b]) => {
+      const aActive = scores[a] >= scores[b];
+      barsHTML += `
+        <div class="mbti-score-row">
+          <span class="mbti-score-label ${aActive ? 'active-dim' : ''}">${a}</span>
+          <div class="mbti-score-bar-bg">
+            <div class="mbti-score-bar-fill" style="width:${scores[a]}%"></div>
+          </div>
+          <span class="mbti-score-pct">${scores[a]}%</span>
+        </div>
+        <div class="mbti-score-row" style="margin-bottom:16px;">
+          <span class="mbti-score-label ${!aActive ? 'active-dim' : ''}">${b}</span>
+          <div class="mbti-score-bar-bg">
+            <div class="mbti-score-bar-fill" style="width:${scores[b]}%; background:linear-gradient(90deg, #a78bfa, #c084fc);"></div>
+          </div>
+          <span class="mbti-score-pct">${scores[b]}%</span>
+        </div>`;
+    });
+    document.getElementById('scoreBars').innerHTML = barsHTML;
+
+    document.getElementById('cardWorkTitle').innerHTML = t.cardWork;
+    document.getElementById('resultWork').innerHTML = tl.work.map(w => `<li>${w}</li>`).join('');
+
+    document.getElementById('cardCommTitle').innerHTML = t.cardComm;
+    document.getElementById('resultComm').innerHTML = tl.comm.map(c => `<li>${c}</li>`).join('');
+
+    document.getElementById('btnRetake').textContent = t.btnRetake;
+    document.getElementById('btnGoHome').textContent = t.btnGoHome;
+
+    // Confetti effect
+    launchConfetti();
+
+    // Save result
+    saveResult(type, scores);
+  }
+
+  // ===== Save =====
+  function saveResult(type, scores) {
+    const result = {
+      type,
+      scores,
+      answers: answers.slice(),
+      completedAt: new Date().toISOString()
+    };
+    const key = `sop_mbti_${user?.email || 'guest'}`;
+    localStorage.setItem(key, JSON.stringify(result));
+
+    // Save to Supabase if available
+    if (typeof SupabaseMode !== 'undefined' && SupabaseMode.isConnected && SupabaseMode.isConnected()) {
+      try {
+        const sb = SupabaseMode.getClient ? SupabaseMode.getClient() : null;
+        if (sb && user?.email) {
+          sb.from('employees').update({ mbti_result: JSON.stringify(result) })
+            .eq('email', user.email)
+            .then(() => console.log('MBTI saved to Supabase'))
+            .catch(e => console.log('Supabase save failed:', e));
+        }
+      } catch(e) { /* silent */ }
+    }
+  }
+
+  // ===== Retake =====
+  function retakeTest() {
+    document.getElementById('resultScreen').classList.remove('active');
+    document.getElementById('questionScreen').style.display = 'block';
+    answers = new Array(20).fill(null);
+    currentQ = 0;
+    renderQuestion();
+  }
+
+  // ===== Confetti =====
+  function launchConfetti() {
+    const container = document.createElement('div');
+    container.className = 'confetti-container';
+    document.body.appendChild(container);
+
+    const colors = ['#6366f1','#a78bfa','#f59e0b','#10b981','#ec4899','#3b82f6','#f97316'];
+    for (let i = 0; i < 50; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.style.left = Math.random() * 100 + '%';
+      piece.style.top = '-10px';
+      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+      piece.style.animationDelay = Math.random() * 1.5 + 's';
+      piece.style.animationDuration = (1.5 + Math.random()) + 's';
+      piece.style.width = (6 + Math.random() * 8) + 'px';
+      piece.style.height = (6 + Math.random() * 8) + 'px';
+      piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      container.appendChild(piece);
+    }
+    setTimeout(() => container.remove(), 3500);
+  }
+
+  // ===== Logout =====
+  document.getElementById('userAvatar').addEventListener('click', () => {
+    const msg = lang === 'en' ? 'Are you sure you want to log out?' :
+                lang === 'vi' ? 'Ban co chac muon dang xuat?' :
+                '로그아웃 하시겠습니까?';
+    if (confirm(msg)) {
+      localStorage.removeItem('sop_user');
+      location.href = 'index.html';
+    }
+  });
+  </script>
+</body>
+</html>

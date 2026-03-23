@@ -256,6 +256,7 @@
       <a href="#" onclick="showPage('dashboard', event)"><span class="ic">&#128202;</span> 대시보드</a>
       <a href="#" onclick="showPage('employees', event)"><span class="ic">&#128101;</span> 직원 관리</a>
       <a href="#" onclick="showPage('learning-path', event)"><span class="ic">&#128218;</span> 학습 경로</a>
+      <a href="#" onclick="showPage('chat-logs', event)"><span class="ic">&#128172;</span> AI 대화 로그</a>
       <a href="#" onclick="showPage('reports', event)"><span class="ic">&#128200;</span> 리포트</a>
 
       <div class="sidebar-section">시스템</div>
@@ -376,6 +377,8 @@
         <div class="stat-card"><p class="label">학습 완료</p><p class="value" style="color:var(--success);" id="statCompleted">0</p></div>
         <div class="stat-card"><p class="label">진행 중</p><p class="value" style="color:var(--warning);" id="statInProgress">0</p></div>
         <div class="stat-card"><p class="label">미시작</p><p class="value" style="color:var(--danger);" id="statNotStarted">0</p></div>
+        <div class="stat-card"><p class="label">평균 등급</p><p class="value" style="color:#d97706;" id="statAvgGrade">-</p></div>
+        <div class="stat-card"><p class="label">MBTI 응시율</p><p class="value" style="color:#7c3aed;" id="statMbtiRate">0%</p></div>
       </div>
       <!-- 마감일 알림 -->
       <div id="deadlineAlerts" class="card" style="margin-bottom:16px; display:none; border-left:3px solid var(--warning);">
@@ -423,7 +426,7 @@
       </div>
       <div class="card" style="padding:0; overflow:hidden;">
         <div style="overflow-x:auto;">
-          <table class="data-table"><thead><tr><th>이름</th><th>이메일</th><th>지점</th><th>역할</th><th>등록일</th><th>관리</th></tr></thead>
+          <table class="data-table"><thead><tr><th>이름</th><th>이메일</th><th>지점</th><th>역할</th><th>MBTI</th><th>등급</th><th>등록일</th><th>관리</th></tr></thead>
           <tbody id="empManageBody"></tbody></table>
         </div>
       </div>
@@ -440,6 +443,32 @@
           <table class="data-table" id="learningPathTable">
             <thead id="lpTableHead"><tr><th>지점</th><th>배정된 SOP</th><th>관리</th></tr></thead>
             <tbody id="lpTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== AI 대화 로그 ========== -->
+    <div id="page-chat-logs" style="display:none;">
+      <div class="topbar">
+        <h1>AI 대화 로그</h1>
+      </div>
+      <div style="display:flex; gap:16px; margin-bottom:20px; flex-wrap:wrap;">
+        <div class="stat-card" style="flex:1; min-width:160px;"><p class="label">총 질문 수</p><p class="value" id="chatLogTotalQ">0</p></div>
+        <div class="stat-card" style="flex:1; min-width:160px;"><p class="label">활용 직원 수</p><p class="value" id="chatLogActiveUsers">0</p></div>
+      </div>
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div style="padding:16px 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <h3 style="font-size:16px;">대화 기록</h3>
+          <input type="text" class="search-box" placeholder="직원 이름 검색..." id="chatLogSearch" oninput="renderChatLogs()">
+        </div>
+        <div style="padding:0 20px 8px;">
+          <div id="chatLogPerEmployee" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data-table">
+            <thead><tr><th>시간</th><th>직원</th><th>질문</th><th>답변</th></tr></thead>
+            <tbody id="chatLogBody"></tbody>
           </table>
         </div>
       </div>
@@ -657,7 +686,7 @@
     // ===== 페이지 전환 =====
     function showPage(page, event) {
       if (event) event.preventDefault();
-      ['sop', 'content', 'dashboard', 'employees', 'learning-path', 'reports', 'settings'].forEach(p => {
+      ['sop', 'content', 'dashboard', 'employees', 'learning-path', 'chat-logs', 'reports', 'settings'].forEach(p => {
         const el = document.getElementById('page-' + p);
         if (el) el.style.display = p === page ? 'block' : 'none';
       });
@@ -669,6 +698,7 @@
       if (page === 'dashboard') renderDashboard();
       if (page === 'employees') renderEmployeeManage();
       if (page === 'learning-path') renderLearningPaths();
+      if (page === 'chat-logs') renderChatLogs();
       if (page === 'reports') renderReports();
       if (page === 'settings') renderSettings();
 
@@ -1401,12 +1431,22 @@ ${text.slice(0, 3000)}`;
     // ===== 직원 관리 =====
     function renderEmployeeManage() {
       const emps = getEmployeesWithProgress();
-      document.getElementById('empManageBody').innerHTML = emps.map(emp =>
-        `<tr><td><strong>${emp.name}</strong></td><td style="font-size:13px;">${emp.email}</td><td style="font-size:13px;">${emp.branch}</td>
+      document.getElementById('empManageBody').innerHTML = emps.map(emp => {
+        const mbtiData = getEmployeeMbti(emp.email);
+        const mbtiHtml = mbtiData
+          ? `<span class="badge" style="background:#ede9fe;color:#7c3aed;cursor:pointer;font-weight:700;" onclick="event.stopPropagation();showMbtiDetail('${emp.name}','${emp.email}')">${mbtiData.type}</span>`
+          : `<span class="badge" style="background:var(--gray-100);color:var(--gray-500);">미응시</span>`;
+        const gradeInfo = getEmployeeGrade(emp.email);
+        const gradeHtml = gradeInfo
+          ? `<span class="badge" style="background:${gradeInfo.bg};color:${gradeInfo.color};font-weight:700;">${gradeInfo.grade}</span>`
+          : `<span style="color:var(--gray-400);">-</span>`;
+        return `<tr><td><strong>${emp.name}</strong></td><td style="font-size:13px;">${emp.email}</td><td style="font-size:13px;">${emp.branch}</td>
         <td><span class="badge" style="background:${emp.role==='branch_manager'?'var(--primary-light)':'var(--gray-100)'}; color:${emp.role==='branch_manager'?'var(--primary)':'var(--gray-700)'};">${emp.role==='branch_manager'?'지점장':'직원'}</span></td>
+        <td>${mbtiHtml}</td>
+        <td>${gradeHtml}</td>
         <td style="font-size:13px;color:var(--gray-500);">${emp.created}</td>
-        <td><button class="btn btn-outline" style="padding:4px 12px;font-size:12px;" onclick="showEmployeeDetail('${emp.id}')">상세</button></td></tr>`
-      ).join('');
+        <td><button class="btn btn-outline" style="padding:4px 12px;font-size:12px;" onclick="showEmployeeDetail('${emp.id}')">상세</button></td></tr>`;
+      }).join('');
     }
 
     // ===== 리포트 (실데이터) =====
@@ -2105,6 +2145,199 @@ function saveInvitation(code) {
       closeModal();
       renderLearningPaths();
     }
+
+    // ===== MBTI 관련 함수 =====
+    function getEmployeeMbti(email) {
+      const raw = localStorage.getItem('sop_mbti_' + email);
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch(e) { return null; }
+    }
+
+    // ===== 등급 관련 함수 =====
+    function getEmployeeGrade(email) {
+      const chapters = SopStore.getChapters();
+      const scores = [];
+      chapters.forEach(ch => {
+        const raw = localStorage.getItem('sop_exam_results_' + ch.id);
+        if (!raw) return;
+        try {
+          const results = JSON.parse(raw);
+          // results could be an array or object with scores keyed by email/id
+          if (Array.isArray(results)) {
+            const match = results.find(r => r.email === email);
+            if (match && match.score != null) scores.push(match.score);
+          } else if (results[email] != null) {
+            scores.push(typeof results[email] === 'object' ? results[email].score : results[email]);
+          }
+        } catch(e) {}
+      });
+      // Also try progress-based scores
+      if (scores.length === 0) {
+        const emp = EmployeeStore.getAll().find(e => e.email === email);
+        if (emp) {
+          const prog = Progress.getEmployeeProgress(emp.id);
+          Object.values(prog.chapterResults).forEach(r => {
+            if (r.score > 0) scores.push(r.score);
+          });
+        }
+      }
+      if (scores.length === 0) return null;
+      const avg = Math.round(scores.reduce((a,b) => a + b, 0) / scores.length);
+      return scoreToGrade(avg);
+    }
+
+    function scoreToGrade(avg) {
+      if (avg >= 95) return { grade: 'S', color: '#92400e', bg: '#fef3c7' };
+      if (avg >= 85) return { grade: 'A', color: '#166534', bg: '#dcfce7' };
+      if (avg >= 75) return { grade: 'B', color: '#1e40af', bg: '#dbeafe' };
+      if (avg >= 65) return { grade: 'C', color: '#854d0e', bg: '#fef9c3' };
+      if (avg >= 50) return { grade: 'D', color: '#9a3412', bg: '#ffedd5' };
+      return { grade: 'F', color: '#991b1b', bg: '#fee2e2' };
+    }
+
+    // ===== MBTI 상세 모달 =====
+    function showMbtiDetail(name, email) {
+      const data = getEmployeeMbti(email);
+      if (!data) return;
+      const m = document.getElementById('modalContent');
+
+      // Dimension bars
+      const dims = [
+        { left: 'E', right: 'I', leftLabel: '외향(E)', rightLabel: '내향(I)', score: data.dimensions?.E ?? data.dimensions?.EI ?? 50 },
+        { left: 'S', right: 'N', leftLabel: '감각(S)', rightLabel: '직관(N)', score: data.dimensions?.S ?? data.dimensions?.SN ?? 50 },
+        { left: 'T', right: 'F', leftLabel: '사고(T)', rightLabel: '감정(F)', score: data.dimensions?.T ?? data.dimensions?.TF ?? 50 },
+        { left: 'J', right: 'P', leftLabel: '판단(J)', rightLabel: '인식(P)', score: data.dimensions?.J ?? data.dimensions?.JP ?? 50 },
+      ];
+
+      const barsHtml = dims.map(d => {
+        const leftPct = d.score;
+        const rightPct = 100 - d.score;
+        return `<div style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+            <span style="font-weight:600;">${d.leftLabel} ${leftPct}%</span>
+            <span style="font-weight:600;">${d.rightLabel} ${rightPct}%</span>
+          </div>
+          <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--gray-200);">
+            <div style="width:${leftPct}%;background:#7c3aed;border-radius:4px 0 0 4px;"></div>
+            <div style="width:${rightPct}%;background:#c4b5fd;border-radius:0 4px 4px 0;"></div>
+          </div>
+        </div>`;
+      }).join('');
+
+      const testDate = data.testDate ? new Date(data.testDate).toLocaleDateString('ko-KR') : '-';
+
+      m.innerHTML = `
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+          <div style="width:64px;height:64px;border-radius:16px;background:#ede9fe;display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:24px;font-weight:800;color:#7c3aed;">${data.type || '?'}</span>
+          </div>
+          <div>
+            <h3 style="margin-bottom:2px;">${name}</h3>
+            <p style="font-size:14px;color:var(--gray-500);">MBTI: <strong style="color:#7c3aed;">${data.type || '-'}</strong></p>
+          </div>
+        </div>
+        <h4 style="font-size:15px;margin-bottom:12px;">차원별 점수</h4>
+        ${barsHtml}
+        ${data.description ? `<div style="margin-top:16px;padding:16px;background:var(--gray-50);border-radius:8px;">
+          <h4 style="font-size:14px;margin-bottom:8px;">성격 설명</h4>
+          <p style="font-size:13px;line-height:1.6;color:var(--gray-700);">${data.description}</p>
+        </div>` : ''}
+        ${data.workStyle ? `<div style="margin-top:12px;padding:16px;background:#ede9fe;border-radius:8px;">
+          <h4 style="font-size:14px;margin-bottom:8px;color:#7c3aed;">업무 스타일 팁</h4>
+          <p style="font-size:13px;line-height:1.6;color:#5b21b6;">${data.workStyle}</p>
+        </div>` : ''}
+        <p style="font-size:12px;color:var(--gray-500);margin-top:12px;">검사일: ${testDate}</p>
+        <button class="btn btn-outline" style="width:100%;margin-top:16px;" onclick="closeModal()">닫기</button>
+      `;
+      document.getElementById('modalOverlay').classList.add('show');
+    }
+
+    // ===== AI 대화 로그 =====
+    function renderChatLogs() {
+      const logs = JSON.parse(localStorage.getItem('sop_chat_logs') || '[]');
+      const searchQ = (document.getElementById('chatLogSearch')?.value || '').toLowerCase();
+
+      // Filter by search
+      const filtered = searchQ
+        ? logs.filter(l => (l.employeeName || l.userName || '').toLowerCase().includes(searchQ))
+        : logs;
+
+      // Stats
+      const totalQ = filtered.length;
+      const userSet = new Set(filtered.map(l => l.employeeName || l.userName || l.email || 'Unknown'));
+      document.getElementById('chatLogTotalQ').textContent = totalQ;
+      document.getElementById('chatLogActiveUsers').textContent = userSet.size;
+
+      // Per-employee question count
+      const perEmp = {};
+      filtered.forEach(l => {
+        const name = l.employeeName || l.userName || l.email || 'Unknown';
+        perEmp[name] = (perEmp[name] || 0) + 1;
+      });
+      document.getElementById('chatLogPerEmployee').innerHTML = Object.entries(perEmp)
+        .sort((a,b) => b[1] - a[1])
+        .map(([name, count]) => `<span class="badge" style="background:var(--primary-light);color:var(--primary);">${name}: ${count}건</span>`)
+        .join('');
+
+      // Table (most recent first, limit 100)
+      const rows = filtered.slice().reverse().slice(0, 100);
+      document.getElementById('chatLogBody').innerHTML = rows.length > 0
+        ? rows.map(l => {
+            const ts = l.timestamp ? new Date(l.timestamp).toLocaleString('ko-KR', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '-';
+            const name = l.employeeName || l.userName || l.email || '-';
+            const q = (l.question || l.message || '').length > 80 ? (l.question || l.message || '').slice(0,80) + '...' : (l.question || l.message || '-');
+            const a = (l.answer || l.response || '').length > 80 ? (l.answer || l.response || '').slice(0,80) + '...' : (l.answer || l.response || '-');
+            return `<tr><td style="font-size:12px;color:var(--gray-500);white-space:nowrap;">${ts}</td>
+              <td style="font-size:13px;font-weight:600;">${name}</td>
+              <td style="font-size:13px;max-width:250px;overflow:hidden;text-overflow:ellipsis;">${q}</td>
+              <td style="font-size:13px;max-width:250px;overflow:hidden;text-overflow:ellipsis;color:var(--gray-600);">${a}</td></tr>`;
+          }).join('')
+        : `<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--gray-500);">대화 기록이 없습니다.<br>직원이 AI 챗봇을 사용하면 여기에 기록됩니다.</td></tr>`;
+    }
+
+    // ===== 대시보드 통계 업데이트 (평균 등급 + MBTI 응시율) =====
+    function updateDashboardExtraStats() {
+      const emps = EmployeeStore.getAll();
+      if (emps.length === 0) return;
+
+      // MBTI 응시율
+      let mbtiCount = 0;
+      emps.forEach(emp => {
+        if (getEmployeeMbti(emp.email)) mbtiCount++;
+      });
+      const mbtiRate = Math.round((mbtiCount / emps.length) * 100);
+      const mbtiEl = document.getElementById('statMbtiRate');
+      if (mbtiEl) mbtiEl.textContent = mbtiRate + '%';
+
+      // 평균 등급
+      const gradeValues = { S: 5, A: 4, B: 3, C: 2, D: 1, F: 0 };
+      let gradeSum = 0, gradeCount = 0;
+      emps.forEach(emp => {
+        const g = getEmployeeGrade(emp.email);
+        if (g) { gradeSum += gradeValues[g.grade] || 0; gradeCount++; }
+      });
+      const avgEl = document.getElementById('statAvgGrade');
+      if (avgEl) {
+        if (gradeCount === 0) { avgEl.textContent = '-'; return; }
+        const avgVal = gradeSum / gradeCount;
+        let avgGrade = 'F';
+        if (avgVal >= 4.5) avgGrade = 'S';
+        else if (avgVal >= 3.5) avgGrade = 'A';
+        else if (avgVal >= 2.5) avgGrade = 'B';
+        else if (avgVal >= 1.5) avgGrade = 'C';
+        else if (avgVal >= 0.5) avgGrade = 'D';
+        const gi = scoreToGrade(avgGrade === 'S' ? 95 : avgGrade === 'A' ? 85 : avgGrade === 'B' ? 75 : avgGrade === 'C' ? 65 : avgGrade === 'D' ? 50 : 30);
+        avgEl.textContent = avgGrade;
+        avgEl.style.color = gi.color;
+      }
+    }
+
+    // Patch renderDashboard to include extra stats
+    const _origRenderDashboard = renderDashboard;
+    renderDashboard = function() {
+      _origRenderDashboard();
+      updateDashboardExtraStats();
+    };
 
     // ===== 초기화 =====
     renderSopList();

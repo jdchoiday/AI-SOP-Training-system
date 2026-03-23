@@ -300,10 +300,33 @@
     document.getElementById('chapterListTitle').textContent = t.learningChapters;
     document.getElementById('userAvatar').title = t.logout;
 
+    // ===== MBTI 챕터 카드 추가 =====
+    function renderMbtiCard() {
+      const container = document.getElementById('chapterList');
+      const email = user?.email || '';
+      const mbtiData = JSON.parse(localStorage.getItem('sop_mbti_' + email) || 'null');
+      const mbtiLabel = lang === 'en' ? 'Personality Test' : lang === 'vi' ? 'Trắc nghiệm tính cách' : 'MBTI 성격검사';
+      const mbtiSub = mbtiData
+        ? (lang === 'en' ? `Result: ${mbtiData.type}` : lang === 'vi' ? `Kết quả: ${mbtiData.type}` : `결과: ${mbtiData.type}`)
+        : (lang === 'en' ? 'Discover your work style' : lang === 'vi' ? 'Khám phá phong cách làm việc' : '나의 업무 스타일 알아보기');
+      const icon = mbtiData ? '&#9989;' : '&#129504;';
+      container.innerHTML += `
+        <a class="chapter-item ${mbtiData ? 'completed' : ''}" href="mbti.html" style="border-left:3px solid #7c3aed;">
+          <div class="chapter-num" style="background:#f3e8ff; color:#7c3aed;">M</div>
+          <div class="chapter-info">
+            <h3>${mbtiLabel}</h3>
+            <p>${mbtiSub}</p>
+          </div>
+          <span style="font-size:20px;">${icon}</span>
+        </a>
+      `;
+    }
+
     // ===== 초기화 =====
     updateProgress();
     updateNextAction();
     renderChapters();
+    renderMbtiCard();
 
     // 로그아웃
     document.getElementById('userAvatar').addEventListener('click', () => {
