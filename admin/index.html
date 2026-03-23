@@ -322,10 +322,7 @@
         </div>
 
         <!-- 드래그앤드롭 영역 -->
-        <div id="sopDropZone" style="border:2px dashed var(--gray-300); border-radius:12px; padding:30px; text-align:center; margin-bottom:20px; cursor:pointer; transition:all 0.3s;"
-          ondragover="event.preventDefault(); this.style.borderColor='var(--primary)'; this.style.background='rgba(79,70,229,0.05)';"
-          ondragleave="this.style.borderColor='var(--gray-300)'; this.style.background='transparent';"
-          ondrop="handleSopDrop(event); this.style.borderColor='var(--gray-300)'; this.style.background='transparent';">
+        <div id="sopDropZone" style="border:2px dashed var(--gray-300); border-radius:12px; padding:30px; text-align:center; margin-bottom:20px; cursor:pointer; transition:all 0.3s;">
           <div style="font-size:36px; margin-bottom:8px;">&#128203;</div>
           <p style="color:var(--gray-500); font-size:14px; margin:0;">
             파일 또는 폴더를 여기에 끌어다 놓으세요<br>
@@ -682,6 +679,20 @@
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
     if (!user || user.role !== 'admin') { window.location.href = '../index.html'; }
 
+    // ===== 브라우저 기본 드래그앤드롭 차단 (파일 열기 방지) =====
+    document.addEventListener('dragover', e => e.preventDefault());
+    document.addEventListener('drop', e => e.preventDefault());
+
+    // 드롭존 이벤트 바인딩
+    document.addEventListener('DOMContentLoaded', () => {
+      const dz = document.getElementById('sopDropZone');
+      if (dz) {
+        dz.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); dz.style.borderColor='var(--primary)'; dz.style.background='rgba(79,70,229,0.05)'; });
+        dz.addEventListener('dragleave', () => { dz.style.borderColor='var(--gray-300)'; dz.style.background='transparent'; });
+        dz.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); dz.style.borderColor='var(--gray-300)'; dz.style.background='transparent'; handleSopDrop(e); });
+      }
+    });
+
     // ===== AI 설정 바인딩 =====
     const AI_CONFIG = (typeof CONFIG !== 'undefined' && CONFIG.AI) ? CONFIG.AI : { scriptProvider:'gemini', quizProvider:'gemini', chatProvider:'gemini', videoProvider:'none', keys:{ gemini:'', siliconflow:'' }, models:{ gemini:'gemini-2.0-flash', wan:'Wan-AI/Wan2.2-T2V-A14B' } };
 
@@ -946,20 +957,27 @@
             continue;
           }
 
-          // AI로 SOP 구조화
+          // AI로 SOP 구조화 시도
           showLoading(`AI가 SOP로 변환 중: ${file.name}`);
-          const structuredContent = await convertTextToSop(text, file.name);
+          let structuredContent;
+          try {
+            structuredContent = await convertTextToSop(text, file.name);
+          } catch(aiErr) {
+            console.warn('AI 변환 실패, 텍스트 그대로 저장:', aiErr);
+            structuredContent = null;
+          }
 
-          // SOP 생성
+          // SOP 생성 (AI 실패해도 텍스트 그대로 저장)
           const sops = getSops();
-          const title = file.name.replace(/\.[^/.]+$/, ''); // 확장자 제거
+          const title = file.name.replace(/\.[^/.]+$/, '');
+          const fallbackHtml = `<p>${text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`;
           const newSop = {
             id: 'sop-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
-            title: structuredContent.title || title,
-            category: structuredContent.category || '기타',
+            title: (structuredContent && structuredContent.title) || title,
+            category: (structuredContent && structuredContent.category) || '기타',
             chapter: 'new',
             status: 'draft',
-            content: structuredContent.html || `<p>${text.replace(/\n/g, '</p><p>')}</p>`,
+            content: (structuredContent && structuredContent.html) || fallbackHtml,
             createdAt: new Date().toISOString().slice(0, 10),
             script: null,
             quizzes: null
@@ -1063,7 +1081,7 @@
 
       // 3. SOP로 저장
       const sops = getSops();
-      const chapters = SopStore ? SopStore.getChapters() : [];
+      const chapters = (typeof SopStore !== 'undefined' && SopStore.getChapters) ? SopStore.getChapters() : JSON.parse(localStorage.getItem('sop_chapters_custom') || '[]');
       let created = 0;
 
       for (const group of organized) {
