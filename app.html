@@ -34,6 +34,7 @@
           style="background:none; border:none; font-size:20px; cursor:pointer; position:relative; padding:4px;">
           &#128276;<span id="notifDot" style="display:none; position:absolute; top:2px; right:2px; width:8px; height:8px; background:var(--danger); border-radius:50%;"></span>
         </button>
+        <a href="change-password.html" title="설정" style="text-decoration:none; font-size:20px; line-height:1; padding:4px; cursor:pointer;">&#9881;</a>
         <div class="user-avatar" id="userAvatar" title="로그아웃">?</div>
       </div>
     </div>
@@ -154,6 +155,12 @@
 
     // ===== 로그인 확인 =====
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    const loginTime = parseInt(localStorage.getItem('sop_login_time') || '0');
+    if (Date.now() - loginTime > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem('sop_user');
+      localStorage.removeItem('sop_login_time');
+      window.location.href = 'index.html';
+    }
     if (!user) {
       window.location.href = 'index.html';
     } else {
@@ -463,6 +470,7 @@
     document.getElementById('userAvatar').addEventListener('click', () => {
       if (confirm(t.logoutConfirm)) {
         localStorage.removeItem('sop_user');
+        localStorage.removeItem('sop_login_time');
         window.location.href = 'index.html';
       }
     });

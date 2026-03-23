@@ -602,6 +602,12 @@
 
     // ===== 로그인 확인 =====
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    const loginTime = parseInt(localStorage.getItem('sop_login_time') || '0');
+    if (Date.now() - loginTime > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem('sop_user');
+      localStorage.removeItem('sop_login_time');
+      window.location.href = 'index.html';
+    }
     if (!user) { window.location.href = 'index.html'; }
 
     // ===== URL에서 챕터(SOP) ID 가져오기 =====
@@ -647,7 +653,8 @@
 
         // 나레이션 미리보기 (처음 40자)
         const preview = (video.title_full || video.title || '').slice(0, 50);
-        const mqScoreData = localStorage.getItem('sop_miniquiz_score_' + video.id);
+        const _mqEmail = (JSON.parse(localStorage.getItem('sop_user') || '{}').email || 'demo');
+        const mqScoreData = localStorage.getItem('sop_miniquiz_score_' + _mqEmail + '_' + video.id);
         let mqBadge = '';
         if (mqScoreData) {
           try {
@@ -887,7 +894,8 @@
       showView('miniQuizView');
 
       // Try to get cached quiz
-      const cacheKey = 'sop_miniquiz_' + videoId;
+      const _mqEmail3 = (JSON.parse(localStorage.getItem('sop_user') || '{}').email || 'demo');
+      const cacheKey = 'sop_miniquiz_' + _mqEmail3 + '_' + videoId;
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         try {
@@ -1074,7 +1082,8 @@ ${narration.slice(0, 1500)}
       `;
 
       // Save mini quiz score
-      localStorage.setItem('sop_miniquiz_score_' + mqVideoId, JSON.stringify({
+      const _mqEmail2 = (JSON.parse(localStorage.getItem('sop_user') || '{}').email || 'demo');
+      localStorage.setItem('sop_miniquiz_score_' + _mqEmail2 + '_' + mqVideoId, JSON.stringify({
         score: mqCorrect, total: mqQuestions.length, date: new Date().toISOString()
       }));
       Progress.saveQuizScore(mqVideoId, Math.round((mqCorrect / mqQuestions.length) * 100));
@@ -1249,8 +1258,8 @@ ${narration.slice(0, 1500)}
     // ===== 챕터 종합시험 =====
     var examQuestions = [], examAnswers = [], examCurrentIndex = 0, examLoading = false;
 
-    function getExamResult(chId) { try { return JSON.parse(localStorage.getItem('sop_exam_results_' + chId) || 'null'); } catch(e) { return null; } }
-    function saveExamResult(chId, r) { localStorage.setItem('sop_exam_results_' + chId, JSON.stringify(r)); }
+    function getExamResult(chId) { const _email = (JSON.parse(localStorage.getItem('sop_user') || '{}').email || 'demo'); try { return JSON.parse(localStorage.getItem('sop_exam_results_' + _email + '_' + chId) || 'null'); } catch(e) { return null; } }
+    function saveExamResult(chId, r) { const _email = (JSON.parse(localStorage.getItem('sop_user') || '{}').email || 'demo'); localStorage.setItem('sop_exam_results_' + _email + '_' + chId, JSON.stringify(r)); }
     function calcGrade(s) { return s>=95?'S':s>=90?'A':s>=80?'B':s>=70?'C':s>=60?'D':'F'; }
 
     function extractKeywords(html) {

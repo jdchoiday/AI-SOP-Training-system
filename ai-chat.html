@@ -136,6 +136,12 @@
     document.getElementById('chatInput').placeholder = t.placeholder;
 
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    const loginTime = parseInt(localStorage.getItem('sop_login_time') || '0');
+    if (Date.now() - loginTime > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem('sop_user');
+      localStorage.removeItem('sop_login_time');
+      window.location.href = 'index.html';
+    }
     if (!user) { window.location.href = 'index.html'; }
     document.getElementById('userAvatar').textContent = (user.name || '?')[0];
 
@@ -208,8 +214,8 @@
     }
     async function syncLogToSupabase(entry) {
       try {
-        if (typeof SupabaseClient !== 'undefined' && SupabaseClient.client) {
-          await SupabaseClient.client.from('chat_logs').insert([entry]);
+        if (typeof SupabaseMode !== 'undefined' && SupabaseMode._ready) {
+          await SupabaseMode.client.from('chat_logs').insert([entry]);
         }
       } catch(e) { /* silent fail - Supabase may not have the table */ }
     }
@@ -372,6 +378,7 @@
     document.getElementById('userAvatar').addEventListener('click', () => {
       if (confirm(t.logoutConfirm)) {
         localStorage.removeItem('sop_user');
+        localStorage.removeItem('sop_login_time');
         sessionStorage.removeItem('sb_synced');
         window.location.href = 'index.html';
       }
