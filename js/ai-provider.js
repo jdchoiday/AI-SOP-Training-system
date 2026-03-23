@@ -613,6 +613,109 @@ if (window.speechSynthesis) {
   window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 }
 
+// ===== TTS + 영상 동기 재생 =====
+
+// 씬 배열에서 TTS 설정을 생성하고 localStorage에 저장
+AI.generateSceneAudio = function(scenes, lang = 'ko-KR', sopId = '') {
+  if (!window.speechSynthesis) return [];
+
+  const configs = scenes.map((scene, i) => ({
+    scene: scene.scene || (i + 1),
+    narration: scene.narration || '',
+    lang: lang,
+    rate: 0.9,
+    pitch: 1,
+    volume: 1,
+  }));
+
+  if (sopId) {
+    localStorage.setItem('sop_tts_config_' + sopId, JSON.stringify(configs));
+  }
+  return configs;
+};
+
+// 영상(muted) + TTS 동시 재생 컨트롤러 반환
+AI.playSyncedVideo = function(videoUrl, narration, lang = 'ko-KR') {
+  let videoEl = null;
+  let utterance = null;
+  let stopped = false;
+  let onSubtitle = null; // callback(word, fullText)
+  let onEnd = null;
+
+  const controller = {
+    // 자막 콜백 설정: fn(currentWord, fullText)
+    set onSubtitleUpdate(fn) { onSubtitle = fn; },
+    set onPlayEnd(fn) { onEnd = fn; },
+
+    play(containerEl) {
+      stopped = false;
+      // 비디오 생성
+      if (videoUrl) {
+        videoEl = document.createElement('video');
+        videoEl.src = videoUrl;
+        videoEl.muted = true;
+        videoEl.autoplay = true;
+        videoEl.playsInline = true;
+        videoEl.style.cssText = 'width:100%;border-radius:8px 8px 0 0;display:block;background:#000;';
+        if (containerEl) {
+          containerEl.innerHTML = '';
+          containerEl.appendChild(videoEl);
+        }
+        videoEl.play().catch(() => {});
+      }
+
+      // TTS 동시 시작
+      if (narration && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        utterance = new SpeechSynthesisUtterance(narration);
+        utterance.lang = lang;
+        utterance.rate = 0.9;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+
+        const voices = window.speechSynthesis.getVoices();
+        const match = voices.find(v => v.lang === lang) || voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+        if (match) utterance.voice = match;
+
+        // 자막 하이라이트 (word boundary 이벤트)
+        utterance.onboundary = (e) => {
+          if (onSubtitle && e.name === 'word') {
+            const word = narration.substring(e.charIndex, e.charIndex + e.charLength);
+            onSubtitle(e.charIndex, e.charLength, narration);
+          }
+        };
+
+        utterance.onend = () => {
+          if (!stopped && onEnd) onEnd();
+        };
+        utterance.onerror = () => {
+          if (!stopped && onEnd) onEnd();
+        };
+
+        window.speechSynthesis.speak(utterance);
+      }
+    },
+
+    pause() {
+      if (videoEl) videoEl.pause();
+      if (window.speechSynthesis) window.speechSynthesis.pause();
+    },
+
+    resume() {
+      if (videoEl) videoEl.play().catch(() => {});
+      if (window.speechSynthesis) window.speechSynthesis.resume();
+    },
+
+    stop() {
+      stopped = true;
+      if (videoEl) { videoEl.pause(); videoEl.src = ''; videoEl = null; }
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+    },
+  };
+
+  return controller;
+};
+
 // ===== AI 제공자 상태 확인 =====
 AI.getStatus = function() {
   const keyCheck = (provider) => {

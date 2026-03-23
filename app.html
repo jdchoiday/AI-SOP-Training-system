@@ -29,7 +29,13 @@
     <!-- ===== 상단 헤더 ===== -->
     <div class="app-header">
       <h2>SOP Training</h2>
-      <div class="user-avatar" id="userAvatar" title="로그아웃">?</div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button id="notifBell" onclick="toggleNotifications()" title=""
+          style="background:none; border:none; font-size:20px; cursor:pointer; position:relative; padding:4px;">
+          &#128276;<span id="notifDot" style="display:none; position:absolute; top:2px; right:2px; width:8px; height:8px; background:var(--danger); border-radius:50%;"></span>
+        </button>
+        <div class="user-avatar" id="userAvatar" title="로그아웃">?</div>
+      </div>
     </div>
 
     <!-- ===== 환영 카드 ===== -->
@@ -73,6 +79,10 @@
       ko: {
         home: '홈', aiChat: 'AI 질문', myResults: '내 결과',
         logout: '로그아웃', logoutConfirm: '로그아웃 하시겠습니까?',
+        notifOn: '알림 켜짐', notifOff: '알림 꺼짐',
+        notifIncomplete: '아직 완료하지 않은 챕터가 있습니다',
+        notifDeadline: (d) => `학습 마감일이 ${d}일 남았습니다`,
+        notifNewSop: '새로운 교육 자료가 등록되었습니다',
         welcome: (name) => `안녕하세요, ${name || '직원'}님!`,
         startLearning: '학습을 시작해보세요',
         progressLabel: '전체 진행률',
@@ -93,6 +103,10 @@
       en: {
         home: 'Home', aiChat: 'AI Q&A', myResults: 'Results',
         logout: 'Logout', logoutConfirm: 'Are you sure you want to log out?',
+        notifOn: 'Notifications on', notifOff: 'Notifications off',
+        notifIncomplete: 'You have incomplete chapters',
+        notifDeadline: (d) => `Training deadline in ${d} days`,
+        notifNewSop: 'New training material has been published',
         welcome: (name) => `Hello, ${name || 'Staff'}!`,
         startLearning: 'Start your training',
         progressLabel: 'Overall progress',
@@ -113,6 +127,10 @@
       vi: {
         home: 'Trang chủ', aiChat: 'Hỏi AI', myResults: 'Kết quả',
         logout: 'Đăng xuất', logoutConfirm: 'Bạn có chắc muốn đăng xuất?',
+        notifOn: 'Bật thông báo', notifOff: 'Tắt thông báo',
+        notifIncomplete: 'Bạn còn chương chưa hoàn thành',
+        notifDeadline: (d) => `Hạn chót học tập còn ${d} ngày`,
+        notifNewSop: 'Có tài liệu đào tạo mới',
         welcome: (name) => `Xin chào, ${name || 'Nhân viên'}!`,
         startLearning: 'Bắt đầu học tập',
         progressLabel: 'Tiến độ tổng thể',
@@ -327,6 +345,119 @@
     updateNextAction();
     renderChapters();
     renderMbtiCard();
+
+    // ===== 알림 시스템 =====
+    const notifKey = 'sop_notif_enabled_' + (user?.email || '');
+    let notifEnabled = localStorage.getItem(notifKey) === 'true';
+    let notifInterval = null;
+
+    function updateNotifUI() {
+      const bell = document.getElementById('notifBell');
+      bell.title = notifEnabled ? t.notifOn : t.notifOff;
+      bell.style.opacity = notifEnabled ? '1' : '0.4';
+    }
+
+    function toggleNotifications() {
+      if (!notifEnabled) {
+        requestNotificationPermission();
+      } else {
+        notifEnabled = false;
+        localStorage.setItem(notifKey, 'false');
+        if (notifInterval) { clearInterval(notifInterval); notifInterval = null; }
+        updateNotifUI();
+        showToast(t.notifOff);
+      }
+    }
+
+    async function requestNotificationPermission() {
+      if (!('Notification' in window)) { showToast('이 브라우저는 알림을 지원하지 않습니다'); return; }
+      let perm = Notification.permission;
+      if (perm === 'default') perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        notifEnabled = true;
+        localStorage.setItem(notifKey, 'true');
+        updateNotifUI();
+        showToast(t.notifOn);
+        startNotifChecks();
+      } else {
+        showToast(t.notifOff);
+      }
+    }
+
+    function showLocalNotification(title, body, url) {
+      if (!notifEnabled || Notification.permission !== 'granted') return;
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then(reg => {
+          reg.showNotification(title, {
+            body, icon: '/assets/icon-192.svg', badge: '/assets/icon-192.svg',
+            data: { url: url || '/app.html' }
+          });
+        });
+      } else {
+        new Notification(title, { body, icon: '/assets/icon-192.svg' });
+      }
+    }
+
+    function checkAndNotify() {
+      if (!notifEnabled || !user) return;
+      const now = Date.now();
+      const lastCheck = parseInt(localStorage.getItem('sop_notif_last_' + user.email) || '0');
+      if (now - lastCheck < 3600000) return; // 1시간에 1번만
+      localStorage.setItem('sop_notif_last_' + user.email, '' + now);
+
+      // 미완료 챕터 확인
+      const incomplete = chapters.some(ch => !Progress.isChapterPassed(ch.id));
+      if (incomplete) {
+        showLocalNotification('SOP Training', t.notifIncomplete, '/app.html');
+        return;
+      }
+
+      // 마감일 확인
+      const deadlines = JSON.parse(localStorage.getItem('sop_deadlines') || '[]');
+      for (const dl of deadlines) {
+        const days = Math.ceil((new Date(dl.deadlineAt) - new Date()) / 86400000);
+        if (days > 0 && days <= 3) {
+          showLocalNotification('SOP Training', t.notifDeadline(days), '/app.html');
+          return;
+        }
+      }
+    }
+
+    function startNotifChecks() {
+      if (notifInterval) clearInterval(notifInterval);
+      checkAndNotify();
+      notifInterval = setInterval(checkAndNotify, 3600000); // 매 1시간
+    }
+
+    // 관리자가 보낸 대기 중 알림 확인
+    function checkPendingNotifications() {
+      if (!user) return;
+      const pending = JSON.parse(localStorage.getItem('sop_pending_notifications') || '[]');
+      const shown = JSON.parse(localStorage.getItem('sop_notif_shown_' + user.email) || '[]');
+      const newNotifs = pending.filter(n => {
+        if (shown.includes(n.id)) return false;
+        if (n.target === 'all') return true;
+        if (n.target === 'incomplete') return chapters.some(ch => !Progress.isChapterPassed(ch.id));
+        if (n.target === 'specific' && n.targetEmails) return n.targetEmails.includes(user.email);
+        return false;
+      });
+      newNotifs.forEach(n => {
+        showLocalNotification(n.title || 'SOP Training', n.message, '/app.html');
+        shown.push(n.id);
+      });
+      if (newNotifs.length > 0) {
+        localStorage.setItem('sop_notif_shown_' + user.email, JSON.stringify(shown));
+        document.getElementById('notifDot').style.display = 'block';
+        setTimeout(() => { document.getElementById('notifDot').style.display = 'none'; }, 5000);
+      }
+    }
+
+    // 초기화
+    updateNotifUI();
+    if (notifEnabled && Notification.permission === 'granted') {
+      startNotifChecks();
+    }
+    checkPendingNotifications();
 
     // 로그아웃
     document.getElementById('userAvatar').addEventListener('click', () => {

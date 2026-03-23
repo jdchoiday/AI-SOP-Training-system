@@ -228,7 +228,7 @@
       }
 
       // 데모 계정 체크 (폴백)
-      const demoAccounts = {'admin@test.com': tx.admin, 'staff@test.com': tx.staff};
+      const demoAccounts = {'admin@test.com': tx.admin, 'manager@test.com': '지점장', 'staff@test.com': tx.staff};
       if (demoAccounts[email]) {
         result.innerHTML = `✅ <strong>${demoAccounts[email]}</strong> ${tx.resetAccountIs}<br>${tx.password}: <strong style="font-size:18px;color:var(--primary);">1234</strong>`;
         result.style.color = 'var(--success)';
@@ -264,7 +264,9 @@
         // Supabase에서 못 찾으면 데모 로그인 시도
         if (!user) {
           if (email === 'admin@test.com' && password === '1234') {
-            user = { id: 'demo-admin', email, role: 'admin', name: '관리자' };
+            user = { id: 'demo-admin', email, role: 'admin', name: '관리자', adminRole: 'superadmin' };
+          } else if (email === 'manager@test.com' && password === '1234') {
+            user = { id: 'demo-manager', email, role: 'admin', name: '강남점장', adminRole: 'branch_manager', adminBranch: '서울 강남점' };
           } else if (email === 'staff@test.com' && password === '1234') {
             user = { id: 'demo-staff', email, role: 'staff', name: '직원1' };
           }
