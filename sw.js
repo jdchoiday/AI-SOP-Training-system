@@ -1,5 +1,5 @@
 // Service Worker — 오프라인 캐싱
-const CACHE_NAME = 'sop-training-v4';
+const CACHE_NAME = 'sop-training-v5';
 const ASSETS = [
   '/',
   '/index.html',
@@ -32,6 +32,23 @@ self.addEventListener('activate', e => {
     Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
   ));
   self.clients.claim();
+});
+
+// Push 알림 수신
+self.addEventListener('push', e => {
+  const data = e.data ? e.data.json() : { title: 'SOP Training', body: '학습 알림' };
+  e.waitUntil(self.registration.showNotification(data.title, {
+    body: data.body,
+    icon: '/assets/icon-192.svg',
+    badge: '/assets/icon-192.svg',
+    data: { url: data.url || '/app.html' }
+  }));
+});
+
+// 알림 클릭 시 해당 페이지 열기
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(clients.openWindow(e.notification.data.url));
 });
 
 self.addEventListener('fetch', e => {
