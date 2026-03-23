@@ -2,6 +2,10 @@
   "version": 2,
   "buildCommand": "",
   "outputDirectory": ".",
+  "rewrites": [
+    { "source": "/api/gemini", "destination": "/api/gemini" },
+    { "source": "/api/siliconflow", "destination": "/api/siliconflow" }
+  ],
   "routes": [
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }

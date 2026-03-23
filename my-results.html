@@ -67,35 +67,35 @@
 <body>
 
   <div class="bottom-nav">
-    <a href="app.html"><span class="nav-icon">&#127968;</span> 홈</a>
-    <a href="ai-chat.html"><span class="nav-icon">&#129302;</span> AI 질문</a>
-    <a href="my-results.html" class="active"><span class="nav-icon">&#127942;</span> 내 결과</a>
+    <a href="app.html"><span class="nav-icon">&#127968;</span> <span class="nav-label-home">홈</span></a>
+    <a href="ai-chat.html"><span class="nav-icon">&#129302;</span> <span class="nav-label-chat">AI 질문</span></a>
+    <a href="my-results.html" class="active"><span class="nav-icon">&#127942;</span> <span class="nav-label-results">내 결과</span></a>
   </div>
 
   <div class="app-container">
     <div class="app-header">
-      <h2>내 결과</h2>
+      <h2 id="pageTitle">내 결과</h2>
       <div class="user-avatar" id="userAvatar">?</div>
     </div>
 
     <div class="result-summary">
       <div class="mini-stat">
         <p class="num" style="color:var(--primary);" id="statProgress">0%</p>
-        <p class="label">전체 진행률</p>
+        <p class="label" id="labelProgress">전체 진행률</p>
       </div>
       <div class="mini-stat">
         <p class="num" style="color:var(--success);" id="statPassed">0</p>
-        <p class="label">통과 챕터</p>
+        <p class="label" id="labelPassed">통과 챕터</p>
       </div>
       <div class="mini-stat">
         <p class="num" style="color:var(--warning);" id="statVideos">0</p>
-        <p class="label">시청 완료</p>
+        <p class="label" id="labelVideos">시청 완료</p>
       </div>
     </div>
 
     <div id="certificateArea"></div>
 
-    <h3 style="margin-bottom:12px; font-size:16px; color:var(--gray-700);">챕터별 결과</h3>
+    <h3 style="margin-bottom:12px; font-size:16px; color:var(--gray-700);" id="chapterResultsTitle">챕터별 결과</h3>
     <div id="chapterResults"></div>
   </div>
 
@@ -105,6 +105,62 @@
   <script src="js/sop-content-kids.js"></script>
   <script src="js/demo-data.js"></script>
   <script>
+    // ===== 다국어 텍스트 =====
+    const T = {
+      ko: {
+        home: '홈', aiChat: 'AI 질문', myResults: '내 결과',
+        pageTitle: '내 결과', overallProgress: '전체 진행률',
+        passedChapters: '통과 챕터', videosCompleted: '시청 완료',
+        chapterResults: '챕터별 결과',
+        certificate: 'SOP Training 수료증', certSub: 'Certificate of Completion',
+        certDesc: '위 사람은 SOP Training의 모든 과정을\n성공적으로 이수하였음을 증명합니다.',
+        certDetail: (ch, vids, avg) => `총 ${ch}개 챕터 · ${vids}개 학습 · 평균 점수 ${avg}점`,
+        saveCert: '📥 수료증 저장',
+        passed: '통과', locked: '잠김', inProgress: '진행중', notStarted: '미시작',
+        logoutConfirm: '로그아웃 하시겠습니까?',
+        staff: '직원',
+      },
+      en: {
+        home: 'Home', aiChat: 'AI Q&A', myResults: 'Results',
+        pageTitle: 'My Results', overallProgress: 'Overall Progress',
+        passedChapters: 'Passed', videosCompleted: 'Videos Done',
+        chapterResults: 'Results by Chapter',
+        certificate: 'SOP Training Certificate', certSub: 'Certificate of Completion',
+        certDesc: 'This certifies that the above person\nhas successfully completed all SOP Training courses.',
+        certDetail: (ch, vids, avg) => `${ch} chapters · ${vids} lessons · Avg. score ${avg}`,
+        saveCert: '📥 Save Certificate',
+        passed: 'Passed', locked: 'Locked', inProgress: 'In Progress', notStarted: 'Not Started',
+        logoutConfirm: 'Are you sure you want to log out?',
+        staff: 'Staff',
+      },
+      vi: {
+        home: 'Trang chủ', aiChat: 'Hỏi AI', myResults: 'Kết quả',
+        pageTitle: 'Kết quả của tôi', overallProgress: 'Tiến độ tổng thể',
+        passedChapters: 'Chương đạt', videosCompleted: 'Video xong',
+        chapterResults: 'Kết quả theo chương',
+        certificate: 'Chứng chỉ đào tạo SOP', certSub: 'Certificate of Completion',
+        certDesc: 'Chứng nhận người trên đã hoàn thành\ntất cả các khóa đào tạo SOP.',
+        certDetail: (ch, vids, avg) => `${ch} chương · ${vids} bài học · Điểm TB ${avg}`,
+        saveCert: '📥 Lưu chứng chỉ',
+        passed: 'Đạt', locked: 'Khóa', inProgress: 'Đang học', notStarted: 'Chưa bắt đầu',
+        logoutConfirm: 'Bạn có chắc muốn đăng xuất?',
+        staff: 'Nhân viên',
+      }
+    };
+    const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
+    const t = T[lang] || T.ko;
+    const dateLang = lang === 'en' ? 'en-US' : lang === 'vi' ? 'vi-VN' : 'ko-KR';
+
+    // Apply static labels
+    document.querySelector('.nav-label-home').textContent = t.home;
+    document.querySelector('.nav-label-chat').textContent = t.aiChat;
+    document.querySelector('.nav-label-results').textContent = t.myResults;
+    document.getElementById('pageTitle').textContent = t.pageTitle;
+    document.getElementById('labelProgress').textContent = t.overallProgress;
+    document.getElementById('labelPassed').textContent = t.passedChapters;
+    document.getElementById('labelVideos').textContent = t.videosCompleted;
+    document.getElementById('chapterResultsTitle').textContent = t.chapterResults;
+
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
     if (!user) { window.location.href = 'index.html'; }
     document.getElementById('userAvatar').textContent = (user.name || '?')[0];
@@ -123,8 +179,8 @@
     if (totalProgress >= 100) {
       const lastDate = Object.values(allResults.chapterResults).map(r => r.date).sort().pop();
       const dateStr = lastDate
-        ? new Date(lastDate).toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' })
-        : new Date().toLocaleDateString('ko-KR');
+        ? new Date(lastDate).toLocaleDateString(dateLang, { year:'numeric', month:'long', day:'numeric' })
+        : new Date().toLocaleDateString(dateLang);
       const scores = Object.values(allResults.chapterResults).map(r => r.score).filter(s => s > 0);
       const avg = scores.length > 0 ? Math.round(scores.reduce((a,b) => a+b, 0) / scores.length) : 0;
       const totalVids = chapters.reduce((sum, ch) => sum + SopStore.getVideos(ch.id).length, 0);
@@ -132,13 +188,13 @@
       document.getElementById('certificateArea').innerHTML = `
         <div class="certificate">
           <div class="cert-icon">&#127942;</div>
-          <h2>SOP Training 수료증</h2>
-          <p style="opacity:0.8;">Certificate of Completion</p>
-          <p class="cert-name">${user.name || '직원'}</p>
-          <p style="font-size:14px;">위 사람은 SOP Training의 모든 과정을<br>성공적으로 이수하였음을 증명합니다.</p>
-          <p class="cert-detail">총 ${chapters.length}개 챕터 · ${totalVids}개 학습 · 평균 점수 ${avg}점</p>
+          <h2>${t.certificate}</h2>
+          <p style="opacity:0.8;">${t.certSub}</p>
+          <p class="cert-name">${user.name || t.staff}</p>
+          <p style="font-size:14px;">${t.certDesc.replace('\n', '<br>')}</p>
+          <p class="cert-detail">${t.certDetail(chapters.length, totalVids, avg)}</p>
           <p class="cert-date">${dateStr}</p>
-          <button onclick="downloadCertificate()" style="margin-top:20px; background:white; color:#2563eb; border:none; border-radius:8px; padding:12px 32px; font-size:15px; font-weight:700; cursor:pointer;">📥 수료증 저장</button>
+          <button onclick="downloadCertificate()" style="margin-top:20px; background:white; color:#2563eb; border:none; border-radius:8px; padding:12px 32px; font-size:15px; font-weight:700; cursor:pointer;">${t.saveCert}</button>
         </div>`;
     }
 
@@ -157,14 +213,14 @@
 
       let badge = '';
       if (passed) {
-        badge = `<span class="badge badge-success">통과 ${result?.score || 0}점</span>`;
+        badge = `<span class="badge badge-success">${t.passed} ${result?.score || 0}</span>`;
       } else if (!unlocked) {
-        badge = `<span class="badge" style="background:var(--gray-100);color:var(--gray-500);">잠김</span>`;
+        badge = `<span class="badge" style="background:var(--gray-100);color:var(--gray-500);">${t.locked}</span>`;
       } else {
         const pct = Progress.getChapterVideoProgress(ch.id);
         badge = pct > 0
-          ? `<span class="badge badge-warning">진행중 ${pct}%</span>`
-          : `<span class="badge" style="background:var(--gray-100);color:var(--gray-500);">미시작</span>`;
+          ? `<span class="badge badge-warning">${t.inProgress} ${pct}%</span>`
+          : `<span class="badge" style="background:var(--gray-100);color:var(--gray-500);">${t.notStarted}</span>`;
       }
 
       container.innerHTML += `
@@ -210,11 +266,11 @@
       ctx.fillText('🏆', 400, 80);
 
       ctx.font = 'bold 28px sans-serif';
-      ctx.fillText('SOP Training 수료증', 400, 130);
+      ctx.fillText(t.certificate, 400, 130);
 
       ctx.font = '16px sans-serif';
       ctx.globalAlpha = 0.8;
-      ctx.fillText('Certificate of Completion', 400, 160);
+      ctx.fillText(t.certSub, 400, 160);
       ctx.globalAlpha = 1;
 
       // Line
@@ -227,7 +283,7 @@
 
       // Name
       ctx.font = 'bold 36px sans-serif';
-      ctx.fillText(user.name || '직원', 400, 250);
+      ctx.fillText(user.name || t.staff, 400, 250);
 
       // Line
       ctx.beginPath();
@@ -236,9 +292,10 @@
       ctx.stroke();
 
       // Description
+      const certLines = t.certDesc.split('\n');
       ctx.font = '16px sans-serif';
-      ctx.fillText('위 사람은 SOP Training의 모든 과정을', 400, 315);
-      ctx.fillText('성공적으로 이수하였음을 증명합니다.', 400, 340);
+      ctx.fillText(certLines[0] || '', 400, 315);
+      ctx.fillText(certLines[1] || '', 400, 340);
 
       // Stats
       const scores = Object.values(allResults.chapterResults).map(r => r.score).filter(s => s > 0);
@@ -246,27 +303,27 @@
       const totalVids = chapters.reduce((sum, ch) => sum + SopStore.getVideos(ch.id).length, 0);
       ctx.font = '14px sans-serif';
       ctx.globalAlpha = 0.8;
-      ctx.fillText(`총 ${chapters.length}개 챕터 · ${totalVids}개 학습 · 평균 점수 ${avg}점`, 400, 385);
+      ctx.fillText(t.certDetail(chapters.length, totalVids, avg), 400, 385);
       ctx.globalAlpha = 1;
 
       // Date
       const lastDate = Object.values(allResults.chapterResults).map(r => r.date).sort().pop();
-      const dateStr = lastDate
-        ? new Date(lastDate).toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' })
-        : new Date().toLocaleDateString('ko-KR');
+      const canvasDateStr = lastDate
+        ? new Date(lastDate).toLocaleDateString(dateLang, { year:'numeric', month:'long', day:'numeric' })
+        : new Date().toLocaleDateString(dateLang);
       ctx.font = '15px sans-serif';
-      ctx.fillText(dateStr, 400, 420);
+      ctx.fillText(canvasDateStr, 400, 420);
 
       // Download
       const link = document.createElement('a');
-      link.download = `SOP_수료증_${user.name || '직원'}.png`;
+      link.download = `SOP_Certificate_${user.name || t.staff}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     }
 
     // 로그아웃
     document.getElementById('userAvatar').addEventListener('click', () => {
-      if (confirm('로그아웃 하시겠습니까?')) {
+      if (confirm(t.logoutConfirm)) {
         localStorage.removeItem('sop_user');
         window.location.href = 'index.html';
       }

@@ -107,6 +107,17 @@
         passwordPlaceholder: '비밀번호 입력',
         errorInvalid: '이메일 또는 비밀번호가 올바르지 않습니다.',
         errorNetwork: '네트워크 오류가 발생했습니다. 다시 시도해주세요.',
+        forgotPassword: '비밀번호를 잊으셨나요?',
+        resetTitle: '비밀번호 재설정',
+        resetDesc: '관리자에게 문의하거나 아래에서 이메일을 확인하세요',
+        resetPlaceholder: '가입한 이메일',
+        resetBtn: '확인',
+        resetEnterEmail: '이메일을 입력하세요',
+        resetTempPw: '임시 비밀번호',
+        resetTempPwSub: '이 비밀번호로 로그인 후 변경하세요',
+        resetAccountIs: '계정입니다.',
+        resetNotFound: '등록된 이메일이 아닙니다. 관리자에게 문의하세요.',
+        admin: '관리자', staff: '직원',
       },
       en: {
         title: 'SOP Training',
@@ -118,6 +129,17 @@
         passwordPlaceholder: 'Enter password',
         errorInvalid: 'Invalid email or password.',
         errorNetwork: 'Network error. Please try again.',
+        forgotPassword: 'Forgot your password?',
+        resetTitle: 'Reset Password',
+        resetDesc: 'Contact an admin or verify your email below',
+        resetPlaceholder: 'Registered email',
+        resetBtn: 'Confirm',
+        resetEnterEmail: 'Please enter your email',
+        resetTempPw: 'Temporary password',
+        resetTempPwSub: 'Use this password to log in, then change it',
+        resetAccountIs: 'account.',
+        resetNotFound: 'Email not registered. Please contact an administrator.',
+        admin: 'Admin', staff: 'Staff',
       },
       vi: {
         title: 'SOP Training',
@@ -129,6 +151,17 @@
         passwordPlaceholder: 'Nhập mật khẩu',
         errorInvalid: 'Email hoặc mật khẩu không đúng.',
         errorNetwork: 'Lỗi mạng. Vui lòng thử lại.',
+        forgotPassword: 'Quên mật khẩu?',
+        resetTitle: 'Đặt lại mật khẩu',
+        resetDesc: 'Liên hệ quản trị viên hoặc xác minh email bên dưới',
+        resetPlaceholder: 'Email đã đăng ký',
+        resetBtn: 'Xác nhận',
+        resetEnterEmail: 'Vui lòng nhập email',
+        resetTempPw: 'Mật khẩu tạm',
+        resetTempPwSub: 'Đăng nhập bằng mật khẩu này rồi đổi lại',
+        resetAccountIs: 'tài khoản.',
+        resetNotFound: 'Email chưa đăng ký. Vui lòng liên hệ quản trị viên.',
+        admin: 'Quản trị viên', staff: 'Nhân viên',
       }
     };
 
@@ -149,6 +182,10 @@
       document.getElementById('email').placeholder = t.emailPlaceholder;
       document.getElementById('password').placeholder = t.passwordPlaceholder;
       document.getElementById('loginBtn').textContent = t.login;
+      document.getElementById('forgotLink').textContent = t.forgotPassword;
+      document.getElementById('resetTitle').textContent = t.resetTitle;
+      document.getElementById('resetDesc').textContent = t.resetDesc;
+      document.getElementById('resetEmail').placeholder = t.resetPlaceholder;
     }
 
     // 페이지 로드시 언어 적용
@@ -163,7 +200,8 @@
     async function handlePasswordReset() {
       const email = document.getElementById('resetEmail').value.trim();
       const result = document.getElementById('resetResult');
-      if (!email) { result.textContent = '이메일을 입력하세요'; result.style.color = 'var(--danger)'; result.style.display = 'block'; return; }
+      const tx = TEXTS[currentLang];
+      if (!email) { result.textContent = tx.resetEnterEmail; result.style.color = 'var(--danger)'; result.style.display = 'block'; return; }
 
       // Supabase에서 확인 후 임시 비밀번호 설정
       if (window.SupabaseMode && SupabaseMode._ready) {
@@ -181,7 +219,7 @@
               .update({ password_hash: tempPw })
               .eq('email', email);
 
-            result.innerHTML = `✅ 임시 비밀번호: <strong style="font-size:18px;color:var(--primary);">${tempPw}</strong><br><span style="font-size:12px;">이 비밀번호로 로그인 후 변경하세요</span>`;
+            result.innerHTML = `✅ ${tx.resetTempPw}: <strong style="font-size:18px;color:var(--primary);">${tempPw}</strong><br><span style="font-size:12px;">${tx.resetTempPwSub}</span>`;
             result.style.color = 'var(--success)';
             result.style.display = 'block';
             return;
@@ -190,12 +228,12 @@
       }
 
       // 데모 계정 체크 (폴백)
-      const demoAccounts = {'admin@test.com': '관리자', 'staff@test.com': '직원'};
+      const demoAccounts = {'admin@test.com': tx.admin, 'staff@test.com': tx.staff};
       if (demoAccounts[email]) {
-        result.innerHTML = `✅ <strong>${demoAccounts[email]}</strong> 계정입니다.<br>비밀번호: <strong style="font-size:18px;color:var(--primary);">1234</strong>`;
+        result.innerHTML = `✅ <strong>${demoAccounts[email]}</strong> ${tx.resetAccountIs}<br>${tx.password}: <strong style="font-size:18px;color:var(--primary);">1234</strong>`;
         result.style.color = 'var(--success)';
       } else {
-        result.textContent = '등록된 이메일이 아닙니다. 관리자에게 문의하세요.';
+        result.textContent = tx.resetNotFound;
         result.style.color = 'var(--danger)';
       }
       result.style.display = 'block';

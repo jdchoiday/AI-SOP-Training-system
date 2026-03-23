@@ -14,6 +14,11 @@ const CONFIG = {
   CHAPTER_PASS_SCORE: 70,    // 챕터 테스트 합격 점수 (%)
   VIDEO_COMPLETE_PERCENT: 90, // 시청 완료 인정 비율 (%)
 
+  // === API Proxy 설정 ===
+  // true = Vercel Edge Functions 경유 (API 키 서버 보관, 프로덕션 권장)
+  // false = 브라우저에서 직접 API 호출 (로컬 개발용)
+  useProxy: true,
+
   // === AI 설정 ===
   // 각 기능별로 제공자를 선택할 수 있습니다
   // 'local' = 무료 (자체 처리), API 키 불필요

@@ -216,6 +216,21 @@
       table th, table td { padding: 8px 6px !important; }
       .stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
     }
+
+    /* === PDF 인쇄용 === */
+    @media print {
+      body { background: white !important; }
+      .admin-sidebar, .mobile-header, .sidebar-overlay,
+      .topbar-actions, .modal-overlay { display: none !important; }
+      .admin-main { margin-left: 0 !important; padding: 0 !important; }
+      .card { box-shadow: none !important; border: 1px solid #ddd; break-inside: avoid; }
+      #page-reports { display: block !important; }
+      [id^="page-"]:not(#page-reports) { display: none !important; }
+      .print-report-header, .print-report-footer { display: block !important; }
+      .progress-bar { border: 1px solid #ccc; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .fill { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    }
+    .print-report-header, .print-report-footer { display: none; }
   </style>
 </head>
 <body style="background:var(--gray-50);">
@@ -240,6 +255,7 @@
       <div class="sidebar-section">운영</div>
       <a href="#" onclick="showPage('dashboard', event)"><span class="ic">&#128202;</span> 대시보드</a>
       <a href="#" onclick="showPage('employees', event)"><span class="ic">&#128101;</span> 직원 관리</a>
+      <a href="#" onclick="showPage('learning-path', event)"><span class="ic">&#128218;</span> 학습 경로</a>
       <a href="#" onclick="showPage('reports', event)"><span class="ic">&#128200;</span> 리포트</a>
 
       <div class="sidebar-section">시스템</div>
@@ -326,6 +342,8 @@
           <button onclick="insertHeading()" title="제목">H</button>
           <button onclick="insertStep()" title="절차 단계" style="font-size:12px;">+ 절차</button>
           <button onclick="insertWarning()" title="주의사항" style="font-size:12px;">&#9888; 주의</button>
+          <span style="border-left:1px solid var(--gray-300); margin:0 4px;"></span>
+          <button onclick="showVersionHistory()" title="버전 이력" style="font-size:12px;">&#128203; 버전 이력</button>
         </div>
         <div class="sop-editor-area" id="sopEditor" contenteditable="true"
              style="border-top-left-radius:0; border-top-right-radius:0;">
@@ -380,7 +398,12 @@
       <div class="card" style="padding:0; overflow:hidden;">
         <div style="padding:20px 20px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
           <h3 style="font-size:18px;">직원 학습 현황</h3>
-          <input type="text" class="search-box" placeholder="이름/지점 검색..." id="empSearch" oninput="filterEmployees()">
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <select id="branchFilter" onchange="filterEmployees()" style="padding:8px 12px; border:1px solid var(--gray-200); border-radius:8px; font-size:13px; background:white; color:var(--gray-700); cursor:pointer; min-width:140px;">
+              <option value="">전체 지점</option>
+            </select>
+            <input type="text" class="search-box" placeholder="이름 검색..." id="empSearch" oninput="filterEmployees()">
+          </div>
         </div>
         <div style="overflow-x:auto;">
           <table class="data-table" style="margin-top:16px;">
@@ -406,16 +429,39 @@
       </div>
     </div>
 
+    <!-- ========== 학습 경로 ========== -->
+    <div id="page-learning-path" style="display:none;">
+      <div class="topbar">
+        <h1>학습 경로</h1>
+        <p style="font-size:14px; color:var(--gray-500); margin-left:12px;">지점별로 배정할 SOP를 선택하세요</p>
+      </div>
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div style="overflow-x:auto;">
+          <table class="data-table" id="learningPathTable">
+            <thead id="lpTableHead"><tr><th>지점</th><th>배정된 SOP</th><th>관리</th></tr></thead>
+            <tbody id="lpTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ========== 리포트 ========== -->
     <div id="page-reports" style="display:none;">
       <div class="topbar"><h1>리포트</h1>
         <div class="topbar-actions">
           <button class="btn btn-outline" style="padding:8px 16px; font-size:13px;" onclick="openModal('setDeadline')">⏰ 마감일 설정</button>
           <button class="btn btn-outline" style="padding:8px 16px; font-size:13px;" onclick="exportAllCSV()">&#128229; CSV 다운로드</button>
+          <button class="btn btn-outline" style="padding:8px 16px; font-size:13px;" onclick="window.print()">&#128196; PDF 리포트 다운로드</button>
+          <button class="btn btn-primary" style="padding:8px 16px; font-size:13px;" onclick="openReportPreview()">&#128202; 리포트 미리보기</button>
         </div>
+      </div>
+      <div class="print-report-header" style="text-align:center; margin-bottom:24px;">
+        <h2 style="font-size:22px; margin-bottom:4px;">SOP 학습 현황 리포트</h2>
+        <p style="color:#666; font-size:14px;" id="printReportDate"></p>
       </div>
       <div class="card"><h3 style="font-size:16px; font-weight:600; margin-bottom:16px;">지점별 학습 현황</h3><div id="branchReport"></div></div>
       <div class="card" style="margin-top:16px;"><h3 style="font-size:16px; font-weight:600; margin-bottom:16px;">챕터별 통과율</h3><div id="chapterReport"></div></div>
+      <div class="print-report-footer" style="text-align:center; margin-top:32px; padding-top:16px; border-top:1px solid #ddd; color:#999; font-size:12px;">Generated by SOP Training System</div>
     </div>
 
     <!-- ========== AI 설정 ========== -->
@@ -611,7 +657,7 @@
     // ===== 페이지 전환 =====
     function showPage(page, event) {
       if (event) event.preventDefault();
-      ['sop', 'content', 'dashboard', 'employees', 'reports', 'settings'].forEach(p => {
+      ['sop', 'content', 'dashboard', 'employees', 'learning-path', 'reports', 'settings'].forEach(p => {
         const el = document.getElementById('page-' + p);
         if (el) el.style.display = p === page ? 'block' : 'none';
       });
@@ -622,6 +668,7 @@
       if (page === 'content') renderGeneratedContent();
       if (page === 'dashboard') renderDashboard();
       if (page === 'employees') renderEmployeeManage();
+      if (page === 'learning-path') renderLearningPaths();
       if (page === 'reports') renderReports();
       if (page === 'settings') renderSettings();
 
@@ -955,9 +1002,22 @@ ${text.slice(0, 3000)}`;
       const idx = sops.findIndex(s => s.id === currentSopId);
       if (idx === -1) return;
 
-      sops[idx].title = document.getElementById('sopTitleInput').value || '제목 없음';
-      sops[idx].content = document.getElementById('sopEditor').innerHTML;
-      sops[idx].category = document.getElementById('sopCategory').value;
+      const newTitle = document.getElementById('sopTitleInput').value || '제목 없음';
+      const newContent = document.getElementById('sopEditor').innerHTML;
+      const newCategory = document.getElementById('sopCategory').value;
+
+      // Save version snapshot if content or title changed
+      if (sops[idx].title !== newTitle || sops[idx].content !== newContent) {
+        saveVersionSnapshot(currentSopId, {
+          title: newTitle,
+          content: newContent,
+          category: newCategory
+        });
+      }
+
+      sops[idx].title = newTitle;
+      sops[idx].content = newContent;
+      sops[idx].category = newCategory;
       saveSops(sops);
     }
 
@@ -1203,6 +1263,15 @@ ${text.slice(0, 3000)}`;
       document.getElementById('statNotStarted').textContent = n;
       renderEmployeeTable(emps);
 
+      // 지점 필터 드롭다운 채우기
+      const branchFilter = document.getElementById('branchFilter');
+      if (branchFilter) {
+        const prev = branchFilter.value;
+        const branchNames = [...new Set(emps.map(e => e.branch).filter(Boolean))].sort();
+        branchFilter.innerHTML = '<option value="">전체 지점</option>' +
+          branchNames.map(b => `<option value="${b}"${b===prev?' selected':''}>${b}</option>`).join('');
+      }
+
       // 상태 분포 바 차트
       const total = emps.length || 1;
       const statusChart = document.getElementById('statusChart');
@@ -1254,8 +1323,19 @@ ${text.slice(0, 3000)}`;
 
     function filterEmployees() {
       const q = document.getElementById('empSearch').value.toLowerCase();
+      const branch = document.getElementById('branchFilter')?.value || '';
       const emps = getEmployeesWithProgress();
-      renderEmployeeTable(emps.filter(e => e.name.toLowerCase().includes(q) || e.branch.toLowerCase().includes(q)));
+      const filtered = emps.filter(e => {
+        const matchBranch = !branch || e.branch === branch;
+        const matchSearch = !q || e.name.toLowerCase().includes(q) || e.branch.toLowerCase().includes(q);
+        return matchBranch && matchSearch;
+      });
+      renderEmployeeTable(filtered);
+      // 요약 통계 업데이트
+      document.getElementById('statTotalEmp').textContent = filtered.length;
+      document.getElementById('statCompleted').textContent = filtered.filter(e => e.status === 'completed').length;
+      document.getElementById('statInProgress').textContent = filtered.filter(e => e.status === 'in_progress').length;
+      document.getElementById('statNotStarted').textContent = filtered.filter(e => e.status === 'not_started').length;
     }
 
     // ===== 직원 상세 (클릭 시 모달) =====
@@ -1392,6 +1472,9 @@ ${text.slice(0, 3000)}`;
       <select id="inviteBranch"><option>서울 강남점</option><option>서울 홍대점</option><option>부산 해운대점</option><option>호치민 1호점</option><option>하노이 1호점</option></select></div>
     <div class="form-group"><label>최대 사용 횟수</label>
       <select id="inviteMax"><option value="5">5명</option><option value="10" selected>10명</option><option value="20">20명</option><option value="50">50명</option></select></div>
+    <div class="form-group"><label>만료일</label>
+      <input type="date" id="inviteExpiry" value="${new Date(Date.now()+7*24*60*60*1000).toISOString().slice(0,10)}" min="${new Date().toISOString().slice(0,10)}">
+      <span style="font-size:11px;color:var(--gray-400);">미지정 시 7일 후 만료</span></div>
     <div style="background:var(--gray-50);padding:16px;border-radius:8px;margin:16px 0;">
       <label style="font-size:12px;color:var(--gray-500);display:block;margin-bottom:4px;">초대 링크</label>
       <div style="display:flex;gap:8px;">
@@ -1480,14 +1563,16 @@ function copyInviteLink() {
 function saveInvitation(code) {
   const branch = document.getElementById('inviteBranch').value;
   const maxUses = parseInt(document.getElementById('inviteMax').value);
+  const expiryInput = document.getElementById('inviteExpiry').value;
+  const expiresAt = expiryInput ? new Date(expiryInput + 'T23:59:59').toISOString() : new Date(Date.now() + 7*24*60*60*1000).toISOString();
   const invites = JSON.parse(localStorage.getItem('sop_invitations') || '[]');
-  invites.push({ code, branch, maxUses, usedCount: 0, createdAt: new Date().toISOString() });
+  invites.push({ code, branch, maxUses, usedCount: 0, expiresAt, createdAt: new Date().toISOString() });
   localStorage.setItem('sop_invitations', JSON.stringify(invites));
 
   // Supabase에도 저장
   if (SupabaseMode._ready) {
     SupabaseMode.client.from('invitations').insert({
-      code, branch, max_uses: maxUses, used_count: 0, created_by: user?.id
+      code, branch, max_uses: maxUses, used_count: 0, expires_at: expiresAt, created_by: user?.id
     }).catch(e => console.error('Invitation save error:', e));
   }
 
@@ -1504,6 +1589,83 @@ function saveInvitation(code) {
       }).join('\n');
       const b=new Blob(['\uFEFF'+h+r],{type:'text/csv;charset=utf-8;'});
       const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`sop_report_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+    }
+
+    // PDF 인쇄 전 날짜 세팅
+    window.addEventListener('beforeprint', function() {
+      const el = document.getElementById('printReportDate');
+      if (el) el.textContent = '생성일: ' + new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
+      if (document.getElementById('page-reports').style.display === 'none') {
+        showPage('reports');
+      }
+    });
+
+    // 리포트 미리보기 (새 창)
+    function openReportPreview() {
+      const emps = getEmployeesWithProgress();
+      const branches = {};
+      emps.forEach(e => {
+        if (!branches[e.branch]) branches[e.branch] = {total:0,completed:0,avgSum:0};
+        branches[e.branch].total++;
+        if (e.status==='completed') branches[e.branch].completed++;
+        branches[e.branch].avgSum += e.progress;
+      });
+      const totalEmps = emps.length;
+      const completedEmps = emps.filter(e => e.status==='completed').length;
+      const completionRate = totalEmps > 0 ? Math.round((completedEmps/totalEmps)*100) : 0;
+      const avgScore = totalEmps > 0 ? Math.round(emps.reduce((s,e) => s+(e.avgScore||0), 0)/totalEmps) : 0;
+      const today = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
+
+      let branchRows = Object.entries(branches).map(([name,d]) => {
+        const avg = Math.round(d.avgSum/d.total);
+        return `<tr><td>${name}</td><td>${d.total}명</td><td>${d.completed}명</td><td>${avg}%</td></tr>`;
+      }).join('');
+
+      const chapters = SopStore.getChapters();
+      let chapterRows = chapters.map((ch,i) => {
+        const passCount = emps.filter(e => Progress.getEmployeeProgress(e.id).chapterResults[ch.id]?.passed).length;
+        const rate = totalEmps > 0 ? Math.round((passCount/totalEmps)*100) : 0;
+        return `<tr><td>${i+1}. ${ch.title}</td><td>${passCount}/${totalEmps}명</td><td>${rate}%</td></tr>`;
+      }).join('');
+
+      const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+        <title>SOP 학습 현황 리포트</title>
+        <style>
+          body{font-family:-apple-system,sans-serif;max-width:800px;margin:0 auto;padding:40px 24px;color:#222;}
+          h1{text-align:center;font-size:24px;margin-bottom:4px;}
+          .date{text-align:center;color:#888;margin-bottom:32px;font-size:14px;}
+          .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px;}
+          .summary-card{background:#f8f9fa;border-radius:12px;padding:20px;text-align:center;}
+          .summary-card .num{font-size:28px;font-weight:700;color:#2563eb;}
+          .summary-card .label{font-size:13px;color:#888;margin-top:4px;}
+          table{width:100%;border-collapse:collapse;margin-bottom:32px;}
+          th{background:#f1f5f9;text-align:left;padding:10px 12px;font-size:13px;font-weight:600;border-bottom:2px solid #e2e8f0;}
+          td{padding:10px 12px;font-size:14px;border-bottom:1px solid #e2e8f0;}
+          h2{font-size:18px;margin:24px 0 12px;padding-bottom:8px;border-bottom:2px solid #2563eb;}
+          .footer{text-align:center;color:#aaa;font-size:12px;margin-top:40px;padding-top:16px;border-top:1px solid #eee;}
+          .actions{text-align:center;margin-bottom:24px;}
+          .actions button{padding:10px 24px;font-size:14px;border:none;border-radius:8px;cursor:pointer;background:#2563eb;color:white;font-weight:600;}
+          .actions button:hover{background:#1d4ed8;}
+          @media print{.actions{display:none;}}
+        </style></head><body>
+        <h1>SOP 학습 현황 리포트</h1>
+        <p class="date">${today}</p>
+        <div class="actions"><button onclick="window.print()">🖨️ 인쇄 / PDF 저장</button></div>
+        <div class="summary">
+          <div class="summary-card"><div class="num">${totalEmps}</div><div class="label">전체 직원 수</div></div>
+          <div class="summary-card"><div class="num">${completionRate}%</div><div class="label">이수율</div></div>
+          <div class="summary-card"><div class="num">${avgScore}점</div><div class="label">평균 퀴즈 점수</div></div>
+        </div>
+        <h2>지점별 학습 현황</h2>
+        <table><thead><tr><th>지점</th><th>인원</th><th>이수</th><th>진행률</th></tr></thead><tbody>${branchRows || '<tr><td colspan="4" style="text-align:center;color:#aaa;">데이터 없음</td></tr>'}</tbody></table>
+        <h2>챕터별 통과율</h2>
+        <table><thead><tr><th>챕터</th><th>통과 인원</th><th>통과율</th></tr></thead><tbody>${chapterRows || '<tr><td colspan="3" style="text-align:center;color:#aaa;">배포된 SOP가 없습니다</td></tr>'}</tbody></table>
+        <div class="footer">Generated by SOP Training System</div>
+        </body></html>`;
+
+      const w = window.open('', '_blank');
+      w.document.write(html);
+      w.document.close();
     }
 
     // ===== 마감일 관리 =====
@@ -1727,6 +1889,222 @@ function saveInvitation(code) {
         Object.assign(AI_CONFIG.keys, keys);
       }
     })();
+
+    // ===== SOP 버전 이력 =====
+    function getVersions(sopId) {
+      return JSON.parse(localStorage.getItem('sop_versions_' + sopId) || '[]');
+    }
+
+    function saveVersionSnapshot(sopId, data) {
+      const versions = getVersions(sopId);
+      const lastVersion = versions.length > 0 ? versions[versions.length - 1].version : 0;
+      const snapshot = {
+        version: lastVersion + 1,
+        title: data.title,
+        content: data.content,
+        savedAt: new Date().toISOString(),
+        savedBy: user?.name || user?.email || 'admin'
+      };
+      versions.push(snapshot);
+      localStorage.setItem('sop_versions_' + sopId, JSON.stringify(versions));
+
+      // Supabase sync if available
+      if (SupabaseMode._ready) {
+        SupabaseMode.client.from('sops').update({
+          version: snapshot.version,
+          updated_at: snapshot.savedAt
+        }).eq('id', sopId).catch(e => console.error('Version Supabase sync:', e));
+      }
+    }
+
+    function showVersionHistory() {
+      if (!currentSopId) return;
+      const versions = getVersions(currentSopId);
+      const m = document.getElementById('modalContent');
+
+      if (versions.length === 0) {
+        m.innerHTML = `<h3>&#128203; 버전 이력</h3>
+          <p style="color:var(--gray-500); text-align:center; padding:40px 0;">저장된 버전이 없습니다.<br>SOP를 저장하면 자동으로 버전이 기록됩니다.</p>
+          <button class="btn btn-outline" style="width:100%; margin-top:16px;" onclick="closeModal()">닫기</button>`;
+        document.getElementById('modalOverlay').classList.add('show');
+        return;
+      }
+
+      const listHTML = versions.slice().reverse().map(v => {
+        const d = new Date(v.savedAt);
+        const dateStr = d.toLocaleDateString('ko-KR') + ' ' + d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+        return `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--gray-100);">
+          <div>
+            <strong style="font-size:14px;">v${v.version}</strong>
+            <span style="font-size:13px; color:var(--gray-500); margin-left:8px;">${v.title}</span>
+            <div style="font-size:12px; color:var(--gray-400);">${dateStr} &middot; ${v.savedBy}</div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-outline" style="padding:4px 10px; font-size:12px;" onclick="previewVersion('${currentSopId}', ${v.version})">미리보기</button>
+            <button class="btn btn-outline" style="padding:4px 10px; font-size:12px; color:var(--primary); border-color:var(--primary);" onclick="restoreVersion('${currentSopId}', ${v.version})">복원</button>
+          </div>
+        </div>`;
+      }).join('');
+
+      m.innerHTML = `<h3>&#128203; 버전 이력 (${versions.length}개)</h3>
+        <div style="max-height:400px; overflow-y:auto;">${listHTML}</div>
+        <button class="btn btn-outline" style="width:100%; margin-top:16px;" onclick="closeModal()">닫기</button>`;
+      document.getElementById('modalOverlay').classList.add('show');
+    }
+
+    function previewVersion(sopId, versionNum) {
+      const versions = getVersions(sopId);
+      const v = versions.find(ver => ver.version === versionNum);
+      if (!v) return;
+
+      const m = document.getElementById('modalContent');
+      const d = new Date(v.savedAt);
+      const dateStr = d.toLocaleDateString('ko-KR') + ' ' + d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+
+      m.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h3 style="margin:0;">v${v.version} — ${v.title}</h3>
+          <span style="font-size:12px; color:var(--gray-500);">${dateStr}</span>
+        </div>
+        <div style="border:1px solid var(--gray-200); border-radius:var(--radius); padding:20px; background:var(--gray-50); max-height:400px; overflow-y:auto; font-size:14px; line-height:1.7;">
+          ${v.content}
+        </div>
+        <div style="display:flex; gap:8px; margin-top:16px;">
+          <button class="btn btn-primary" style="flex:1;" onclick="restoreVersion('${sopId}', ${versionNum})">이 버전으로 복원</button>
+          <button class="btn btn-outline" onclick="showVersionHistory()">목록으로</button>
+        </div>`;
+    }
+
+    function restoreVersion(sopId, versionNum) {
+      const versions = getVersions(sopId);
+      const v = versions.find(ver => ver.version === versionNum);
+      if (!v) return;
+      if (!confirm(`v${v.version} 버전으로 복원하시겠습니까?\n현재 내용은 자동으로 새 버전으로 저장됩니다.`)) return;
+
+      // Save current state as a new version before restoring
+      const currentTitle = document.getElementById('sopTitleInput').value || '제목 없음';
+      const currentContent = document.getElementById('sopEditor').innerHTML;
+      saveVersionSnapshot(sopId, { title: currentTitle, content: currentContent, category: document.getElementById('sopCategory').value });
+
+      // Restore
+      document.getElementById('sopTitleInput').value = v.title;
+      document.getElementById('sopEditor').innerHTML = v.content;
+      saveSop();
+      closeModal();
+    }
+
+    // ===== 학습 경로 관리 =====
+    function getLearningPaths() {
+      return JSON.parse(localStorage.getItem('sop_learning_paths') || '{}');
+    }
+
+    function saveLearningPaths(paths) {
+      localStorage.setItem('sop_learning_paths', JSON.stringify(paths));
+      if (SupabaseMode._ready) {
+        SupabaseMode.client.from('settings').upsert({
+          key: 'learning_paths', value: JSON.stringify(paths), updated_at: new Date().toISOString()
+        }, { onConflict: 'key' }).catch(e => console.error('Learning path Supabase sync:', e));
+      }
+    }
+
+    function getBranchNames() {
+      const emps = EmployeeStore.getAll();
+      const branches = [...new Set(emps.map(e => e.branch).filter(Boolean))].sort();
+      // Include known branches even if no employees yet
+      const known = ['서울 강남점','서울 홍대점','부산 해운대점','호치민 1호점','하노이 1호점'];
+      known.forEach(b => { if (!branches.includes(b)) branches.push(b); });
+      return branches.sort();
+    }
+
+    function renderLearningPaths() {
+      const paths = getLearningPaths();
+      const branches = getBranchNames();
+      const sops = getSops().filter(s => s.status === 'published');
+      const tbody = document.getElementById('lpTableBody');
+
+      if (sops.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:40px; color:var(--gray-500);">배포된 SOP가 없습니다. SOP를 먼저 배포하세요.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = branches.map(branch => {
+        const assigned = paths[branch]; // undefined means all
+        const allAssigned = !assigned || assigned.length === sops.length;
+        const assignedSops = allAssigned
+          ? sops
+          : sops.filter(s => assigned.includes(s.id));
+        const sopNames = allAssigned
+          ? `<span class="badge" style="background:#dcfce7; color:var(--success);">전체 배정 (${sops.length}개)</span>`
+          : assignedSops.length > 0
+            ? assignedSops.map(s => `<span class="badge" style="background:var(--primary-light); color:var(--primary);">${s.title}</span>`).join(' ')
+            : `<span class="badge" style="background:var(--gray-100); color:var(--danger);">미배정</span>`;
+
+        return `<tr>
+          <td><strong>${branch}</strong></td>
+          <td style="max-width:400px;">${sopNames}</td>
+          <td><button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="editLearningPath('${branch.replace(/'/g, "\\'")}')">편집</button></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function editLearningPath(branch) {
+      const paths = getLearningPaths();
+      const sops = getSops().filter(s => s.status === 'published');
+      const assigned = paths[branch]; // undefined = all
+      const allAssigned = !assigned;
+
+      const m = document.getElementById('modalContent');
+      m.innerHTML = `
+        <h3>학습 경로 편집 — ${branch}</h3>
+        <p style="font-size:14px; color:var(--gray-500); margin-bottom:16px;">이 지점 직원에게 배정할 SOP를 선택하세요</p>
+        <div style="margin-bottom:16px;">
+          <label style="display:flex; align-items:center; gap:8px; padding:10px; background:var(--gray-50); border-radius:8px; cursor:pointer; font-weight:600;">
+            <input type="checkbox" id="lpAssignAll" onchange="toggleAssignAll()" ${allAssigned ? 'checked' : ''}> 전체 배정 (모든 SOP)
+          </label>
+        </div>
+        <div id="lpSopChecklist" style="${allAssigned ? 'opacity:0.5; pointer-events:none;' : ''}">
+          ${sops.map(s => {
+            const checked = allAssigned || (assigned && assigned.includes(s.id));
+            return `<label style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--gray-100); cursor:pointer;">
+              <input type="checkbox" class="lp-sop-cb" value="${s.id}" ${checked ? 'checked' : ''}>
+              <div>
+                <strong style="font-size:14px;">${s.title}</strong>
+                <div style="font-size:12px; color:var(--gray-500);">${s.category} · ${s.script ? s.script.length + '씬' : '스크립트 없음'}</div>
+              </div>
+            </label>`;
+          }).join('')}
+        </div>
+        <div style="display:flex; gap:8px; margin-top:20px;">
+          <button class="btn btn-primary" style="flex:1;" onclick="saveLearningPath('${branch.replace(/'/g, "\\'")}')">저장</button>
+          <button class="btn btn-outline" onclick="closeModal()">취소</button>
+        </div>`;
+      document.getElementById('modalOverlay').classList.add('show');
+    }
+
+    function toggleAssignAll() {
+      const checked = document.getElementById('lpAssignAll').checked;
+      const list = document.getElementById('lpSopChecklist');
+      list.style.opacity = checked ? '0.5' : '1';
+      list.style.pointerEvents = checked ? 'none' : 'auto';
+      if (checked) {
+        list.querySelectorAll('.lp-sop-cb').forEach(cb => cb.checked = true);
+      }
+    }
+
+    function saveLearningPath(branch) {
+      const paths = getLearningPaths();
+      const allChecked = document.getElementById('lpAssignAll').checked;
+
+      if (allChecked) {
+        delete paths[branch]; // undefined = all SOPs
+      } else {
+        const checked = [...document.querySelectorAll('.lp-sop-cb:checked')].map(cb => cb.value);
+        paths[branch] = checked;
+      }
+
+      saveLearningPaths(paths);
+      closeModal();
+      renderLearningPaths();
+    }
 
     // ===== 초기화 =====
     renderSopList();
