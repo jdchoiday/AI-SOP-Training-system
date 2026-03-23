@@ -179,7 +179,7 @@ ${this._htmlToText(sopContent)}
       const prompt = `당신은 직원 교육 퀴즈 출제 전문가입니다.
 
 아래 SOP 문서를 기반으로 4지선다 퀴즈를 JSON 배열로 생성하세요.
-각 항목은 { "question": "문제", "options": ["선택지1", "선택지2", "선택지3", "선택지4"], "correct": 정답인덱스(0~3) } 형식입니다.
+각 항목은 { "question": "문제", "options": ["선택지1", "선택지2", "선택지3", "선택지4"], "correct": 정답인덱스(0~3), "explanation": "정답인 이유를 1문장으로 설명" } 형식입니다.
 
 SOP 제목: ${sopTitle}
 SOP 내용:
@@ -450,6 +450,21 @@ ${sopContext}
     } catch (e) {
       return { status: 'error', message: e.message };
     }
+  },
+
+  // 영상 생성 완료까지 폴링
+  async pollVideoUntilDone(requestId, onProgress, maxAttempts = 30) {
+    for (let i = 0; i < maxAttempts; i++) {
+      const result = await this.checkVideoStatus(requestId);
+      if (onProgress) onProgress(result, i + 1);
+
+      if (result.status === 'completed') return result;
+      if (result.status === 'failed' || result.status === 'error') return result;
+
+      // 10초 간격으로 폴링
+      await new Promise(resolve => setTimeout(resolve, 10000));
+    }
+    return { status: 'timeout', message: '영상 생성 시간이 초과되었습니다. 나중에 다시 확인해주세요.' };
   },
 
   // Vidu API 영상 생성 (대안)

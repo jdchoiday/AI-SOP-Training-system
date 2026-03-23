@@ -80,6 +80,14 @@
   <script src="js/config.js"></script>
   <script src="js/supabase-client.js"></script>
   <script>
+    // ===== 세션 타임아웃 체크 (24시간) =====
+    const SESSION_HOURS = 24;
+    const loginTime = localStorage.getItem('sop_login_time');
+    if (loginTime && (Date.now() - parseInt(loginTime)) > SESSION_HOURS * 60 * 60 * 1000) {
+      localStorage.removeItem('sop_user');
+      localStorage.removeItem('sop_login_time');
+    }
+
     // Supabase 초기화
     SupabaseMode.init().then(connected => {
       if (connected) {
@@ -155,32 +163,40 @@
     async function handlePasswordReset() {
       const email = document.getElementById('resetEmail').value.trim();
       const result = document.getElementById('resetResult');
-      if (!email) { result.textContent = '이메일을 입력하세요.'; result.style.color = '#dc2626'; result.style.display = 'block'; return; }
+      if (!email) { result.textContent = '이메일을 입력하세요'; result.style.color = 'var(--danger)'; result.style.display = 'block'; return; }
 
-      // Supabase에서 직원 조회
-      if (SupabaseMode._ready) {
+      // Supabase에서 확인 후 임시 비밀번호 설정
+      if (window.SupabaseMode && SupabaseMode._ready) {
         try {
-          const { data } = await SupabaseMode.client.from('employees').select('name,email').eq('email', email).single();
+          const { data, error } = await SupabaseMode.client
+            .from('employees')
+            .select('id, name')
+            .eq('email', email)
+            .single();
+
           if (data) {
-            result.innerHTML = `✅ <strong>${data.name}</strong>님의 계정이 확인되었습니다.<br>관리자에게 비밀번호 초기화를 요청하세요.`;
-            result.style.color = '#166534';
-          } else {
-            result.textContent = '해당 이메일로 등록된 계정이 없습니다.';
-            result.style.color = '#dc2626';
+            const tempPw = Math.random().toString(36).slice(-6);
+            await SupabaseMode.client
+              .from('employees')
+              .update({ password_hash: tempPw })
+              .eq('email', email);
+
+            result.innerHTML = `✅ 임시 비밀번호: <strong style="font-size:18px;color:var(--primary);">${tempPw}</strong><br><span style="font-size:12px;">이 비밀번호로 로그인 후 변경하세요</span>`;
+            result.style.color = 'var(--success)';
+            result.style.display = 'block';
+            return;
           }
-        } catch {
-          result.textContent = '해당 이메일로 등록된 계정이 없습니다.';
-          result.style.color = '#dc2626';
-        }
+        } catch(e) { console.error('Reset error:', e); }
+      }
+
+      // 데모 계정 체크 (폴백)
+      const demoAccounts = {'admin@test.com': '관리자', 'staff@test.com': '직원'};
+      if (demoAccounts[email]) {
+        result.innerHTML = `✅ <strong>${demoAccounts[email]}</strong> 계정입니다.<br>비밀번호: <strong style="font-size:18px;color:var(--primary);">1234</strong>`;
+        result.style.color = 'var(--success)';
       } else {
-        // 데모 모드
-        if (email === 'admin@test.com' || email === 'staff@test.com') {
-          result.innerHTML = '✅ 데모 계정입니다. 비밀번호는 <strong>1234</strong> 입니다.';
-          result.style.color = '#166534';
-        } else {
-          result.textContent = '해당 이메일로 등록된 계정이 없습니다.';
-          result.style.color = '#dc2626';
-        }
+        result.textContent = '등록된 이메일이 아닙니다. 관리자에게 문의하세요.';
+        result.style.color = 'var(--danger)';
       }
       result.style.display = 'block';
     }
@@ -220,6 +236,7 @@
 
         // 로그인 성공 → 세션 저장
         localStorage.setItem('sop_user', JSON.stringify(user));
+        localStorage.setItem('sop_login_time', Date.now().toString());
 
         // Supabase에서 데이터 동기화
         if (SupabaseMode._ready) {
