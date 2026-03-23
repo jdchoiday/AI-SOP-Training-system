@@ -1,5 +1,5 @@
 // Service Worker — 오프라인 캐싱
-const CACHE_NAME = 'sop-training-v3';
+const CACHE_NAME = 'sop-training-v4';
 const ASSETS = [
   '/',
   '/index.html',
@@ -9,6 +9,7 @@ const ASSETS = [
   '/my-results.html',
   '/register.html',
   '/change-password.html',
+  '/mbti.html',
   '/admin/index.html',
   '/css/style.css',
   '/js/config.js',
