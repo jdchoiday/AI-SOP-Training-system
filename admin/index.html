@@ -2198,7 +2198,8 @@ function saveInvitation(code) {
       // 생성 시작 UI — 페이지 상단 고정 배너
       let statusEl = document.getElementById('videoGenStatus');
       if (statusEl) statusEl.remove();
-      document.querySelector('.main-content').insertAdjacentHTML('afterbegin', `
+      const insertTarget = document.getElementById('sopEditorView') || document.getElementById('page-sop');
+      insertTarget.insertAdjacentHTML('afterbegin', `
         <div id="videoGenStatus" style="position:sticky; top:0; z-index:100; background:#f5f3ff; border:2px solid #7c3aed; border-radius:12px; padding:16px; margin-bottom:16px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <h4 style="color:#7c3aed; margin:0;">&#127910; AI 영상 생성 중...</h4>
