@@ -1,40 +1,40 @@
 // ============================================
 // Vercel Serverless Function — SiliconFlow API Proxy
-// Keeps SILICONFLOW_API_KEY server-side
-// Supports video submit and status-check endpoints
 // ============================================
 
 module.exports = async function handler(req, res) {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
 
   const apiKey = process.env.SILICONFLOW_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'SILICONFLOW_API_KEY is not configured on the server.' });
-  }
+  if (!apiKey) return res.status(500).json({ error: 'SILICONFLOW_API_KEY not set' });
 
   try {
-    const { action, ...payload } = req.body;
+    const { action, ...rest } = req.body;
 
-    // Determine which SiliconFlow endpoint to call
-    // action: 'submit' (default) or 'status'
-    let targetUrl;
+    const targetUrl = action === 'status'
+      ? 'https://api.siliconflow.com/v1/video/status'
+      : 'https://api.siliconflow.com/v1/video/submit';
+
+    // Only send fields that SiliconFlow expects
+    let payload;
     if (action === 'status') {
-      targetUrl = 'https://api.siliconflow.com/v1/video/status';
+      payload = { requestId: rest.requestId };
     } else {
-      targetUrl = 'https://api.siliconflow.com/v1/video/submit';
+      payload = {
+        model: rest.model,
+        prompt: rest.prompt,
+        image_size: rest.image_size || '1280x720',
+      };
+      if (rest.negative_prompt) payload.negative_prompt = rest.negative_prompt;
+      if (rest.seed) payload.seed = rest.seed;
     }
+
+    console.log('SiliconFlow proxy ->', targetUrl, JSON.stringify(payload));
 
     const response = await fetch(targetUrl, {
       method: 'POST',
@@ -46,17 +46,11 @@ module.exports = async function handler(req, res) {
     });
 
     const data = await response.json();
+    console.log('SiliconFlow response <-', response.status, JSON.stringify(data));
 
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error: data.error?.message || data.message || 'SiliconFlow API request failed',
-        details: data.error || data,
-      });
-    }
-
-    return res.status(200).json(data);
+    return res.status(response.status).json(data);
   } catch (err) {
     console.error('SiliconFlow proxy error:', err);
-    return res.status(500).json({ error: 'Internal server error', message: err.message });
+    return res.status(500).json({ error: err.message });
   }
 };

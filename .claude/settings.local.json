@@ -3,7 +3,8 @@
     "allow": [
       "mcp__Claude_Preview__preview_start",
       "WebSearch",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(curl -s -X POST https://api.siliconflow.com/v1/video/submit -H \"Authorization: Bearer sk-folxwzzqfasjqmdodvystwesgbatjztmxwkezfuvfglvhyvs\" -H \"Content-Type: application/json\" -d '{\"\"\"\"model\"\"\"\":\"\"\"\"Wan-AI/Wan2.2-T2V-A14B\"\"\"\",\"\"\"\"prompt\"\"\"\":\"\"\"\"A clean kitchen\"\"\"\",\"\"\"\"image_size\"\"\"\":\"\"\"\"1280x720\"\"\"\"}')"
     ]
   }
 }
