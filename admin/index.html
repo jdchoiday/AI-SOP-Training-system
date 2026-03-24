@@ -2195,18 +2195,19 @@ function saveInvitation(code) {
         if (!confirm(`${sop.script.length}개 씬의 영상을 생성합니다.\n예상 비용: ${cost}\n\n진행하시겠습니까?`)) return;
       }
 
-      // 생성 시작 UI
-      const area = document.getElementById('aiResultArea');
-      area.insertAdjacentHTML('afterbegin', `
-        <div class="ai-result-section" id="videoGenStatus" style="margin-bottom:16px;">
-          <div class="ai-result-header" style="background:#f5f3ff;">
-            <h4 style="color:#7c3aed;">&#127910; AI 영상 생성 중...</h4>
-            <span style="font-size:12px; color:#7c3aed;" id="videoGenProgress">0/${sop.script.length}</span>
+      // 생성 시작 UI — 페이지 상단 고정 배너
+      let statusEl = document.getElementById('videoGenStatus');
+      if (statusEl) statusEl.remove();
+      document.querySelector('.main-content').insertAdjacentHTML('afterbegin', `
+        <div id="videoGenStatus" style="position:sticky; top:0; z-index:100; background:#f5f3ff; border:2px solid #7c3aed; border-radius:12px; padding:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <h4 style="color:#7c3aed; margin:0;">&#127910; AI 영상 생성 중...</h4>
+            <span style="font-size:13px; color:#7c3aed; font-weight:600;" id="videoGenProgress">0/${sop.script.length}</span>
           </div>
-          <div class="ai-result-body" id="videoGenLog" style="max-height:300px; overflow-y:auto;">
-          </div>
+          <div id="videoGenLog" style="max-height:250px; overflow-y:auto; font-size:13px;"></div>
         </div>
       `);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
 
       const log = document.getElementById('videoGenLog');
       const progress = document.getElementById('videoGenProgress');
