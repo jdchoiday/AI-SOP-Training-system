@@ -80,7 +80,7 @@
 //
 
 // ===== AI 설정 (config.js에서 오버라이드 가능) =====
-const AI_CONFIG = {
+window.AI_CONFIG = window.AI_CONFIG || {
   // 스크립트 생성 제공자: 'local' | 'gemini' | 'openai' | 'groq'
   scriptProvider: 'local',
 
