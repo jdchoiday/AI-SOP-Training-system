@@ -219,6 +219,19 @@
     .mq-loading { text-align: center; padding: 40px 20px; }
     .mq-loading .spinner { width: 36px; height: 36px; border: 3px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: mqspin 0.8s linear infinite; margin: 0 auto 12px; }
     @keyframes mqspin { to { transform: rotate(360deg); } }
+    /* Slide player launch button */
+    .sp-launch-btn {
+      width: 100%; padding: 14px 20px; border: none; border-radius: 12px;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white; font-size: 15px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      box-shadow: 0 4px 14px rgba(99,102,241,0.35);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .sp-launch-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(99,102,241,0.45);
+    }
   </style>
 </head>
 <body>
@@ -391,6 +404,7 @@
   <script src="js/ai-provider.js"></script>
   <script src="js/sop-content-kids.js"></script>
   <script src="js/demo-data.js"></script>
+  <script src="js/slide-player.js"></script>
   <script>
     // ===== 다국어 텍스트 =====
     const T = {
@@ -455,6 +469,7 @@
         examConfirmSubmit: '아직 답하지 않은 문제가 있습니다. 제출하시겠습니까?',
         examExistingGrade: (grade) => `종합시험 등급: ${grade}`,
         examRetakeAvailable: '재시험 가능',
+        playAllSlides: '&#9654; 전체 슬라이드 재생',
       },
       en: {
         home: 'Home', aiChat: 'AI Q&A', myResults: 'Results',
@@ -517,6 +532,7 @@
         examConfirmSubmit: 'Some questions are unanswered. Submit anyway?',
         examExistingGrade: (grade) => `Exam Grade: ${grade}`,
         examRetakeAvailable: 'Retake available',
+        playAllSlides: '&#9654; Play All Slides',
       },
       vi: {
         home: 'Trang chủ', aiChat: 'Hỏi AI', myResults: 'Kết quả',
@@ -579,6 +595,7 @@
         examConfirmSubmit: 'Còn câu chưa trả lời. Nộp bài luôn?',
         examExistingGrade: (grade) => `Xếp hạng thi: ${grade}`,
         examRetakeAvailable: 'Có thể thi lại',
+        playAllSlides: '&#9654; Phat tat ca slide',
       }
     };
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
@@ -644,6 +661,25 @@
 
       const container = document.getElementById('videoList');
       container.innerHTML = '';
+
+      // "Play All Slides" button at top
+      if (videos.length > 0) {
+        container.innerHTML += `
+          <div style="margin-bottom:14px;">
+            <button onclick="openSlidePlayer()" style="
+              width:100%; padding:14px 20px; border:none; border-radius:12px;
+              background:linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+              color:white; font-size:15px; font-weight:700; cursor:pointer;
+              display:flex; align-items:center; justify-content:center; gap:8px;
+              box-shadow: 0 4px 14px rgba(99,102,241,0.35);
+              transition: transform 0.15s, box-shadow 0.15s;
+            " onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(99,102,241,0.45)'"
+               onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(99,102,241,0.35)'">
+              ${t.playAllSlides}
+            </button>
+          </div>
+        `;
+      }
 
       let completedCount = 0;
 
@@ -837,6 +873,17 @@
       document.getElementById('videoPlayer').src = '';
       showView('videoListView');
     });
+
+    // ===== 슬라이드 플레이어 열기 (전체 재생) =====
+    function openSlidePlayer() {
+      if (!chapterId || typeof SlidePlayer === 'undefined') return;
+      AI.stopTTS();
+      if (_syncController) { _syncController.stop(); _syncController = null; }
+      SlidePlayer.onClose(() => {
+        renderVideoList();
+      });
+      SlidePlayer.open(chapterId);
+    }
 
     // ===== 시청 완료 (최소 시청 시간 검증) =====
     let videoStartTime = 0;
