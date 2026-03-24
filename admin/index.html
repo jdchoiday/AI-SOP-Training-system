@@ -1506,7 +1506,7 @@ ${text.slice(0, 3000)}`;
           if (typeof AI_CONFIG !== 'undefined' && AI_CONFIG.videoProvider && AI_CONFIG.videoProvider !== 'none' && scriptResult && scriptResult.length > 0) {
             const cost = (scriptResult.length * 0.29).toFixed(2);
             if (confirm(`✅ 스크립트 ${scriptResult.length}씬 + 퀴즈 생성 완료!\n\n🎬 AI 영상도 자동 생성할까요?\n예상 비용: $${cost} (${scriptResult.length}씬 × $0.29)\n\n취소를 누르면 영상 없이 텍스트+TTS로 학습합니다.`)) {
-              generateSopVideos();
+              generateSopVideos(true);
             }
           }
         } catch (e) {
@@ -2179,7 +2179,7 @@ function saveInvitation(code) {
     }
 
     // ===== AI 영상 생성 =====
-    async function generateSopVideos() {
+    async function generateSopVideos(skipConfirm) {
       if (AI_CONFIG.videoProvider === 'none') {
         alert('영상 생성 기능을 사용하려면 config.js에서 videoProvider를 설정하세요.\n\n추천: SiliconFlow API 키 발급 후\nvideoProvider: "wan" 으로 변경');
         return;
@@ -2188,11 +2188,12 @@ function saveInvitation(code) {
       const sop = getSops().find(s => s.id === currentSopId);
       if (!sop || !sop.script) return;
 
-      const cost = AI_CONFIG.videoProvider === 'wan'
-        ? `$${(sop.script.length * 0.29).toFixed(2)}`
-        : `$${(sop.script.length * 0.20).toFixed(2)}`;
-
-      if (!confirm(`${sop.script.length}개 씬의 영상을 생성합니다.\n예상 비용: ${cost}\n\n진행하시겠습니까?`)) return;
+      if (!skipConfirm) {
+        const cost = AI_CONFIG.videoProvider === 'wan'
+          ? `$${(sop.script.length * 0.29).toFixed(2)}`
+          : `$${(sop.script.length * 0.20).toFixed(2)}`;
+        if (!confirm(`${sop.script.length}개 씬의 영상을 생성합니다.\n예상 비용: ${cost}\n\n진행하시겠습니까?`)) return;
+      }
 
       // 생성 시작 UI
       const area = document.getElementById('aiResultArea');
@@ -2219,7 +2220,14 @@ function saveInvitation(code) {
         </div>`;
         progress.textContent = `${i}/${sop.script.length}`;
 
-        const result = await AI.generateVideo(prompt, { turbo: true });
+        let result;
+        try {
+          result = await AI.generateVideo(prompt, { turbo: true });
+          console.log('Video gen result:', JSON.stringify(result));
+        } catch(videoErr) {
+          console.error('Video gen error:', videoErr);
+          result = { status: 'error', message: videoErr.message };
+        }
 
         // 로그 업데이트
         const lastLog = log.lastElementChild;
