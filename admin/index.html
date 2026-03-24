@@ -2222,7 +2222,7 @@ function saveInvitation(code) {
 
         let result;
         try {
-          result = await AI.generateVideo(prompt, { turbo: true });
+          result = await AI.generateVideo(prompt, { turbo: false });
           console.log('Video gen result:', JSON.stringify(result));
         } catch(videoErr) {
           console.error('Video gen error:', videoErr);
