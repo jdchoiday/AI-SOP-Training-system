@@ -1,6 +1,7 @@
-// ============================================
 // Vercel Serverless Function — SiliconFlow API Proxy
-// ============================================
+// maxDuration 설정으로 타임아웃 확장
+
+export const config = { maxDuration: 30 };
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -20,37 +21,41 @@ module.exports = async function handler(req, res) {
       ? 'https://api.siliconflow.com/v1/video/status'
       : 'https://api.siliconflow.com/v1/video/submit';
 
-    // Only send fields that SiliconFlow expects
     let payload;
     if (action === 'status') {
       payload = { requestId: rest.requestId };
     } else {
-      payload = {
-        model: rest.model,
-        prompt: rest.prompt,
-        image_size: rest.image_size || '1280x720',
-      };
-      if (rest.negative_prompt) payload.negative_prompt = rest.negative_prompt;
-      if (rest.seed) payload.seed = rest.seed;
+      payload = { model: rest.model, prompt: rest.prompt, image_size: rest.image_size || '1280x720' };
     }
 
-    console.log('SiliconFlow proxy ->', targetUrl, JSON.stringify(payload));
+    // 최대 2번 재시도
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 25000);
 
-    const response = await fetch(targetUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(payload),
-    });
+        const response = await fetch(targetUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
 
-    const data = await response.json();
-    console.log('SiliconFlow response <-', response.status, JSON.stringify(data));
+        const data = await response.json();
+        return res.status(response.status).json(data);
+      } catch (e) {
+        lastError = e;
+        if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
+      }
+    }
 
-    return res.status(response.status).json(data);
+    return res.status(500).json({ error: lastError.message });
   } catch (err) {
-    console.error('SiliconFlow proxy error:', err);
     return res.status(500).json({ error: err.message });
   }
 };
