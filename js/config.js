@@ -44,7 +44,7 @@ const CONFIG = {
 
     // API 키 (사용할 제공자만 입력)
     keys: {
-      gemini: 'AIzaSyBCsnJr0WTvLUa7AuZKAloafg5d97EH_VI',        // https://aistudio.google.com 에서 무료 발급
+      gemini: 'AIzaSyAYclwqL37iiD68K2lpWg5fK_Y8kTyc4CY',        // https://aistudio.google.com 에서 무료 발급
       openai: '',        // https://platform.openai.com 에서 발급 (유료)
       groq: '',          // https://console.groq.com 에서 무료 발급
       siliconflow: 'sk-folxwzzqfasjqmdodvystwesgbatjztmxwkezfuvfglvhyvs',   // SiliconFlow (Wan 영상 생성)
