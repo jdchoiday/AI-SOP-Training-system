@@ -1501,6 +1501,14 @@ ${text.slice(0, 3000)}`;
 
           renderStatusFlow('generated');
           renderAiResults(sops[idx]);
+
+          // 영상 생성 여부 확인 (유료)
+          if (typeof AI_CONFIG !== 'undefined' && AI_CONFIG.videoProvider && AI_CONFIG.videoProvider !== 'none' && scriptResult && scriptResult.length > 0) {
+            const cost = (scriptResult.length * 0.29).toFixed(2);
+            if (confirm(`✅ 스크립트 ${scriptResult.length}씬 + 퀴즈 생성 완료!\n\n🎬 AI 영상도 자동 생성할까요?\n예상 비용: $${cost} (${scriptResult.length}씬 × $0.29)\n\n취소를 누르면 영상 없이 텍스트+TTS로 학습합니다.`)) {
+              generateSopVideos();
+            }
+          }
         } catch (e) {
           hideLoading();
           alert('AI 생성 중 오류: ' + e.message);
