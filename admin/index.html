@@ -694,9 +694,9 @@
     });
 
     // ===== AI 설정 바인딩 =====
-    // AI_CONFIG는 ai-provider.js에서 이미 선언됨. 없으면 폴백 생성
-    if (typeof AI_CONFIG === 'undefined') {
-      var AI_CONFIG = { scriptProvider:'gemini', quizProvider:'gemini', chatProvider:'gemini', videoProvider:'none', keys:{ gemini:'', siliconflow:'' }, models:{ gemini:'gemini-2.0-flash', wan:'Wan-AI/Wan2.2-T2V-A14B' } };
+    // AI_CONFIG는 ai-provider.js에서 선언됨. 없으면 window에 폴백 생성
+    if (typeof window.AI_CONFIG === 'undefined') {
+      window.AI_CONFIG = { scriptProvider:'gemini', quizProvider:'gemini', chatProvider:'gemini', videoProvider:'none', keys:{ gemini:'', siliconflow:'' }, models:{ gemini:'gemini-2.0-flash', wan:'Wan-AI/Wan2.2-T2V-A14B' } };
     }
 
     // ===== 멀티 관리자 역할 시스템 =====
