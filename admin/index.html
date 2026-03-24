@@ -2241,7 +2241,7 @@ function saveInvitation(code) {
             if (status.status === 'processing') {
               lastLog.innerHTML = `<strong>씬 ${scene.scene}</strong>: ⏳ 생성 중... (${attempt * 10}초 경과)`;
             }
-          }, 18); // 최대 3분 대기
+          }, 60); // 최대 10분 대기
 
           if (pollResult.status === 'completed' && pollResult.videoUrl) {
             const safeNarr = (scene.narration || '').replace(/`/g, "'").replace(/\\/g, '\\\\');
