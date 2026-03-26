@@ -142,20 +142,38 @@ const AI = {
     }
 
     try {
+      const plainText = this._htmlToText(sopContent);
+      // SOP 길이에 비례하여 최소 씬 수 결정 (200자당 1씬, 최소 5씬)
+      const minScenes = Math.max(5, Math.min(20, Math.ceil(plainText.length / 200)));
+
+      // SOP 언어 자동 감지
+      const hasVietnamese = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(plainText);
+      const isEnglish = !hasVietnamese && /^[\x00-\x7F\s.,!?;:'"()\-\d\n]+$/.test(plainText.slice(0, 300));
+      const titleHasVie = /vie|VIE|베트남|vietnam/i.test(sopTitle);
+      const titleHasEn = /eng|ENG|영어|english/i.test(sopTitle);
+
+      let langInstruction = '나레이션은 한국어로 작성';
+      if (hasVietnamese || titleHasVie) langInstruction = '나레이션은 반드시 베트남어(tiếng Việt)로 작성';
+      else if (isEnglish || titleHasEn) langInstruction = '나레이션은 반드시 영어(English)로 작성';
+
       const prompt = `당신은 직원 교육 영상 스크립트 작성 전문가입니다.
 
-아래 SOP 문서를 기반으로 교육 영상 스크립트를 JSON 배열로 생성하세요.
-각 항목은 { "scene": 번호, "narration": "나레이션 텍스트", "visual": "화면 설명" } 형식입니다.
+아래 SOP 문서의 모든 내용을 빠짐없이 교육 영상 스크립트로 변환하세요.
+JSON 배열로 생성하며, 각 항목은 { "scene": 번호, "narration": "나레이션 텍스트", "visual": "영어 이미지 프롬프트" } 형식입니다.
 
 SOP 제목: ${sopTitle}
 SOP 내용:
-${this._htmlToText(sopContent)}
+${plainText}
 
-규칙:
+중요 규칙:
+- ${langInstruction}. SOP 원문의 언어와 동일한 언어로 나레이션을 작성할 것
+- 반드시 ${minScenes}씬 이상 생성할 것 (SOP 내용이 길므로 충분한 씬이 필요)
+- SOP의 모든 단락과 항목을 빠짐없이 포함할 것. 내용을 생략하지 말 것
 - 첫 씬은 인사와 주제 소개
 - 마지막 씬은 핵심 요약과 마무리
-- 나레이션은 자연스럽고 친근한 말투
-- 각 씬 30초~1분 분량
+- 나레이션은 자연스럽고 친근한 말투로 2~4문장
+- 각 씬은 교육 영상의 한 장면 (30초~1분 분량)
+- visual 필드는 반드시 영어로 된 상세한 이미지 생성 프롬프트를 작성할 것. 나레이션 내용과 정확히 일치하는 구체적인 장면을 묘사. 예시: "A friendly female staff member in light blue polo uniform kneeling to make eye contact with a small child, gently explaining safety rules in a bright modern kids indoor playground"
 - JSON 배열만 출력, 다른 텍스트 없이`;
 
       const result = await this._callLLM(provider, prompt);
@@ -176,25 +194,40 @@ ${this._htmlToText(sopContent)}
     }
 
     try {
+      const plainText = this._htmlToText(sopContent);
+      // SOP 언어 자동 감지
+      const hasVietnamese = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(plainText);
+      const isEnglish = !hasVietnamese && /^[\x00-\x7F\s.,!?;:'"()\-\d\n]+$/.test(plainText.slice(0, 300));
+      const titleHasVie = /vie|VIE|베트남|vietnam/i.test(sopTitle);
+      const titleHasEn = /eng|ENG|영어|english/i.test(sopTitle);
+
+      let quizLang = '한국어';
+      if (hasVietnamese || titleHasVie) quizLang = '베트남어(tiếng Việt)';
+      else if (isEnglish || titleHasEn) quizLang = '영어(English)';
+
       const prompt = `당신은 직원 교육 퀴즈 출제 전문가입니다.
 
-아래 SOP 문서를 기반으로 4지선다 퀴즈를 JSON 배열로 생성하세요.
-각 항목은 { "question": "문제", "options": ["선택지1", "선택지2", "선택지3", "선택지4"], "correct": 정답인덱스(0~3), "explanation": "정답인 이유를 1문장으로 설명" } 형식입니다.
+아래 SOP 스크립트 내용에서 직접 발췌하여 4지선다 퀴즈를 **정확히 3문제** JSON 배열로 생성하세요.
+각 항목은 { "question": "문제", "options": ["선택지1", "선택지2", "선택지3", "선택지4"], "correct": 정답인덱스(0~3), "explanation": "스크립트 원문에서 근거를 1문장으로 인용" } 형식입니다.
 
 SOP 제목: ${sopTitle}
-SOP 내용:
-${this._htmlToText(sopContent)}
+SOP 스크립트:
+${plainText}
 
 규칙:
-- 5~7개 문제 생성
-- SOP의 핵심 절차와 주의사항 중심
-- 정답이 고르게 분포되도록 (0,1,2,3 골고루)
-- 오답도 그럴듯하게
-- JSON 배열만 출력`;
+- 반드시 정확히 3문제만 생성 (3개 초과 금지)
+- 퀴즈는 반드시 ${quizLang}로 작성할 것
+- 질문과 정답은 반드시 위 스크립트 본문에 있는 내용에서 발췌할 것
+- 스크립트에 없는 내용으로 문제를 만들지 말 것
+- 정답이 고르게 분포되도록 (0,1,2 각 1회씩)
+- 오답은 그럴듯하지만 스크립트 내용과 다르게
+- JSON 배열만 출력, 다른 텍스트 없이`;
 
       const result = await this._callLLM(provider, prompt);
       const parsed = JSON.parse(result.match(/\[[\s\S]*\]/)?.[0] || '[]');
-      return parsed.length > 0 ? parsed : this._localGenerateQuiz(sopTitle, sopContent);
+      // 반드시 3문제로 제한
+      const limited = parsed.slice(0, 3);
+      return limited.length > 0 ? limited : this._localGenerateQuiz(sopTitle, sopContent);
     } catch (e) {
       console.warn('AI quiz generation failed, falling back to local:', e.message);
       return this._localGenerateQuiz(sopTitle, sopContent);
@@ -249,7 +282,7 @@ ${sopContext}
           body: JSON.stringify({
             prompt,
             model,
-            generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+            generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
           })
         });
         const data = await res.json();
@@ -268,7 +301,7 @@ ${sopContext}
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+          generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
         })
       });
       const data = await res.json();
@@ -367,13 +400,17 @@ ${sopContext}
       }
     });
 
-    quizzes.push({
-      question: `"${sopTitle}"의 전체 절차 수는?`,
-      options: [`${headings.length}단계`, `${headings.length + 2}단계`, `${headings.length - 1}단계`, `${headings.length + 1}단계`],
-      correct: 0
-    });
+    // 절차 수 퀴즈는 headings가 있을 때만
+    if (headings.length > 0) {
+      quizzes.push({
+        question: `"${sopTitle}"의 전체 절차 수는?`,
+        options: [`${headings.length}단계`, `${headings.length + 2}단계`, `${headings.length - 1}단계`, `${headings.length + 1}단계`],
+        correct: 0
+      });
+    }
 
-    return quizzes;
+    // 최대 3개로 제한
+    return quizzes.slice(0, 3);
   },
 
   // ===== 영상 생성 =====
@@ -533,8 +570,13 @@ ${sopContext}
 
     const results = [];
     for (const scene of sop.script) {
-      // 나레이션을 영상 프롬프트로 변환
-      const videoPrompt = `교육 영상 장면. ${scene.visual}. 깨끗한 매장 환경, 유니폼을 입은 직원이 절차를 수행하는 모습. 밝고 전문적인 분위기. 720p 품질.`;
+      // Gemini로 컨텍스트 기반 영어 프롬프트 생성
+      let videoPrompt;
+      try {
+        videoPrompt = await this._buildContextualPrompt(scene.visual, scene.narration);
+      } catch (e) {
+        videoPrompt = `A staff member in uniform performing procedures in a modern Korean kids cafe. ${scene.visual || ''}. Bright warm lighting, professional training video style, 720p quality.`;
+      }
 
       const result = await this.generateVideo(videoPrompt, { turbo: true });
       results.push({
@@ -551,6 +593,25 @@ ${sopContext}
       results: results,
       estimatedTotalCost: `$${(sop.script.length * 0.21).toFixed(2)}~$${(sop.script.length * 0.29).toFixed(2)}`,
     };
+  },
+
+  // Gemini로 씬 나레이션 → 구체적 영어 비디오 프롬프트 생성
+  async _buildContextualPrompt(visual, narration) {
+    const prompt = `You are a video prompt engineer. Convert this training video scene into a detailed English video generation prompt.
+
+SCENE VISUAL: ${visual || 'N/A'}
+SCENE NARRATION: ${narration || 'N/A'}
+
+Requirements:
+- Describe a SPECIFIC scene matching the narration content
+- Setting: modern Korean kids indoor playground/cafe
+- Characters: staff in uniform performing described procedures
+- Include specific actions, objects, details from narration
+- Style: bright warm lighting, clean professional, training video
+- Under 150 words, ONLY the English prompt`;
+
+    const result = await this._callLLM('gemini', prompt);
+    return result.trim().replace(/^["']|["']$/g, '');
   },
 };
 

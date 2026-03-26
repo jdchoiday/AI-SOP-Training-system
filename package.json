@@ -1,0 +1,9 @@
+{
+  "name": "sop-training-system",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "node-edge-tts": "^1.2.10",
+    "ws": "^8.18.0"
+  }
+}

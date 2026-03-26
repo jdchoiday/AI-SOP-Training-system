@@ -97,6 +97,11 @@ const SupabaseMode = {
   async saveSop(sop) {
     if (!this._ready) return;
     try {
+      // Supabase status check constraint에 맞는 값만 허용
+      const validStatuses = ['draft', 'published'];
+      let status = sop.status || 'draft';
+      if (!validStatuses.includes(status)) status = 'draft';
+
       const row = {
         id: sop.id,
         title: sop.title,
@@ -105,13 +110,14 @@ const SupabaseMode = {
         category: sop.category || '',
         content: sop.content || '',
         content_vn: sop.content_vn || '',
-        status: sop.status || 'draft',
+        status: status,
         order_num: sop.order_num || 0,
-        script: sop.script || [],
-        quizzes: sop.quizzes || [],
+        script: sop.script || null,
+        quizzes: sop.quizzes || null,
         updated_at: new Date().toISOString(),
       };
-      await this._client.from('sop_documents').upsert(row, { onConflict: 'id' });
+      const { error } = await this._client.from('sop_documents').upsert(row, { onConflict: 'id' });
+      if (error) console.warn('[Supabase] SOP 저장 실패:', sop.id, error.message);
     } catch (e) {
       console.error('[Supabase] SOP 저장 오류:', e);
     }

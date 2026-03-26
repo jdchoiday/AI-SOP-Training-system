@@ -1,5 +1,5 @@
 // Service Worker — 오프라인 캐싱
-const CACHE_NAME = 'sop-training-v5';
+const CACHE_NAME = 'sop-training-v7';
 const ASSETS = [
   '/',
   '/index.html',
@@ -17,6 +17,7 @@ const ASSETS = [
   '/js/supabase-client.js',
   '/js/sop-content-kids.js',
   '/js/demo-data.js',
+  '/js/slide-player.js',
   '/manifest.json',
   '/assets/icon-192.svg',
   '/assets/icon-512.svg',
@@ -52,10 +53,16 @@ self.addEventListener('notificationclick', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // localhost 개발 환경에서는 SW 개입하지 않음
+  if (e.request.url.includes('localhost')) {
+    return; // 브라우저 기본 동작
+  }
   // API 호출은 캐시하지 않음
   if (e.request.url.includes('googleapis.com') ||
       e.request.url.includes('supabase.co') ||
-      e.request.url.includes('siliconflow.com')) {
+      e.request.url.includes('siliconflow.com') ||
+      e.request.url.includes('/api/') ||
+      e.request.url.includes('speech.platform.bing.com')) {
     return;
   }
   // 네트워크 우선, 실패 시 캐시

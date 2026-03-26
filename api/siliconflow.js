@@ -1,7 +1,10 @@
 // Vercel Serverless Function — SiliconFlow API Proxy
 // maxDuration 설정으로 타임아웃 확장
 
-export const config = { maxDuration: 30 };
+// Vercel config (ignored in local server)
+if (typeof exports !== 'undefined') {
+  try { Object.defineProperty(exports, 'config', { value: { maxDuration: 30 } }); } catch(e) {}
+}
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

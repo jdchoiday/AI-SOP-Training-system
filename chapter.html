@@ -889,12 +889,12 @@
     let videoStartTime = 0;
     const MIN_WATCH_SECONDS = 10; // 최소 10초 시청 필요
 
-    // 영상/나레이션 열 때 시작 시간 기록
-    const origOpenVideo = openVideo;
-    function openVideo(videoId) {
+    // 영상/나레이션 열 때 시작 시간 기록 (래핑)
+    const _baseOpenVideo = openVideo;
+    openVideo = function(videoId) {
       videoStartTime = Date.now();
-      origOpenVideo(videoId);
-    }
+      _baseOpenVideo(videoId);
+    };
 
     document.getElementById('completeVideoBtn').addEventListener('click', () => {
       const elapsed = Math.floor((Date.now() - videoStartTime) / 1000);
