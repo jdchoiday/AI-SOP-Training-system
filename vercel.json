@@ -4,8 +4,14 @@
   "outputDirectory": ".",
   "rewrites": [
     { "source": "/api/gemini", "destination": "/api/gemini" },
-    { "source": "/api/siliconflow", "destination": "/api/siliconflow" }
+    { "source": "/api/siliconflow", "destination": "/api/siliconflow" },
+    { "source": "/api/tts", "destination": "/api/tts" }
   ],
+  "functions": {
+    "api/tts.js": {
+      "maxDuration": 25
+    }
+  },
   "routes": [
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }

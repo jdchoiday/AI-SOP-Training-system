@@ -313,12 +313,27 @@
         <div class="topbar">
           <h1>SOP 관리</h1>
           <div class="topbar-actions">
+            <button class="btn btn-outline" style="padding:10px 20px; font-size:14px;" onclick="document.getElementById('sopJsonInput').click()">&#128230; JSON 일괄 업로드</button>
             <button class="btn btn-outline" style="padding:10px 20px; font-size:14px;" onclick="document.getElementById('sopFileInput').click()">&#128196; 파일 업로드</button>
             <button class="btn btn-outline" style="padding:10px 20px; font-size:14px;" onclick="document.getElementById('sopFolderInput').click()">&#128193; 폴더 업로드</button>
             <button class="btn btn-primary" style="padding:10px 20px; font-size:14px;" onclick="createNewSop()">+ 새 SOP 작성</button>
           </div>
           <input type="file" id="sopFileInput" accept=".txt,.pdf,.doc,.docx,.hwp,.md" multiple style="display:none;" onchange="handleSopFileUpload(event)">
           <input type="file" id="sopFolderInput" webkitdirectory multiple style="display:none;" onchange="handleSopFolderUpload(event)">
+          <input type="file" id="sopJsonInput" accept=".json" style="display:none;" onchange="handleSopJsonUpload(event)">
+        </div>
+
+        <!-- 일괄 액션 바 (선택 시 표시) -->
+        <div id="sopBulkBar" style="display:none; background:#fef2f2; border:1px solid #fecaca; border-radius:12px; padding:14px 20px; margin-bottom:16px; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span id="sopBulkCount" style="font-size:14px; font-weight:600; color:#dc2626;"></span>
+            <button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="sopSelectAll()">전체 선택</button>
+            <button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="sopDeselectAll()">선택 해제</button>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="sopExportSelected()">&#128229; 내보내기</button>
+            <button class="btn" style="padding:6px 14px; font-size:13px; background:#dc2626; color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopDeleteSelected()">&#128465; 선택 삭제</button>
+          </div>
         </div>
 
         <!-- 드래그앤드롭 영역 -->
@@ -326,18 +341,30 @@
           <div style="font-size:36px; margin-bottom:8px;">&#128203;</div>
           <p style="color:var(--gray-500); font-size:14px; margin:0;">
             파일 또는 폴더를 여기에 끌어다 놓으세요<br>
-            <span style="font-size:12px;">TXT, PDF, Word, HWP 지원 | 여러 파일을 한번에 업로드하면 AI가 자동으로 챕터별 SOP로 정리합니다</span>
+            <span style="font-size:12px;">TXT, PDF, Word, HWP, JSON 지원 | JSON 파일로 SOP를 일괄 업로드/교체할 수 있습니다</span>
           </p>
         </div>
 
-        <!-- 필터 -->
-        <div class="filter-bar">
-          <button class="filter-chip active" onclick="filterSop('all', this)">전체</button>
-          <button class="filter-chip" onclick="filterSop('draft', this)">작성 중</button>
-          <button class="filter-chip" onclick="filterSop('generated', this)">콘텐츠 생성됨</button>
-          <button class="filter-chip" onclick="filterSop('published', this)">배포 완료</button>
+        <!-- 필터 + 전체 관리 -->
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:20px;">
+          <div class="filter-bar" style="margin-bottom:0;">
+            <button class="filter-chip active" onclick="filterSop('all', this)">전체</button>
+            <button class="filter-chip" onclick="filterSop('draft', this)">작성 중</button>
+            <button class="filter-chip" onclick="filterSop('generated', this)">콘텐츠 생성됨</button>
+            <button class="filter-chip" onclick="filterSop('published', this)">배포 완료</button>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-outline" style="padding:6px 14px; font-size:12px;" onclick="sopExportAll()">&#128229; 전체 내보내기</button>
+          </div>
         </div>
 
+        <!-- 전체 선택 헤더 -->
+        <div id="sopListHeader" style="display:none; align-items:center; gap:12px; padding:10px 20px; background:var(--gray-50); border-radius:var(--radius) var(--radius) 0 0; border:1px solid var(--gray-200); border-bottom:none;">
+          <input type="checkbox" id="sopSelectAllCheckbox" onchange="sopToggleSelectAll(this.checked)"
+            style="width:18px; height:18px; cursor:pointer; accent-color:var(--primary);">
+          <label for="sopSelectAllCheckbox" style="font-size:13px; color:var(--gray-600); cursor:pointer; user-select:none;">전체 선택</label>
+          <span id="sopCountLabel" style="font-size:12px; color:var(--gray-400); margin-left:auto;"></span>
+        </div>
         <div id="sopList"></div>
       </div>
 
@@ -355,7 +382,7 @@
           <div class="topbar-actions">
             <button class="btn btn-outline" style="padding:8px 16px; font-size:13px; color:var(--danger); border-color:var(--danger);" onclick="deleteSop()">삭제</button>
             <button class="btn btn-outline" style="padding:8px 16px; font-size:13px;" onclick="saveSop()">&#128190; 저장</button>
-            <button class="btn btn-primary" style="padding:8px 16px; font-size:13px;" id="generateBtn" onclick="generateContent()">&#9889; AI 콘텐츠 생성</button>
+            <button class="btn btn-primary" style="padding:8px 16px; font-size:13px;" id="generateBtn" onclick="generateContent()">&#9889; 슬라이드 + 퀴즈 생성</button>
           </div>
         </div>
 
@@ -390,10 +417,6 @@
         <div class="sop-editor-area" id="sopEditor" contenteditable="true"
              style="border-top-left-radius:0; border-top-right-radius:0;">
         </div>
-
-        <p style="font-size:12px; color:var(--gray-500); margin-top:8px;">
-          &#128161; 팁: 절차를 1, 2, 3 순서로 명확하게 작성하면 AI가 더 좋은 스크립트를 생성합니다
-        </p>
 
         <!-- AI 생성 결과 영역 -->
         <div id="aiResultArea"></div>
@@ -623,42 +646,13 @@
       <div class="card" style="margin-top:16px;">
         <h4 style="font-size:15px; margin-bottom:16px;">API 키 설정</h4>
         <p style="font-size:13px; color:var(--gray-500); margin-bottom:16px;">
-          Local(무료) 모드에서는 키가 필요 없습니다. 외부 AI를 사용할 때만 해당 키를 입력하세요.
+          퀴즈 자동 생성과 AI 챗봇에 Gemini API 키가 필요합니다.
         </p>
 
         <div class="form-group">
           <label>Google Gemini 키 <a href="https://aistudio.google.com" target="_blank" style="font-size:12px;">(무료 발급)</a></label>
           <input type="password" id="keyGemini" placeholder="AIza..." onchange="updateAiKeys()">
         </div>
-
-        <div class="form-group">
-          <label>Groq 키 <a href="https://console.groq.com" target="_blank" style="font-size:12px;">(무료 발급)</a></label>
-          <input type="password" id="keyGroq" placeholder="gsk_..." onchange="updateAiKeys()">
-        </div>
-
-        <div class="form-group">
-          <label>OpenAI 키 <a href="https://platform.openai.com" target="_blank" style="font-size:12px;">(유료)</a></label>
-          <input type="password" id="keyOpenai" placeholder="sk-..." onchange="updateAiKeys()">
-        </div>
-
-        <div class="form-group">
-          <label>SiliconFlow 키 — Wan 영상 생성 <a href="https://siliconflow.com" target="_blank" style="font-size:12px;">(발급)</a></label>
-          <input type="password" id="keySiliconflow" placeholder="sf-..." onchange="updateAiKeys()">
-        </div>
-      </div>
-
-      <!-- 비용 가이드 -->
-      <div class="card" style="margin-top:16px; background:var(--gray-50);">
-        <h4 style="font-size:15px; margin-bottom:12px;">비용 가이드</h4>
-        <table class="data-table" style="font-size:13px; box-shadow:none;">
-          <thead><tr><th>구성</th><th>월 비용</th><th>포함 기능</th></tr></thead>
-          <tbody>
-            <tr><td><strong>무비용</strong></td><td style="color:var(--success); font-weight:700;">$0</td><td>Local 전부 (스크립트+퀴즈+챗봇 텍스트)</td></tr>
-            <tr><td><strong>가성비 추천</strong></td><td style="color:var(--success); font-weight:700;">$0</td><td>Gemini 무료 티어 (고품질 스크립트+챗봇)</td></tr>
-            <tr><td><strong>영상 포함</strong></td><td style="color:var(--primary); font-weight:700;">~$1.50/SOP</td><td>위 + Wan 2.2 영상 (5씬 기준, 1회성)</td></tr>
-            <tr><td><strong>프리미엄</strong></td><td style="color:var(--warning); font-weight:700;">~$5/월</td><td>GPT-4o-mini + Wan 영상 (SOP 5개, 직원 50명)</td></tr>
-          </tbody>
-        </table>
       </div>
     </div>
 
@@ -674,6 +668,7 @@
   <script src="../js/ai-provider.js"></script>
   <script src="../js/sop-content-kids.js"></script>
   <script src="../js/demo-data.js"></script>
+  <script src="../js/slide-player.js"></script>
   <script>
     // ===== 관리자 확인 =====
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
@@ -697,6 +692,21 @@
     // AI_CONFIG는 ai-provider.js에서 선언됨. 없으면 window에 폴백 생성
     if (typeof window.AI_CONFIG === 'undefined') {
       window.AI_CONFIG = { scriptProvider:'gemini', quizProvider:'gemini', chatProvider:'gemini', videoProvider:'none', keys:{ gemini:'', siliconflow:'' }, models:{ gemini:'gemini-2.0-flash', wan:'Wan-AI/Wan2.2-T2V-A14B' } };
+    }
+
+    // ===== Gemini API 공통 호출 (항상 서버 경유) =====
+    window.callGemini = async function(prompt, options = {}) {
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          model: options.model || 'gemini-2.0-flash',
+          generationConfig: options.generationConfig || { temperature: options.temperature || 0.7, maxOutputTokens: options.maxOutputTokens || 2048 }
+        })
+      });
+      const data = await res.json();
+      return data?.text || data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
 
     // ===== 멀티 관리자 역할 시스템 =====
@@ -832,8 +842,8 @@
       }
     }
 
-    // 초기 데모 SOP가 없으면 SopStore.initDemo()로 생성
-    if (getSops().length === 0) {
+    // 초기 데모 SOP: 사용자가 삭제한 적 없을 때만 자동 생성
+    if (getSops().length === 0 && localStorage.getItem('sop_user_cleared') !== 'true') {
       if (typeof SopStore !== 'undefined') { SopStore.initDemo(); }
     }
 
@@ -871,8 +881,243 @@
       document.getElementById('sidebarOverlay').classList.toggle('show');
     }
 
-    // ===== SOP 필터 상태 =====
+    // ===== SOP 필터/선택 상태 =====
     let currentSopFilter = 'all';
+    let selectedSopIds = new Set();
+
+    function updateBulkBar() {
+      const bar = document.getElementById('sopBulkBar');
+      if (selectedSopIds.size > 0) {
+        bar.style.display = 'flex';
+        document.getElementById('sopBulkCount').textContent = `${selectedSopIds.size}개 선택됨`;
+      } else {
+        bar.style.display = 'none';
+      }
+    }
+
+    function toggleSopSelect(sopId, event) {
+      event.stopPropagation();
+      if (selectedSopIds.has(sopId)) selectedSopIds.delete(sopId);
+      else selectedSopIds.add(sopId);
+      updateBulkBar();
+      // 체크박스 시각 업데이트
+      const cb = document.querySelector(`.sop-checkbox[data-id="${sopId}"]`);
+      if (cb) cb.checked = selectedSopIds.has(sopId);
+      // 마스터 체크박스 동기화
+      const total = document.querySelectorAll('.sop-checkbox').length;
+      const checked = document.querySelectorAll('.sop-checkbox:checked').length;
+      const masterCb = document.getElementById('sopSelectAllCheckbox');
+      if (masterCb) { masterCb.checked = (checked === total && total > 0); masterCb.indeterminate = (checked > 0 && checked < total); }
+    }
+
+    function sopSelectAll() {
+      let sops = getSops();
+      if (currentSopFilter !== 'all') sops = sops.filter(s => s.status === currentSopFilter);
+      sops.forEach(s => selectedSopIds.add(s.id));
+      document.querySelectorAll('.sop-checkbox').forEach(cb => cb.checked = true);
+      const masterCb = document.getElementById('sopSelectAllCheckbox');
+      if (masterCb) masterCb.checked = true;
+      updateBulkBar();
+    }
+
+    function sopDeselectAll() {
+      selectedSopIds.clear();
+      document.querySelectorAll('.sop-checkbox').forEach(cb => cb.checked = false);
+      const masterCb = document.getElementById('sopSelectAllCheckbox');
+      if (masterCb) masterCb.checked = false;
+      updateBulkBar();
+    }
+
+    function sopToggleSelectAll(checked) {
+      if (checked) sopSelectAll();
+      else sopDeselectAll();
+    }
+
+    function sopDeleteSelected() {
+      if (selectedSopIds.size === 0) return;
+      const count = selectedSopIds.size;
+      if (!confirm(`선택된 ${count}개 SOP를 삭제하시겠습니까?\n\n관련 학습 진행률도 초기화됩니다.\n이 작업은 되돌릴 수 없습니다.`)) return;
+
+      let sops = getSops();
+      const deletedIds = [...selectedSopIds];
+      sops = sops.filter(s => !selectedSopIds.has(s.id));
+      saveSops(sops);
+      // 데모 자동 재생성 방지
+      localStorage.setItem('sop_user_cleared', 'true');
+
+      // Supabase에서도 삭제
+      if (typeof SupabaseMode !== 'undefined' && SupabaseMode._ready) {
+        deletedIds.forEach(id => SupabaseMode.deleteSop(id).catch(() => {}));
+      }
+
+      // 진행률 데이터 정리
+      cleanupProgressData(deletedIds);
+
+      selectedSopIds.clear();
+      updateBulkBar();
+      renderSopList();
+      alert(`${count}개 SOP가 삭제되었습니다.`);
+    }
+
+    function sopDeleteAll() {
+      const sops = getSops();
+      if (sops.length === 0) { alert('삭제할 SOP가 없습니다.'); return; }
+      if (!confirm(`전체 ${sops.length}개 SOP를 모두 삭제하시겠습니까?\n\n모든 학습 진행률도 초기화됩니다.\n이 작업은 되돌릴 수 없습니다.`)) return;
+      if (!confirm(`정말로 전체 삭제를 진행합니까? 이 작업은 복구할 수 없습니다.`)) return;
+
+      const deletedIds = sops.map(s => s.id);
+      saveSops([]);
+      // 데모 자동 재생성 방지
+      localStorage.setItem('sop_user_cleared', 'true');
+
+      // Supabase에서도 삭제
+      if (typeof SupabaseMode !== 'undefined' && SupabaseMode._ready) {
+        deletedIds.forEach(id => SupabaseMode.deleteSop(id).catch(() => {}));
+      }
+
+      // 진행률 전체 초기화
+      cleanupProgressData(deletedIds);
+
+      selectedSopIds.clear();
+      updateBulkBar();
+      renderSopList();
+      alert(`전체 ${deletedIds.length}개 SOP가 삭제되었습니다.\n새로운 SOP를 업로드하세요.`);
+    }
+
+    function cleanupProgressData(deletedSopIds) {
+      // 삭제된 SOP 관련 진행률 정리
+      try {
+        const progressData = JSON.parse(localStorage.getItem('sop_progress_v2') || '{}');
+        for (const empId of Object.keys(progressData)) {
+          const emp = progressData[empId];
+          // 삭제된 SOP의 비디오 완료 기록 제거
+          emp.completedVideos = (emp.completedVideos || []).filter(vid => {
+            return !deletedSopIds.some(sopId => vid.startsWith(sopId + '-'));
+          });
+          // 삭제된 SOP의 챕터 결과 제거
+          for (const sopId of deletedSopIds) {
+            delete emp.chapterResults[sopId];
+            // quizScores에서도 제거
+            Object.keys(emp.quizScores || {}).forEach(key => {
+              if (key.startsWith(sopId + '-')) delete emp.quizScores[key];
+            });
+          }
+        }
+        localStorage.setItem('sop_progress_v2', JSON.stringify(progressData));
+      } catch (e) {
+        console.error('진행률 정리 오류:', e);
+      }
+    }
+
+    function sopExportSelected() {
+      if (selectedSopIds.size === 0) return;
+      const sops = getSops().filter(s => selectedSopIds.has(s.id));
+      downloadSopJson(sops, `sop-export-${selectedSopIds.size}items.json`);
+    }
+
+    function sopExportAll() {
+      const sops = getSops();
+      if (sops.length === 0) { alert('내보낼 SOP가 없습니다.'); return; }
+      downloadSopJson(sops, `sop-export-all-${new Date().toISOString().slice(0,10)}.json`);
+    }
+
+    function downloadSopJson(sops, filename) {
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        version: '1.0',
+        count: sops.length,
+        sops: sops
+      };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // ===== JSON 일괄 업로드 =====
+    async function handleSopJsonUpload(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      event.target.value = '';
+
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        // 다양한 JSON 형식 지원
+        let newSops = [];
+        if (Array.isArray(data)) {
+          newSops = data;
+        } else if (data.sops && Array.isArray(data.sops)) {
+          newSops = data.sops;
+        } else if (data.title && data.content) {
+          newSops = [data]; // 단일 SOP 객체
+        } else {
+          alert('지원하지 않는 JSON 형식입니다.\n배열 또는 { sops: [...] } 형식이어야 합니다.');
+          return;
+        }
+
+        if (newSops.length === 0) {
+          alert('업로드할 SOP가 없습니다.'); return;
+        }
+
+        // 기존 SOP 처리 선택
+        const existingSops = getSops();
+        let mode = 'append';
+        if (existingSops.length > 0) {
+          const choice = confirm(
+            `현재 ${existingSops.length}개 SOP가 있습니다.\n\n` +
+            `[확인] = 기존 SOP를 모두 삭제하고 새로 교체 (${newSops.length}개)\n` +
+            `[취소] = 기존 SOP에 추가 (${existingSops.length} + ${newSops.length}개)`
+          );
+          mode = choice ? 'replace' : 'append';
+        }
+
+        // SOP 정규화 (필수 필드 보장)
+        const normalized = newSops.map((sop, i) => ({
+          id: sop.id || ('sop-' + Date.now() + '-' + i),
+          title: sop.title || `SOP ${i + 1}`,
+          title_en: sop.title_en || null,
+          title_vn: sop.title_vn || null,
+          category: sop.category || '기타',
+          content: sop.content || '',
+          content_vn: sop.content_vn || '',
+          status: sop.status || 'draft',
+          order_num: sop.order_num || (i + 1),
+          createdAt: sop.createdAt || new Date().toISOString().slice(0, 10),
+          script: sop.script || null,
+          quizzes: sop.quizzes || null,
+        }));
+
+        if (mode === 'replace') {
+          // 기존 진행률도 정리
+          const deletedIds = existingSops.map(s => s.id);
+          cleanupProgressData(deletedIds);
+          if (typeof SupabaseMode !== 'undefined' && SupabaseMode._ready) {
+            deletedIds.forEach(id => SupabaseMode.deleteSop(id).catch(() => {}));
+          }
+          saveSops(normalized);
+        } else {
+          saveSops([...existingSops, ...normalized]);
+        }
+        // 새 SOP가 업로드되었으므로 자동 생성 차단 유지 (데모 재생성 방지)
+        localStorage.setItem('sop_user_cleared', 'true');
+
+        selectedSopIds.clear();
+        updateBulkBar();
+        renderSopList();
+
+        const modeLabel = mode === 'replace' ? '교체' : '추가';
+        alert(`${normalized.length}개 SOP가 ${modeLabel}되었습니다.`);
+
+      } catch (e) {
+        console.error('JSON 업로드 오류:', e);
+        alert(`JSON 파일 처리 오류:\n${e.message}`);
+      }
+    }
 
     // ===== SOP 목록 렌더링 =====
     function renderSopList() {
@@ -885,15 +1130,23 @@
       }
       const container = document.getElementById('sopList');
 
+      const listHeader = document.getElementById('sopListHeader');
       if (sops.length === 0) {
+        listHeader.style.display = 'none';
         container.innerHTML = `
           <div style="text-align:center; padding:60px; color:var(--gray-500);">
             <p style="font-size:48px; margin-bottom:12px;">&#128221;</p>
             <p style="font-size:16px; font-weight:600; margin-bottom:4px;">아직 작성된 SOP가 없습니다</p>
-            <p style="font-size:14px;">위의 "새 SOP 작성" 버튼을 눌러 시작하세요</p>
+            <p style="font-size:14px;">위의 "새 SOP 작성" 또는 "JSON 일괄 업로드" 버튼으로 시작하세요</p>
           </div>`;
+        updateBulkBar();
         return;
       }
+      listHeader.style.display = 'flex';
+      document.getElementById('sopCountLabel').textContent = `총 ${sops.length}개`;
+      // 마스터 체크박스 동기화
+      const allChecked = sops.every(s => selectedSopIds.has(s.id));
+      document.getElementById('sopSelectAllCheckbox').checked = allChecked;
 
       container.innerHTML = sops.map(sop => {
         const statusMap = {
@@ -905,28 +1158,35 @@
         const st = statusMap[sop.status] || statusMap.draft;
         const hasScript = sop.script && sop.script.length > 0;
         const hasQuiz = sop.quizzes && sop.quizzes.length > 0;
+        const isChecked = selectedSopIds.has(sop.id);
 
         return `
-          <div class="sop-list-item" onclick="openSopEditor('${sop.id}')">
-            <div class="sop-icon" style="background:${st.bg}; color:${st.color};">&#128221;</div>
-            <div class="sop-info">
+          <div class="sop-list-item" style="position:relative;">
+            <input type="checkbox" class="sop-checkbox" data-id="${sop.id}"
+              ${isChecked ? 'checked' : ''}
+              onclick="toggleSopSelect('${sop.id}', event)"
+              style="width:18px; height:18px; cursor:pointer; flex-shrink:0; accent-color:var(--primary);">
+            <div class="sop-icon" style="background:${st.bg}; color:${st.color};" onclick="openSopEditor('${sop.id}')">&#128221;</div>
+            <div class="sop-info" onclick="openSopEditor('${sop.id}')" style="cursor:pointer;">
               <h4>${sop.title}</h4>
-              <p>${sop.category} · ${sop.createdAt}</p>
+              <p>${sop.category || ''} · ${sop.createdAt || ''}</p>
               <div class="sop-badges" style="margin-top:6px;">
                 <span class="badge" style="background:${st.bg}; color:${st.color};">${st.label}</span>
                 ${hasScript ? '<span class="badge" style="background:var(--primary-light); color:var(--primary);">스크립트 ✓</span>' : ''}
                 ${hasQuiz ? '<span class="badge" style="background:#dcfce7; color:var(--success);">퀴즈 ' + sop.quizzes.length + '문제</span>' : ''}
               </div>
             </div>
-            <span style="color:var(--gray-300);">&#8250;</span>
+            <span style="color:var(--gray-300); cursor:pointer;" onclick="openSopEditor('${sop.id}')">&#8250;</span>
           </div>`;
       }).join('');
+      updateBulkBar();
     }
 
     function filterSop(status, btn) {
       document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentSopFilter = status;
+      selectedSopIds.clear();
       renderSopList();
     }
 
@@ -960,27 +1220,19 @@
             continue;
           }
 
-          // AI로 SOP 구조화 시도
-          showLoading(`AI가 SOP로 변환 중: ${file.name}`);
-          let structuredContent;
-          try {
-            structuredContent = await convertTextToSop(text, file.name);
-          } catch(aiErr) {
-            console.warn('AI 변환 실패, 텍스트 그대로 저장:', aiErr);
-            structuredContent = null;
-          }
-
-          // SOP 생성 (AI 실패해도 텍스트 그대로 저장)
+          // 원문 그대로 저장 (AI 구조화 없음)
           const sops = getSops();
           const title = file.name.replace(/\.[^/.]+$/, '');
-          const fallbackHtml = `<p>${text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`;
+          // 줄 단위로 bullet 리스트 생성 (번호 없이)
+          const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+          const rawHtml = '<ul>' + lines.map(l => `<li>${l.trim()}</li>`).join('') + '</ul>';
           const newSop = {
             id: 'sop-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
-            title: (structuredContent && structuredContent.title) || title,
-            category: (structuredContent && structuredContent.category) || '기타',
+            title: title,
+            category: '기타',
             chapter: 'new',
             status: 'draft',
-            content: (structuredContent && structuredContent.html) || fallbackHtml,
+            content: rawHtml,
             createdAt: new Date().toISOString().slice(0, 10),
             script: null,
             quizzes: null
@@ -1020,11 +1272,13 @@
       event.preventDefault();
       const items = event.dataTransfer.items;
       const files = [];
+      const jsonFiles = [];
 
       async function traverseEntry(entry) {
         if (entry.isFile) {
           const file = await new Promise(resolve => entry.file(resolve));
-          if (/\.(txt|md|pdf|doc|docx|hwp)$/i.test(file.name)) files.push(file);
+          if (/\.json$/i.test(file.name)) jsonFiles.push(file);
+          else if (/\.(txt|md|pdf|doc|docx|hwp)$/i.test(file.name)) files.push(file);
         } else if (entry.isDirectory) {
           const reader = entry.createReader();
           const entries = await new Promise(resolve => reader.readEntries(resolve));
@@ -1038,12 +1292,20 @@
         if (entry) await traverseEntry(entry);
         else if (item.kind === 'file') {
           const file = item.getAsFile();
-          if (/\.(txt|md|pdf|doc|docx|hwp)$/i.test(file.name)) files.push(file);
+          if (/\.json$/i.test(file.name)) jsonFiles.push(file);
+          else if (/\.(txt|md|pdf|doc|docx|hwp)$/i.test(file.name)) files.push(file);
         }
       }
       hideLoading();
 
-      if (!files.length) { alert('지원되는 파일이 없습니다 (TXT, PDF, Word, HWP)'); return; }
+      // JSON 파일 우선 처리
+      if (jsonFiles.length > 0) {
+        const fakeEvent = { target: { files: jsonFiles, value: '' } };
+        await handleSopJsonUpload(fakeEvent);
+        return;
+      }
+
+      if (!files.length) { alert('지원되는 파일이 없습니다 (TXT, PDF, Word, HWP, JSON)'); return; }
       await processMultipleFiles(files);
     }
 
@@ -1134,21 +1396,7 @@ ${fileList}
 JSON 배열로 응답:
 [{"chapter":"챕터명","title":"SOP 제목","category":"카테고리","html":"<h3>1. 절차</h3><ol><li>내용</li></ol>","fileIndices":[0,1]}]`;
 
-      let response;
-      if (typeof CONFIG !== 'undefined' && CONFIG.useProxy) {
-        response = await fetch('/api/gemini', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, model: 'gemini-2.0-flash', generationConfig: { temperature: 0.5, maxOutputTokens: 4096 } })
-        });
-      } else {
-        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${AI_CONFIG.keys.gemini}`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.5, maxOutputTokens: 4096 } })
-        });
-      }
-
-      const data = await response.json();
-      let aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text || '';
+      const aiText = await callGemini(prompt, { temperature: 0.5, maxOutputTokens: 4096 });
       const jsonMatch = aiText.match(/\[[\s\S]*\]/);
       if (jsonMatch) return JSON.parse(jsonMatch[0]);
       throw new Error('AI 응답 파싱 실패');
@@ -1242,30 +1490,7 @@ JSON으로 응답: {"title":"제목","category":"카테고리","html":"<h3>1. ..
 텍스트:
 ${text.slice(0, 3000)}`;
 
-          let response;
-          if (typeof CONFIG !== 'undefined' && CONFIG.useProxy) {
-            response = await fetch('/api/gemini', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt, model: 'gemini-2.0-flash' })
-            });
-          } else {
-            response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${AI_CONFIG.keys.gemini}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-            });
-          }
-
-          const data = await response.json();
-          let aiText = '';
-          if (data?.candidates) {
-            aiText = data.candidates[0]?.content?.parts?.[0]?.text || '';
-          } else if (data?.text) {
-            aiText = data.text;
-          } else if (typeof data === 'string') {
-            aiText = data;
-          }
+          const aiText = await callGemini(prompt);
 
           // JSON 추출
           const jsonMatch = aiText.match(/\{[\s\S]*\}/);
@@ -1360,8 +1585,15 @@ ${text.slice(0, 3000)}`;
       if (!hasPermission('sop_delete')) { alert('SOP 삭제 권한이 없습니다.'); return; }
       if (!currentSopId) return;
       if (!confirm('이 SOP를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+      const deletedId = currentSopId;
       const sops = getSops().filter(s => s.id !== currentSopId);
       saveSops(sops);
+      // 데모 자동 재생성 방지 + 진행률 정리
+      localStorage.setItem('sop_user_cleared', 'true');
+      cleanupProgressData([deletedId]);
+      if (typeof SupabaseMode !== 'undefined' && SupabaseMode._ready) {
+        SupabaseMode.deleteSop(deletedId).catch(() => {});
+      }
       currentSopId = null;
       document.getElementById('sopListView').style.display = 'block';
       document.getElementById('sopEditorView').style.display = 'none';
@@ -1418,6 +1650,9 @@ ${text.slice(0, 3000)}`;
       sops[idx].title = newTitle;
       sops[idx].content = newContent;
       sops[idx].category = newCategory;
+      // 챕터 선택도 저장
+      const chapterSelect = document.getElementById('sopChapterSelect');
+      if (chapterSelect) sops[idx].chapter = chapterSelect.value;
       saveSops(sops);
     }
 
@@ -1427,12 +1662,26 @@ ${text.slice(0, 3000)}`;
     function insertStep() {
       const num = document.getElementById('sopEditor').querySelectorAll('h3').length + 1;
       document.execCommand('insertHTML', false,
-        `<h3>${num}. 새 절차</h3><ol><li>단계를 입력하세요</li></ol>`);
+        `<h3>${num}. 새 절차</h3><ul><li>단계를 입력하세요</li></ul>`);
     }
     function insertWarning() {
       document.execCommand('insertHTML', false,
         '<p><strong>⚠️ 주의:</strong> 주의사항을 입력하세요</p>');
     }
+
+    // 붙여넣기 시 원문 그대로 유지 (자동 번호/포맷 제거)
+    document.addEventListener('DOMContentLoaded', () => {
+      const editor = document.getElementById('sopEditor');
+      if (!editor) return;
+      editor.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = e.clipboardData.getData('text/plain');
+        // 줄 단위로 분리 → 각 줄을 <li>로 변환 (번호 없는 bullet)
+        const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+        const html = '<ul>' + lines.map(l => `<li>${l.trim()}</li>`).join('') + '</ul>';
+        document.execCommand('insertHTML', false, html);
+      });
+    });
 
     // ===== 로딩 오버레이 =====
     function showLoading(msg) {
@@ -1455,7 +1704,7 @@ ${text.slice(0, 3000)}`;
       if (overlay) overlay.style.display = 'none';
     }
 
-    // ===== AI 콘텐츠 생성 (시뮬레이션) =====
+    // ===== AI 콘텐츠 생성 (SOP 원문 → 스크립트, AI → 퀴즈만) =====
     function generateContent() {
       if (!hasPermission('sop_edit')) { alert('SOP 편집 권한이 없습니다.'); return; }
       saveSop();
@@ -1474,20 +1723,27 @@ ${text.slice(0, 3000)}`;
         <div class="ai-result-section" style="margin-top:20px;">
           <div class="generating-overlay">
             <div class="big-spinner"></div>
-            <h3 style="margin-bottom:4px;">AI가 콘텐츠를 생성하고 있습니다...</h3>
-            <p style="color:var(--gray-500); font-size:14px;">SOP를 분석하여 영상 스크립트와 퀴즈를 만들고 있어요</p>
+            <h3 style="margin-bottom:4px;">콘텐츠를 생성하고 있습니다...</h3>
+            <p style="color:var(--gray-500); font-size:14px;">SOP 원문으로 슬라이드를 구성하고 퀴즈를 생성합니다</p>
           </div>
         </div>`;
 
       document.getElementById('generateBtn').disabled = true;
 
-      // AI Provider를 통한 생성 (local이면 즉시, API면 비동기)
       (async () => {
         try {
-          showLoading('AI 스크립트 생성 중...');
-          const scriptPromise = AI.generateScript(sop.title, sop.content);
-          const scriptResult = await scriptPromise;
+          // ① SOP 원문을 그대로 씬으로 분할 (AI 호출 없음)
+          showLoading('SOP 원문으로 스크립트 구성 중...');
+          console.log('[generateContent] SOP content length:', sop.content.length);
+          console.log('[generateContent] SOP content preview:', sop.content.substring(0, 200));
+          const scriptResult = _sopContentToScenes(sop.content);
+          console.log('[generateContent] 생성된 씬 수:', scriptResult.length);
+          if (scriptResult.length > 0) {
+            console.log('[generateContent] 씬1:', scriptResult[0].narration.substring(0, 50));
+            if (scriptResult.length > 1) console.log('[generateContent] 씬2:', scriptResult[1].narration.substring(0, 50));
+          }
 
+          // ② AI는 퀴즈만 생성
           showLoading('AI 퀴즈 생성 중...');
           const quizResult = await AI.generateQuiz(sop.title, sop.content);
 
@@ -1499,24 +1755,727 @@ ${text.slice(0, 3000)}`;
           sops[idx].status = 'generated';
           saveSops(sops);
 
+          // 이전 캐시 초기화 (새 스크립트에 맞는 새 이미지/음성 생성)
+          localStorage.removeItem('sop_image_cache_v1');
+          localStorage.removeItem('sop_tts_cache_v1');
+
           renderStatusFlow('generated');
           renderAiResults(sops[idx]);
 
-          // 영상 생성 여부 확인 (유료)
-          if (typeof AI_CONFIG !== 'undefined' && AI_CONFIG.videoProvider && AI_CONFIG.videoProvider !== 'none' && scriptResult && scriptResult.length > 0) {
-            const cost = (scriptResult.length * 0.29).toFixed(2);
-            if (confirm(`✅ 스크립트 ${scriptResult.length}씬 + 퀴즈 생성 완료!\n\n🎬 AI 영상도 자동 생성할까요?\n예상 비용: $${cost} (${scriptResult.length}씬 × $0.29)\n\n취소를 누르면 영상 없이 텍스트+TTS로 학습합니다.`)) {
-              generateSopVideos(true);
-            }
-          }
+          alert(`✅ 완료!\n\n📋 슬라이드: ${scriptResult.length}씬 (SOP 원문 기반)\n📝 퀴즈: ${quizResult.length}문제 (AI 생성)`);
         } catch (e) {
           hideLoading();
-          alert('AI 생성 중 오류: ' + e.message);
+          alert('생성 중 오류: ' + e.message);
         } finally {
           document.getElementById('generateBtn').disabled = false;
           document.getElementById('generateBtn').innerHTML = '&#128260; 다시 생성';
         }
       })();
+    }
+
+    // SOP 원문 HTML을 슬라이드 씬 배열로 변환 (bullet 1개 = 씬 1개)
+    function _sopContentToScenes(htmlContent) {
+      const temp = document.createElement('div');
+      temp.innerHTML = htmlContent;
+
+      // li 태그가 있으면 li 기준, 없으면 줄 기준
+      const lis = temp.querySelectorAll('li');
+      let lines = [];
+      if (lis.length > 0) {
+        lis.forEach(li => {
+          const t = li.textContent.trim();
+          if (t.length > 0) lines.push(t);
+        });
+      } else {
+        const text = temp.textContent || temp.innerText || '';
+        lines = text.split(/\n+/).map(l => l.trim()).filter(l => l.length > 0);
+      }
+
+      if (lines.length === 0) return [];
+
+      // 원문 그대로 사용 — 가공하지 않음
+      // 각 줄 = 1씬 (빈 줄만 제외)
+      return lines.map((narration, i) => ({
+        scene: i + 1,
+        narration: narration,
+        visual: `Scene ${i + 1}: Training content slide`,
+        imageUrl: null
+      }));
+    }
+
+    // ===== 스크립트 편집 함수 =====
+    window._saveScripts = function() {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+
+      const textareas = document.querySelectorAll('.scene-narration');
+      const oldScript = sops[idx].script || [];
+      const newScript = [];
+      const emptyScenes = [];
+      textareas.forEach((ta, i) => {
+        const text = ta.value.trim();
+        const old = oldScript[i] || {};
+        if (text.length > 0) {
+          newScript.push({
+            scene: i + 1,
+            narration: text,
+            visual: old.visual || `Scene ${i + 1}: Training content slide`,
+            imageUrl: old.imageUrl || null,
+            imageConfirmed: old.imageConfirmed || false,
+          });
+        } else if (old.imageUrl) {
+          emptyScenes.push(i + 1);
+        }
+      });
+
+      // 이미지가 있는 빈 씬 경고
+      if (emptyScenes.length > 0 && !confirm(`씬 ${emptyScenes.join(', ')}에 이미지가 있지만 텍스트가 비어있어 삭제됩니다. 계속할까요?`)) return;
+
+      newScript.forEach((s, i) => s.scene = i + 1);
+
+      sops[idx].script = newScript;
+      saveSops(sops);
+
+      renderAiResults(sops[idx]);
+      alert(`✅ ${newScript.length}개 씬 저장 완료\n\n이미지를 생성하려면 "🎨 이미지 일괄 생성" 버튼을 눌러주세요.`);
+    }
+
+    // ===== 개별 씬 이미지 생성 =====
+    // ===== 이미지 프롬프트 생성 템플릿 =====
+    function _buildImagePrompt(narration) {
+      // SOP 제목에서 환경 자동 감지
+      const sops = getSops();
+      const sidx = sops.findIndex(s => s.id === currentSopId);
+      const sopTitle = sidx >= 0 ? sops[sidx].title : '';
+      const sopContent = sidx >= 0 ? (sops[sidx].content || '').slice(0, 500) : '';
+
+      return `You are an expert at creating image prompts for a staff training video.
+
+Read this narration carefully and create ONE English image prompt that PRECISELY illustrates the SPECIFIC action, concept, or situation described.
+
+SOP TITLE: "${sopTitle}"
+NARRATION: "${narration}"
+
+CRITICAL RULES:
+1. UNDERSTAND THE MEANING: The image must visually represent what the narration is ACTUALLY saying. Not a generic scene.
+2. INFER THE SETTING from the SOP title and narration content. Examples:
+   - If about kindergarten/preschool → bright Korean kindergarten classroom
+   - If about kids cafe/playground → colorful indoor kids playground
+   - If about restaurant/cafe → clean modern Korean restaurant
+   - If about retail/store → bright retail store interior
+   - If about office work → modern Korean office
+   - If about cleaning/hygiene → appropriate workplace setting
+3. INFER THE PEOPLE from context. Don't always show the same character. Match the role:
+   - Teacher → friendly young Korean woman in appropriate uniform
+   - Chef → person in chef attire
+   - Staff → person in neat work uniform
+   - Manager → professional-looking person
+4. VARY the composition: close-ups for details, wide shots for environments, medium shots for interactions
+5. Style: Warm, bright, professional. Clean and educational.
+6. ABSOLUTELY FORBIDDEN: nudity, shirtless, suggestive, violent, scary, medical/hospital, dark, gloomy, doctors, lab coats
+7. Keep it CHILD-SAFE and PROFESSIONAL at all times
+
+Output ONLY the image prompt (50-80 words), nothing else.`;
+    }
+
+    window._genSingleImage = async function(sceneIdx, btnEl) {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+      const scene = sops[idx].script[sceneIdx];
+
+      const origText = btnEl.textContent;
+      btnEl.disabled = true;
+      btnEl.textContent = '⏳ 생성 중...';
+
+      try {
+        let imgPrompt = 'A professional Korean staff member in a bright, clean modern workplace. Warm natural lighting, educational training scene.';
+        try {
+          const g = await callGemini(_buildImagePrompt(scene.narration));
+          if (g && g.length > 20) imgPrompt = g.trim().replace(/^["']|["']$/g, '');
+        } catch (e) { console.warn('Gemini prompt failed:', e.message); }
+
+        const imgRes = await fetch('/api/image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'generate-multi', visual: imgPrompt, narration: scene.narration, sceneIndex: sceneIdx, totalScenes: sops[idx].script.length })
+        });
+        const imgData = await imgRes.json();
+
+        if (imgData.images && imgData.images.length > 0 && imgData.images[0].imageUrl) {
+          scene.imageUrl = imgData.images[0].imageUrl;
+          scene.imageConfirmed = false;
+          saveSops(sops);
+          btnEl.disabled = false;
+          btnEl.textContent = origText;
+          renderAiResults(sops[idx]);
+          // 렌더 후 위자드 열기
+          setTimeout(() => _renderWizardScene(sceneIdx), 100);
+          return;
+        } else {
+          alert('이미지 생성 실패. 다시 시도해주세요.');
+        }
+      } catch (e) {
+        console.warn('Image gen failed:', e.message);
+        alert('이미지 생성 실패: ' + e.message);
+      }
+
+      btnEl.disabled = false;
+      btnEl.textContent = origText;
+      renderAiResults(sops[idx]);
+    }
+
+    // ===== 이미지 일괄 사전 생성 =====
+    window._generateAllImages = async function() {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+      const sop = sops[idx];
+
+      if (!sop.script || sop.script.length === 0) {
+        alert('스크립트가 없습니다. 먼저 스크립트를 저장하세요.');
+        return;
+      }
+
+      // 확정된 이미지는 건너뛰기
+      const needGen = sop.script.filter(s => !s.imageConfirmed);
+      if (needGen.length === 0) {
+        alert('모든 씬의 이미지가 확정되었습니다.');
+        return;
+      }
+
+      const total = needGen.length;
+      if (!confirm(`${total}개 씬의 이미지를 생성합니다.\n예상 비용: ~$${(total * 0.01).toFixed(2)}\n예상 시간: ~${Math.ceil(total * 8)}초 (API 제한 방지 딜레이 포함)\n\n진행하시겠습니까?`)) return;
+
+      // 프로그레스 바 표시
+      const progressId = 'imgGenProgress';
+      const area = document.getElementById('aiResultArea');
+      area.insertAdjacentHTML('afterbegin', `
+        <div id="${progressId}" class="card" style="margin-bottom:16px; padding:16px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <strong>🎨 이미지 생성 중...</strong>
+            <span id="imgGenCount">0 / ${total}</span>
+          </div>
+          <div style="background:#e2e8f0; border-radius:8px; height:8px; overflow:hidden;">
+            <div id="imgGenBar" style="background:linear-gradient(90deg,#6366f1,#8b5cf6); height:100%; width:0%; transition:width 0.3s;"></div>
+          </div>
+          <div id="imgGenStatus" style="font-size:12px; color:var(--gray-500); margin-top:6px;">Gemini로 이미지 프롬프트 변환 중...</div>
+        </div>
+      `);
+
+      let done = 0;
+      for (let i = 0; i < sop.script.length; i++) {
+        const scene = sop.script[i];
+        if (scene.imageConfirmed) continue; // 확정된 이미지는 스킵
+
+        const statusEl = document.getElementById('imgGenStatus');
+        if (statusEl) statusEl.textContent = `씬 ${scene.scene}: 이미지 생성 중...`;
+
+        try {
+          // 1) Gemini로 나레이션 → 영어 이미지 프롬프트 변환 (서버 경유)
+          let imgPrompt = `A professional Korean staff member in a bright, clean modern workplace. Warm natural lighting, educational training scene.`;
+          try {
+            const generated = await callGemini(_buildImagePrompt(scene.narration));
+            if (generated && generated.length > 20) imgPrompt = generated.trim().replace(/^["']|["']$/g, '');
+          } catch (e) {
+            console.warn('Gemini prompt failed, using default:', e.message);
+          }
+
+          // 2) FLUX로 이미지 생성
+          const imgRes = await fetch('/api/image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'generate-multi', visual: imgPrompt, narration: scene.narration, sceneIndex: i, totalScenes: sop.script.length })
+          });
+          const imgData = await imgRes.json();
+
+          if (imgData.images && imgData.images.length > 0 && imgData.images[0].imageUrl) {
+            scene.imageUrl = imgData.images[0].imageUrl;
+          }
+        } catch (e) {
+          console.warn(`씬 ${scene.scene} 이미지 생성 실패:`, e.message);
+        }
+
+        done++;
+        const countEl = document.getElementById('imgGenCount');
+        const barEl = document.getElementById('imgGenBar');
+        if (countEl) countEl.textContent = `${done} / ${total}`;
+        if (barEl) barEl.style.width = (done / total * 100) + '%';
+
+        // 5개마다 중간 저장
+        if (done % 5 === 0) saveSops(sops);
+
+        // API 429 방지: 씬 간 3초 딜레이
+        if (done < total) {
+          const statusEl2 = document.getElementById('imgGenStatus');
+          if (statusEl2) statusEl2.textContent = `다음 씬 대기 중... (API 제한 방지)`;
+          await new Promise(r => setTimeout(r, 3000));
+        }
+      }
+
+      // 저장 (중간 저장은 5개마다)
+      saveSops(sops);
+
+      // 프로그레스 제거 후 리뷰 패널 열기
+      const progressEl = document.getElementById(progressId);
+      if (progressEl) progressEl.remove();
+
+      renderAiResults(sop);
+      _openSceneWizard(0); // 첫 씬부터 순차 리뷰 시작
+    }
+
+    // ===== 이미지 리뷰 패널 (전체 씬 한눈에) =====
+    window._openImageReview = function() {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+      const sop = sops[idx];
+      if (!sop.script || sop.script.length === 0) return;
+
+      const confirmed = sop.script.filter(s => s.imageConfirmed).length;
+      const generated = sop.script.filter(s => s.imageUrl).length;
+
+      const modal = document.getElementById('modalContent');
+      const overlay = document.getElementById('modalOverlay');
+
+      modal.innerHTML = `
+        <div style="padding:24px; max-width:900px; max-height:80vh; overflow-y:auto;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0;">🖼️ 이미지 리뷰 (${sop.script.length}개 씬)</h3>
+            <div style="font-size:13px;">
+              ✅ 확정: <strong>${confirmed}</strong> / ${sop.script.length}
+              &nbsp;|&nbsp; 🖼️ 생성됨: <strong>${generated}</strong> / ${sop.script.length}
+            </div>
+          </div>
+
+          ${confirmed === sop.script.length
+            ? `<div style="background:#ecfdf5;padding:12px;border-radius:8px;margin-bottom:16px;color:#059669;font-weight:600;text-align:center;">🎉 모든 씬 이미지가 확정되었습니다!</div>`
+            : `<div style="background:#fffbeb;padding:12px;border-radius:8px;margin-bottom:16px;color:#d97706;font-size:13px;text-align:center;">미확정 이미지는 노란 테두리로 표시됩니다. 각 이미지를 확인 후 확정해주세요.</div>`
+          }
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:20px;">
+            ${sop.script.map((s, i) => `
+              <div style="border:3px solid ${s.imageConfirmed ? '#10b981' : s.imageUrl ? '#f59e0b' : '#d1d5db'}; border-radius:16px; overflow:hidden; background:white; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+                <div style="aspect-ratio:16/9; background:#f1f5f9; display:flex; align-items:center; justify-content:center; overflow:hidden; min-height:180px;">
+                  ${s.imageUrl
+                    ? `<img src="${s.imageUrl}" style="width:100%;height:100%;object-fit:cover;" alt="씬${s.scene}">`
+                    : `<div style="text-align:center;"><span style="font-size:48px;">🎨</span><div style="color:#94a3b8;font-size:14px;margin-top:8px;">이미지 없음</div></div>`
+                  }
+                </div>
+                <div style="padding:16px;">
+                  <div style="font-size:16px;color:#374151;font-weight:700;margin-bottom:6px;">씬 ${s.scene}</div>
+                  <div style="font-size:14px;color:#6b7280;line-height:1.5;max-height:60px;overflow:hidden;">${s.narration.slice(0, 80)}${s.narration.length > 80 ? '...' : ''}</div>
+                  <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+                    ${s.imageConfirmed
+                      ? `<span style="font-size:16px;color:#10b981;font-weight:700;padding:8px 0;">✅ 확정됨</span>
+                         <button onclick="_unconfirmFromReview(${i})" style="margin-left:auto;font-size:14px;padding:8px 16px;background:none;border:2px solid #ef4444;color:#ef4444;border-radius:8px;cursor:pointer;font-weight:600;">확정 해제</button>`
+                      : s.imageUrl
+                        ? `<button onclick="_confirmFromReview(${i})" style="font-size:15px;padding:10px 20px;background:#10b981;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;">✅ 확정</button>
+                           <button onclick="_regenFromReview(${i})" style="font-size:15px;padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;">🔄 재생성</button>
+                           <button onclick="_removeFromReview(${i})" style="font-size:15px;padding:10px 20px;background:none;border:2px solid #ef4444;color:#ef4444;border-radius:8px;cursor:pointer;font-weight:700;">🗑️</button>`
+                        : `<button onclick="_regenFromReview(${i})" style="font-size:15px;padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;width:100%;">🎨 이미지 생성</button>`
+                    }
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div style="display:flex;gap:12px;margin-top:24px;justify-content:center;">
+            ${confirmed < sop.script.length && generated > 0 ? `
+              <button onclick="_confirmAllImages()" style="padding:14px 32px;background:#10b981;color:white;border:none;border-radius:10px;cursor:pointer;font-size:16px;font-weight:700;">✅ 전체 확정</button>
+            ` : ''}
+            <button onclick="closeModal()" style="padding:14px 32px;background:#6b7280;color:white;border:none;border-radius:10px;cursor:pointer;font-size:16px;font-weight:600;">닫기</button>
+          </div>
+        </div>
+      `;
+      overlay.classList.add('show');
+    }
+
+    window._confirmFromReview = function(sceneIdx) {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+      sops[idx].script[sceneIdx].imageConfirmed = true;
+      saveSops(sops);
+      _openImageReview();
+    }
+
+    window._unconfirmFromReview = function(sceneIdx) {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+      sops[idx].script[sceneIdx].imageConfirmed = false;
+      saveSops(sops);
+      _openImageReview();
+    }
+
+    window._removeFromReview = function(sceneIdx) {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+      sops[idx].script[sceneIdx].imageUrl = null;
+      sops[idx].script[sceneIdx].imageConfirmed = false;
+      saveSops(sops);
+      _openImageReview();
+    }
+
+    window._regenFromReview = async function(sceneIdx) {
+      closeModal();
+      _openImageManager(sceneIdx);
+      setTimeout(() => _generateSceneImage(sceneIdx), 300);
+    }
+
+    window._confirmAllImages = function() {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+      let count = 0;
+      sops[idx].script.forEach(s => {
+        if (s.imageUrl && !s.imageConfirmed) { s.imageConfirmed = true; count++; }
+      });
+      saveSops(sops);
+      _openImageReview();
+    }
+
+    // ===== 순차 리뷰 위자드 (한 씬씩 크게 보기) =====
+    window._openSceneWizard = function(startIdx) {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+      const sop = sops[idx];
+      if (!sop.script || sop.script.length === 0) return;
+
+      // 이미지가 있는 첫 미확정 씬부터 시작
+      let currentIdx = startIdx;
+      while (currentIdx < sop.script.length && sop.script[currentIdx].imageConfirmed) {
+        currentIdx++;
+      }
+      if (currentIdx >= sop.script.length) currentIdx = 0; // 전부 확정이면 처음부터
+
+      _renderWizardScene(currentIdx);
+    }
+
+    window._renderWizardScene = function(sceneIdx) {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+      const sop = sops[idx];
+      const scene = sop.script[sceneIdx];
+      if (!scene) return;
+
+      const total = sop.script.length;
+      const confirmed = sop.script.filter(s => s.imageConfirmed).length;
+
+      const modal = document.getElementById('modalContent');
+      const overlay = document.getElementById('modalOverlay');
+
+      modal.innerHTML = `
+        <div style="padding:24px; max-width:1100px; width:95vw;">
+          <!-- 상단: 진행률 -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="margin:0; font-size:20px;">씬 ${scene.scene} / ${total}</h3>
+            <div style="font-size:14px; color:#6b7280;">✅ ${confirmed} 확정 / ${total} 전체</div>
+          </div>
+          <div style="background:#e2e8f0; border-radius:8px; height:6px; margin-bottom:20px;">
+            <div style="background:#10b981; height:100%; border-radius:8px; width:${(confirmed/total*100)}%; transition:width 0.3s;"></div>
+          </div>
+
+          <!-- 이미지 -->
+          <div style="aspect-ratio:16/9; background:#f1f5f9; border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center; margin-bottom:16px; min-height:450px; border:3px solid ${scene.imageConfirmed ? '#10b981' : scene.imageUrl ? '#f59e0b' : '#d1d5db'};">
+            ${scene.imageUrl
+              ? `<img src="${scene.imageUrl}" style="width:100%;height:100%;object-fit:cover;" alt="씬${scene.scene}">`
+              : `<div style="text-align:center;"><span style="font-size:64px;">🎨</span><div style="color:#94a3b8;font-size:16px;margin-top:12px;">이미지 없음</div></div>`
+            }
+          </div>
+
+          <!-- 나레이션 텍스트 -->
+          <div style="background:#f8fafc; border-radius:10px; padding:16px; margin-bottom:20px; border:1px solid #e2e8f0;">
+            <div style="font-size:12px; color:#9ca3af; margin-bottom:4px; font-weight:600;">나레이션</div>
+            <div style="font-size:15px; line-height:1.7; color:#374151;">${scene.narration}</div>
+          </div>
+
+          <!-- 액션 버튼 -->
+          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:16px;">
+            ${scene.imageUrl && !scene.imageConfirmed ? `
+              <button onclick="_wizardConfirm(${sceneIdx})" style="padding:14px 28px; font-size:16px; font-weight:700; background:#10b981; color:white; border:none; border-radius:10px; cursor:pointer;">
+                ✅ 확정
+              </button>
+            ` : ''}
+            ${scene.imageConfirmed ? `
+              <button onclick="_wizardUnconfirm(${sceneIdx})" style="padding:14px 28px; font-size:16px; font-weight:700; background:none; border:2px solid #ef4444; color:#ef4444; border-radius:10px; cursor:pointer;">
+                확정 해제
+              </button>
+            ` : ''}
+            <button onclick="_wizardRegen(${sceneIdx})" style="padding:14px 28px; font-size:16px; font-weight:700; background:#6366f1; color:white; border:none; border-radius:10px; cursor:pointer;">
+              🔄 재생성
+            </button>
+            ${scene.imageUrl ? `
+              <button onclick="_wizardRemove(${sceneIdx})" style="padding:14px 28px; font-size:16px; font-weight:700; background:none; border:2px solid #ef4444; color:#ef4444; border-radius:10px; cursor:pointer;">
+                🗑️ 삭제
+              </button>
+            ` : ''}
+          </div>
+
+          <!-- 네비게이션 -->
+          <div style="display:flex; gap:10px; justify-content:center; border-top:1px solid #e2e8f0; padding-top:16px;">
+            <button onclick="_renderWizardScene(${sceneIdx > 0 ? sceneIdx - 1 : total - 1})" style="padding:12px 24px; font-size:15px; font-weight:600; background:#e2e8f0; color:#374151; border:none; border-radius:10px; cursor:pointer;">
+              ◀ 이전
+            </button>
+            <button onclick="_renderWizardScene(${sceneIdx < total - 1 ? sceneIdx + 1 : 0})" style="padding:12px 24px; font-size:15px; font-weight:600; background:#e2e8f0; color:#374151; border:none; border-radius:10px; cursor:pointer;">
+              다음 ▶
+            </button>
+            <button onclick="closeModal(); renderAiResults(getSops().find(s=>s.id===currentSopId));" style="padding:12px 24px; font-size:15px; font-weight:600; background:#6b7280; color:white; border:none; border-radius:10px; cursor:pointer;">
+              닫기
+            </button>
+          </div>
+        </div>
+      `;
+      overlay.classList.add('show');
+    }
+
+    window._wizardConfirm = function(sceneIdx) {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      sops[idx].script[sceneIdx].imageConfirmed = true;
+      saveSops(sops);
+      // 다음 미확정 씬으로 이동
+      let next = sceneIdx + 1;
+      while (next < sops[idx].script.length && sops[idx].script[next].imageConfirmed) next++;
+      if (next >= sops[idx].script.length) {
+        // 전부 확정됨
+        const allConfirmed = sops[idx].script.every(s => s.imageConfirmed);
+        if (allConfirmed) {
+          closeModal();
+          renderAiResults(sops[idx]);
+          alert('🎉 모든 씬 이미지가 확정되었습니다!');
+          return;
+        }
+        next = 0;
+      }
+      _renderWizardScene(next);
+    }
+
+    window._wizardUnconfirm = function(sceneIdx) {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      sops[idx].script[sceneIdx].imageConfirmed = false;
+      saveSops(sops);
+      _renderWizardScene(sceneIdx);
+    }
+
+    window._wizardRegen = async function(sceneIdx) {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      const scene = sops[idx].script[sceneIdx];
+
+      // 이미지 영역에 로딩 표시
+      const modal = document.getElementById('modalContent');
+      const imgArea = modal.querySelector('[style*="aspect-ratio"]');
+      if (imgArea) imgArea.innerHTML = `<div style="text-align:center;"><div style="font-size:48px;">⏳</div><div style="color:#6b7280;font-size:16px;margin-top:12px;">이미지 생성 중...</div></div>`;
+
+      try {
+        let imgPrompt = 'A professional Korean staff member in a bright, clean modern workplace. Warm natural lighting, educational training scene.';
+        try {
+          const g = await callGemini(_buildImagePrompt(scene.narration));
+          if (g && g.length > 20) imgPrompt = g.trim().replace(/^["']|["']$/g, '');
+        } catch (e) { console.warn('Gemini prompt failed:', e.message); }
+
+        const imgRes = await fetch('/api/image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'generate-multi', visual: imgPrompt, narration: scene.narration, sceneIndex: sceneIdx, totalScenes: sops[idx].script.length })
+        });
+        const imgData = await imgRes.json();
+
+        if (imgData.images && imgData.images.length > 0 && imgData.images[0].imageUrl) {
+          scene.imageUrl = imgData.images[0].imageUrl;
+          scene.imageConfirmed = false;
+        }
+      } catch (e) {
+        console.warn('Image regen failed:', e.message);
+        alert('이미지 생성 실패: ' + e.message);
+      }
+
+      saveSops(sops);
+      _renderWizardScene(sceneIdx);
+    }
+
+    window._wizardRemove = function(sceneIdx) {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      sops[idx].script[sceneIdx].imageUrl = null;
+      sops[idx].script[sceneIdx].imageConfirmed = false;
+      saveSops(sops);
+      _renderWizardScene(sceneIdx);
+    }
+
+    // ===== 씬별 이미지 관리 팝업 =====
+    window._openImageManager = function(sceneIdx) {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+      const scene = sops[idx].script[sceneIdx];
+      if (!scene) return;
+
+      // textarea에서 최신 나레이션 반영
+      const ta = document.querySelector(`.scene-narration[data-index="${sceneIdx}"]`);
+      if (ta) scene.narration = ta.value.trim();
+
+      const modal = document.getElementById('modalContent');
+      const overlay = document.getElementById('modalOverlay');
+
+      modal.innerHTML = `
+        <div style="padding:24px; max-width:600px;">
+          <h3 style="margin-bottom:16px;">🎨 씬 ${scene.scene} 이미지 관리</h3>
+          <div style="background:#f8fafc; padding:12px; border-radius:8px; margin-bottom:16px; font-size:13px; color:var(--gray-600); line-height:1.6; max-height:100px; overflow-y:auto;">
+            ${scene.narration.slice(0, 200)}${scene.narration.length > 200 ? '...' : ''}
+          </div>
+          <div id="imgManagerPreview" style="width:100%; aspect-ratio:16/9; background:#e2e8f0; border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:16px; overflow:hidden;">
+            ${scene.imageUrl
+              ? `<img src="${scene.imageUrl}" style="width:100%;height:100%;object-fit:cover;" alt="씬${scene.scene}">`
+              : `<span style="color:#94a3b8; font-size:14px;">이미지 없음</span>`
+            }
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="imgGenBtn" onclick="_generateSceneImage(${sceneIdx})" style="padding:10px 20px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">
+              ${scene.imageUrl ? '🔄 새로 생성' : '🎨 이미지 생성'}
+            </button>
+            ${scene.imageUrl ? `
+              <button onclick="_confirmSceneImage(${sceneIdx})" style="padding:10px 20px; background:var(--success); color:white; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">
+                ✅ 이 이미지로 확정
+              </button>
+              <button onclick="_removeSceneImage(${sceneIdx})" style="padding:10px 20px; background:none; color:#e55; border:1px solid #e55; border-radius:8px; cursor:pointer; font-size:13px;">
+                🗑️ 삭제
+              </button>
+            ` : ''}
+          </div>
+          <div id="imgGenMsg" style="margin-top:12px; font-size:12px; color:var(--gray-500);"></div>
+        </div>
+      `;
+      overlay.classList.add('show');
+    }
+
+    window._generateSceneImage = async function(sceneIdx) {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+      const scene = sops[idx].script[sceneIdx];
+
+      const btn = document.getElementById('imgGenBtn');
+      const msg = document.getElementById('imgGenMsg');
+      const preview = document.getElementById('imgManagerPreview');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ 생성 중...'; }
+      if (msg) msg.textContent = 'Gemini로 프롬프트 변환 → FLUX 이미지 생성 중... (10~15초)';
+
+      try {
+        // 1) Gemini → 영어 이미지 프롬프트
+        let imgPrompt = 'A friendly young female Korean kindergarten teacher in light blue polo uniform with name badge, standing in a bright colorful modern Korean preschool classroom with happy toddlers. Warm natural lighting, clean interior.';
+        try {
+          const gen = await callGemini(`Convert this narration into ONE English image prompt (under 80 words). Output ONLY the prompt.\n\nRULES:\n- Setting: bright kindergarten/preschool classroom or indoor kids playground\n- People: friendly young female Korean teacher in light blue polo uniform\n- Children: happy toddlers aged 3-6\n- NEVER: doctors, lab coats, medical, hospitals, offices, shirtless\n- Always child-friendly safe environment\n\nNarration: ${scene.narration}`);
+          if (gen && gen.length > 20) imgPrompt = gen.trim();
+          if (msg) msg.textContent = '이미지 생성 중...';
+        } catch (e) {}
+
+        // 2) FLUX 이미지 생성
+        const imgRes = await fetch('/api/image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'generate-multi', visual: imgPrompt, narration: scene.narration, sceneIndex: sceneIdx, totalScenes: sops[idx].script.length })
+        });
+        const imgData = await imgRes.json();
+
+        if (imgData.images && imgData.images[0]?.imageUrl) {
+          scene.imageUrl = imgData.images[0].imageUrl;
+          saveSops(sops);
+
+          // 미리보기 업데이트
+          if (preview) preview.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:100%;object-fit:cover;" alt="씬${scene.scene}">`;
+          if (msg) msg.innerHTML = `<span style="color:var(--success);">✅ 생성 완료! 마음에 들면 "확정", 아니면 "새로 생성"을 눌러주세요.</span>`;
+          if (btn) { btn.disabled = false; btn.textContent = '🔄 새로 생성'; }
+
+          // 팝업 버튼 영역 업데이트 (확정/삭제 추가)
+          _openImageManager(sceneIdx);
+        } else {
+          if (msg) msg.innerHTML = `<span style="color:#e55;">❌ 생성 실패. 다시 시도해주세요.</span>`;
+          if (btn) { btn.disabled = false; btn.textContent = '🎨 다시 시도'; }
+        }
+      } catch (e) {
+        if (msg) msg.innerHTML = `<span style="color:#e55;">❌ 오류: ${e.message}</span>`;
+        if (btn) { btn.disabled = false; btn.textContent = '🎨 다시 시도'; }
+      }
+    }
+
+    function _confirmSceneImage(sceneIdx) {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+
+      sops[idx].script[sceneIdx].imageConfirmed = true;
+      saveSops(sops);
+      closeModal();
+      renderAiResults(sops[idx]);
+    }
+
+    function _removeSceneImage(sceneIdx) {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+
+      sops[idx].script[sceneIdx].imageUrl = null;
+      sops[idx].script[sceneIdx].imageConfirmed = false;
+      saveSops(sops);
+      _openImageManager(sceneIdx);
+    }
+
+    window._addScene = function() {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+
+      if (!sops[idx].script) sops[idx].script = [];
+      sops[idx].script.push({ scene: sops[idx].script.length + 1, narration: '', visual: 'New scene' });
+      saveSops(sops);
+      renderAiResults(sops[idx]);
+
+      // 새 씬으로 스크롤
+      setTimeout(() => {
+        const editor = document.getElementById('scriptEditor');
+        if (editor) editor.lastElementChild.querySelector('textarea').focus();
+      }, 100);
+    }
+
+    window._deleteScene = function(index) {
+      if (!confirm(`씬 ${index + 1}을 삭제하시겠습니까?`)) return;
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+
+      sops[idx].script.splice(index, 1);
+      sops[idx].script.forEach((s, i) => s.scene = i + 1);
+      saveSops(sops);
+      renderAiResults(sops[idx]);
+    }
+
+    window._moveScene = function(index, direction) {
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+
+      const newIdx = index + direction;
+      if (newIdx < 0 || newIdx >= sops[idx].script.length) return;
+
+      // 현재 textarea 값을 먼저 반영
+      const textareas = document.querySelectorAll('.scene-narration');
+      textareas.forEach((ta, i) => { sops[idx].script[i].narration = ta.value; });
+
+      const temp = sops[idx].script[index];
+      sops[idx].script[index] = sops[idx].script[newIdx];
+      sops[idx].script[newIdx] = temp;
+      sops[idx].script.forEach((s, i) => s.scene = i + 1);
+      saveSops(sops);
+      renderAiResults(sops[idx]);
     }
 
     // ===== AI 결과 렌더링 =====
@@ -1530,19 +2489,38 @@ ${text.slice(0, 3000)}`;
 
       let html = '';
 
-      // 스크립트 프리뷰
+      // 스크립트 편집기
       html += `
         <div class="ai-result-section" style="margin-top:24px;">
-          <div class="ai-result-header">
-            <h4>&#127910; AI 생성 스크립트 (${sop.script.length}개 씬)</h4>
-            <span style="font-size:12px; color:var(--primary);">예상 영상 길이: 약 ${Math.round(sop.script.length * 0.7)}분</span>
+          <div class="ai-result-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <h4 style="font-size:18px;">&#127910; 슬라이드 스크립트 (${sop.script.length}개 씬)</h4>
+            <span style="font-size:14px; color:var(--gray-500);">예상 ${Math.round(sop.script.length * 0.7)}분</span>
           </div>
-          <div class="ai-result-body">
-            ${sop.script.map(s => `
-              <div class="script-scene">
-                <div class="scene-num">씬 ${s.scene}</div>
-                <div class="narration">${s.narration}</div>
-                <div class="visual-note">&#127909; ${s.visual}</div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin:12px 0 16px;">
+            <button style="padding:12px 20px; font-size:15px; font-weight:700; background:#6366f1; color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_addScene()">➕ 씬 추가</button>
+            <button style="padding:12px 20px; font-size:15px; font-weight:700; background:#3b82f6; color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_saveScripts()">💾 스크립트 저장</button>
+            <button style="padding:12px 20px; font-size:15px; font-weight:700; background:linear-gradient(135deg,#f59e0b,#ef4444); color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_generateAllImages()">🎨 이미지 일괄 생성</button>
+            <button style="padding:12px 20px; font-size:15px; font-weight:700; background:#10b981; color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_openImageReview()">🖼️ 이미지 리뷰</button>
+          </div>
+          <div style="display:flex; gap:12px; margin-bottom:12px; padding:10px 16px; background:#f8fafc; border-radius:8px; font-size:14px; color:var(--gray-600);">
+            ✅ 확정: <strong>${sop.script.filter(x => x.imageConfirmed).length}</strong> / ${sop.script.length}
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            🖼️ 생성됨: <strong>${sop.script.filter(x => x.imageUrl).length}</strong> / ${sop.script.length}
+          </div>
+          <div class="ai-result-body" id="scriptEditor">
+            ${sop.script.map((s, i) => `
+              <div class="script-scene" style="position:relative; padding:12px; margin-bottom:8px; border:1px solid #e2e8f0; border-radius:10px; background:white;" data-index="${i}">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                  <div style="font-size:16px; font-weight:700; color:#374151;">씬 ${s.scene}</div>
+                  <div style="display:flex; gap:6px; align-items:center;">
+                    <button onclick="_genSingleImage(${i}, this)" style="background:#6366f1;color:white;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600;">🎨 생성</button>
+                    ${s.imageUrl ? `<button onclick="_renderWizardScene(${i})" style="background:${s.imageConfirmed ? '#10b981' : '#f59e0b'};color:white;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600;">${s.imageConfirmed ? '✅ 확정됨' : '🖼️ 보기'}</button>` : ''}
+                    ${i > 0 ? `<button onclick="_moveScene(${i},-1)" style="background:none;border:2px solid #d1d5db;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:14px;font-weight:700;" title="위로">▲</button>` : ''}
+                    ${i < sop.script.length - 1 ? `<button onclick="_moveScene(${i},1)" style="background:none;border:2px solid #d1d5db;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:14px;font-weight:700;" title="아래로">▼</button>` : ''}
+                    <button onclick="_deleteScene(${i})" style="background:none;border:2px solid #ef4444;color:#ef4444;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:14px;font-weight:700;" title="삭제">✕</button>
+                  </div>
+                </div>
+                <textarea class="scene-narration" data-index="${i}" rows="3" style="width:100%;border:2px solid #e2e8f0;border-radius:8px;padding:10px;font-size:14px;line-height:1.7;resize:vertical;font-family:inherit;">${s.narration}</textarea>
               </div>
             `).join('')}
           </div>
@@ -1573,13 +2551,24 @@ ${text.slice(0, 3000)}`;
       const videoEnabled = AI_CONFIG.videoProvider !== 'none';
       html += `
         <div style="display:flex; gap:8px; margin-top:20px; flex-wrap:wrap;">
+          <button class="btn" style="padding:12px 24px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;" onclick="SlidePlayer.open('${sop.id}')">
+            &#9654; 슬라이드 미리보기
+          </button>
           ${!isPublished ? `
             <button class="btn btn-success" style="padding:12px 24px;" onclick="publishSop()">
               &#9989; 검토 완료 → 직원에게 배포
             </button>
           ` : `
-            <div class="alert alert-success" style="flex:1;">
-              &#9989; 이 SOP는 직원에게 배포되었습니다
+            <div style="display:flex; gap:8px; align-items:center; flex:1;">
+              <div class="alert alert-success" style="flex:1; margin:0;">
+                &#9989; 배포됨
+              </div>
+              <button class="btn btn-outline" style="padding:10px 18px; font-size:13px; color:#f59e0b; border-color:#f59e0b;" onclick="unpublishSop()">
+                &#9998; 수정모드로 전환
+              </button>
+              <button class="btn btn-success" style="padding:10px 18px; font-size:13px;" onclick="publishSop()">
+                &#128260; 재배포
+              </button>
             </div>
           `}
           <button class="btn btn-outline" style="padding:12px 24px;" onclick="generateContent()">
@@ -1599,6 +2588,24 @@ ${text.slice(0, 3000)}`;
       area.innerHTML = html;
     }
 
+    // ===== 수정모드 전환 (배포 해제) =====
+    function unpublishSop() {
+      if (!hasPermission('sop_edit')) { alert('권한이 없습니다.'); return; }
+      if (!currentSopId) return;
+      if (!confirm('배포를 해제하고 수정모드로 전환합니다.\n직원들은 이 SOP를 더 이상 볼 수 없습니다.\n계속하시겠습니까?')) return;
+
+      const sops = getSops();
+      const idx = sops.findIndex(s => s.id === currentSopId);
+      if (idx === -1) return;
+
+      sops[idx].status = 'draft';
+      saveSops(sops);
+      renderStatusFlow('draft');
+      renderAiResults(sops[idx]);
+
+      alert('✏️ 수정모드로 전환되었습니다. 스크립트를 수정한 후 재배포하세요.');
+    }
+
     // ===== 배포 =====
     function publishSop() {
       if (!hasPermission('sop_edit')) { alert('SOP 배포 권한이 없습니다.'); return; }
@@ -1606,6 +2613,15 @@ ${text.slice(0, 3000)}`;
       const sops = getSops();
       const idx = sops.findIndex(s => s.id === currentSopId);
       if (idx === -1) return;
+
+      // 배포 전 검증
+      if (!sops[idx].script || sops[idx].script.length === 0) {
+        alert('⚠️ 스크립트가 없습니다. 먼저 스크립트를 생성하세요.');
+        return;
+      }
+      if (!sops[idx].quizzes || sops[idx].quizzes.length === 0) {
+        if (!confirm('퀴즈가 없습니다. 퀴즈 없이 배포하시겠습니까?')) return;
+      }
 
       sops[idx].status = 'published';
       saveSops(sops);
@@ -1649,6 +2665,7 @@ ${text.slice(0, 3000)}`;
               <span class="badge" style="background:${st.bg}; color:${st.color};">${st.label}</span>
             </div>
             <div style="display:flex; gap:8px;">
+              <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="SlidePlayer.open('${sop.id}')">&#9654; 미리보기</button>
               <button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="showPage('sop'); setTimeout(() => openSopEditor('${sop.id}'), 100);">상세 보기</button>
               ${sop.status !== 'published' ? `<button class="btn btn-primary" style="padding:6px 14px; font-size:13px;" onclick="currentSopId='${sop.id}'; publishSop(); renderGeneratedContent();">배포하기</button>` : ''}
             </div>
@@ -2188,6 +3205,58 @@ function saveInvitation(code) {
       const sop = getSops().find(s => s.id === currentSopId);
       if (!sop || !sop.script) return;
 
+      // Gemini API로 컨텍스트 기반 영어 프롬프트 생성
+      async function _buildVideoPrompt(visual, narration) {
+        // Gemini로 구체적 프롬프트 생성 시도
+        try {
+          const geminiPrompt = `You are a video prompt engineer. Convert the following training video scene into a detailed, specific English video generation prompt.
+
+SCENE VISUAL: ${visual || 'N/A'}
+SCENE NARRATION: ${narration || 'N/A'}
+
+Requirements:
+- Describe a SPECIFIC scene matching the narration content exactly
+- Setting: modern Korean kids indoor playground/cafe (키즈카페)
+- Characters: staff in uniform performing the described procedures
+- Include specific actions, objects, details from the narration
+- Style: bright warm lighting, clean professional, training video
+- Camera: smooth cinematic movement, 720p quality
+- Under 150 words, ONLY the English prompt, nothing else`;
+
+          const result = await AI._callLLM('gemini', geminiPrompt);
+          if (result && result.length > 20) {
+            console.log('[Video] Gemini prompt:', result.slice(0, 80) + '...');
+            return result.trim().replace(/^["']|["']$/g, '');
+          }
+        } catch (e) {
+          console.warn('[Video] Gemini prompt failed, using fallback:', e.message);
+        }
+
+        // 폴백: 키워드 매칭
+        const sceneMap = {
+          '타이틀': 'Camera slowly zooming into a bright colorful kids cafe entrance with a welcoming sign',
+          '출근': 'A staff member arriving at a kids cafe in the early morning, walking through the entrance',
+          '체크인': 'A staff member checking in at a digital attendance kiosk and putting on uniform',
+          '점검': 'A staff member carefully inspecting colorful playground equipment with a clipboard',
+          '청소': 'A staff member mopping the floor with a professional mop in a kids cafe',
+          '소독': 'A staff member spraying disinfectant and wiping down play equipment',
+          '인사': 'A smiling staff member warmly greeting a parent and child at the entrance',
+          '입장': 'A staff member welcoming a family, checking admission bracelets',
+          '안전': 'A staff member supervising children playing safely in the play area',
+          '비상': 'Staff following emergency evacuation procedures calmly',
+          '정산': 'End of day cash register settlement, staff counting money',
+          '잠금': 'A staff member locking the entrance and setting security alarm',
+          '요약': 'A training summary board displaying key points with checkmarks',
+        };
+        const combined = (visual || '') + ' ' + (narration || '');
+        for (const [ko, en] of Object.entries(sceneMap)) {
+          if (combined.includes(ko)) {
+            return `${en}. Bright warm lighting, clean modern Korean kids cafe, professional training video, smooth camera, 720p.`;
+          }
+        }
+        return 'A modern Korean kids indoor playground with colorful equipment and friendly staff. Professional training video, bright warm lighting, 720p.';
+      }
+
       if (!skipConfirm) {
         const cost = AI_CONFIG.videoProvider === 'wan'
           ? `$${(sop.script.length * 0.29).toFixed(2)}`
@@ -2215,7 +3284,7 @@ function saveInvitation(code) {
 
       for (let i = 0; i < sop.script.length; i++) {
         const scene = sop.script[i];
-        const prompt = `교육 영상. ${scene.visual}. 깨끗한 매장, 유니폼 직원, 전문적 분위기. 720p.`;
+        const prompt = await _buildVideoPrompt(scene.visual, scene.narration);
 
         log.innerHTML += `<div style="padding:8px 0; border-bottom:1px solid var(--gray-100); font-size:13px;">
           <strong>씬 ${scene.scene}</strong>: 생성 요청 중... <span class="spinner" style="width:14px;height:14px;"></span>

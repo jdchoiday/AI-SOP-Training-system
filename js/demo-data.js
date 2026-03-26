@@ -84,8 +84,13 @@ const SopStore = {
   },
 
   // 초기 SOP 세팅 (KIDS_SOP_CONTENT가 있으면 사용, 없으면 기본 데모)
+  // 한번이라도 삭제한 적 있으면 자동 생성하지 않음
   initDemo() {
     if (this.getAll().length > 0) return;
+    // 사용자가 의도적으로 삭제한 경우 자동 생성 차단
+    if (localStorage.getItem('sop_user_cleared') === 'true') return;
+    // 자동 로드 비활성화됨 - 관리자가 직접 SOP 업로드
+    if (localStorage.getItem('sop_skip_auto_load') === 'true') return;
 
     // 키즈카페 SOP 콘텐츠가 로드되어 있으면 사용
     if (typeof KIDS_SOP_CONTENT !== 'undefined' && KIDS_SOP_CONTENT.length > 0) {
@@ -401,6 +406,8 @@ const Progress = {
 
   // 초기화 (데모 데이터 시뮬레이션)
   initDemoProgress() {
+    // 사용자가 SOP를 삭제한 적 있으면 데모 진행률 생성 안 함
+    if (localStorage.getItem('sop_user_cleared') === 'true') return;
     const all = this._getData();
     // 이미 데이터 있으면 스킵
     if (Object.keys(all).length > 1) return;

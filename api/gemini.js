@@ -41,22 +41,37 @@ module.exports = async function handler(req, res) {
       },
     };
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    // 429 자동 재시도 (최대 3회, 대기 후 재시도)
+    const maxRetries = 3;
+    let lastError = null;
 
-    const data = await response.json();
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
 
-    if (!response.ok) {
+      const data = await response.json();
+
+      if (response.ok) {
+        return res.status(200).json(data);
+      }
+
+      // 429 (Too Many Requests) → 대기 후 재시도
+      if (response.status === 429 && attempt < maxRetries - 1) {
+        const waitSec = (attempt + 1) * 5; // 5초, 10초, 15초
+        console.log(`[Gemini] 429 rate limit, ${waitSec}초 대기 후 재시도 (${attempt + 1}/${maxRetries})`);
+        await new Promise(r => setTimeout(r, waitSec * 1000));
+        continue;
+      }
+
+      lastError = data;
       return res.status(response.status).json({
         error: data.error?.message || 'Gemini API request failed',
         details: data.error,
       });
     }
-
-    return res.status(200).json(data);
   } catch (err) {
     console.error('Gemini proxy error:', err);
     return res.status(500).json({ error: 'Internal server error', message: err.message });

@@ -39,16 +39,17 @@ const CONFIG = {
     ttsProvider: 'none',        // 'edge' 추천 (무료+고품질)
 
     // 영상 생성: SOP 스크립트 → 720p AI 영상
-    videoProvider: 'wan',       // Wan 2.2 ($0.29/클립, 720p, 가성비 최고)
+    videoProvider: 'none',      // 슬라이드+TTS 모드 사용 (무료). 영상 필요 시 'wan' 으로 변경
                                 // 'vidu' 대안 ($0.20/클립, 빠름)
 
     // API 키 (사용할 제공자만 입력)
+    // API 키는 서버 환경변수(.env)에서만 관리. 클라이언트에 노출하지 않음.
     keys: {
-      gemini: 'AIzaSyAYclwqL37iiD68K2lpWg5fK_Y8kTyc4CY',        // https://aistudio.google.com 에서 무료 발급
+      gemini: '',        // 서버 프록시 사용 (/api/gemini)
       openai: '',        // https://platform.openai.com 에서 발급 (유료)
       groq: '',          // https://console.groq.com 에서 무료 발급
-      siliconflow: 'sk-folxwzzqfasjqmdodvystwesgbatjztmxwkezfuvfglvhyvs',   // SiliconFlow (Wan 영상 생성)
-      vidu: '',          // Vidu API 키 (WaveSpeedAI 또는 Atlas Cloud)
+      siliconflow: '',   // 서버 프록시 사용 (/api/image)
+      vidu: '',          // Vidu API 키
     },
 
     // 모델 (기본값, 변경 가능)
