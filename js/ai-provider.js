@@ -185,7 +185,18 @@ ${plainText}
 
       const result = await this._callLLM(provider, prompt);
       const parsed = JSON.parse(result.match(/\[[\s\S]*\]/)?.[0] || '[]');
-      return parsed.length > 0 ? parsed : this._localGenerateScript(sopTitle, sopContent);
+      if (parsed.length === 0) return this._localGenerateScript(sopTitle, sopContent);
+
+      // visual 필드 품질 검증: 부실한 visual은 나레이션 기반으로 재생성
+      parsed.forEach(scene => {
+        if (!scene.visual || scene.visual.length < 30 ||
+            /^scene\s*\d/i.test(scene.visual) ||
+            /training content/i.test(scene.visual) ||
+            /slide/i.test(scene.visual)) {
+          scene.visual = this._narrationToVisual(scene.narration || '', '');
+        }
+      });
+      return parsed;
     } catch (e) {
       console.warn('AI script generation failed, falling back to local:', e.message);
       return this._localGenerateScript(sopTitle, sopContent);
