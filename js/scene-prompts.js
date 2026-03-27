@@ -3,14 +3,9 @@
 // ============================================
 // 이 파일 하나만 수정하면 api/image.js, ai-provider.js, admin/index.html 모두 반영됨
 // ============================================
-// ⚠️ FLUX 모델 금지어: uniform, clean, examination, patient, clinic
-//    → "uniform" 대신 구체적 의류 (light blue polo shirt, beige apron 등) 사용
-//    → "clean" 대신 "tidy", "organized", "well-kept" 사용
-// ============================================
 
-// 캐릭터 기본 설명 (의사 연상 방지)
-const CHAR = 'A friendly young Korean woman in her 20s wearing a light blue polo shirt and beige apron with a name tag';
-const CHAR_SHORT = 'A Korean woman in a light blue polo shirt and beige apron';
+const CHAR = 'A friendly young Korean woman in her 20s in neat professional attire';
+const CHAR_SHORT = 'A young Korean woman';
 
 const SCENE_MAP = [
   // === 위생/손씻기 ===
@@ -180,9 +175,8 @@ const CAMERA_ANGLES = [
 ];
 
 // 기본 세팅 & 네거티브 프롬프트
-// ⚠️ "uniform" 제거 → 구체적 의류 설명 사용
-const BASE_SETTING = 'Candid photo in a bright modern Korean kids indoor playground cafe. Staff wearing light blue polo shirt and beige apron with name tag. Warm natural lighting, colorful cheerful interior. Shot on Canon EOS R5, 35mm lens, f/2.8, natural window lighting.';
-const NEGATIVE_PROMPT = 'nude, naked, nsfw, shirtless, undressed, revealing, suggestive, violent, gore, blood, weapon, scary, horror, dark, inappropriate, doctor, lab coat, white coat, medical, hospital, stethoscope, clinic, nurse, surgery, patient, examination, scrubs, medical gloves, syringe, military, police, judge, lawyer, courtroom, prison, tattoo, piercing, smoking, alcohol, drugs, deformed, ugly, blurry, bad anatomy, extra limbs, uniform';
+const BASE_SETTING = 'Candid photo in a bright modern workplace. Warm natural lighting. Shot on Canon EOS R5, 35mm lens, f/2.8, natural window lighting.';
+const NEGATIVE_PROMPT = 'deformed, ugly, blurry, bad anatomy, extra limbs';
 const QUALITY_SUFFIX = 'Candid editorial photography, natural skin texture, realistic warm lighting, 8k uhd.';
 
 /**
