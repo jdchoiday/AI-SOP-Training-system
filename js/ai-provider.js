@@ -173,7 +173,14 @@ ${plainText}
 - 마지막 씬은 핵심 요약과 마무리
 - 나레이션은 자연스럽고 친근한 말투로 2~4문장
 - 각 씬은 교육 영상의 한 장면 (30초~1분 분량)
-- visual 필드는 반드시 영어로 된 상세한 이미지 생성 프롬프트를 작성할 것. 나레이션 내용과 정확히 일치하는 구체적인 장면을 묘사. 예시: "A friendly female staff member in light blue polo uniform kneeling to make eye contact with a small child, gently explaining safety rules in a bright modern kids indoor playground"
+- visual 필드는 반드시 영어로 된 상세한 이미지 생성 프롬프트를 작성할 것
+- visual은 나레이션의 핵심 행동/장면을 구체적으로 묘사해야 함. "Training content slide" 같은 추상적 표현은 절대 금지
+- visual 예시들:
+  * 칭찬 장면 → "A smiling Korean woman giving thumbs-up to a proud child showing a drawing in a bright playroom"
+  * 손씻기 → "Close-up of hands being washed with soap under running water at a clean modern sink"
+  * 교육 소개 → "A Korean woman in uniform standing at a podium introducing a training topic in a bright meeting room"
+  * 감정 교육 → "Colorful emotion cards spread on a table, Korean teacher pointing at happy face card with children"
+- 각 visual은 50-80 단어로 카메라 앵글, 인물, 행동, 장소, 조명을 포함할 것
 - JSON 배열만 출력, 다른 텍스트 없이`;
 
       const result = await this._callLLM(provider, prompt);
@@ -348,7 +355,7 @@ ${sopContext}
     const headings = div.querySelectorAll('h3');
 
     const script = [
-      { scene: 1, narration: `안녕하세요. "${sopTitle}"에 대해 배우겠습니다.`, visual: '타이틀 화면' }
+      { scene: 1, narration: `안녕하세요. "${sopTitle}"에 대해 배우겠습니다.`, visual: `A Korean woman in professional attire standing at a podium, warmly introducing the training topic "${sopTitle}". Bright modern training room with screen.` }
     ];
 
     headings.forEach((h, i) => {
@@ -358,20 +365,68 @@ ${sopContext}
       if (nextEl && (nextEl.tagName === 'OL' || nextEl.tagName === 'UL')) {
         steps = Array.from(nextEl.querySelectorAll('li')).map(li => li.textContent).join('. ');
       }
+      const narration = steps ? `${section}입니다. ${steps}` : `다음은 ${section}에 대해 알아보겠습니다.`;
       script.push({
         scene: i + 2,
-        narration: steps ? `${section}입니다. ${steps}` : `다음은 ${section}에 대해 알아보겠습니다.`,
-        visual: `${section} - 관련 장면`
+        narration,
+        visual: this._narrationToVisual(narration, section)
       });
     });
 
     script.push({
       scene: script.length + 1,
       narration: `"${sopTitle}" 교육을 마칩니다. 핵심 내용을 기억해주세요!`,
-      visual: '요약 + 마무리'
+      visual: 'A Korean woman standing at an organized reception giving a confident thumbs up. Clean whiteboard behind with summary bullet points. Warm bright lighting.'
     });
 
     return script;
+  },
+
+  _narrationToVisual(narration, section) {
+    const text = (narration + ' ' + section).toLowerCase();
+    const scenes = [
+      { kw: ['손 씻', '손씻', '비누', '세정'], en: 'A Korean woman carefully washing hands with soap under running water at a clean sink. Bright modern washroom.' },
+      { kw: ['청소', '소독', '닦', '쓸'], en: 'A person in uniform wiping surfaces with disinfectant spray and cloth. Bright tidy room.' },
+      { kw: ['점검', '체크', '확인'], en: 'A Korean woman in uniform checking items on a clipboard checklist. Well-organized room.' },
+      { kw: ['안전', '주의', '위험'], en: 'Safety instruction signs next to well-organized equipment. Bright facility with floor markings.' },
+      { kw: ['인사', '환영', '안녕'], en: 'A smiling Korean woman bowing warmly to welcome visitors at a reception desk.' },
+      { kw: ['아이', '어린이', '유아', '아동'], en: 'A Korean woman kneeling at eye level with happy children in a bright playroom.' },
+      { kw: ['칭찬', '격려', '응원', '잘했'], en: 'A Korean woman giving enthusiastic thumbs-up to a happy child. Bright cheerful playroom.' },
+      { kw: ['자존감', '자신감'], en: 'A proud child holding up a craft project while teacher watches with encouraging smile.' },
+      { kw: ['눈빛', '눈 맞', '눈높이', '표정'], en: 'A Korean woman making warm eye contact with a child at eye level, both smiling.' },
+      { kw: ['진심', '진정성'], en: 'Close-up of a Korean woman speaking sincerely with hands on heart. Warm lighting.' },
+      { kw: ['구체적', '명확', '디테일'], en: 'A Korean woman pointing at specific details on a child drawing. Bright art table.' },
+      { kw: ['패턴', '공식', '방법', '기법', '기술'], en: 'A Korean woman pointing at a step-by-step diagram on whiteboard. Bright training room.' },
+      { kw: ['소통', '대화', '경청'], en: 'A Korean woman actively listening to someone, leaning forward attentively. Quiet room.' },
+      { kw: ['감정', '기분', '느낌', '정서'], en: 'Colorful emotion cards on table. Korean teacher showing them to children.' },
+      { kw: ['공감', '이해', '위로'], en: 'A Korean woman comforting a child with a gentle pat on the shoulder.' },
+      { kw: ['팀', '동료', '협력'], en: 'Two Korean women in uniforms discussing at a round table. Bright meeting room.' },
+      { kw: ['부모', '학부모', '보호자'], en: 'A Korean woman having a warm conversation with parents at a desk.' },
+      { kw: ['규칙', '규정', '절차', '약속'], en: 'A Korean woman pointing at posted rules on a wall. Organized classroom.' },
+      { kw: ['음식', '식사', '간식'], en: 'A clean kitchen counter with healthy snacks on colorful plates. Bright kitchen.' },
+      { kw: ['놀이', '게임', '활동'], en: 'A bright playroom with educational toys and art supplies on low tables.' },
+      { kw: ['출근', '시작', '아침'], en: 'A Korean woman in neat uniform walking through a bright entrance in morning light.' },
+      { kw: ['질문', '궁금', '생각해'], en: 'A Korean woman with thoughtful expression, looking at a question on whiteboard.' },
+      { kw: ['예를 들', '예시', '사례'], en: 'A Korean woman presenting examples on a screen in a bright training room.' },
+      { kw: ['중요', '기억', '꼭', '핵심'], en: 'A Korean woman pointing at a highlighted key point with star mark on board.' },
+      { kw: ['집중', '몰입', '집중력'], en: 'A child deeply focused on building with blocks while teacher observes quietly.' },
+      { kw: ['크래용', '그림', '미술'], en: 'A child drawing with colorful crayons. Korean teacher admiring the artwork.' },
+      { kw: ['교육', '철학', '가치'], en: 'A Korean woman reading an educational book at a round table. Cozy meeting room.' },
+      { kw: ['성장', '발달', '배움'], en: 'A wall display with children artwork and growth charts. Bright hallway.' },
+      { kw: ['예민', '민감', '섬세'], en: 'A Korean woman gently approaching a shy child with soft caring expression.' },
+      { kw: ['동기', '의욕', '열정'], en: 'A Korean woman energetically leading a group activity with enthusiasm.' },
+      { kw: ['효과', '결과', '변화'], en: 'A presentation board showing before-and-after comparison with positive results.' },
+      { kw: ['비교', '차이', '다른'], en: 'A whiteboard showing two contrasting approaches side by side.' },
+      { kw: ['경험', '겪어', '시도'], en: 'A Korean woman gesturing as she tells a story with a reflective smile.' },
+    ];
+
+    for (const s of scenes) {
+      if (s.kw.some(k => text.includes(k))) {
+        return s.en + ' Professional training video, warm natural lighting, 8k quality.';
+      }
+    }
+
+    return `A Korean woman in professional uniform explaining about "${section}" in a bright modern workspace. Clean organized interior, warm natural lighting. Professional training photo.`;
   },
 
   _localGenerateQuiz(sopTitle, sopContent) {
