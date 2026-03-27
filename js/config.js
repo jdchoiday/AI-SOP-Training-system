@@ -54,7 +54,7 @@ const CONFIG = {
 
     // 모델 (기본값, 변경 가능)
     models: {
-      gemini: 'gemini-2.0-flash',              // 무료, 빠름
+      gemini: 'gemini-2.5-flash',              // 무료, 빠름
       openai: 'gpt-4o-mini',                   // 가장 저렴한 OpenAI
       groq: 'llama-3.3-70b-versatile',         // 무료, 고성능
       wan: 'Wan-AI/Wan2.2-T2V-A14B',           // $0.29/클립, 720p, 추천
