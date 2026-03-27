@@ -4,8 +4,8 @@
 // 이 파일 하나만 수정하면 api/image.js, ai-provider.js, admin/index.html 모두 반영됨
 // ============================================
 
-const CHAR = 'A friendly young Korean woman in her 20s in neat professional attire';
-const CHAR_SHORT = 'A young Korean woman';
+const CHAR = 'A friendly young Korean woman in her 20s wearing a light blue polo shirt and beige apron with a name tag, kids cafe staff';
+const CHAR_SHORT = 'A young Korean woman in a light blue polo shirt and beige apron';
 
 const SCENE_MAP = [
   // === 위생/손씻기 ===
@@ -57,6 +57,7 @@ const SCENE_MAP = [
   { kw: ['결제', '카드'], en: `${CHAR_SHORT} processing a card payment on a POS terminal at the counter. Modern kids cafe reception.` },
 
   // === 놀이공간/아이 ===
+  { kw: ['발달', '개월', '발육', '성장단계'], en: `${CHAR_SHORT} sitting on the floor with toddlers watching them stack colorful blocks and explore toys. Bright kids cafe playroom with soft mats.` },
   { kw: ['아이', '어린이', '유아', '아동', '원아'], en: `${CHAR_SHORT} kneeling at eye level with happy small children in a bright colorful indoor playground with ball pit.` },
   { kw: ['연령', '구역', '영유아존'], en: `${CHAR_SHORT} leading a parent and toddler into a soft padded baby play zone. Pastel colors and soft toys.` },
   { kw: ['위험', '제지', '안전해요'], en: `${CHAR_SHORT} gently holding a child's hand, redirecting them away from a high area. Indoor playground.` },
@@ -202,7 +203,7 @@ function narrationToPrompt(narration, section, options) {
   let bestScore = 0;
   for (const s of SCENE_MAP) {
     const score = s.kw.filter(k => text.includes(k)).length;
-    if (score > bestScore) {
+    if (score >= bestScore) {
       bestScore = score;
       bestMatch = s;
     }

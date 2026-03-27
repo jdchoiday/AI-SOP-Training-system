@@ -1958,20 +1958,26 @@ ${text.slice(0, 3000)}`;
       const sopTitle = sidx >= 0 ? sops[sidx].title : '';
       const sopContent = sidx >= 0 ? (sops[sidx].content || '').slice(0, 500) : '';
 
-      return `You create image generation prompts for training videos.
+      return `You create image generation prompts for training videos at a KIDS CAFE (children's indoor playground).
 
 SOP TITLE: "${sopTitle}"
 NARRATION: "${narration}"
 
 TASK: Write ONE English prompt (50-80 words) describing a SPECIFIC scene that matches this narration.
 
-MANDATORY FORMAT - your prompt MUST follow this structure:
-"[Camera angle]. [Specific person description] [doing specific action matching narration]. [Specific setting matching SOP context]. Warm bright lighting, clean interior, professional photo."
+CRITICAL RULES:
+- The subject is ALWAYS: "A young Korean woman in a light blue polo shirt and beige apron" (kids cafe staff)
+- The setting is ALWAYS: a colorful kids cafe / indoor playground / playroom / training room
+- NEVER describe the person as a doctor, nurse, scientist, or any medical professional
+- NEVER include stethoscope, lab coat, white coat, or medical equipment
+- Focus on the SPECIFIC ACTION described in the narration
+
+FORMAT: "[Camera angle]. [Person in polo shirt and apron] [doing specific action matching narration]. [Kids cafe / playroom setting]. Warm bright lighting, candid photo."
 
 EXAMPLES:
-- Narration about handwashing → "Medium shot. A young Korean woman in a light blue apron carefully washing her hands with soap under running water at a stainless steel sink. Clean modern kitchen with white tiles. Warm bright lighting, professional photo."
-- Narration about greeting → "Wide shot. A smiling Korean woman in beige uniform bowing slightly to welcome a family at a bright reception desk. Modern lobby with plants. Warm lighting, professional photo."
-- Narration about teaching philosophy → "Close-up shot. A Korean woman in casual professional clothes sitting at a round table, looking warmly at materials spread on the table. Cozy meeting room with bookshelves. Soft warm lighting, professional photo."
+- Narration about child development → "Medium shot. A young Korean woman in a light blue polo shirt and beige apron sitting on the floor with toddlers, observing their play with building blocks. Bright colorful kids cafe playroom with foam mats. Warm lighting, candid photo."
+- Narration about handwashing → "Close-up shot. A young Korean woman in a light blue polo shirt carefully washing her hands with soap at a kitchen sink. Clean kids cafe kitchen with warm lighting, candid photo."
+- Narration about greeting → "Wide shot. A smiling Korean woman in a light blue polo shirt and beige apron bowing to welcome a family at a colorful kids cafe reception desk. Warm lighting, candid photo."
 
 Output ONLY the prompt, nothing else.`;
     }

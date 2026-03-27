@@ -175,12 +175,16 @@ ${plainText}
 - 각 씬은 교육 영상의 한 장면 (30초~1분 분량)
 - visual 필드는 반드시 영어로 된 상세한 이미지 생성 프롬프트를 작성할 것
 - visual은 나레이션의 핵심 행동/장면을 구체적으로 묘사해야 함. "Training content slide" 같은 추상적 표현은 절대 금지
+- visual의 인물은 반드시 "A young Korean woman in a light blue polo shirt and beige apron" (키즈카페 직원)으로 묘사
+- visual의 장소는 반드시 키즈카페/실내놀이터/교육실 등 아동 관련 환경
+- 절대로 의사, 간호사, 과학자, 의료인으로 묘사하지 말 것. 청진기, 흰 가운, 의료장비 절대 금지
 - visual 예시들:
-  * 칭찬 장면 → "A smiling Korean woman giving thumbs-up to a proud child showing a drawing in a bright playroom"
-  * 손씻기 → "Close-up of hands being washed with soap under running water at a clean modern sink"
-  * 교육 소개 → "A Korean woman in uniform standing at a podium introducing a training topic in a bright meeting room"
-  * 감정 교육 → "Colorful emotion cards spread on a table, Korean teacher pointing at happy face card with children"
-- 각 visual은 50-80 단어로 카메라 앵글, 인물, 행동, 장소, 조명을 포함할 것
+  * 칭찬 장면 → "A smiling Korean woman in polo shirt and apron giving thumbs-up to a proud child showing a drawing in a bright kids cafe playroom"
+  * 손씻기 → "Close-up of hands being washed with soap under running water at a kids cafe kitchen sink"
+  * 교육 소개 → "A Korean woman in polo shirt and apron standing in front of a TV screen introducing a training topic in a cozy meeting room"
+  * 감정 교육 → "Colorful emotion cards spread on a table, Korean teacher in apron pointing at happy face card with children"
+  * 아동 발달 → "A Korean woman in polo shirt sitting on floor with toddlers, watching them stack colorful blocks in a bright playroom"
+- 각 visual은 50-80 단어로 카메라 앵글, 인물(polo shirt and apron), 행동, 장소(키즈카페), 조명을 포함할 것
 - JSON 배열만 출력, 다른 텍스트 없이`;
 
       const result = await this._callLLM(provider, prompt);
