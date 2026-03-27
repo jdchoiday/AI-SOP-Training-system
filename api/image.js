@@ -228,6 +228,36 @@ const ACTION_MAP = [
   { kw: ['규칙', '약속', '기준'], en: 'pointing at clearly posted classroom rules on wall' },
   { kw: ['모범', '본보기', '리더'], en: 'demonstrating proper behavior to children with friendly gesture' },
   { kw: ['안녕하세요', '소개', '환영합니다'], en: 'standing at podium area, warmly introducing training session' },
+  // 칭찬/격려/감정
+  { kw: ['칭찬', '격려', '응원'], en: 'giving enthusiastic thumbs-up to a happy child with proud expression' },
+  { kw: ['잘했어', '대단', '훌륭'], en: 'clapping hands with proud expression while child shows completed drawing' },
+  { kw: ['자존감', '자신감', '자기 효능'], en: 'watching a child stand tall and proud holding up a craft project' },
+  { kw: ['눈빛', '표정', '눈 맞', '눈높이'], en: 'kneeling to make warm eye contact with a child at eye level' },
+  { kw: ['진심', '진정성', '진짜'], en: 'speaking sincerely with hands on heart, genuine warm expression' },
+  { kw: ['구체적', '명확', '디테일'], en: 'pointing at specific details on a childs drawing, describing what she sees' },
+  { kw: ['기계적', '반복', '습관적'], en: 'giving a half-hearted response without eye contact, looking distracted' },
+  { kw: ['패턴', '공식', '방법', '기법', '기술'], en: 'pointing at a step-by-step framework diagram on whiteboard' },
+  { kw: ['효과', '결과', '변화', '영향'], en: 'presenting a before-and-after comparison chart showing positive results' },
+  // 소통/피드백
+  { kw: ['피드백', '반응', '답변'], en: 'nodding thoughtfully while taking notes, responding to someone' },
+  { kw: ['말투', '어조', '목소리', '톤'], en: 'speaking gently with soft hand gestures to a child' },
+  // 감정/심리
+  { kw: ['감정', '기분', '느낌', '정서'], en: 'showing colorful emotion cards to children at a table' },
+  { kw: ['동기', '의욕', '열정', '열의'], en: 'energetically leading a group activity with arms raised' },
+  { kw: ['스트레스', '번아웃', '지침', '힘들'], en: 'sitting at desk looking tired, then taking a calming breath with tea' },
+  // 예시/비교/질문
+  { kw: ['예를 들', '예시', '예컨대', '사례'], en: 'presenting a case study on screen, pointing at real-world examples' },
+  { kw: ['비교', '차이', '다른', '반면'], en: 'showing two contrasting approaches side by side on whiteboard' },
+  { kw: ['중요', '기억', '꼭'], en: 'pointing emphatically at highlighted key point with star mark on board' },
+  { kw: ['질문', '궁금', '물어', '생각해'], en: 'standing thoughtfully with finger on chin, looking at question on board' },
+  { kw: ['경험', '겪어', '해본', '시도'], en: 'recalling a memory with reflective smile, hands gesturing while telling story' },
+  // 집중/관찰
+  { kw: ['집중', '몰입', '집중력'], en: 'quietly observing a child deeply focused on building with blocks' },
+  { kw: ['관찰', '지켜', '바라보'], en: 'observing children playing from a distance, taking mental notes' },
+  // 미술/창작
+  { kw: ['크래용', '색연필', '그림', '그리', '미술'], en: 'admiring a childs colorful drawing at art table with crayons' },
+  // 예민/민감
+  { kw: ['예민', '민감', '섬세'], en: 'gently approaching a shy child, crouching low with soft caring expression' },
 ];
 
 function extractActions(text) {

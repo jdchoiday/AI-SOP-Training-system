@@ -1851,30 +1851,88 @@ ${text.slice(0, 3000)}`;
 
       // 키워드 → 구체적 영어 장면
       const scenes = [
+        // 위생/손씻기
         { kw: ['손 씻', '손씻', 'hand wash', '비누', 'soap'], en: 'A young Korean woman in a light blue apron carefully washing her hands with soap and water under a stainless steel faucet. Clean modern kitchen with white tiles and bright lighting.' },
         { kw: ['손바닥', '문질러', '문지르'], en: 'Close-up of two hands rubbing palms together under running water with soap bubbles. Clean sink area with bright overhead lighting.' },
         { kw: ['손가락', '손톱', '엄지'], en: 'Close-up of hands carefully cleaning between fingers and under fingernails with soap. Bright clean washroom.' },
         { kw: ['세균', '감염', '예방', '위생', '균'], en: 'A colorful educational infographic poster about germs and hygiene displayed on a clean white wall. Bright classroom setting with warm lighting.' },
+        // 인사/환영
         { kw: ['인사', '환영', '안녕', 'greeting', 'welcome'], en: 'A smiling young Korean woman in neat beige uniform bowing warmly to welcome visitors at a bright modern reception desk with plants.' },
+        // 교육/가치
         { kw: ['교육', '철학', '가치', '핵심', '믿음'], en: 'A young Korean woman in smart casual clothes sitting at a round wooden table, thoughtfully reading an open book. Cozy meeting room with bookshelves and warm lighting.' },
+        // 아이/어린이
         { kw: ['아이', '어린이', '유아', '아동', 'child', 'kid'], en: 'A friendly Korean woman in a colorful apron kneeling down to eye level with small happy children in a bright playroom with colorful toys.' },
+        // 청소/위생
         { kw: ['청소', '소독', '닦', '쓸', 'clean'], en: 'A person in a clean uniform wiping down a table surface with a spray bottle and cloth. Bright tidy room with organized shelves.' },
+        // 점검
         { kw: ['점검', '체크', '확인', 'check', 'inspect'], en: 'A young Korean woman in uniform holding a clipboard and checking items on a checklist. Well-organized storage room with labeled shelves.' },
+        // 안전
         { kw: ['안전', '주의', '위험', 'safety'], en: 'A safety instruction sign on a wall next to well-organized equipment. Bright clean facility with safety markings on the floor.' },
+        // 출근/시작
         { kw: ['출근', '시작', '아침', 'morning'], en: 'A young Korean woman in neat uniform walking through a bright modern entrance in the early morning. Clean lobby with warm sunrise light.' },
+        // 마무리/퇴근
         { kw: ['마무리', '정리', '퇴근', '끝', 'end'], en: 'A tidy organized workspace at the end of the day. Neatly arranged supplies on shelves, clean desk. Warm evening lighting through windows.' },
-        { kw: ['요약', '정리', '복습', 'summary', 'review'], en: 'A clean whiteboard with colorful bullet points and key takeaways written in neat handwriting. Bright meeting room with warm lighting.' },
+        // 요약/복습
+        { kw: ['요약', '복습', 'summary', 'review'], en: 'A clean whiteboard with colorful bullet points and key takeaways written in neat handwriting. Bright meeting room with warm lighting.' },
+        // 음식
         { kw: ['음식', '식사', '간식', '요리', 'food', 'meal'], en: 'A clean modern kitchen counter with neatly prepared healthy snacks on colorful plates. Bright kitchen with stainless steel appliances.' },
+        // 놀이/활동
         { kw: ['놀이', '게임', '활동', 'play', 'activity'], en: 'A bright colorful playroom with organized educational toys, building blocks, and art supplies on low tables. Warm natural lighting.' },
+        // 규칙/절차
         { kw: ['규칙', '규정', '절차', 'rule', 'procedure'], en: 'A neatly organized binder open on a desk showing clear step-by-step procedures with diagrams. Clean modern office desk with warm lighting.' },
+        // 팀/협력
         { kw: ['팀', '동료', '협력', 'team', 'cooperat'], en: 'Two young Korean women in matching uniforms having a friendly discussion at a round table. Bright meeting room with a whiteboard.' },
+        // 부모/보호자
         { kw: ['부모', '학부모', '보호자', 'parent'], en: 'A Korean woman in professional attire having a warm conversation with parents across a desk. Bright friendly office with plants.' },
+        // 탐구/호기심
         { kw: ['레지오', '에밀리아', '탐구', '호기심', '발견'], en: 'A bright classroom with children exploring nature items on a table - leaves, rocks, magnifying glass. Korean teacher observing nearby with a smile.' },
+        // 성장/배움
         { kw: ['성장', '발달', '배움', 'growth', 'learn'], en: 'A wall display showing childrens colorful artwork and growth charts. Bright cheerful hallway with warm lighting.' },
+        // 언어
         { kw: ['언어', '영어', '베트남', 'language'], en: 'A colorful classroom wall with multilingual posters in Korean, English and Vietnamese. Bright educational environment.' },
+        // 인성/감사
         { kw: ['인성', '감사', '미안', '존중', 'character'], en: 'A warm illustration-style poster showing children sharing and helping each other. Displayed in a bright classroom with soft lighting.' },
+        // 긴장/걱정
         { kw: ['긴장', '걱정', '실수', '처음', 'nervous'], en: 'A young Korean woman taking a deep breath at a doorway, about to enter a bright room. Warm encouraging atmosphere.' },
+        // 관심/사랑
         { kw: ['관심', '사랑', '마음', 'care', 'heart'], en: 'A Korean woman gently holding a small hand-made heart card, smiling warmly. Soft bright background with warm tones.' },
+        // === 칭찬/격려/감정 ===
+        { kw: ['칭찬', '격려', '응원', 'praise', 'encourage'], en: 'A smiling Korean woman in uniform giving an enthusiastic thumbs-up while talking to a happy child. Bright cheerful playroom with warm lighting.' },
+        { kw: ['잘했어', '대단', '훌륭', 'good job', 'excellent'], en: 'A Korean woman clapping her hands with a proud expression while a child shows off a completed drawing. Bright art room with colorful decorations.' },
+        { kw: ['자존감', '자신감', '자기 효능', 'self-esteem', 'confidence'], en: 'A small child standing tall and proud, holding up a craft project. Korean teacher watching with a warm encouraging smile. Bright classroom.' },
+        { kw: ['눈빛', '표정', '눈 맞', '눈높이', 'eye contact'], en: 'A Korean woman kneeling to make eye contact with a child at eye level, both smiling warmly. Soft bright playroom setting.' },
+        { kw: ['진심', '진정성', '진짜', 'sincere', 'genuine'], en: 'Close-up of a Korean woman with a genuine warm smile, hands on heart, speaking sincerely. Soft warm lighting, professional setting.' },
+        { kw: ['구체적', '명확', '디테일', 'specific', 'detail'], en: 'A Korean woman pointing at specific details on a childs drawing, describing what she sees. Bright art table with crayons.' },
+        { kw: ['기계적', '반복', '습관적', 'mechanical', 'automatic'], en: 'A tired-looking person giving a half-hearted thumbs up without eye contact. Contrasting with a bright room. Muted tones to show lack of engagement.' },
+        { kw: ['패턴', '공식', '방법', '기법', '기술', 'technique', 'method'], en: 'A clean whiteboard showing a simple step-by-step framework diagram with arrows. Korean woman pointing at the board. Bright meeting room.' },
+        { kw: ['효과', '결과', '변화', '영향', 'effect', 'result', 'impact'], en: 'A before-and-after style display board showing positive transformation. Bright office with charts and positive indicators.' },
+        // === 소통/대화 ===
+        { kw: ['소통', '대화', '경청', '들어', 'listen', 'communicate'], en: 'A Korean woman leaning forward attentively, listening to a child speak with focused caring expression. Quiet bright room.' },
+        { kw: ['피드백', '반응', '답변', 'feedback', 'response'], en: 'A Korean woman nodding thoughtfully while taking notes on a clipboard, responding to someone. Bright professional office.' },
+        { kw: ['말투', '어조', '목소리', '톤', 'tone', 'voice'], en: 'A Korean woman speaking gently with soft hand gestures to a child. Speech bubble illustration style. Warm bright classroom.' },
+        // === 감정/심리 ===
+        { kw: ['감정', '기분', '느낌', '정서', 'emotion', 'feeling'], en: 'Colorful emotion cards spread on a table showing happy, sad, surprised faces. Korean teacher pointing at them. Bright classroom.' },
+        { kw: ['공감', '이해', '위로', 'empathy', 'comfort'], en: 'A Korean woman sitting beside a sad child, gently patting their shoulder with a caring expression. Soft warm lighting.' },
+        { kw: ['동기', '의욕', '열정', '열의', 'motivation', 'passion'], en: 'A Korean woman in uniform energetically leading a group activity, arms raised with enthusiasm. Bright dynamic playroom.' },
+        { kw: ['스트레스', '번아웃', '지침', '힘들', 'stress', 'burnout'], en: 'A Korean woman sitting at a desk looking tired, then taking a deep calming breath. Soft office lighting with a cup of tea.' },
+        // === 예시/비교/설명 ===
+        { kw: ['예를 들', '예시', '예컨대', '사례', 'example', 'for instance'], en: 'A Korean woman presenting a case study on a screen, pointing at real-world examples. Bright training room with projector.' },
+        { kw: ['비교', '차이', '다른', '반면', 'compare', 'difference'], en: 'A split-screen style presentation showing two contrasting approaches side by side. Clean whiteboard with markers.' },
+        { kw: ['중요', '핵심', '기억', '꼭', 'important', 'key', 'remember'], en: 'A Korean woman pointing emphatically at a highlighted key point on a whiteboard with a star mark. Bright training room.' },
+        // === 질문/생각 ===
+        { kw: ['질문', '궁금', '물어', '생각해', 'question', 'wonder', 'think'], en: 'A Korean woman with a thoughtful expression, finger on chin, looking at a question mark on a whiteboard. Bright classroom.' },
+        { kw: ['경험', '겪어', '해본', '시도', 'experience', 'try'], en: 'A Korean woman recalling a memory with a reflective smile, hands gesturing as she tells a story. Warm cozy room.' },
+        // === 집중/몰입 ===
+        { kw: ['집중', '몰입', '집중력', 'focus', 'concentrate'], en: 'A child deeply focused on building with colorful blocks, while Korean teacher observes quietly nearby. Calm bright playroom.' },
+        { kw: ['관찰', '지켜', '바라보', 'observe', 'watch'], en: 'A Korean woman quietly observing children playing from a distance, taking mental notes. Bright open playroom.' },
+        // === 크래용/미술/창작 ===
+        { kw: ['크래용', '색연필', '그림', '그리', '미술', 'crayon', 'draw', 'art'], en: 'A child happily drawing with colorful crayons at a low table. Korean teacher admiring the artwork. Bright art corner with supplies.' },
+        // === 도구/자료 ===
+        { kw: ['도구', '자료', '교구', '재료', 'tool', 'material'], en: 'An organized shelf with labeled educational materials and colorful teaching aids. Bright clean storage room.' },
+        // === 배우다/학습/교육 시작 ===
+        { kw: ['배우겠', '알아보', '살펴', '시작하겠', '학습'], en: 'A Korean woman in professional attire standing at a podium, warmly introducing a training topic. Bright modern training room with screen.' },
+        // === 예민/민감 ===
+        { kw: ['예민', '민감', '섬세', 'sensitive', 'delicate'], en: 'A Korean woman gently and carefully approaching a shy child, crouching low with soft expression. Calm quiet room with warm tones.' },
       ];
 
       for (const s of scenes) {
