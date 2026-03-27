@@ -43,10 +43,7 @@ module.exports = async (req, res) => {
       const isEnglishPrompt = visual && /^[A-Z]/.test(visual.trim()) && visual.length > 30;
       if (isEnglishPrompt) {
         const camera = CAMERA_ANGLES[(sceneIndex * 3) % CAMERA_ANGLES.length];
-        let cleanVisual = visual
-          .replace(/\b(doctor|medical|hospital|lab coat|white coat|stethoscope|patient|clinic|nurse|surgery|examination|scrubs|shirtless|nude|military|police)\b/gi, 'staff member')
-          .replace(/\buniform\b/gi, 'light blue polo shirt and beige apron');
-        prompts = [`${camera} ${cleanVisual}. ${QUALITY_SUFFIX}`];
+        prompts = [`${camera} ${visual}. ${QUALITY_SUFFIX}`];
         console.log(`[Image] Using AI-generated visual prompt`);
       } else {
         // 공유 매핑으로 나레이션 → 영어 프롬프트 변환
