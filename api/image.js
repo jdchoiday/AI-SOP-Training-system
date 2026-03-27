@@ -1,15 +1,13 @@
 // ============================================
-// SiliconFlow FLUX Image Generation API
+// Nano Banana 2 (Gemini 3.1 Flash Image) 이미지 생성 API
 // ============================================
 // POST /api/image
 // Body: { visual, narration, action, sceneIndex, totalScenes }
 //
-// action="generate-multi" → 씬당 이미지 생성 (FLUX, 2~5초)
-// action="status" → 레거시 호환 (즉시 완료)
+// 한국어 나레이션을 직접 이해하고 이미지 생성 (번역 불필요)
 // ============================================
 
-// 통합 씬 프롬프트 매핑 사용 (Single Source of Truth)
-const { CAMERA_ANGLES, BASE_SETTING, NEGATIVE_PROMPT, QUALITY_SUFFIX, narrationToPrompt, extractActions } = require('../js/scene-prompts.js');
+const sharp = (() => { try { return require('sharp'); } catch { return null; } })();
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -19,111 +17,109 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
 
-  const siliconflowKey = process.env.SILICONFLOW_API_KEY;
-  if (!siliconflowKey) return res.status(500).json({ error: 'SILICONFLOW_API_KEY not set' });
-
-  const apiBase = 'https://api.siliconflow.com';
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not set' });
 
   try {
     const { action = 'generate', visual, narration, sceneIndex, totalScenes } = req.body || {};
 
-    // === Status polling (legacy compat - return immediately) ===
     if (action === 'status') {
       return res.status(200).json({ status: 'Succeed', message: 'Image mode - no polling needed' });
     }
 
-    // === Generate multiple images (FLUX) ===
-    if (action === 'generate-multi') {
+    if (action === 'generate-multi' || action === 'generate') {
       if (!visual && !narration) {
         return res.status(400).json({ error: 'visual or narration required' });
       }
 
-      // visual 필드가 영어 이미지 프롬프트면 직접 사용, 아니면 공유 매핑으로 변환
-      let prompts;
-      const isEnglishPrompt = visual && /^[A-Z]/.test(visual.trim()) && visual.length > 30;
-      if (isEnglishPrompt) {
-        const camera = CAMERA_ANGLES[(sceneIndex * 3) % CAMERA_ANGLES.length];
-        prompts = [`${camera} ${visual}. ${QUALITY_SUFFIX}`];
-        console.log(`[Image] Using AI-generated visual prompt`);
-      } else {
-        // 공유 매핑으로 나레이션 → 영어 프롬프트 변환
-        const prompt = narrationToPrompt(narration || '', visual || '', { withCamera: true, cameraIndex: (sceneIndex || 0) * 3 });
-        prompts = [prompt];
-        console.log(`[Image] Using shared narrationToPrompt: ${prompt.slice(0, 80)}...`);
-      }
+      // 카메라 앵글 결정
+      const cameras = ['와이드 샷', '미디엄 샷', '클로즈업', '오버더숄더 샷', '아이레벨 샷'];
+      const camera = cameras[(sceneIndex || 0) % cameras.length];
 
-      console.log(`[Image] Generating ${prompts.length} images...`);
-      const results = await Promise.all(prompts.map(async (prompt, i) => {
-        try {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 25000);
-          const response = await fetch(`${apiBase}/v1/images/generations`, {
+      // 한국어 프롬프트 구성 (Nano Banana는 한국어를 직접 이해)
+      const imagePrompt = `다음 나레이션의 장면을 사실적인 사진으로 생성해주세요.
+
+나레이션: "${narration}"
+
+장면 요구사항:
+- ${camera}으로 촬영
+- 나레이션에 묘사된 상황을 정확하게 시각화
+- 장소: 밝고 현대적인 한국 키즈카페/실내놀이터/교육실 (나레이션 맥락에 맞게)
+- 인물: 20대 한국인 여성, 라이트블루 폴로셔츠와 베이지색 앞치마 착용 (키즈카페 직원)
+- 아이가 등장하면: 실제 한국 유아/어린이
+- 밝고 따뜻한 자연광, 깨끗한 실내
+- 사실적인 다큐멘터리 사진 스타일
+- 16:9 가로 비율
+- 외설적이거나 폭력적인 내용 절대 금지`;
+
+      console.log(`[Image] Nano Banana 2 prompt for scene ${(sceneIndex || 0) + 1}: ${narration.slice(0, 80)}...`);
+
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 45000);
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${geminiKey}`,
+          {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${siliconflowKey}`,
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              model: 'black-forest-labs/FLUX.1-dev',
-              prompt,
-              negative_prompt: NEGATIVE_PROMPT,
-              image_size: '1280x720',
-              num_inference_steps: 20,
+              contents: [{ parts: [{ text: imagePrompt }] }],
+              generationConfig: { responseModalities: ['IMAGE', 'TEXT'] },
             }),
             signal: controller.signal,
-          });
-          clearTimeout(timeout);
-          const data = await response.json();
-          if (data.images && data.images.length > 0) {
-            console.log(`[Image] Clip ${i + 1} success`);
-            return { index: i, imageUrl: data.images[0].url, prompt, error: null };
           }
-          return { index: i, imageUrl: null, prompt, error: data.message || 'No image' };
-        } catch (e) {
-          return { index: i, imageUrl: null, prompt, error: e.message };
+        );
+        clearTimeout(timeout);
+
+        const data = await response.json();
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        const imagePart = parts.find(p => p.inlineData);
+
+        if (imagePart && imagePart.inlineData) {
+          let base64 = imagePart.inlineData.data;
+          let mime = imagePart.inlineData.mimeType || 'image/jpeg';
+          const origSize = Math.round(base64.length / 1024);
+
+          // JPEG 압축 (이미 JPEG이면 리사이즈만, PNG면 변환)
+          if (sharp) {
+            try {
+              const buf = Buffer.from(base64, 'base64');
+              const jpegBuf = await sharp(buf)
+                .resize(1280, 720, { fit: 'cover' })
+                .jpeg({ quality: 82 })
+                .toBuffer();
+              base64 = jpegBuf.toString('base64');
+              mime = 'image/jpeg';
+            } catch (e) { /* sharp 실패 시 원본 그대로 */ }
+          }
+
+          const dataUrl = `data:${mime};base64,${base64}`;
+          console.log(`[Image] Nano Banana 2 OK (${origSize}KB → ${Math.round(base64.length / 1024)}KB)`);
+
+          if (action === 'generate-multi') {
+            return res.status(200).json({
+              type: 'image',
+              images: [{ index: 0, imageUrl: dataUrl, prompt: narration, error: null }],
+            });
+          } else {
+            return res.status(200).json({ type: 'image', imageUrl: dataUrl, prompt: narration });
+          }
         }
-      }));
 
-      const successCount = results.filter(r => r.imageUrl).length;
-      console.log(`[Image] Done: ${successCount}/${results.length} images`);
+        // 텍스트만 반환된 경우 (이미지 생성 거부 등)
+        const textPart = parts.find(p => p.text);
+        const errorMsg = textPart?.text || data.error?.message || 'No image generated';
+        console.error(`[Image] Nano Banana 2 no image: ${errorMsg.slice(0, 100)}`);
+        return res.status(500).json({ error: errorMsg });
 
-      return res.status(200).json({ type: 'image', images: results });
+      } catch (e) {
+        console.error(`[Image] Nano Banana 2 failed: ${e.message}`);
+        return res.status(500).json({ error: e.message });
+      }
     }
 
-    // === Single image (legacy) ===
-    if (!visual && !narration) {
-      return res.status(400).json({ error: 'visual or narration required' });
-    }
-
-    const prompt = narrationToPrompt(narration || '', visual || '', { withCamera: true });
-    console.log(`[Image] Single: ${prompt.slice(0, 120)}...`);
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 25000);
-    const response = await fetch(`${apiBase}/v1/images/generations`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${siliconflowKey}`,
-      },
-      body: JSON.stringify({
-        model: 'black-forest-labs/FLUX.1-schnell',
-        prompt: prompt,
-        negative_prompt: NEGATIVE_PROMPT,
-        image_size: '1280x720',
-        num_inference_steps: 4,
-      }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-
-    const data = await response.json();
-
-    if (data.images && data.images.length > 0) {
-      return res.status(200).json({ type: 'image', imageUrl: data.images[0].url, prompt });
-    }
-
-    return res.status(500).json({ error: data.message || 'Image generation failed' });
+    return res.status(400).json({ error: 'Unknown action' });
 
   } catch (err) {
     console.error('[Image] Error:', err);

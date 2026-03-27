@@ -107,7 +107,7 @@ window.AI_CONFIG = window.AI_CONFIG || {
 
   // 모델 설정
   models: {
-    gemini: 'gemini-2.0-flash',              // 무료 티어, 빠르고 저렴
+    gemini: 'gemini-2.5-flash',              // 무료 티어, 빠르고 저렴
     openai: 'gpt-4o-mini',                   // 가장 저렴한 OpenAI 모델
     groq: 'llama-3.3-70b-versatile',         // 무료, 빠름
     wan: 'Wan-AI/Wan2.2-T2V-A14B',           // $0.29/클립, 720p, 가성비 최고
