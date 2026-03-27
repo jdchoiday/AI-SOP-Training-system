@@ -176,7 +176,7 @@ const CAMERA_ANGLES = [
 
 // 기본 세팅 & 네거티브 프롬프트
 const BASE_SETTING = 'Candid photo in a bright modern workplace. Warm natural lighting. Shot on Canon EOS R5, 35mm lens, f/2.8, natural window lighting.';
-const NEGATIVE_PROMPT = 'deformed, ugly, blurry, bad anatomy, extra limbs';
+const NEGATIVE_PROMPT = 'nude, naked, nsfw, shirtless, revealing, suggestive, sexual, deformed, ugly, blurry, bad anatomy, extra limbs';
 const QUALITY_SUFFIX = 'Candid editorial photography, natural skin texture, realistic warm lighting, 8k uhd.';
 
 /**
