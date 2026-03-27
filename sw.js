@@ -1,5 +1,5 @@
 // Service Worker — 오프라인 캐싱
-const CACHE_NAME = 'sop-training-v7';
+const CACHE_NAME = 'sop-training-v8';
 const ASSETS = [
   '/',
   '/index.html',
@@ -60,13 +60,17 @@ self.addEventListener('fetch', e => {
   // API 호출은 캐시하지 않음
   if (e.request.url.includes('googleapis.com') ||
       e.request.url.includes('supabase.co') ||
-      e.request.url.includes('siliconflow.com') ||
+      e.request.url.includes('siliconflow') ||
       e.request.url.includes('/api/') ||
-      e.request.url.includes('speech.platform.bing.com')) {
+      e.request.url.includes('speech.platform.bing.com') ||
+      e.request.url.includes('s3.') ||
+      e.request.url.includes('temporary/outputs')) {
     return;
   }
-  // 네트워크 우선, 실패 시 캐시
+  // 네트워크 우선, 실패 시 캐시 (undefined 방지)
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+    fetch(e.request).catch(() =>
+      caches.match(e.request).then(r => r || new Response('Offline', { status: 503 }))
+    )
   );
 });

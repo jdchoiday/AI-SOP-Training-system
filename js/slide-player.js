@@ -1145,6 +1145,7 @@ const SlidePlayer = (() => {
       if (audioUrl) {
         _setVoiceStatus('speaking');
         _preloadNext();
+        _preloadNextImage();
         await _playAudioFromUrl(audioUrl);
       } else {
         _setVoiceStatus('speaking');

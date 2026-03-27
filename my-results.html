@@ -197,7 +197,7 @@
           <h2>${t.certificate}</h2>
           <p style="opacity:0.8;">${t.certSub}</p>
           <p class="cert-name">${user.name || t.staff}</p>
-          <p style="font-size:14px;">${t.certDesc.replace('\n', '<br>')}</p>
+          <p style="font-size:14px;">${t.certDesc.replace(/\n/g, '<br>')}</p>
           <p class="cert-detail">${t.certDetail(chapters.length, totalVids, avg)}</p>
           <p class="cert-date">${dateStr}</p>
           <button onclick="downloadCertificate()" style="margin-top:20px; background:white; color:#2563eb; border:none; border-radius:8px; padding:12px 32px; font-size:15px; font-weight:700; cursor:pointer;">${t.saveCert}</button>

@@ -1843,6 +1843,50 @@ ${text.slice(0, 3000)}`;
 
     // ===== 개별 씬 이미지 생성 =====
     // ===== 이미지 프롬프트 생성 템플릿 =====
+    // === 로컬 프롬프트 변환 (Gemini 없이 작동) ===
+    function _localPromptFromNarration(narration) {
+      const text = narration.toLowerCase();
+      const cameras = ['Wide shot.', 'Medium shot.', 'Close-up shot.', 'Over-the-shoulder shot.'];
+      const cam = cameras[Math.floor(Math.random() * cameras.length)];
+
+      // 키워드 → 구체적 영어 장면
+      const scenes = [
+        { kw: ['손 씻', '손씻', 'hand wash', '비누', 'soap'], en: 'A young Korean woman in a light blue apron carefully washing her hands with soap and water under a stainless steel faucet. Clean modern kitchen with white tiles and bright lighting.' },
+        { kw: ['손바닥', '문질러', '문지르'], en: 'Close-up of two hands rubbing palms together under running water with soap bubbles. Clean sink area with bright overhead lighting.' },
+        { kw: ['손가락', '손톱', '엄지'], en: 'Close-up of hands carefully cleaning between fingers and under fingernails with soap. Bright clean washroom.' },
+        { kw: ['세균', '감염', '예방', '위생', '균'], en: 'A colorful educational infographic poster about germs and hygiene displayed on a clean white wall. Bright classroom setting with warm lighting.' },
+        { kw: ['인사', '환영', '안녕', 'greeting', 'welcome'], en: 'A smiling young Korean woman in neat beige uniform bowing warmly to welcome visitors at a bright modern reception desk with plants.' },
+        { kw: ['교육', '철학', '가치', '핵심', '믿음'], en: 'A young Korean woman in smart casual clothes sitting at a round wooden table, thoughtfully reading an open book. Cozy meeting room with bookshelves and warm lighting.' },
+        { kw: ['아이', '어린이', '유아', '아동', 'child', 'kid'], en: 'A friendly Korean woman in a colorful apron kneeling down to eye level with small happy children in a bright playroom with colorful toys.' },
+        { kw: ['청소', '소독', '닦', '쓸', 'clean'], en: 'A person in a clean uniform wiping down a table surface with a spray bottle and cloth. Bright tidy room with organized shelves.' },
+        { kw: ['점검', '체크', '확인', 'check', 'inspect'], en: 'A young Korean woman in uniform holding a clipboard and checking items on a checklist. Well-organized storage room with labeled shelves.' },
+        { kw: ['안전', '주의', '위험', 'safety'], en: 'A safety instruction sign on a wall next to well-organized equipment. Bright clean facility with safety markings on the floor.' },
+        { kw: ['출근', '시작', '아침', 'morning'], en: 'A young Korean woman in neat uniform walking through a bright modern entrance in the early morning. Clean lobby with warm sunrise light.' },
+        { kw: ['마무리', '정리', '퇴근', '끝', 'end'], en: 'A tidy organized workspace at the end of the day. Neatly arranged supplies on shelves, clean desk. Warm evening lighting through windows.' },
+        { kw: ['요약', '정리', '복습', 'summary', 'review'], en: 'A clean whiteboard with colorful bullet points and key takeaways written in neat handwriting. Bright meeting room with warm lighting.' },
+        { kw: ['음식', '식사', '간식', '요리', 'food', 'meal'], en: 'A clean modern kitchen counter with neatly prepared healthy snacks on colorful plates. Bright kitchen with stainless steel appliances.' },
+        { kw: ['놀이', '게임', '활동', 'play', 'activity'], en: 'A bright colorful playroom with organized educational toys, building blocks, and art supplies on low tables. Warm natural lighting.' },
+        { kw: ['규칙', '규정', '절차', 'rule', 'procedure'], en: 'A neatly organized binder open on a desk showing clear step-by-step procedures with diagrams. Clean modern office desk with warm lighting.' },
+        { kw: ['팀', '동료', '협력', 'team', 'cooperat'], en: 'Two young Korean women in matching uniforms having a friendly discussion at a round table. Bright meeting room with a whiteboard.' },
+        { kw: ['부모', '학부모', '보호자', 'parent'], en: 'A Korean woman in professional attire having a warm conversation with parents across a desk. Bright friendly office with plants.' },
+        { kw: ['레지오', '에밀리아', '탐구', '호기심', '발견'], en: 'A bright classroom with children exploring nature items on a table - leaves, rocks, magnifying glass. Korean teacher observing nearby with a smile.' },
+        { kw: ['성장', '발달', '배움', 'growth', 'learn'], en: 'A wall display showing childrens colorful artwork and growth charts. Bright cheerful hallway with warm lighting.' },
+        { kw: ['언어', '영어', '베트남', 'language'], en: 'A colorful classroom wall with multilingual posters in Korean, English and Vietnamese. Bright educational environment.' },
+        { kw: ['인성', '감사', '미안', '존중', 'character'], en: 'A warm illustration-style poster showing children sharing and helping each other. Displayed in a bright classroom with soft lighting.' },
+        { kw: ['긴장', '걱정', '실수', '처음', 'nervous'], en: 'A young Korean woman taking a deep breath at a doorway, about to enter a bright room. Warm encouraging atmosphere.' },
+        { kw: ['관심', '사랑', '마음', 'care', 'heart'], en: 'A Korean woman gently holding a small hand-made heart card, smiling warmly. Soft bright background with warm tones.' },
+      ];
+
+      for (const s of scenes) {
+        if (s.kw.some(k => text.includes(k))) {
+          return `${cam} ${s.en} Professional training video screenshot, 8k quality.`;
+        }
+      }
+
+      // 매칭 안 되면 일반적 교육 장면
+      return `${cam} A young Korean woman in neat professional uniform standing in a bright modern workspace. Clean organized interior with warm natural lighting. Professional training video screenshot, 8k quality.`;
+    }
+
     function _buildImagePrompt(narration) {
       // SOP 제목에서 환경 자동 감지
       const sops = getSops();
@@ -1850,33 +1894,24 @@ ${text.slice(0, 3000)}`;
       const sopTitle = sidx >= 0 ? sops[sidx].title : '';
       const sopContent = sidx >= 0 ? (sops[sidx].content || '').slice(0, 500) : '';
 
-      return `You are an expert at creating image prompts for a staff training video.
-
-Read this narration carefully and create ONE English image prompt that PRECISELY illustrates the SPECIFIC action, concept, or situation described.
+      return `You create image generation prompts for training videos.
 
 SOP TITLE: "${sopTitle}"
 NARRATION: "${narration}"
 
-CRITICAL RULES:
-1. UNDERSTAND THE MEANING: The image must visually represent what the narration is ACTUALLY saying. Not a generic scene.
-2. INFER THE SETTING from the SOP title and narration content. Examples:
-   - If about kindergarten/preschool → bright Korean kindergarten classroom
-   - If about kids cafe/playground → colorful indoor kids playground
-   - If about restaurant/cafe → clean modern Korean restaurant
-   - If about retail/store → bright retail store interior
-   - If about office work → modern Korean office
-   - If about cleaning/hygiene → appropriate workplace setting
-3. INFER THE PEOPLE from context. Don't always show the same character. Match the role:
-   - Teacher → friendly young Korean woman in appropriate uniform
-   - Chef → person in chef attire
-   - Staff → person in neat work uniform
-   - Manager → professional-looking person
-4. VARY the composition: close-ups for details, wide shots for environments, medium shots for interactions
-5. Style: Warm, bright, professional. Clean and educational.
-6. ABSOLUTELY FORBIDDEN: nudity, shirtless, suggestive, violent, scary, medical/hospital, dark, gloomy, doctors, lab coats
-7. Keep it CHILD-SAFE and PROFESSIONAL at all times
+TASK: Write ONE English prompt (50-80 words) describing a SPECIFIC scene that matches this narration.
 
-Output ONLY the image prompt (50-80 words), nothing else.`;
+MANDATORY FORMAT - your prompt MUST follow this structure:
+"[Camera angle]. [Specific person description] [doing specific action matching narration]. [Specific setting matching SOP context]. Warm bright lighting, clean interior, professional photo."
+
+EXAMPLES:
+- Narration about handwashing → "Medium shot. A young Korean woman in a light blue apron carefully washing her hands with soap under running water at a stainless steel sink. Clean modern kitchen with white tiles. Warm bright lighting, professional photo."
+- Narration about greeting → "Wide shot. A smiling Korean woman in beige uniform bowing slightly to welcome a family at a bright reception desk. Modern lobby with plants. Warm lighting, professional photo."
+- Narration about teaching philosophy → "Close-up shot. A Korean woman in casual professional clothes sitting at a round table, looking warmly at materials spread on the table. Cozy meeting room with bookshelves. Soft warm lighting, professional photo."
+
+BANNED WORDS (NEVER use these): doctor, medical, hospital, lab coat, stethoscope, patient, clinic, nurse, surgery, examination, shirtless, nude, military, police, judge, lawyer
+
+Output ONLY the prompt, nothing else.`;
     }
 
     window._genSingleImage = async function(sceneIdx, btnEl) {
@@ -1890,11 +1925,15 @@ Output ONLY the image prompt (50-80 words), nothing else.`;
       btnEl.textContent = '⏳ 생성 중...';
 
       try {
-        let imgPrompt = 'A professional Korean staff member in a bright, clean modern workplace. Warm natural lighting, educational training scene.';
+        let imgPrompt = _localPromptFromNarration(scene.narration);
+        console.log('[Image] 로컬 프롬프트:', imgPrompt.slice(0, 80) + '...');
         try {
           const g = await callGemini(_buildImagePrompt(scene.narration));
-          if (g && g.length > 20) imgPrompt = g.trim().replace(/^["']|["']$/g, '');
-        } catch (e) { console.warn('Gemini prompt failed:', e.message); }
+          if (g && g.length > 20) {
+            imgPrompt = g.trim().replace(/^["']|["']$/g, '');
+            console.log('[Image] Gemini 업그레이드:', imgPrompt.slice(0, 80) + '...');
+          }
+        } catch (e) { console.warn('[Image] Gemini 실패, 로컬 사용:', e.message); }
 
         const imgRes = await fetch('/api/image', {
           method: 'POST',
@@ -2276,11 +2315,15 @@ Output ONLY the image prompt (50-80 words), nothing else.`;
       if (imgArea) imgArea.innerHTML = `<div style="text-align:center;"><div style="font-size:48px;">⏳</div><div style="color:#6b7280;font-size:16px;margin-top:12px;">이미지 생성 중...</div></div>`;
 
       try {
-        let imgPrompt = 'A professional Korean staff member in a bright, clean modern workplace. Warm natural lighting, educational training scene.';
+        let imgPrompt = _localPromptFromNarration(scene.narration);
+        console.log('[Image] 로컬 프롬프트:', imgPrompt.slice(0, 80) + '...');
         try {
           const g = await callGemini(_buildImagePrompt(scene.narration));
-          if (g && g.length > 20) imgPrompt = g.trim().replace(/^["']|["']$/g, '');
-        } catch (e) { console.warn('Gemini prompt failed:', e.message); }
+          if (g && g.length > 20) {
+            imgPrompt = g.trim().replace(/^["']|["']$/g, '');
+            console.log('[Image] Gemini 업그레이드:', imgPrompt.slice(0, 80) + '...');
+          }
+        } catch (e) { console.warn('[Image] Gemini 실패, 로컬 사용:', e.message); }
 
         const imgRes = await fetch('/api/image', {
           method: 'POST',
@@ -2371,9 +2414,9 @@ Output ONLY the image prompt (50-80 words), nothing else.`;
 
       try {
         // 1) Gemini → 영어 이미지 프롬프트
-        let imgPrompt = 'A friendly young female Korean kindergarten teacher in light blue polo uniform with name badge, standing in a bright colorful modern Korean preschool classroom with happy toddlers. Warm natural lighting, clean interior.';
+        let imgPrompt = 'A professional Korean staff member in a bright, clean modern workplace. Warm natural lighting, educational training scene.';
         try {
-          const gen = await callGemini(`Convert this narration into ONE English image prompt (under 80 words). Output ONLY the prompt.\n\nRULES:\n- Setting: bright kindergarten/preschool classroom or indoor kids playground\n- People: friendly young female Korean teacher in light blue polo uniform\n- Children: happy toddlers aged 3-6\n- NEVER: doctors, lab coats, medical, hospitals, offices, shirtless\n- Always child-friendly safe environment\n\nNarration: ${scene.narration}`);
+          const gen = await callGemini(_buildImagePrompt(scene.narration));
           if (gen && gen.length > 20) imgPrompt = gen.trim();
           if (msg) msg.textContent = '이미지 생성 중...';
         } catch (e) {}
@@ -2987,7 +3030,7 @@ Output ONLY the image prompt (50-80 words), nothing else.`;
       csv.split('\n').filter(l => l.trim()).forEach(line => {
         const [name, email, branch, role] = line.split(',').map(s => s.trim());
         if (name && email && !emps.find(e => e.email === email)) {
-          emps.push({ id: 'emp-' + Date.now() + '-' + added, name, email, branch: branch || '미지정', role: role || 'staff', created: new Date().toISOString().slice(0, 10) });
+          emps.push({ id: 'emp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), name, email, branch: branch || '미지정', role: role || 'staff', created: new Date().toISOString().slice(0, 10) });
           added++;
         }
       });
@@ -3005,8 +3048,9 @@ Output ONLY the image prompt (50-80 words), nothing else.`;
       if (!name || !email) { alert('이름과 이메일을 입력하세요'); return; }
 
       const emps = EmployeeStore.getAll();
+      if (emps.find(e => e.email === email)) { alert('이미 등록된 이메일입니다'); return; }
       emps.push({
-        id: 'emp-' + Date.now(),
+        id: 'emp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
         name, email, branch, role,
         created: new Date().toISOString().slice(0, 10)
       });
@@ -3232,29 +3276,8 @@ Requirements:
           console.warn('[Video] Gemini prompt failed, using fallback:', e.message);
         }
 
-        // 폴백: 키워드 매칭
-        const sceneMap = {
-          '타이틀': 'Camera slowly zooming into a bright colorful kids cafe entrance with a welcoming sign',
-          '출근': 'A staff member arriving at a kids cafe in the early morning, walking through the entrance',
-          '체크인': 'A staff member checking in at a digital attendance kiosk and putting on uniform',
-          '점검': 'A staff member carefully inspecting colorful playground equipment with a clipboard',
-          '청소': 'A staff member mopping the floor with a professional mop in a kids cafe',
-          '소독': 'A staff member spraying disinfectant and wiping down play equipment',
-          '인사': 'A smiling staff member warmly greeting a parent and child at the entrance',
-          '입장': 'A staff member welcoming a family, checking admission bracelets',
-          '안전': 'A staff member supervising children playing safely in the play area',
-          '비상': 'Staff following emergency evacuation procedures calmly',
-          '정산': 'End of day cash register settlement, staff counting money',
-          '잠금': 'A staff member locking the entrance and setting security alarm',
-          '요약': 'A training summary board displaying key points with checkmarks',
-        };
-        const combined = (visual || '') + ' ' + (narration || '');
-        for (const [ko, en] of Object.entries(sceneMap)) {
-          if (combined.includes(ko)) {
-            return `${en}. Bright warm lighting, clean modern Korean kids cafe, professional training video, smooth camera, 720p.`;
-          }
-        }
-        return 'A modern Korean kids indoor playground with colorful equipment and friendly staff. Professional training video, bright warm lighting, 720p.';
+        // 폴백: 일반적인 교육 장면
+        return 'A professional Korean staff member in a bright clean modern workplace. Warm lighting, educational training scene, professional video style, 720p.';
       }
 
       if (!skipConfirm) {

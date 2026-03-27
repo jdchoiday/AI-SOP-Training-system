@@ -46,11 +46,19 @@ module.exports = async function handler(req, res) {
     let lastError = null;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 25000);
+      let response;
+      try {
+        response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
 
       const data = await response.json();
 

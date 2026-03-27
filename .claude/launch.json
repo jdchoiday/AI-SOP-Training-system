@@ -4,7 +4,7 @@
     {
       "name": "sop-training",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["-e", "const h=require('http'),f=require('fs'),p=require('path'),url=require('url'),m={'html':'text/html','css':'text/css','js':'application/javascript','json':'application/json','png':'image/png','jpg':'image/jpeg','svg':'image/svg+xml','ico':'image/x-icon'};h.createServer((q,r)=>{let parsed=url.parse(q.url);let pathname=parsed.pathname==='/'?'/index.html':parsed.pathname;let fp=p.join('.',decodeURIComponent(pathname));f.readFile(fp,(e,d)=>{if(e){r.writeHead(404);r.end('Not found');return;}let ext=p.extname(fp).slice(1);r.writeHead(200,{'Content-Type':(m[ext]||'application/octet-stream')+';charset=utf-8'});r.end(d);});}).listen(3000,()=>console.log('Server running on http://localhost:3000'));"],
+      "runtimeArgs": ["server.js"],
       "port": 3000
     }
   ]
