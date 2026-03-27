@@ -663,6 +663,7 @@
     <div class="modal" id="modalContent"></div>
   </div>
 
+  <script src="../js/scene-prompts.js"></script>
   <script src="../js/config.js"></script>
   <script src="../js/supabase-client.js"></script>
   <script src="../js/ai-provider.js"></script>
@@ -1843,8 +1844,13 @@ ${text.slice(0, 3000)}`;
 
     // ===== 개별 씬 이미지 생성 =====
     // ===== 이미지 프롬프트 생성 템플릿 =====
-    // === 로컬 프롬프트 변환 (Gemini 없이 작동) ===
+    // === 로컬 프롬프트 변환 (공유 모듈 scene-prompts.js 사용) ===
     function _localPromptFromNarration(narration) {
+      // 공유 모듈이 로드되었으면 사용 (Single Source of Truth)
+      if (window.ScenePrompts) {
+        return window.ScenePrompts.narrationToPrompt(narration, '', { withCamera: true });
+      }
+      // fallback (scene-prompts.js 로드 실패 시)
       const text = narration.toLowerCase();
       const cameras = ['Wide shot.', 'Medium shot.', 'Close-up shot.', 'Over-the-shoulder shot.'];
       const cam = cameras[Math.floor(Math.random() * cameras.length)];

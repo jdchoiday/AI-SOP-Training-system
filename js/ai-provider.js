@@ -193,7 +193,9 @@ ${plainText}
             /^scene\s*\d/i.test(scene.visual) ||
             /training content/i.test(scene.visual) ||
             /slide/i.test(scene.visual)) {
-          scene.visual = this._narrationToVisual(scene.narration || '', '');
+          scene.visual = window.ScenePrompts
+            ? window.ScenePrompts.narrationToPrompt(scene.narration || '', '', { withCamera: false })
+            : this._narrationToVisual(scene.narration || '', '');
         }
       });
       return parsed;
@@ -380,7 +382,9 @@ ${sopContext}
       script.push({
         scene: i + 2,
         narration,
-        visual: this._narrationToVisual(narration, section)
+        visual: window.ScenePrompts
+          ? window.ScenePrompts.narrationToPrompt(narration, section, { withCamera: false })
+          : this._narrationToVisual(narration, section)
       });
     });
 
