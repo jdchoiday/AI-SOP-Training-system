@@ -41,7 +41,9 @@ module.exports = async (req, res) => {
       if (isEnglishPrompt) {
         // AI가 생성한 영어 프롬프트를 카메라/스타일과 결합
         const camera = CAMERA_ANGLES[(sceneIndex * 3) % CAMERA_ANGLES.length];
-        prompts = [`${camera} ${visual}. Korean kindergarten teacher in light blue polo uniform. Bright colorful preschool classroom with educational toys. Shot on Canon EOS R5, 35mm lens, f/2.8, natural window lighting. Raw photo, realistic lighting, 8k uhd.`];
+        // visual에서 banned words 제거
+        let cleanVisual = visual.replace(/\b(doctor|medical|hospital|lab coat|stethoscope|patient|clinic|nurse|surgery|examination|shirtless|nude|military|police)\b/gi, 'staff member');
+        prompts = [`${camera} ${cleanVisual}. Shot on Canon EOS R5, 35mm lens, f/2.8, natural window lighting. Raw photo, realistic lighting, 8k uhd.`];
         console.log(`[Image] Using AI-generated visual prompt`);
       } else {
         prompts = buildScenePrompts(narration || '', visual || '', sceneIndex || 0, totalScenes || 6);
@@ -51,6 +53,8 @@ module.exports = async (req, res) => {
       console.log(`[Image] Generating ${prompts.length} images in parallel...`);
       const results = await Promise.all(prompts.map(async (prompt, i) => {
         try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 25000);
           const response = await fetch(`${apiBase}/v1/images/generations`, {
             method: 'POST',
             headers: {
@@ -64,7 +68,9 @@ module.exports = async (req, res) => {
               image_size: '1280x720',
               num_inference_steps: 20,
             }),
+            signal: controller.signal,
           });
+          clearTimeout(timeout);
           const data = await response.json();
           if (data.images && data.images.length > 0) {
             console.log(`[Image] Clip ${i + 1} success`);
@@ -93,6 +99,8 @@ module.exports = async (req, res) => {
     const prompt = buildSinglePrompt(visual || '', narration || '');
     console.log(`[Image] Single: ${prompt.slice(0, 120)}...`);
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25000);
     const response = await fetch(`${apiBase}/v1/images/generations`, {
       method: 'POST',
       headers: {
@@ -106,7 +114,9 @@ module.exports = async (req, res) => {
         image_size: '1280x720',
         num_inference_steps: 4,
       }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     const data = await response.json();
 
@@ -126,8 +136,8 @@ module.exports = async (req, res) => {
 // 프롬프트 시스템
 // ============================================
 
-const BASE_SETTING = 'Candid photo of a friendly young Korean female kindergarten teacher in light blue polo uniform shirt with name badge, in a bright colorful modern Korean preschool classroom with child-sized furniture and educational toys. Warm natural lighting, clean safe interior. Shot on Canon EOS R5, 35mm lens, f/2.8, natural window lighting.';
-const NEGATIVE_PROMPT = 'nude, naked, nsfw, shirtless, undressed, revealing, suggestive, violent, gore, blood, weapon, scary, horror, dark, inappropriate, doctor, lab coat, medical, hospital, office, factory, suit, formal wear';
+const BASE_SETTING = 'Candid photo in a bright, clean modern Korean workplace. Professional staff in neat uniform. Warm natural lighting, clean safe interior. Shot on Canon EOS R5, 35mm lens, f/2.8, natural window lighting.';
+const NEGATIVE_PROMPT = 'nude, naked, nsfw, shirtless, undressed, revealing, suggestive, violent, gore, blood, weapon, scary, horror, dark, inappropriate, doctor, lab coat, medical, hospital, stethoscope, clinic, nurse, surgery, patient, examination room, military, police, judge, lawyer, courtroom, prison, tattoo, piercing, smoking, alcohol, drugs, deformed, ugly, blurry, bad anatomy, extra limbs';
 
 const CAMERA_ANGLES = [
   'Wide establishing shot,',

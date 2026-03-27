@@ -1182,7 +1182,7 @@ ${narration.slice(0, 1500)}
         const btn = document.createElement('button');
         btn.className = 'quiz-option';
         btn.textContent = opt;
-        btn.addEventListener('click', () => handleAnswer(i, q.correct, options.length));
+        btn.addEventListener('click', () => handleAnswer(i, q.correct));
         optionsDiv.appendChild(btn);
       });
 
@@ -1472,7 +1472,11 @@ ${narration.slice(0, 1500)}
         }
       });
       var mp=mcT>0?Math.round((mcC/mcT)*100):0, sp=saT>0?Math.round(saS/saT):0;
-      var os=Math.round(mp*0.7+sp*0.3), gr=calcGrade(os);
+      var os;
+      if(saT===0) os=mp;
+      else if(mcT===0) os=sp;
+      else os=Math.round(mp*0.7+sp*0.3);
+      var gr=calcGrade(os);
       saveExamResult(chapterId,{score:os,mcScore:mp,saScore:sp,answers:da,completedAt:new Date().toISOString(),grade:gr});
       showExamResults(os,mp,sp,gr,da);
     }
