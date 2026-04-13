@@ -3153,7 +3153,7 @@ Output ONLY the prompt, nothing else.`;
       }
 
       const total = needGen.length;
-      if (!confirm(`${total}개 씬의 이미지를 생성합니다.\n예상 비용: ~$${(total * 0.02).toFixed(2)}\n예상 시간: ~${Math.ceil(total * 3)}초 (3개씩 병렬 생성)\n\n진행하시겠습니까?`)) return;
+      if (!confirm(`${total}개 씬의 이미지를 생성합니다.\n예상 비용: ~$${(total * 0.02).toFixed(2)}\n예상 시간: ~${Math.ceil(total * 8)}초 (1개씩 순차 + 재시도)\n\n진행하시겠습니까?`)) return;
 
       // 프로그레스 바 표시
       const progressId = 'imgGenProgress';
@@ -3179,9 +3179,9 @@ Output ONLY the prompt, nothing else.`;
 
       let done = 0;
       let failed = 0;
-      const BATCH_SIZE = 2; // 2개씩 (Gemini 레이트 리밋 방지)
+      const BATCH_SIZE = 1; // 1개씩 순차 (Gemini 안정성 최우선)
       const FETCH_TIMEOUT = 55000; // 55초 (Vercel 60초 제한보다 약간 짧게)
-      const RETRY_MAX = 1; // 실패 시 1회 재시도
+      const RETRY_MAX = 2; // 실패 시 2회 재시도
 
       // 타임아웃 포함 fetch 헬퍼
       async function fetchWithTimeout(url, options, timeoutMs) {
@@ -3220,8 +3220,11 @@ Output ONLY the prompt, nothing else.`;
           }
         } catch (e) {
           if (retry < RETRY_MAX) {
-            console.warn(`씬 ${scene.scene} 재시도 (${retry + 1}/${RETRY_MAX}):`, e.message);
-            await new Promise(r => setTimeout(r, 3000)); // 3초 대기 후 재시도
+            const waitSec = 5 + retry * 5; // 5초, 10초 대기
+            console.warn(`씬 ${scene.scene} 재시도 (${retry + 1}/${RETRY_MAX}), ${waitSec}초 대기:`, e.message);
+            const statusEl = document.getElementById('imgGenStatus');
+            if (statusEl) statusEl.textContent = `씬 ${scene.scene} 실패 — ${waitSec}초 후 재시도 (${retry + 1}/${RETRY_MAX})...`;
+            await new Promise(r => setTimeout(r, waitSec * 1000));
             return generateOneImage(scene, sceneIdx, retry + 1);
           }
           console.error(`씬 ${scene.scene} 최종 실패:`, e.message);
@@ -3249,10 +3252,33 @@ Output ONLY the prompt, nothing else.`;
         // 배치마다 중간 저장 (alert 방지: try/catch)
         try { saveSops(sops); } catch(e) { console.warn('[Save] 중간 저장 실패:', e.message); }
 
-        // 배치 간 딜레이 (레이트 리밋 방지, 점점 늘림)
+        // 씬 간 딜레이 (레이트 리밋 방지, 점점 늘림)
         if (b + BATCH_SIZE < sceneJobs.length) {
-          const delay = 2000 + Math.floor(b / BATCH_SIZE) * 500; // 2초~점진 증가
-          await new Promise(r => setTimeout(r, Math.min(delay, 5000)));
+          const delay = 3000 + Math.floor(b / BATCH_SIZE) * 1000; // 3초~점진 증가 (최대 8초)
+          const statusEl = document.getElementById('imgGenStatus');
+          if (statusEl) statusEl.textContent = `다음 씬 준비 중... (${Math.round(delay/1000)}초 대기)`;
+          await new Promise(r => setTimeout(r, Math.min(delay, 8000)));
+        }
+      }
+
+      // 실패한 씬들 마지막 재시도 (한 번 더)
+      if (failed > 0) {
+        const failedJobs = sceneJobs.filter(i => !sop.script[i].imageUrl);
+        if (failedJobs.length > 0) {
+          const statusEl = document.getElementById('imgGenStatus');
+          if (statusEl) statusEl.textContent = `❌ ${failedJobs.length}개 실패 씬 최종 재시도 중... (10초 대기)`;
+          await new Promise(r => setTimeout(r, 10000)); // 10초 충분히 대기
+
+          for (const i of failedJobs) {
+            if (statusEl) statusEl.textContent = `🔄 씬 ${sop.script[i].scene} 최종 재시도...`;
+            const ok = await generateOneImage(sop.script[i], i, 0);
+            if (ok) {
+              failed--;
+              const countEl = document.getElementById('imgGenCount');
+              if (countEl) countEl.textContent = `${done} / ${total}` + (failed > 0 ? ` (❌${failed})` : ' ✅');
+            }
+            await new Promise(r => setTimeout(r, 5000)); // 씬 간 5초 대기
+          }
         }
       }
 

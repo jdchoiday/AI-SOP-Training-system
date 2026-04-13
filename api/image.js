@@ -45,7 +45,7 @@ module.exports = async (req, res) => {
 
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 45000);
+        const timeout = setTimeout(() => controller.abort(), 50000); // 50초 (Vercel 60초 내)
 
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${geminiKey}`,
