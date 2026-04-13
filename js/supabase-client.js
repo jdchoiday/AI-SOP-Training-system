@@ -160,6 +160,10 @@ const SupabaseMode = {
             // 스크립트/퀴즈: Supabase 데이터 우선, 없으면 localStorage 보존
             script: d.script || local.script || null,
             quizzes: d.quizzes || local.quizzes || null,
+            // 챕터/섹션 계층 구조 (v8)
+            doc_type: d.doc_type || local.doc_type || (d.id.startsWith('chapter-') ? 'chapter' : 'section'),
+            parent_id: d.parent_id || local.parent_id || null,
+            exam_quizzes: d.exam_quizzes || local.exam_quizzes || null,
             createdAt: d.created_at || new Date().toISOString(),
           };
         });

@@ -1403,10 +1403,21 @@
     function getSops() {
       const sops = JSON.parse(localStorage.getItem('sop_documents') || '[]');
       sops.forEach(sop => {
+        // doc_type 자동 추론 (Supabase 싱크 시 누락 방지)
+        if (!sop.doc_type) {
+          sop.doc_type = sop.id.startsWith('chapter-') ? 'chapter' : 'section';
+        }
+        // parent_id 자동 복구: category가 ChXX 형태이면 해당 챕터에 연결
+        if (sop.doc_type === 'section' && !sop.parent_id && sop.category) {
+          const chMatch = sop.category.match(/^[Cc]h(\d+)$/);
+          if (chMatch) {
+            const chKey = 'ch' + String(parseInt(chMatch[1])).padStart(2, '0');
+            const parent = sops.find(s => s.id.startsWith('chapter-') && s.id.includes(chKey));
+            if (parent) sop.parent_id = parent.id;
+          }
+        }
         if (sop.script) sop.script.forEach((sc, idx) => {
-          // idb: 잔여 참조 정리 (이전 버전 호환)
           if (sc.imageUrl && sc.imageUrl.startsWith('idb:')) sc.imageUrl = null;
-          // 별도 저장소에서 이미지 복원
           if (sc.imageUrl && sc.imageUrl.startsWith('__stored__:')) {
             const stored = getSceneImage(sop.id, idx);
             sc.imageUrl = stored || null;
