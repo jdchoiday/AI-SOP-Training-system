@@ -1946,74 +1946,115 @@
       renderSopList();
     }
 
-    // ===== 파일 업로드 → SOP 변환 =====
+    // ===== 파일명 → 챕터/섹션 자동 파싱 =====
+    // 지원 패턴: Ch02_Sec01_제목_한글_v1_202604, ch3-sec2-title, Chapter1_Section3_...
+    function parseChapterSection(filename) {
+      const name = filename.replace(/\.[^/.]+$/, ''); // 확장자 제거
+      // 패턴 1: Ch02_Sec01_제목... 또는 ch02-sec01-제목...
+      const m1 = name.match(/[Cc]h(?:apter)?[_\-\s]*(\d+)[_\-\s]*[Ss]ec(?:tion)?[_\-\s]*(\d+)[_\-\s]*(.*)/);
+      if (m1) {
+        const chNum = parseInt(m1[1]);
+        const secNum = parseInt(m1[2]);
+        let secTitle = m1[3].replace(/[_\-]/g, ' ').replace(/\s+(한글|영어|베트남어|v\d+|\d{6})\s*/gi, ' ').trim();
+        return { chapterNum: chNum, sectionNum: secNum, sectionTitle: secTitle || `섹션 ${secNum}`, chapterKey: `ch${String(chNum).padStart(2,'0')}` };
+      }
+      // 패턴 2: Ch02_제목 (챕터만, 섹션 없음)
+      const m2 = name.match(/[Cc]h(?:apter)?[_\-\s]*(\d+)[_\-\s]+(.*)/);
+      if (m2) {
+        const chNum = parseInt(m2[1]);
+        let title = m2[2].replace(/[_\-]/g, ' ').replace(/\s+(한글|영어|베트남어|v\d+|\d{6})\s*/gi, ' ').trim();
+        return { chapterNum: chNum, sectionNum: 1, sectionTitle: title || `섹션 1`, chapterKey: `ch${String(chNum).padStart(2,'0')}` };
+      }
+      return null; // 패턴 없음
+    }
+
+    // ===== 파일 업로드 → SOP 변환 (자동 챕터/섹션 분류) =====
     async function handleSopFileUpload(event) {
       if (!hasPermission('sop_create')) { alert('SOP 생성 권한이 없습니다.'); return; }
       const files = event.target.files;
       if (!files || files.length === 0) return;
 
+      const sops = getSops();
       let successCount = 0;
+      const chapterMap = {}; // chapterKey → chapterId 매핑
+
+      // 기존 대챕터 수집 (중복 방지)
+      sops.filter(s => s.doc_type === 'chapter').forEach(ch => {
+        // Ch02 형태의 키 추출 시도
+        const m = ch.title.match(/[Cc]h(?:apter)?[_\-.\s]*(\d+)/);
+        if (m) chapterMap[`ch${String(parseInt(m[1])).padStart(2,'0')}`] = ch.id;
+      });
+
       for (const file of files) {
         showLoading(`파일 읽는 중: ${file.name}`);
 
         try {
           let text = '';
-
-          if (file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-            text = await file.text();
-          } else if (file.name.endsWith('.pdf')) {
-            text = await extractPdfText(file);
-          } else if (file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
-            text = await extractDocText(file);
-          } else if (file.name.endsWith('.hwp')) {
-            text = await file.text(); // HWP는 텍스트만 추출 시도
-          } else {
-            text = await file.text();
-          }
+          if (file.name.endsWith('.txt') || file.name.endsWith('.md')) text = await file.text();
+          else if (file.name.endsWith('.pdf')) text = await extractPdfText(file);
+          else if (file.name.endsWith('.doc') || file.name.endsWith('.docx')) text = await extractDocText(file);
+          else if (file.name.endsWith('.hwp')) text = await file.text();
+          else text = await file.text();
 
           if (!text || text.trim().length < 20) {
-            alert(`"${file.name}" 에서 텍스트를 추출할 수 없습니다.\nTXT 파일로 변환 후 다시 시도해주세요.`);
+            alert(`"${file.name}" 에서 텍스트를 추출할 수 없습니다.`);
             continue;
           }
 
-          // 원문 저장 + Word 이미지 보존
-          const sops = getSops();
           const title = file.name.replace(/\.[^/.]+$/, '');
           let rawHtml = '';
           const isDocx = file.name.endsWith('.doc') || file.name.endsWith('.docx');
 
           if (isDocx && text.includes('<')) {
-            // Word에서 나온 HTML은 그대로 사용 (이미지 img 태그 포함)
             rawHtml = text;
           } else {
-            // 줄 단위로 bullet 리스트 생성
             const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
             rawHtml = '<ul>' + lines.map(l => `<li>${l.trim()}</li>`).join('') + '</ul>';
           }
 
-          // Word에서 추출된 이미지를 별도 저장
           const docImages = (isDocx && window._lastDocImages && window._lastDocImages.length > 0)
             ? [...window._lastDocImages] : [];
 
+          // 파일명 패턴 파싱
+          const parsed = parseChapterSection(file.name);
+          let parentId = null;
+          let orderNum = 0;
+
+          if (parsed) {
+            // 대챕터 자동 생성 (없으면)
+            if (!chapterMap[parsed.chapterKey]) {
+              const chId = 'chapter-' + parsed.chapterKey + '-' + Date.now();
+              const newChapter = {
+                id: chId, title: `Ch${String(parsed.chapterNum).padStart(2,'0')}`, category: '',
+                status: 'draft', doc_type: 'chapter', parent_id: null,
+                order_num: parsed.chapterNum, content: '',
+                createdAt: new Date().toISOString().slice(0, 10),
+                script: null, quizzes: null, exam_quizzes: null
+              };
+              sops.push(newChapter);
+              chapterMap[parsed.chapterKey] = chId;
+              console.log(`[Upload] 📘 대챕터 자동 생성: Ch${String(parsed.chapterNum).padStart(2,'0')}`);
+            }
+            parentId = chapterMap[parsed.chapterKey];
+            orderNum = parsed.sectionNum;
+          }
+
           const newSop = {
             id: 'sop-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
-            title: title,
-            category: '기타',
-            chapter: 'new',
+            title: parsed ? parsed.sectionTitle : title,
+            category: parsed ? `Ch${String(parsed.chapterNum).padStart(2,'0')}` : '기타',
             status: 'draft',
+            doc_type: 'section',
+            parent_id: parentId,
+            order_num: orderNum,
             content: rawHtml,
             createdAt: new Date().toISOString().slice(0, 10),
-            script: null,
-            quizzes: null,
+            script: null, quizzes: null,
             docImages: docImages.length > 0 ? docImages : undefined
           };
           sops.push(newSop);
-          saveSops(sops);
-
-          if (docImages.length > 0) {
-            console.log(`[Upload] "${title}" — ${docImages.length}개 이미지 추출 저장됨`);
-          }
           successCount++;
+          if (docImages.length > 0) console.log(`[Upload] "${title}" — ${docImages.length}개 이미지 추출`);
 
         } catch (e) {
           console.error('File upload error:', e);
@@ -2021,17 +2062,29 @@
         }
       }
 
+      saveSops(sops);
       hideLoading();
       renderSopList();
-      event.target.value = ''; // 파일 입력 초기화
+      event.target.value = '';
+
       if (successCount > 0) {
-        const lastSopId = getSops()[getSops().length - 1]?.id;
-        const doConvert = confirm(`${successCount}개 파일이 SOP로 변환되었습니다.\n\n🤖 AI 구조화를 실행하시겠습니까?\n(SOP를 영상/퀴즈 생성에 최적화된 형식으로 자동 변환합니다)\n\n"취소"를 누르면 원본 그대로 저장됩니다.`);
-        if (doConvert && lastSopId) {
-          convertSopWithAI(lastSopId);
+        // 자동 분류 결과 요약
+        const chapterCount = Object.keys(chapterMap).length;
+        const summary = chapterCount > 0
+          ? `📘 ${chapterCount}개 챕터에 ${successCount}개 섹션 자동 배치됨\n\n` +
+            Object.entries(chapterMap).map(([key, id]) => {
+              const sections = sops.filter(s => s.parent_id === id);
+              return `• ${key.toUpperCase()}: ${sections.length}개 섹션`;
+            }).join('\n')
+          : `${successCount}개 파일이 SOP로 변환됨 (챕터 패턴 미감지)`;
+
+        const doConvert = confirm(`${summary}\n\n🤖 AI 구조화를 실행하시겠습니까?\n(SOP를 영상/퀴즈 생성에 최적화된 형식으로 자동 변환합니다)\n\n"취소"를 누르면 원본 그대로 저장됩니다.`);
+        if (doConvert) {
+          const lastSopId = getSops().filter(s => s.doc_type !== 'chapter').pop()?.id;
+          if (lastSopId) convertSopWithAI(lastSopId);
         }
       } else {
-        alert(`파일 변환에 실패했습니다.\nTXT 파일로 변환 후 다시 시도하거나, 직접 작성해주세요.`);
+        alert(`파일 변환에 실패했습니다.\nTXT 파일로 변환 후 다시 시도해주세요.`);
       }
     }
 
@@ -2089,9 +2142,19 @@
 
     // ===== 다중 파일 → AI 자동 챕터 분류 =====
     async function processMultipleFiles(files) {
-      showLoading(`${files.length}개 파일 읽는 중...`);
+      // 파일명 패턴 감지: ChXX_SecYY 형식이 하나라도 있으면 자동 분류
+      const hasPattern = files.some(f => parseChapterSection(f.name) !== null);
 
-      // 1. 모든 파일 텍스트 추출
+      if (hasPattern) {
+        // ===== 파일명 기반 자동 챕터/섹션 분류 =====
+        // handleSopFileUpload에 위임 (같은 로직)
+        const fakeEvent = { target: { files, value: '' } };
+        await handleSopFileUpload(fakeEvent);
+        return;
+      }
+
+      // ===== 패턴 없으면 기존 AI 분류 =====
+      showLoading(`${files.length}개 파일 읽는 중...`);
       const fileContents = [];
       for (const file of files) {
         try {
@@ -2101,7 +2164,6 @@
           else if (/\.pdf$/i.test(file.name)) text = await extractPdfText(file);
           else if (/\.(doc|docx)$/i.test(file.name)) text = await extractDocText(file);
           if (text && text.trim().length > 10) {
-            // 폴더 경로에서 카테고리 추출
             const pathParts = (file.webkitRelativePath || file.name).split('/');
             const folder = pathParts.length > 1 ? pathParts[pathParts.length - 2] : '';
             fileContents.push({ name: file.name, folder, text: text.slice(0, 2000) });
@@ -2111,38 +2173,39 @@
 
       if (!fileContents.length) { hideLoading(); alert('텍스트를 추출할 수 있는 파일이 없습니다.'); return; }
 
-      // 2. AI로 챕터 자동 분류
       showLoading(`AI가 ${fileContents.length}개 파일을 챕터별로 분류 중...`);
       let organized;
       try {
         organized = await aiOrganizeFiles(fileContents);
       } catch(e) {
         console.error('AI organize error:', e);
-        // 폴백: 폴더명 또는 파일명 기준 분류
         organized = fallbackOrganize(fileContents);
       }
 
-      // 3. SOP로 저장
       const sops = getSops();
-      const chapters = (typeof SopStore !== 'undefined' && SopStore.getChapters) ? SopStore.getChapters() : JSON.parse(localStorage.getItem('sop_chapters_custom') || '[]');
+      const chapterMap = {};
+      sops.filter(s => s.doc_type === 'chapter').forEach(ch => { chapterMap[ch.title] = ch.id; });
       let created = 0;
 
       for (const group of organized) {
-        // 챕터가 없으면 생성
-        let chapterId = chapters.find(c => c.title === group.chapter)?.id;
-        if (!chapterId) {
-          chapterId = 'ch-' + Date.now() + '-' + Math.random().toString(36).substr(2,4);
-          const newChapter = { id: chapterId, title: group.chapter, order: chapters.length + 1 };
-          chapters.push(newChapter);
-          localStorage.setItem('sop_chapters_custom', JSON.stringify(chapters));
+        // 대챕터 자동 생성
+        if (!chapterMap[group.chapter]) {
+          const chId = 'chapter-' + Date.now() + '-' + Math.random().toString(36).substr(2,4);
+          sops.push({
+            id: chId, title: group.chapter, category: '', status: 'draft',
+            doc_type: 'chapter', parent_id: null, order_num: Object.keys(chapterMap).length + 1,
+            content: '', createdAt: new Date().toISOString().slice(0, 10),
+            script: null, quizzes: null, exam_quizzes: null
+          });
+          chapterMap[group.chapter] = chId;
         }
 
         const newSop = {
           id: 'sop-' + Date.now() + '-' + (++created) + Math.random().toString(36).substr(2,3),
-          title: group.title,
-          category: group.category || '기타',
-          chapter: chapterId,
-          status: 'draft',
+          title: group.title, category: group.category || '기타',
+          status: 'draft', doc_type: 'section',
+          parent_id: chapterMap[group.chapter],
+          order_num: created,
           content: group.html,
           createdAt: new Date().toISOString().slice(0, 10),
           script: null, quizzes: null
@@ -2153,7 +2216,7 @@
       saveSops(sops);
       hideLoading();
       renderSopList();
-      alert(`${created}개 SOP가 생성되었습니다.\n\nAI가 다음과 같이 분류했습니다:\n${organized.map(g => `• [${g.chapter}] ${g.title}`).join('\n')}\n\n각 SOP를 확인하고 "AI 콘텐츠 생성"을 클릭하세요.`);
+      alert(`📘 ${Object.keys(chapterMap).length}개 챕터에 ${created}개 섹션 자동 배치됨\n\n${organized.map(g => `• [${g.chapter}] ${g.title}`).join('\n')}\n\n각 SOP에서 "AI 콘텐츠 생성"을 클릭하세요.`);
     }
 
     // AI 파일 분류
