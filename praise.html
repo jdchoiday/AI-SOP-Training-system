@@ -39,6 +39,124 @@
     .praise-history-emoji { font-size: 24px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--gray-50); border-radius: 10px; flex-shrink: 0; }
 
     .daily-limit-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+
+    /* 프로필 미리보기 모달 */
+    .profile-modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6); z-index: 1000;
+      align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .profile-modal-overlay.show { display: flex; }
+    .profile-modal {
+      background: var(--bg-main, #0F172A);
+      border-radius: 24px;
+      width: 92%; max-width: 400px;
+      max-height: 85vh; overflow-y: auto;
+      border: 1px solid rgba(16,185,129,0.15);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      animation: modalSlideUp 0.3s ease;
+    }
+    @keyframes modalSlideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .pm-hero {
+      position: relative;
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%);
+      border-radius: 24px 24px 0 0;
+      padding: 28px 20px 20px;
+      overflow: hidden;
+    }
+    .pm-hero::before {
+      content: '';
+      position: absolute; top: -40%; right: -20%;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .pm-hero * { position: relative; z-index: 1; }
+    .pm-close {
+      position: absolute; top: 12px; right: 14px; z-index: 2;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(255,255,255,0.1); border: none;
+      color: #94A3B8; font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s;
+    }
+    .pm-close:hover { background: rgba(255,255,255,0.2); color: white; }
+    .pm-avatar {
+      width: 72px; height: 72px; border-radius: 50%;
+      border: 3px solid var(--primary);
+      background: rgba(16,185,129,0.15);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; font-weight: 700; color: white;
+      margin: 0 auto 12px;
+      box-shadow: 0 0 20px rgba(16,185,129,0.3);
+    }
+    .pm-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+    .pm-name { text-align: center; font-size: 20px; font-weight: 800; color: #F1F5F9; }
+    .pm-branch { text-align: center; font-size: 13px; color: #94A3B8; margin-top: 2px; }
+    .pm-intro { text-align: center; font-size: 13px; color: #CBD5E1; font-style: italic; margin-top: 8px; }
+    .pm-tier {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      margin-top: 10px;
+    }
+    .pm-tier-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: 16px; font-size: 12px; font-weight: 700;
+      color: white; background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .pm-xp-text { font-size: 11px; color: #64748B; }
+
+    .pm-stats {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; padding: 14px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .pm-stat-item { display: flex; align-items: center; gap: 6px; }
+    .pm-stat-icon { font-size: 14px; width: 18px; text-align: center; }
+    .pm-stat-name { font-size: 11px; color: #94A3B8; width: 40px; }
+    .pm-stat-bar { flex: 1; height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+    .pm-stat-bar .fill { height: 100%; border-radius: 3px; }
+    .pm-stat-val { font-size: 10px; color: #64748B; width: 16px; text-align: right; font-weight: 600; }
+
+    .pm-body { padding: 16px 20px; }
+    .pm-section { margin-bottom: 14px; }
+    .pm-section-title { font-size: 12px; color: #64748B; margin-bottom: 6px; font-weight: 600; }
+    .pm-motto {
+      font-size: 14px; color: #E2E8F0; font-style: italic;
+      padding: 10px 14px; background: rgba(16,185,129,0.06);
+      border-radius: 10px; border-left: 3px solid var(--primary);
+      text-align: center;
+    }
+    .pm-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+    .pm-tag {
+      padding: 3px 10px; border-radius: 12px;
+      font-size: 11px; font-weight: 500;
+      background: rgba(16,185,129,0.1); color: var(--primary);
+    }
+    .pm-tag.warn { background: rgba(245,158,11,0.1); color: #F59E0B; }
+    .pm-info-row {
+      display: flex; justify-content: space-between; padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13px;
+    }
+    .pm-info-row:last-child { border-bottom: none; }
+    .pm-info-label { color: #64748B; }
+    .pm-info-value { color: #E2E8F0; font-weight: 600; }
+    .pm-empty { text-align: center; padding: 20px; color: #64748B; font-size: 13px; }
+
+    .pm-boost-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: calc(100% - 40px); margin: 0 20px 20px;
+      padding: 14px; border: none; border-radius: 14px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      background: linear-gradient(135deg, var(--primary) 0%, #059669 100%);
+      color: white; transition: all 0.2s;
+    }
+    .pm-boost-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(16,185,129,0.3); }
+    .pm-boost-btn:disabled { background: var(--gray-200); color: var(--gray-400); cursor: not-allowed; transform: none; box-shadow: none; }
   </style>
 </head>
 <body>
@@ -114,6 +232,28 @@
     </div>
   </div>
 
+  <!-- 프로필 미리보기 모달 -->
+  <div class="profile-modal-overlay" id="profileModal" onclick="if(event.target===this)closeProfileModal()">
+    <div class="profile-modal">
+      <div class="pm-hero">
+        <button class="pm-close" onclick="closeProfileModal()">&times;</button>
+        <div class="pm-avatar" id="pmAvatar">?</div>
+        <div class="pm-name" id="pmName">-</div>
+        <div class="pm-branch" id="pmBranch">-</div>
+        <div class="pm-intro" id="pmIntro"></div>
+        <div class="pm-tier">
+          <span class="pm-tier-badge" id="pmTier">🌱 새싹</span>
+          <span class="pm-xp-text" id="pmXp">0 EXP</span>
+        </div>
+      </div>
+      <div class="pm-stats" id="pmStats"></div>
+      <div class="pm-body" id="pmBody"></div>
+      <button class="pm-boost-btn" id="pmBoostBtn" onclick="boostFromModal()">
+        🙌 부스트 보내기
+      </button>
+    </div>
+  </div>
+
   <script src="js/config.js"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/demo-data.js"></script>
@@ -128,7 +268,7 @@
     // ===== i18n TEXTS =====
     const T = {
       ko: {
-        home: '홈', tasks: '미션', praise: '부스트', myResults: '내 결과',
+        home: '홈', tasks: '미션', praise: '부스트', myResults: '내 프로필',
         sendPraise: '칭찬 보내기', received: '받은 칭찬',
         whoPraise: '누구에게 칭찬할까요?',
         myTeam: '우리 팀', otherTeams: '같은 지점 · 다른 팀',
@@ -155,7 +295,7 @@
         placeholder: '예: 오늘 바쁜 시간에 정말 많이 도와줘서 고마워요!',
       },
       en: {
-        home: 'Home', tasks: 'Tasks', praise: 'Praise', myResults: 'Results',
+        home: 'Home', tasks: 'Tasks', praise: 'Boost', myResults: 'Profile',
         sendPraise: 'Send Praise', received: 'Received',
         whoPraise: 'Who do you want to praise?',
         myTeam: 'My Team', otherTeams: 'Same Branch · Other Teams',
@@ -182,7 +322,7 @@
         placeholder: 'e.g., Thanks for helping so much during the busy hours today!',
       },
       vi: {
-        home: 'Trang chủ', tasks: 'Nhiệm vụ', praise: 'Khen ngợi', myResults: 'Kết quả',
+        home: 'Trang chủ', tasks: 'Nhiệm vụ', praise: 'Khen', myResults: 'Hồ sơ',
         sendPraise: 'Gửi lời khen', received: 'Đã nhận',
         whoPraise: 'Bạn muốn khen ai?',
         myTeam: 'Đội của tôi', otherTeams: 'Cùng chi nhánh · Đội khác',
@@ -307,8 +447,8 @@
         : '';
       return `
         <div class="emp-select-item" style="${border}" onclick="selectEmployee('${e.id}', this)">
-          <div class="emp-avatar">${(e.name || '?')[0]}</div>
-          <div style="flex:1;">
+          <div class="emp-avatar" onclick="event.stopPropagation(); showProfileModal('${e.id}')" style="cursor:pointer; transition:transform 0.2s;" onmouseenter="this.style.transform='scale(1.15)'" onmouseleave="this.style.transform='scale(1)'">${(e.name || '?')[0]}</div>
+          <div style="flex:1; cursor:pointer;" onclick="event.stopPropagation(); showProfileModal('${e.id}')">
             <div style="font-weight:600; font-size:14px;">${e.name}</div>
             <div style="font-size:12px; color:var(--gray-500);">${e.team || e.branch || ''}</div>
           </div>
@@ -510,6 +650,200 @@
       toast.textContent = msg;
       toast.style.opacity = '1';
       setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+    }
+
+    // ===== 프로필 모달 =====
+    let modalTargetEmpId = null;
+
+    async function showProfileModal(empId) {
+      modalTargetEmpId = empId;
+      const emp = EmployeeStore.getById(empId);
+      if (!emp) return;
+
+      // Avatar
+      const avatarEl = document.getElementById('pmAvatar');
+      avatarEl.innerHTML = (emp.name || '?')[0];
+      avatarEl.style.fontSize = '28px';
+
+      // Name, branch
+      document.getElementById('pmName').textContent = emp.name || '?';
+      document.getElementById('pmBranch').textContent = [emp.team, emp.branch].filter(Boolean).join(' · ');
+
+      // Clear previous data
+      document.getElementById('pmIntro').textContent = '';
+      document.getElementById('pmStats').innerHTML = '';
+      document.getElementById('pmBody').innerHTML = '<div class="pm-empty">⏳</div>';
+
+      // Boost button
+      const boostBtn = document.getElementById('pmBoostBtn');
+      const boostLabel = lang === 'en' ? '🙌 Send Boost' : lang === 'vi' ? '🙌 Gửi Boost' : '🙌 부스트 보내기';
+      boostBtn.textContent = boostLabel;
+      boostBtn.disabled = dailyLimitExceeded;
+
+      // Show modal
+      document.getElementById('profileModal').classList.add('show');
+      document.body.style.overflow = 'hidden';
+
+      // XP & Tier
+      let totalXp = 0;
+      try {
+        if (typeof XpService !== 'undefined') {
+          totalXp = await XpService.getTotal(empId) || 0;
+        }
+      } catch (e) {}
+      const tier = calculateTier(totalXp);
+      const tierTitle = getTierTitle(tier, lang);
+      document.getElementById('pmTier').innerHTML = `${tier.emoji} ${tierTitle} ${tier.subLabel}`;
+      document.getElementById('pmTier').style.borderColor = tier.color + '60';
+      document.getElementById('pmXp').textContent = `${totalXp.toLocaleString()} EXP`;
+
+      // Fetch profile from Supabase
+      let profile = null;
+      if (SupabaseMode._ready && SupabaseMode._client) {
+        try {
+          const { data } = await SupabaseMode._client
+            .from('employee_profiles')
+            .select('*')
+            .eq('employee_id', empId)
+            .single();
+          if (data) {
+            profile = {
+              intro: data.intro || '',
+              bio: data.bio || '',
+              mbti: data.mbti || '',
+              hobbies: data.hobbies || [],
+              likes: data.likes || [],
+              motto: data.motto || '',
+              skills: data.skills || '',
+              strengths: data.strengths || [],
+              weaknesses: data.weaknesses || [],
+              workStyles: data.work_styles || [],
+              goal: data.goal || '',
+              specialAbility: data.special_ability || '',
+              avatarType: data.avatar_type || 'initial',
+              avatar: data.avatar_type === 'photo' ? data.avatar : data.avatar_type === 'emoji' ? data.avatar_emoji : null,
+              stats: data.stats || null,
+            };
+          }
+        } catch (e) {}
+      }
+
+      // Update avatar from profile
+      if (profile?.avatarType === 'photo' && profile.avatar) {
+        avatarEl.innerHTML = `<img src="${profile.avatar}" alt="">`;
+      } else if (profile?.avatarType === 'emoji' && profile.avatar) {
+        avatarEl.textContent = profile.avatar;
+        avatarEl.style.fontSize = '32px';
+      }
+
+      // Intro
+      if (profile?.intro) {
+        document.getElementById('pmIntro').textContent = `"${profile.intro}"`;
+      }
+
+      // Stats
+      if (profile?.stats) {
+        const statDefs = [
+          { key: 'communication', alt: 'comm', icon: '💬', label: lang === 'en' ? 'Comm' : lang === 'vi' ? 'Giao tiếp' : '소통', color: '#10B981' },
+          { key: 'focus', alt: 'focus', icon: '🎯', label: lang === 'en' ? 'Focus' : lang === 'vi' ? 'Tập trung' : '집중', color: '#3B82F6' },
+          { key: 'teamwork', alt: 'team', icon: '🤝', label: lang === 'en' ? 'Team' : lang === 'vi' ? 'Đồng đội' : '팀워크', color: '#F59E0B' },
+          { key: 'creativity', alt: 'creative', icon: '💡', label: lang === 'en' ? 'Create' : lang === 'vi' ? 'Sáng tạo' : '창의', color: '#EC4899' },
+          { key: 'execution', alt: 'speed', icon: '⚡', label: lang === 'en' ? 'Action' : lang === 'vi' ? 'Hành động' : '실행', color: '#EF4444' },
+          { key: 'service', alt: 'service', icon: '❤️', label: lang === 'en' ? 'Service' : lang === 'vi' ? 'Phục vụ' : '서비스', color: '#8B5CF6' },
+        ];
+        document.getElementById('pmStats').innerHTML = statDefs.map(s => {
+          const val = profile.stats[s.key] || profile.stats[s.alt] || 0;
+          return `<div class="pm-stat-item">
+            <span class="pm-stat-icon">${s.icon}</span>
+            <span class="pm-stat-name">${s.label}</span>
+            <div class="pm-stat-bar"><div class="fill" style="width:${val*10}%;background:${s.color};"></div></div>
+            <span class="pm-stat-val">${val}</span>
+          </div>`;
+        }).join('');
+      } else {
+        document.getElementById('pmStats').style.display = 'none';
+      }
+
+      // Body
+      let bodyHtml = '';
+
+      if (!profile) {
+        const noProfileMsg = lang === 'en' ? 'This person hasn\'t set up their profile yet.' : lang === 'vi' ? 'Người này chưa tạo hồ sơ.' : '아직 프로필을 등록하지 않았어요.';
+        bodyHtml = `<div class="pm-empty">🎭<br>${noProfileMsg}</div>`;
+      } else {
+        // Motto
+        if (profile.motto) {
+          bodyHtml += `<div class="pm-section"><div class="pm-motto">"${profile.motto}"</div></div>`;
+        }
+
+        // Bio
+        if (profile.bio) {
+          bodyHtml += `<div class="pm-section"><div class="pm-section-title">📝 ${lang === 'en' ? 'About' : lang === 'vi' ? 'Giới thiệu' : '소개'}</div>
+            <p style="font-size:13px; color:#CBD5E1; line-height:1.6; margin:0;">${profile.bio}</p></div>`;
+        }
+
+        // MBTI, Hobbies, Likes
+        if (profile.mbti || profile.hobbies?.length || profile.likes?.length) {
+          bodyHtml += `<div class="pm-section"><div class="pm-section-title">🎨 ${lang === 'en' ? 'About Me' : lang === 'vi' ? 'Về tôi' : '나에 대해'}</div>`;
+          if (profile.mbti) bodyHtml += `<div class="pm-info-row"><span class="pm-info-label">MBTI</span><span class="pm-info-value">${profile.mbti}</span></div>`;
+          if (profile.hobbies?.length) {
+            bodyHtml += `<div style="margin-top:8px;"><span style="font-size:11px;color:#64748B;">${lang === 'en' ? 'Hobbies' : lang === 'vi' ? 'Sở thích' : '취미'}</span>
+              <div class="pm-tags" style="margin-top:4px;">${profile.hobbies.map(h => `<span class="pm-tag">${h}</span>`).join('')}</div></div>`;
+          }
+          if (profile.likes?.length) {
+            bodyHtml += `<div style="margin-top:8px;"><span style="font-size:11px;color:#64748B;">${lang === 'en' ? 'Likes' : lang === 'vi' ? 'Yêu thích' : '좋아하는 것'}</span>
+              <div class="pm-tags" style="margin-top:4px;">${profile.likes.map(l => `<span class="pm-tag">${l}</span>`).join('')}</div></div>`;
+          }
+          bodyHtml += `</div>`;
+        }
+
+        // Strengths / Weaknesses
+        if (profile.strengths?.length || profile.weaknesses?.length) {
+          bodyHtml += `<div class="pm-section"><div class="pm-section-title">💪 ${lang === 'en' ? 'Strengths & Growth' : lang === 'vi' ? 'Điểm mạnh' : '장점 & 개선점'}</div>`;
+          if (profile.strengths?.length) bodyHtml += `<div class="pm-tags">${profile.strengths.map(s => `<span class="pm-tag">${s}</span>`).join('')}</div>`;
+          if (profile.weaknesses?.length) bodyHtml += `<div class="pm-tags" style="margin-top:6px;">${profile.weaknesses.map(w => `<span class="pm-tag warn">${w}</span>`).join('')}</div>`;
+          bodyHtml += `</div>`;
+        }
+
+        // Extra info
+        const extras = [];
+        if (profile.skills) extras.push([lang === 'en' ? 'Skills' : lang === 'vi' ? 'Kỹ năng' : '특기', profile.skills]);
+        if (profile.goal) extras.push([lang === 'en' ? 'Goal' : lang === 'vi' ? 'Mục tiêu' : '목표', profile.goal]);
+        if (profile.specialAbility) extras.push([lang === 'en' ? 'Hidden Talent' : lang === 'vi' ? 'Tài năng ẩn' : '숨겨진 재능', profile.specialAbility]);
+        if (extras.length) {
+          bodyHtml += `<div class="pm-section"><div class="pm-section-title">✨ ${lang === 'en' ? 'Extra' : lang === 'vi' ? 'Thêm' : '추가 정보'}</div>`;
+          extras.forEach(([label, value]) => {
+            bodyHtml += `<div class="pm-info-row"><span class="pm-info-label">${label}</span><span class="pm-info-value">${value}</span></div>`;
+          });
+          bodyHtml += `</div>`;
+        }
+
+        if (!bodyHtml) {
+          const minimalMsg = lang === 'en' ? 'Profile is minimal.' : lang === 'vi' ? 'Hồ sơ tối giản.' : '간단한 프로필이에요.';
+          bodyHtml = `<div class="pm-empty">${minimalMsg}</div>`;
+        }
+      }
+
+      document.getElementById('pmBody').innerHTML = bodyHtml;
+    }
+
+    function closeProfileModal() {
+      document.getElementById('profileModal').classList.remove('show');
+      document.body.style.overflow = '';
+    }
+
+    function boostFromModal() {
+      const empId = modalTargetEmpId;
+      closeProfileModal();
+      if (!empId || dailyLimitExceeded) return;
+      // Find and click the employee item
+      const items = document.querySelectorAll('.emp-select-item');
+      for (const item of items) {
+        if (item.getAttribute('onclick')?.includes(empId)) {
+          selectEmployee(empId, item);
+          break;
+        }
+      }
     }
 
     // ===== 초기화 =====
