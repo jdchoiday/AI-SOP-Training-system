@@ -80,7 +80,7 @@ module.exports = async (req, res) => {
                 .toBuffer();
               base64 = jpegBuf.toString('base64');
               mime = 'image/jpeg';
-            } catch (e) { /* sharp 실패 시 원본 그대로 */ }
+            } catch (e) { console.warn('[Image] Sharp compression failed:', e.message); }
           }
 
           const dataUrl = `data:${mime};base64,${base64}`;

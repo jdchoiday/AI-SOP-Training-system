@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOP Training - 성과제</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0F172A">
+  <link rel="icon" href="assets/icon-192.svg">
+  <style>
+    .task-tabs { display: flex; gap: 0; margin-bottom: 16px; border-bottom: 2px solid var(--gray-200); }
+    .task-tab { flex: 1; padding: 12px; text-align: center; font-size: 14px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; color: var(--gray-500); transition: all 0.2s; }
+    .task-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    .task-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .summary-card { background: var(--bg-card); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); text-align: center; }
+    .summary-value { font-size: 24px; font-weight: 800; color: var(--primary); }
+    .summary-label { font-size: 12px; color: var(--gray-500); margin-top: 4px; }
+    .summary-card.points .summary-value { color: #f59e0b; }
+
+    .task-item { display: flex; align-items: center; gap: 12px; padding: 16px; background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 8px; transition: all 0.2s; }
+    .task-item.completed { opacity: 0.6; }
+    .task-icon { font-size: 28px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: var(--gray-50); border-radius: 10px; flex-shrink: 0; }
+    .task-info { flex: 1; min-width: 0; }
+    .task-title { font-weight: 600; font-size: 15px; color: var(--gray-900); }
+    .task-reward { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+    .task-check { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--gray-300); background: var(--bg-card); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+    .task-check:hover { border-color: var(--primary); background: var(--primary-light); }
+    .task-check.done { border-color: var(--success); background: var(--success); color: white; }
+
+    .points-card { background: linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(245,158,11,0.25) 100%); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px; text-align: center; }
+    .points-big { font-size: 36px; font-weight: 800; color: #F59E0B; }
+    .points-label { font-size: 13px; color: #FBBF24; opacity: 0.8; margin-top: 4px; }
+    .points-sub { font-size: 11px; color: #FBBF24; opacity: 0.6; margin-top: 8px; }
+
+    .date-nav { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 16px; }
+    .date-nav button { background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px 8px; color: var(--gray-500); }
+    .date-nav button:hover { color: var(--primary); }
+    .date-display { font-size: 15px; font-weight: 600; color: var(--gray-700); min-width: 140px; text-align: center; }
+
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--gray-500); }
+    .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+
+  <div class="bottom-nav">
+    <a href="app.html">
+      <span class="nav-icon">&#127968;</span> <span class="nav-label-home">홈</span>
+    </a>
+    <a href="tasks.html" class="active">
+      <span class="nav-icon">&#9989;</span> <span class="nav-label-tasks">미션</span>
+    </a>
+    <a href="praise.html">
+      <span class="nav-icon">&#128588;</span> <span class="nav-label-praise">부스트</span>
+    </a>
+    <a href="my-results.html">
+      <span class="nav-icon">&#127942;</span> <span class="nav-label-results">내 결과</span>
+    </a>
+  </div>
+
+  <div class="app-container">
+
+    <!-- 상단 헤더 -->
+    <div class="app-header">
+      <h2 id="pageTitle">기본 성과제</h2>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <a href="team-tasks.html" id="linkTeamTasks" style="text-decoration:none; padding:6px 12px; border-radius:10px; font-size:12px; font-weight:600; background:linear-gradient(135deg,#10B981,#059669); color:white;">👥 팀 테스크</a>
+        <a href="app.html" style="text-decoration:none; font-size:20px; line-height:1; padding:4px; cursor:pointer;">&#127968;</a>
+        <a href="profile.html" class="user-avatar" id="userAvatar" title="내 프로필" style="text-decoration:none; overflow:hidden;">?</a>
+      </div>
+    </div>
+
+    <!-- 포인트 현황 카드 -->
+    <div class="points-card" id="pointsCard">
+      <div class="points-big" id="quarterPoints">0 P</div>
+      <div class="points-label" id="quarterLabel">이번 분기 포인트</div>
+      <div class="points-sub" id="totalPointsLabel">누적: 0 P</div>
+    </div>
+
+    <!-- 요약 -->
+    <div class="task-summary" id="taskSummary">
+      <div class="summary-card">
+        <div class="summary-value" id="todayCompleted">0</div>
+        <div class="summary-label" id="todayLabel">오늘 완료</div>
+      </div>
+      <div class="summary-card points">
+        <div class="summary-value" id="todayPoints">+0 P</div>
+        <div class="summary-label" id="todayPointsLabel">오늘 획득</div>
+      </div>
+    </div>
+
+    <!-- 날짜 네비게이션 -->
+    <div class="date-nav">
+      <button onclick="changeDate(-1)">&#9664;</button>
+      <div class="date-display" id="dateDisplay"></div>
+      <button onclick="changeDate(1)" id="nextDateBtn">&#9654;</button>
+    </div>
+
+    <!-- 카테고리 탭 -->
+    <div class="task-tabs" id="taskTabs">
+      <div class="task-tab active" data-cat="daily" onclick="switchTab('daily')">
+        <span id="tabDaily">매일</span>
+      </div>
+      <div class="task-tab" data-cat="weekly" onclick="switchTab('weekly')">
+        <span id="tabWeekly">주간</span>
+      </div>
+      <div class="task-tab" data-cat="monthly" onclick="switchTab('monthly')">
+        <span id="tabMonthly">월간</span>
+      </div>
+    </div>
+
+    <!-- 성과제 리스트 -->
+    <div id="taskList"></div>
+
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script src="js/xp-system.js"></script>
+  <script>
+    // ===== 다국어 =====
+    const T = {
+      ko: {
+        pageTitle: '기본 성과제',
+        home: '홈', tasks: '성과제', praise: '칭찬', results: '내 결과',
+        daily: '매일', weekly: '주간', monthly: '월간',
+        quarterPoints: '이번 분기 포인트',
+        totalPoints: (n) => `누적: ${n} P`,
+        todayCompleted: '오늘 완료', todayPoints: '오늘 획득',
+        complete: '완료!', alreadyDone: '이미 완료됨',
+        xpGained: (xp) => `+${xp} XP`,
+        pointGained: (p) => `+${p} P`,
+        noTasks: '등록된 성과제가 없습니다',
+        noTasksSub: '관리자가 성과제를 등록하면 여기에 표시됩니다',
+        today: '오늘',
+        confirmComplete: (name) => `"${name}" 완료 처리하시겠습니까?`,
+        teamTasks: '👥 팀 테스크',
+      },
+      en: {
+        pageTitle: 'Basic Tasks',
+        home: 'Home', tasks: 'Tasks', praise: 'Praise', results: 'Results',
+        daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly',
+        quarterPoints: 'Quarter Points',
+        totalPoints: (n) => `Total: ${n} P`,
+        todayCompleted: 'Done Today', todayPoints: 'Earned Today',
+        complete: 'Done!', alreadyDone: 'Already completed',
+        xpGained: (xp) => `+${xp} XP`,
+        pointGained: (p) => `+${p} P`,
+        noTasks: 'No tasks registered',
+        noTasksSub: 'Tasks will appear once admin adds them',
+        today: 'Today',
+        confirmComplete: (name) => `Mark "${name}" as complete?`,
+        teamTasks: '👥 Team Tasks',
+      },
+      vi: {
+        pageTitle: 'Nhiệm vụ cơ bản',
+        home: 'Trang chủ', tasks: 'Nhiệm vụ', praise: 'Khen ngợi', results: 'Kết quả',
+        daily: 'Hàng ngày', weekly: 'Hàng tuần', monthly: 'Hàng tháng',
+        quarterPoints: 'Điểm quý này',
+        totalPoints: (n) => `Tổng: ${n} P`,
+        todayCompleted: 'Hoàn thành hôm nay', todayPoints: 'Kiếm được hôm nay',
+        complete: 'Xong!', alreadyDone: 'Đã hoàn thành',
+        xpGained: (xp) => `+${xp} XP`,
+        pointGained: (p) => `+${p} P`,
+        noTasks: 'Chưa có nhiệm vụ nào',
+        noTasksSub: 'Nhiệm vụ sẽ hiển thị khi quản trị viên thêm',
+        today: 'Hôm nay',
+        confirmComplete: (name) => `Đánh dấu "${name}" là hoàn thành?`,
+        teamTasks: '👥 Nhóm',
+      }
+    };
+    const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
+    const t = T[lang] || T.ko;
+
+    // ===== 로그인 확인 =====
+    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    const loginTime = parseInt(localStorage.getItem('sop_login_time') || '0');
+    if (Date.now() - loginTime > 24 * 60 * 60 * 1000 || !user) {
+      localStorage.removeItem('sop_user');
+      localStorage.removeItem('sop_login_time');
+      window.location.href = 'index.html';
+    }
+
+    // 아바타
+    const avatarEl = document.getElementById('userAvatar');
+    if (user.avatarType === 'photo' && user.avatarData) {
+      avatarEl.innerHTML = `<img src="${user.avatarData}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+    } else if (user.avatarType === 'emoji' && user.avatarData) {
+      avatarEl.textContent = user.avatarData;
+      avatarEl.style.fontSize = '20px';
+    } else {
+      avatarEl.textContent = (user.name || '?')[0];
+    }
+
+    // ===== 상태 변수 =====
+    let currentDate = new Date();
+    let currentTab = 'daily';
+    let templates = [];
+    let todayLogs = [];
+    let _resolvedEmpId = null; // employees 테이블의 실제 ID 캐시
+
+    // employees 테이블에서 실제 ID를 찾는 헬퍼
+    async function getEmployeeId() {
+      if (_resolvedEmpId) return _resolvedEmpId;
+      if (!SupabaseMode._ready || !user?.id) return user?.id;
+      // 먼저 user.id로 직접 조회
+      const { data: d1 } = await SupabaseMode._client
+        .from('employees').select('id').eq('id', user.id).maybeSingle();
+      if (d1) { _resolvedEmpId = d1.id; return _resolvedEmpId; }
+      // 없으면 email로 조회
+      if (user.email) {
+        const { data: d2 } = await SupabaseMode._client
+          .from('employees').select('id').eq('email', user.email).maybeSingle();
+        if (d2) { _resolvedEmpId = d2.id; return _resolvedEmpId; }
+      }
+      return user.id; // 못 찾으면 원래 ID 사용
+    }
+
+    // ===== 날짜 유틸 =====
+    function formatDate(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${dd}`;
+    }
+
+    function isToday(d) {
+      const now = new Date();
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    }
+
+    function changeDate(delta) {
+      const newDate = new Date(currentDate);
+      newDate.setDate(newDate.getDate() + delta);
+      // 미래 날짜 불가
+      if (newDate > new Date()) return;
+      currentDate = newDate;
+      loadData();
+    }
+
+    // ===== UI 업데이트 =====
+    function updateDateDisplay() {
+      const display = document.getElementById('dateDisplay');
+      if (isToday(currentDate)) {
+        const dayNames = { ko: ['일','월','화','수','목','금','토'], en: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], vi: ['CN','T2','T3','T4','T5','T6','T7'] };
+        const days = dayNames[lang] || dayNames.ko;
+        display.textContent = `${t.today} (${days[currentDate.getDay()]})`;
+      } else {
+        display.textContent = formatDate(currentDate);
+      }
+      // 미래 날짜 버튼 비활성화
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      document.getElementById('nextDateBtn').style.opacity = currentDate >= tomorrow ? '0.3' : '1';
+    }
+
+    function switchTab(cat) {
+      currentTab = cat;
+      document.querySelectorAll('.task-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.cat === cat);
+      });
+      renderTasks();
+    }
+
+    function getLocalizedTitle(template) {
+      if (lang === 'en' && template.title_en) return template.title_en;
+      if (lang === 'vi' && template.title_vi) return template.title_vi;
+      return template.title;
+    }
+
+    function renderTasks() {
+      const container = document.getElementById('taskList');
+      const filtered = templates.filter(t => t.category === currentTab && t.is_active !== false);
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="emoji">📋</div>
+            <p>${t.noTasks}</p>
+            <p style="font-size:13px; margin-top:8px;">${t.noTasksSub}</p>
+          </div>`;
+        return;
+      }
+
+      const dateStr = formatDate(currentDate);
+      let html = '';
+
+      filtered.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)).forEach(tmpl => {
+        const log = todayLogs.find(l => l.template_id === tmpl.id);
+        const isDone = !!log;
+        const canCheck = isToday(currentDate) && !isDone;
+
+        html += `
+          <div class="task-item ${isDone ? 'completed' : ''}">
+            <div class="task-icon">${tmpl.icon || '📋'}</div>
+            <div class="task-info">
+              <div class="task-title">${getLocalizedTitle(tmpl)}</div>
+              <div class="task-reward">
+                <span style="color:var(--primary); font-weight:600;">+${tmpl.xp_reward} XP</span>
+                <span style="margin:0 4px;">·</span>
+                <span style="color:#f59e0b; font-weight:600;">+${tmpl.point_reward} P</span>
+              </div>
+            </div>
+            <div class="task-check ${isDone ? 'done' : ''}"
+                 ${canCheck ? `onclick="completeTask('${tmpl.id}')"` : ''}
+                 style="${!canCheck && !isDone ? 'opacity:0.3; cursor:default;' : ''}">
+              ${isDone ? '&#10003;' : ''}
+            </div>
+          </div>`;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function updateSummary() {
+      const dateStr = formatDate(currentDate);
+      const dayLogs = todayLogs;
+      const completedCount = dayLogs.length;
+      const pointsEarned = dayLogs.reduce((sum, l) => sum + (l.points_granted || 0), 0);
+
+      document.getElementById('todayCompleted').textContent = completedCount;
+      document.getElementById('todayPoints').textContent = `+${pointsEarned} P`;
+    }
+
+    async function updatePointsCard() {
+      if (!SupabaseMode._ready || !user?.id) {
+        document.getElementById('quarterPoints').textContent = '0 P';
+        document.getElementById('totalPointsLabel').textContent = t.totalPoints(0);
+        return;
+      }
+      try {
+        const empId = await getEmployeeId();
+        const { data } = await SupabaseMode._client
+          .from('employees')
+          .select('quarter_points, total_points')
+          .eq('id', empId)
+          .maybeSingle();
+
+        const qp = data?.quarter_points || 0;
+        const tp = data?.total_points || 0;
+        document.getElementById('quarterPoints').textContent = `${qp} P`;
+        document.getElementById('totalPointsLabel').textContent = t.totalPoints(tp);
+      } catch (e) {
+        console.warn('[Tasks] 포인트 조회 오류:', e);
+      }
+    }
+
+    // ===== 데이터 로드 =====
+    async function loadData() {
+      updateDateDisplay();
+
+      if (!SupabaseMode._ready) {
+        renderTasks();
+        updateSummary();
+        return;
+      }
+
+      try {
+        // 템플릿 로드 (캐시)
+        if (templates.length === 0) {
+          const { data: tmplData } = await SupabaseMode._client
+            .from('basic_task_templates')
+            .select('*')
+            .eq('is_active', true)
+            .order('sort_order');
+
+          // 지점 필터링
+          const emp = typeof EmployeeStore !== 'undefined' ? EmployeeStore.getCurrentEmployee() : null;
+          const branch = emp?.branch || user.branch || '';
+          templates = (tmplData || []).filter(t => !t.branch || t.branch === '' || t.branch === branch);
+        }
+
+        // 해당 날짜 로그 로드
+        const dateStr = formatDate(currentDate);
+        const resolvedId = await getEmployeeId();
+        const { data: logData } = await SupabaseMode._client
+          .from('basic_task_logs')
+          .select('*')
+          .eq('employee_id', resolvedId)
+          .eq('completed_date', dateStr);
+
+        todayLogs = logData || [];
+      } catch (e) {
+        console.warn('[Tasks] 데이터 로드 오류:', e);
+        templates = [];
+        todayLogs = [];
+      }
+
+      renderTasks();
+      updateSummary();
+      updatePointsCard();
+    }
+
+    // ===== 성과제 완료 처리 =====
+    async function completeTask(templateId) {
+      const tmpl = templates.find(t => t.id === templateId);
+      if (!tmpl) return;
+
+      if (!confirm(t.confirmComplete(getLocalizedTitle(tmpl)))) return;
+
+      if (!SupabaseMode._ready || !user?.id) {
+        showToast('DB 연결이 필요합니다');
+        return;
+      }
+
+      try {
+        const dateStr = formatDate(currentDate);
+        const resolvedId = await getEmployeeId();
+
+        // 1) 로그 삽입
+        const { error } = await SupabaseMode._client
+          .from('basic_task_logs')
+          .insert({
+            employee_id: resolvedId,
+            template_id: templateId,
+            completed_date: dateStr,
+            xp_granted: tmpl.xp_reward,
+            points_granted: tmpl.point_reward,
+          });
+
+        if (error) {
+          if (error.code === '23505') {
+            showToast(t.alreadyDone);
+            return;
+          }
+          if (error.code === '23503') {
+            // FK violation - employee not in employees table
+            console.error('[Tasks] FK 오류:', error.message, error.details);
+            showToast(lang === 'en' ? 'Employee not registered. Contact admin.' : lang === 'vi' ? 'Nhân viên chưa đăng ký.' : '직원 등록이 필요합니다. 관리자에게 문의하세요.');
+            return;
+          }
+          console.error('[Tasks] ��료 오류:', error.message || JSON.stringify(error));
+          showToast(lang === 'en' ? 'Error occurred' : lang === 'vi' ? 'Có lỗi xảy ra' : '오류가 발생했습니다');
+          return;
+        }
+
+        // 2) XP 적립
+        const xpSourceId = `basic_task_${templateId}_${dateStr}`;
+        const xpResult = await XpService.addXp(
+          resolvedId, tmpl.xp_reward, 'basic_task', xpSourceId,
+          getLocalizedTitle(tmpl)
+        );
+
+        // 3) 포인트 적립 (employees 테이블 업데이트)
+        try {
+          // point_transactions 로그
+          await SupabaseMode._client
+            .from('point_transactions')
+            .insert({
+              employee_id: resolvedId,
+              amount: tmpl.point_reward,
+              source: 'basic_task',
+              source_id: xpSourceId,
+              reason: getLocalizedTitle(tmpl),
+            });
+
+          // employees 포인트 증가
+          const empId = await getEmployeeId();
+          const { data: empData } = await SupabaseMode._client
+            .from('employees')
+            .select('quarter_points, total_points')
+            .eq('id', empId)
+            .maybeSingle();
+
+          const currentQP = empData?.quarter_points || 0;
+          const currentTP = empData?.total_points || 0;
+
+          await SupabaseMode._client
+            .from('employees')
+            .update({
+              quarter_points: currentQP + tmpl.point_reward,
+              total_points: currentTP + tmpl.point_reward,
+            })
+            .eq('id', empId);
+        } catch (pe) {
+          console.warn('[Tasks] 포인트 적립 오류:', pe);
+        }
+
+        // 4) 성공 토스트
+        showToast(`${t.complete} ${t.xpGained(tmpl.xp_reward)} / ${t.pointGained(tmpl.point_reward)}`);
+
+        // 5) 레벨업 체크
+        if (xpResult?.leveledUp) {
+          setTimeout(() => {
+            if (typeof showLevelUpCelebration === 'function') {
+              showLevelUpCelebration(xpResult.oldTier, xpResult.newTier, lang);
+            }
+          }, 500);
+        }
+
+        // 6) UI 갱신
+        await loadData();
+
+      } catch (e) {
+        console.error('[Tasks] completeTask 오류:', e);
+        showToast('오류가 발생했습니다');
+      }
+    }
+
+    // ===== Toast =====
+    function showToast(msg) {
+      let toast = document.getElementById('toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.style.cssText = 'position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#1e293b; color:white; padding:12px 24px; border-radius:10px; font-size:14px; z-index:9999; opacity:0; transition:opacity 0.3s; pointer-events:none; text-align:center; max-width:80%;';
+        document.body.appendChild(toast);
+      }
+      toast.textContent = msg;
+      toast.style.opacity = '1';
+      setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+    }
+
+    // ===== 다국어 적용 =====
+    document.getElementById('pageTitle').textContent = t.pageTitle;
+    document.querySelector('.nav-label-home').textContent = t.home;
+    document.querySelector('.nav-label-tasks').textContent = t.tasks;
+    document.querySelector('.nav-label-praise').textContent = t.praise;
+    document.querySelector('.nav-label-results').textContent = t.results;
+    const linkTeamEl = document.getElementById('linkTeamTasks');
+    if (linkTeamEl) linkTeamEl.textContent = t.teamTasks;
+    document.getElementById('tabDaily').textContent = t.daily;
+    document.getElementById('tabWeekly').textContent = t.weekly;
+    document.getElementById('tabMonthly').textContent = t.monthly;
+    document.getElementById('quarterLabel').textContent = t.quarterPoints;
+    document.getElementById('todayLabel').textContent = t.todayCompleted;
+    document.getElementById('todayPointsLabel').textContent = t.todayPoints;
+
+    // ===== 초기화 =====
+    SupabaseMode.init().then(connected => {
+      if (connected) {
+        SupabaseMode.syncAll().then(() => loadData());
+      } else {
+        loadData();
+      }
+    });
+  </script>
+
+</body>
+</html>

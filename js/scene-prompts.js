@@ -467,6 +467,7 @@ function extractActions(text) {
  * @returns {string} Gemini 메타 프롬프트
  */
 function buildSmartVisualPrompt(narration, sceneIndex, totalScenes) {
+  narration = narration || '';
   // 나레이션 언어 자동 감지
   const hasVietnamese = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(narration);
   const isEnglish = !hasVietnamese && /^[\x00-\x7F\s.,!?;:'"()\-\d\n]+$/.test((narration || '').slice(0, 200));

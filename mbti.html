@@ -6,7 +6,7 @@
   <title>SOP Training - MBTI</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2563eb">
+  <meta name="theme-color" content="#0F172A">
   <link rel="icon" href="assets/icon-192.svg">
   <style>
     /* ===== MBTI Test Styles ===== */
@@ -18,7 +18,7 @@
     .mbti-welcome h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
     .mbti-welcome p { color: var(--gray-500); font-size: 14px; line-height: 1.7; margin-bottom: 16px; }
     .mbti-welcome .feature-list {
-      text-align: left; background: white; border-radius: var(--radius);
+      text-align: left; background: var(--bg-card); border-radius: var(--radius);
       padding: 16px 20px; margin: 16px 0; box-shadow: var(--shadow);
     }
     .mbti-welcome .feature-list li {
@@ -67,14 +67,14 @@
     .mbti-options { display: flex; flex-direction: column; gap: 14px; }
     .mbti-option-btn {
       display: flex; align-items: center; gap: 14px;
-      background: white; border: 2px solid var(--gray-200);
+      background: var(--bg-card); border: 2px solid var(--gray-200);
       border-radius: var(--radius); padding: 18px 20px;
       font-size: 15px; color: var(--gray-700); cursor: pointer;
       transition: all 0.25s ease; text-align: left; line-height: 1.5;
     }
-    .mbti-option-btn:hover { border-color: #6366f1; background: #f5f3ff; }
+    .mbti-option-btn:hover { border-color: #6366f1; background: rgba(99,102,241,0.15); }
     .mbti-option-btn.selected {
-      border-color: #6366f1; background: #ede9fe; color: #4338ca; font-weight: 600;
+      border-color: #6366f1; background: rgba(99,102,241,0.2); color: #a78bfa; font-weight: 600;
     }
     .mbti-option-label {
       display: flex; align-items: center; justify-content: center;
@@ -131,7 +131,7 @@
     }
 
     .mbti-result-card {
-      background: white; border-radius: var(--radius); padding: 20px;
+      background: var(--bg-card); border-radius: var(--radius); padding: 20px;
       margin-bottom: 16px; box-shadow: var(--shadow); text-align: left;
     }
     .mbti-result-card h4 {
@@ -196,7 +196,7 @@
 
     /* Previous result banner */
     .mbti-prev-result {
-      background: linear-gradient(135deg, #ede9fe, #dbeafe);
+      background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(59,130,246,0.15));
       border-radius: var(--radius); padding: 16px; margin-bottom: 20px;
       text-align: center;
     }
@@ -215,8 +215,8 @@
     <a href="app.html">
       <span class="nav-icon">&#127968;</span> <span class="nav-label-home"></span>
     </a>
-    <a href="ai-chat.html">
-      <span class="nav-icon">&#129302;</span> <span class="nav-label-chat"></span>
+    <a href="tasks.html">
+      <span class="nav-icon">&#9989;</span> <span class="nav-label-tasks"></span>
     </a>
     <a href="my-results.html">
       <span class="nav-icon">&#127942;</span> <span class="nav-label-results"></span>
@@ -431,7 +431,7 @@
 
   // ===== Nav labels =====
   document.querySelector('.nav-label-home').textContent = t.home;
-  document.querySelector('.nav-label-chat').textContent = t.aiChat;
+  if (document.querySelector('.nav-label-tasks')) document.querySelector('.nav-label-tasks').textContent = lang === 'en' ? 'Tasks' : lang === 'vi' ? 'Nhiệm vụ' : '미션';
   document.querySelector('.nav-label-results').textContent = t.myResults;
 
   // ===== 20 MBTI Questions (service industry focused) =====
@@ -545,7 +545,7 @@
   // ===== 16 MBTI Type Data =====
   const TYPES = {
     ISTJ: {
-      icon: '&#128221;', color: '#2563eb',
+      icon: '&#128221;', color: '#10B981',
       ko: { name: '청렴결백한 논리주의자', desc: '책임감이 강하고 꼼꼼하며, 정해진 규칙과 절차를 철저히 따릅니다. 서비스 매뉴얼을 완벽하게 숙지하고, 일관된 품질을 유지하는 데 탁월합니다. 조용히 맡은 바를 묵묵히 해내는 믿음직한 팀원입니다.',
         work: ['매뉴얼과 절차를 정확히 준수', '재고 관리, 마감 정산 등 꼼꼼한 업무에 강함', '일관된 서비스 품질 유지'],
         comm: ['명확하고 구체적인 지시를 선호합니다', '갑작스런 변경보다 사전 공지가 효과적', '논리적 근거와 함께 피드백하면 좋습니다'] },
@@ -569,7 +569,7 @@
         comm: ['Dong luc tu loi cam on ca nhan', 'Thich phan hoi rieng 1:1', 'Lam tot nhat trong moi truong on dinh'] }
     },
     INFJ: {
-      icon: '&#127800;', color: '#7c3aed',
+      icon: '&#127800;', color: '#F59E0B',
       ko: { name: '선의의 옹호자', desc: '통찰력 있고 이상주의적이며, 깊은 공감 능력으로 동료와 고객의 필요를 직관적으로 파악합니다. 의미 있는 일에 열정을 가지며 조용히 팀에 영향력을 발휘합니다.',
         work: ['고객의 숨은 니즈를 직관적으로 파악', '팀원들의 감정 변화를 잘 감지', '서비스 개선 아이디어 제안 능력'],
         comm: ['업무의 의미와 목적을 함께 설명해주세요', '조용하지만 깊은 생각을 가지고 있습니다', '1:1 대화에서 더 솔직한 의견을 나눕니다'] },
@@ -713,7 +713,7 @@
         comm: ['Cong nhan no luc va dong gop', 'Vai tro va su thuoc ve nhom quan trong', 'Gioi hoa giai xung dot'] }
     },
     ENFJ: {
-      icon: '&#127775;', color: '#7c3aed',
+      icon: '&#127775;', color: '#F59E0B',
       ko: { name: '언변능숙한 사회운동가', desc: '카리스마 있고 영감을 주는 리더형입니다. 사람들의 잠재력을 발견하고 이끌어내며, 팀 전체의 성장을 위해 헌신합니다.',
         work: ['팀원의 성장을 돕는 자연스러운 리더십', '고객과 깊은 유대감 형성', '팀 비전 설정과 동기부여'],
         comm: ['리더십 기회를 제공하면 큰 성과를 냅니다', '팀원들의 성장에 관심이 많습니다', '비전과 목적을 공유하면 더 열심히 합니다'] },
