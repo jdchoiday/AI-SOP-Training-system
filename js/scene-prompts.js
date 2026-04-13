@@ -467,12 +467,33 @@ function extractActions(text) {
  * @returns {string} Gemini 메타 프롬프트
  */
 function buildSmartVisualPrompt(narration, sceneIndex, totalScenes) {
+  // 나레이션 언어 자동 감지
+  const hasVietnamese = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(narration);
+  const isEnglish = !hasVietnamese && /^[\x00-\x7F\s.,!?;:'"()\-\d\n]+$/.test((narration || '').slice(0, 200));
+
+  let textLangInstruction;
+  if (hasVietnamese) {
+    textLangInstruction = `★★★ 이미지 안의 모든 텍스트(라벨, 제목, 번호 설명, 포스터 문구 등)는 반드시 베트남어(tiếng Việt)로 작성하세요.
+예시: "Rửa tay", "Bước 1", "An toàn", "Quy tắc", "Trước / Sau"
+영어나 한국어 텍스트를 이미지에 넣지 마세요.`;
+  } else if (isEnglish) {
+    textLangInstruction = `★★★ All text inside the image (labels, titles, step descriptions, poster text, etc.) MUST be written in English.
+Examples: "Wash Hands", "Step 1", "Safety Rules", "Before / After"
+Do NOT put Korean or Vietnamese text in the image.`;
+  } else {
+    textLangInstruction = `★★★ 이미지 안의 모든 텍스트(라벨, 제목, 번호 설명, 포스터 문구 등)는 반드시 한국어로 작성하세요.
+예시: "손 씻기", "1단계", "안전 수칙", "이전 / 이후"
+영어나 베트남어 텍스트를 이미지에 넣지 마세요.`;
+  }
+
   return `당신은 교육 영상의 시각 디렉터입니다.
 
 다음 나레이션에 가장 적합한 이미지를 생성해주세요.
 
 나레이션: "${narration}"
 씬: ${(sceneIndex || 0) + 1}/${totalScenes || 10}
+
+${textLangInstruction}
 
 시각 타입 선택 기준 (반드시 다양하게 사용):
 - 절차/순서 설명 → 단계별 인포그래픽 (번호 매겨진 아이콘 배열)
