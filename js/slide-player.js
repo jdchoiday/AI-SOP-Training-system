@@ -240,16 +240,20 @@ const SlidePlayer = (() => {
         @keyframes sp-skeletonPulse { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 
         .sp-scene-visual {
-          width: 100%; max-width: 800px;
+          width: 100%; max-width: 480px;
           border-radius: 16px; overflow: hidden;
-          margin-bottom: 16px; position: relative;
+          margin-bottom: 0; position: relative;
           background: rgba(255,255,255,0.04);
           border: 1px solid rgba(255,255,255,0.06);
-          aspect-ratio: 16/9;
+          aspect-ratio: 9/16;
+          max-height: 70vh;
         }
         .sp-scene-visual img {
-          width: 100%; height: 100%; object-fit: cover;
+          width: 100%; height: 100%; object-fit: contain;
           animation: sp-imgReveal 0.6s ease;
+        }
+        @media (max-width: 600px) {
+          .sp-scene-visual { max-width: 100%; max-height: 65vh; border-radius: 12px; }
         }
         .sp-scene-visual .sp-img-skeleton {
           position: absolute; inset: 0;
@@ -273,10 +277,6 @@ const SlidePlayer = (() => {
           text-align: center; margin-top: 4px; margin-bottom: 8px;
           opacity: 0.7;
         }
-        @media (max-width: 600px) {
-          .sp-scene-visual { border-radius: 12px; }
-        }
-
         .sp-topbar {
           display: flex; align-items: center; justify-content: space-between;
           padding: 12px 20px; flex-shrink: 0;
@@ -304,8 +304,9 @@ const SlidePlayer = (() => {
         }
 
         .sp-slide-container {
-          width: 100%; max-width: 800px;
+          width: 100%; max-width: 520px;
           animation: sp-slideUp 0.45s ease;
+          display: flex; flex-direction: column; align-items: center;
         }
 
         /* Scene badge */
@@ -621,7 +622,7 @@ const SlidePlayer = (() => {
     // 사전 생성된 이미지가 있으면 즉시 표시, 없으면 API 호출
     if (scene.imageUrl) {
       const vis = document.getElementById('spSceneVisual');
-      if (vis) vis.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;" alt="scene">`;
+      if (vis) vis.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:100%;object-fit:contain;border-radius:12px;" alt="scene">`;
     } else {
       _currentImagePromise = _loadSceneImage(scene.visual, scene.narration);
       _preloadNextImage();
@@ -1031,7 +1032,7 @@ const SlidePlayer = (() => {
       _stopCurrentAudio();
 
       currentAudio = new Audio(url);
-      currentAudio.playbackRate = 1.12;
+      currentAudio.playbackRate = 1.0;
 
       // 프로그레스 바 — requestAnimationFrame (60fps 제한, DOM 쿼리 캐시)
       const progressBar = document.getElementById('spAudioProgress');

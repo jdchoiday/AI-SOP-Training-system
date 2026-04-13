@@ -125,11 +125,11 @@ module.exports = async (req, res) => {
     const langVoices = VOICES[lang] || VOICES['ko-KR'];
     const voiceName = langVoices[gender] || langVoices.female;
 
-    // 자연스러운 속도 (실제 사람 말투에 가깝게)
-    let prosodyRate = rate || '+5%';
-    if (prosodyRate === 'default') prosodyRate = '+5%';
-    let prosodyPitch = pitch || '+0Hz';
-    if (prosodyPitch === 'default') prosodyPitch = '+0Hz';
+    // 자연스러운 속도 (교육용 — 또렷하되 편안한 톤)
+    let prosodyRate = rate || '-5%';
+    if (prosodyRate === 'default' || prosodyRate === '+0%') prosodyRate = '-5%';
+    let prosodyPitch = pitch || '+2Hz';
+    if (prosodyPitch === 'default' || prosodyPitch === '+0Hz') prosodyPitch = '+2Hz';
 
     // 텍스트 전처리 (자연스러운 끊어읽기)
     const processedText = preprocessText(text, lang);
