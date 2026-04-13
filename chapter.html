@@ -652,8 +652,9 @@
     const chapterQuizzes = SopStore.getQuizzes(chapterId);
 
     if (!chapter) {
-      alert(t.chapterNotFound);
+      console.warn('[Chapter] 챕터를 찾을 수 없습니다:', chapterId);
       window.location.href = 'app.html';
+      return;
     }
 
     // ===== 다음 챕터 찾기 =====
