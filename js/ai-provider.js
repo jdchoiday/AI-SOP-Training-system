@@ -201,6 +201,11 @@ ${plainText}
   * 안전 → "Cute illustrated safety poster with 5 rules: icons and Korean text, kawaii style, bright colors."
   * 시네마틱 → "Cinematic wide shot of colorful LED lights turning on across indoor playground. Dark-to-bright transition, morning atmosphere."
 - 각 visual은 50-80 단어로 구체적 묘사 포함
+- ★★★ 인포그래픽/다이어그램/포스터 등 텍스트가 포함된 시각 타입의 경우:
+  * 나레이션이 한국어면 → visual에 "with Korean text labels" 명시 (예: "Step-by-step infographic with Korean labels: 1단계, 2단계...")
+  * 나레이션이 영어면 → visual에 "with English text labels" 명시 (예: "Infographic with English labels: Step 1, Step 2...")
+  * 나레이션이 베트남어면 → visual에 "with Vietnamese text labels" 명시 (예: "Infographic with Vietnamese labels: Bước 1, Bước 2...")
+  * 이미지 안의 텍스트는 반드시 나레이션과 같은 언어로 작성되어야 합니다
 - JSON 배열만 출력, 다른 텍스트 없이`;
 
       const result = await this._callLLM(provider, prompt);

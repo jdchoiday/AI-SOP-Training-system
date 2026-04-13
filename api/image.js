@@ -121,9 +121,20 @@ function buildFallbackPrompt(narration, sceneIndex) {
   const cameras = ['와이드 샷', '미디엄 샷', '클로즈업', '오버더숄더 샷', '아이레벨 샷'];
   const camera = cameras[(sceneIndex || 0) % cameras.length];
 
+  // 나레이션 언어 감지
+  const hasVie = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(narration || '');
+  const isEn = !hasVie && /^[\x00-\x7F\s.,!?;:'"()\-\d\n]+$/.test((narration || '').slice(0, 200));
+  const textLang = hasVie
+    ? '★ 이미지 안의 모든 텍스트(라벨, 제목, 포스터 문구)는 반드시 베트남어(tiếng Việt)로 작성하세요.'
+    : isEn
+      ? '★ All text inside the image (labels, titles, poster text) MUST be written in English. No Korean or Vietnamese.'
+      : '★ 이미지 안의 모든 텍스트(라벨, 제목, 포스터 문구)는 반드시 한국어로 작성하세요.';
+
   return `다음 나레이션의 장면을 시각적으로 생성해주세요.
 
 나레이션: "${narration}"
+
+${textLang}
 
 중요: 단순히 같은 스타일의 사진만 만들지 마세요.
 나레이션 내용에 따라 가장 적합한 시각 타입을 선택하세요:
