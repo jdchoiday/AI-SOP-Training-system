@@ -8,18 +8,45 @@ const ImageDB = {
   _db: null,
   _DB_NAME: 'sop_images_db',
   _STORE_NAME: 'scene_images',
+  _VERSION: 2, // v2: object store 재생성 보장
 
   async init() {
-    if (this._db) return this._db;
+    if (this._db) {
+      // DB가 열려있어도 store가 없으면 재시도
+      if (this._db.objectStoreNames.contains(this._STORE_NAME)) return this._db;
+      this._db.close();
+      this._db = null;
+    }
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open(this._DB_NAME, 1);
+      const req = indexedDB.open(this._DB_NAME, this._VERSION);
       req.onupgradeneeded = (e) => {
         const db = e.target.result;
         if (!db.objectStoreNames.contains(this._STORE_NAME)) {
           db.createObjectStore(this._STORE_NAME);
         }
       };
-      req.onsuccess = (e) => { this._db = e.target.result; resolve(this._db); };
+      req.onsuccess = (e) => {
+        this._db = e.target.result;
+        // 최종 확인: store 존재하는지
+        if (!this._db.objectStoreNames.contains(this._STORE_NAME)) {
+          console.warn('[ImageDB] Store not found after open, deleting DB and retrying...');
+          this._db.close();
+          this._db = null;
+          const delReq = indexedDB.deleteDatabase(this._DB_NAME);
+          delReq.onsuccess = () => {
+            // 재시도 (1회)
+            const retry = indexedDB.open(this._DB_NAME, this._VERSION);
+            retry.onupgradeneeded = (ev) => {
+              ev.target.result.createObjectStore(this._STORE_NAME);
+            };
+            retry.onsuccess = (ev) => { this._db = ev.target.result; resolve(this._db); };
+            retry.onerror = (ev) => reject(ev);
+          };
+          delReq.onerror = () => reject(new Error('Failed to delete DB'));
+          return;
+        }
+        resolve(this._db);
+      };
       req.onerror = (e) => { console.error('[ImageDB] init failed:', e); reject(e); };
     });
   },
