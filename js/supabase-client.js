@@ -39,10 +39,10 @@ const SupabaseMode = {
     for (let i = 0; i <= maxRetries; i++) {
       try {
         const result = await fn();
-        if (result.error && result.error.message && /502|503|504|fetch/.test(result.error.message)) {
+        if (result.error && result.error.message && /500|502|503|504|fetch|timeout/i.test(result.error.message)) {
           if (i < maxRetries) {
             console.warn(`[Supabase] 일시적 오류, ${i+1}/${maxRetries} 재시도...`);
-            await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+            await new Promise(r => setTimeout(r, 1500 * (i + 1)));
             continue;
           }
         }
@@ -50,7 +50,7 @@ const SupabaseMode = {
       } catch (e) {
         if (i < maxRetries) {
           console.warn(`[Supabase] 네트워크 오류, ${i+1}/${maxRetries} 재시도...`);
-          await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+          await new Promise(r => setTimeout(r, 1500 * (i + 1)));
           continue;
         }
         throw e;
@@ -179,6 +179,13 @@ const SupabaseMode = {
     }
   },
 
+  // base64 이미지 및 __stored__ 포인터 정리 헬퍼
+  _stripLargeData(text) {
+    if (!text || typeof text !== 'string') return text || '';
+    // base64 이미지 인라인 제거 (data:image/...)
+    return text.replace(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/g, '');
+  },
+
   async saveSop(sop) {
     if (!this._ready) return;
     try {
@@ -187,17 +194,23 @@ const SupabaseMode = {
       let status = sop.status || 'draft';
       if (!validStatuses.includes(status)) status = 'draft';
 
-      // script에서 base64 이미지 데이터 제거 (Supabase 용량 절약)
+      // script에서 base64 이미지 및 __stored__ 포인터 제거
       let scriptClean = sop.script;
       if (scriptClean && Array.isArray(scriptClean)) {
         scriptClean = scriptClean.map(sc => {
           const copy = { ...sc };
-          if (copy.imageUrl && copy.imageUrl.startsWith('data:')) {
-            copy.imageUrl = ''; // base64는 Supabase에 저장하지 않음
+          if (copy.imageUrl && (copy.imageUrl.startsWith('data:') || copy.imageUrl.startsWith('__stored__'))) {
+            copy.imageUrl = ''; // base64/포인터는 Supabase에 저장하지 않음
           }
+          // narration, visual 등에 혹시 base64가 섞여있으면 제거
+          if (copy.narration) copy.narration = this._stripLargeData(copy.narration);
           return copy;
         });
       }
+
+      // content 필드에서도 base64 이미지 제거
+      const contentClean = this._stripLargeData(sop.content);
+      const contentVnClean = this._stripLargeData(sop.content_vn);
 
       const row = {
         id: sop.id,
@@ -205,14 +218,22 @@ const SupabaseMode = {
         title_en: sop.title_en || null,
         title_vn: sop.title_vn || null,
         category: sop.category || '',
-        content: sop.content || '',
-        content_vn: sop.content_vn || '',
+        content: contentClean,
+        content_vn: contentVnClean,
         status: status,
         order_num: sop.order_num || 0,
         script: scriptClean || null,
         quizzes: sop.quizzes || null,
         updated_at: new Date().toISOString(),
       };
+
+      // 행 크기 체크 (1MB 이상이면 스킵 — Supabase 타임아웃 방지)
+      const rowSize = JSON.stringify(row).length;
+      if (rowSize > 1024 * 1024) {
+        console.warn(`[Supabase] SOP ${sop.id} 크기 초과 (${(rowSize/1024).toFixed(0)}KB) — 업로드 스킵`);
+        return;
+      }
+
       const { error } = await this._retry(() =>
         this._client.from('sop_documents').upsert(row, { onConflict: 'id' })
       );
@@ -224,10 +245,17 @@ const SupabaseMode = {
 
   async saveAllSops(sops) {
     if (!this._ready) return;
+    let ok = 0, fail = 0;
     for (const sop of sops) {
-      await this.saveSop(sop);
+      try {
+        await this.saveSop(sop);
+        ok++;
+      } catch (e) {
+        fail++;
+        console.warn(`[Supabase] SOP ${sop.id} 업로드 실패:`, e.message);
+      }
     }
-    console.log(`[Supabase] SOP ${sops.length}개 업로드 완료`);
+    console.log(`[Supabase] SOP ${ok}/${sops.length}개 업로드 완료` + (fail ? ` (❌${fail} 실패)` : ''));
   },
 
   async deleteSop(id) {
