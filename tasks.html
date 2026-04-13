@@ -41,6 +41,49 @@
 
     .empty-state { text-align: center; padding: 40px 20px; color: var(--gray-500); }
     .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
+
+    /* 학습 미션 섹션 */
+    .section-divider {
+      display: flex; align-items: center; gap: 10px;
+      margin: 24px 0 14px; font-size: 15px; font-weight: 700; color: var(--gray-700);
+    }
+    .section-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--gray-200);
+    }
+    .study-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px; background: var(--bg-card); border-radius: var(--radius);
+      box-shadow: var(--shadow); margin-bottom: 8px;
+      text-decoration: none; color: inherit; transition: transform 0.15s;
+    }
+    .study-item:hover { transform: translateY(-1px); }
+    .study-item.locked { opacity: 0.5; pointer-events: none; }
+    .study-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    .study-icon.done { background: rgba(16,185,129,0.15); }
+    .study-icon.active { background: rgba(59,130,246,0.15); }
+    .study-icon.lock { background: rgba(255,255,255,0.05); }
+    .study-info { flex: 1; min-width: 0; }
+    .study-title { font-weight: 600; font-size: 14px; }
+    .study-sub { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+    .study-badge {
+      padding: 4px 10px; border-radius: 10px; font-size: 11px; font-weight: 700;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .study-badge.done { background: rgba(16,185,129,0.15); color: var(--success); }
+    .study-badge.progress { background: rgba(59,130,246,0.15); color: #3B82F6; }
+    .study-badge.locked { background: rgba(255,255,255,0.05); color: var(--gray-500); }
+    .study-progress-bar {
+      height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px;
+      margin-top: 6px; overflow: hidden;
+    }
+    .study-progress-bar .fill {
+      height: 100%; border-radius: 2px;
+      background: linear-gradient(90deg, #3B82F6, #10B981);
+    }
   </style>
 </head>
 <body>
@@ -114,17 +157,24 @@
     <!-- 성과제 리스트 -->
     <div id="taskList"></div>
 
+    <!-- 학습 미션 섹션 -->
+    <div class="section-divider" id="studySectionTitle">📚 학습 미션</div>
+    <div id="studyList"></div>
+
   </div>
 
   <script src="js/config.js"></script>
   <script src="js/supabase-client.js"></script>
+  <script src="js/scene-prompts.js"></script>
+  <script src="js/ai-provider.js"></script>
+  <script src="js/sop-content-kids.js"></script>
   <script src="js/demo-data.js"></script>
   <script src="js/xp-system.js"></script>
   <script>
     // ===== 다국어 =====
     const T = {
       ko: {
-        pageTitle: '기본 성과제',
+        pageTitle: '미션',
         home: '홈', tasks: '미션', praise: '부스트', results: '내 프로필',
         daily: '매일', weekly: '주간', monthly: '월간',
         quarterPoints: '이번 분기 포인트',
@@ -138,9 +188,17 @@
         today: '오늘',
         confirmComplete: (name) => `"${name}" 완료 처리하시겠습니까?`,
         teamTasks: '👥 팀 테스크',
+        studyMission: '📚 학습 미션',
+        studyDone: '완료',
+        studyProgress: (pct) => `${pct}%`,
+        studyLocked: '잠김',
+        studyNotStarted: '시작하기',
+        studyScenes: (n) => `${n}개 영상`,
+        studyReward: '+50 XP',
+        studyAllDone: '모든 학습을 완료했어요! 🎉',
       },
       en: {
-        pageTitle: 'Basic Tasks',
+        pageTitle: 'Missions',
         home: 'Home', tasks: 'Tasks', praise: 'Boost', results: 'Profile',
         daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly',
         quarterPoints: 'Quarter Points',
@@ -154,9 +212,17 @@
         today: 'Today',
         confirmComplete: (name) => `Mark "${name}" as complete?`,
         teamTasks: '👥 Team Tasks',
+        studyMission: '📚 Study Missions',
+        studyDone: 'Done',
+        studyProgress: (pct) => `${pct}%`,
+        studyLocked: 'Locked',
+        studyNotStarted: 'Start',
+        studyScenes: (n) => `${n} videos`,
+        studyReward: '+50 XP',
+        studyAllDone: 'All studies completed! 🎉',
       },
       vi: {
-        pageTitle: 'Nhiệm vụ cơ bản',
+        pageTitle: 'Nhiệm vụ',
         home: 'Trang chủ', tasks: 'Nhiệm vụ', praise: 'Khen', results: 'Hồ sơ',
         daily: 'Hàng ngày', weekly: 'Hàng tuần', monthly: 'Hàng tháng',
         quarterPoints: 'Điểm quý này',
@@ -170,6 +236,14 @@
         today: 'Hôm nay',
         confirmComplete: (name) => `Đánh dấu "${name}" là hoàn thành?`,
         teamTasks: '👥 Nhóm',
+        studyMission: '📚 Học tập',
+        studyDone: 'Xong',
+        studyProgress: (pct) => `${pct}%`,
+        studyLocked: 'Khóa',
+        studyNotStarted: 'Bắt đầu',
+        studyScenes: (n) => `${n} video`,
+        studyReward: '+50 XP',
+        studyAllDone: 'Hoàn thành tất cả bài học! 🎉',
       }
     };
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
@@ -515,7 +589,85 @@
       setTimeout(() => { toast.style.opacity = '0'; }, 2500);
     }
 
+    // ===== 학습 미션 렌더링 =====
+    function renderStudyMissions() {
+      const container = document.getElementById('studyList');
+      if (typeof SopStore === 'undefined' || typeof Progress === 'undefined') {
+        container.innerHTML = '';
+        return;
+      }
+
+      const allChapters = SopStore.getChapters();
+      // 지점별 학습 경로 필터
+      const emp = typeof EmployeeStore !== 'undefined' ? EmployeeStore.getCurrentEmployee() : null;
+      const branch = emp?.branch || user.branch;
+      const paths = JSON.parse(localStorage.getItem('sop_learning_paths') || '{}');
+      const assigned = paths[branch];
+      const chapters = (!assigned || assigned.length === 0) ? allChapters : allChapters.filter(ch => assigned.includes(ch.id));
+
+      if (chapters.length === 0) {
+        container.innerHTML = '';
+        document.getElementById('studySectionTitle').style.display = 'none';
+        return;
+      }
+
+      const allDone = chapters.every(ch => Progress.isChapterPassed(ch.id));
+      let html = '';
+
+      chapters.forEach((ch, index) => {
+        const unlocked = Progress.isChapterUnlocked(index);
+        const passed = Progress.isChapterPassed(ch.id);
+        const videoProgress = Progress.getChapterVideoProgress(ch.id);
+        const videos = SopStore.getVideos(ch.id);
+        const title = typeof getLocalizedText === 'function' ? getLocalizedText(ch, 'title') : ch.title;
+
+        let iconClass, statusBadge, link;
+
+        if (passed) {
+          iconClass = 'done';
+          statusBadge = `<span class="study-badge done">✓ ${t.studyDone}</span>`;
+          link = `chapter.html?id=${ch.id}`;
+        } else if (!unlocked) {
+          iconClass = 'lock';
+          statusBadge = `<span class="study-badge locked">🔒 ${t.studyLocked}</span>`;
+          link = '#';
+        } else if (videoProgress > 0) {
+          iconClass = 'active';
+          statusBadge = `<span class="study-badge progress">${t.studyProgress(videoProgress)}</span>`;
+          link = `chapter.html?id=${ch.id}`;
+        } else {
+          iconClass = 'active';
+          statusBadge = `<span class="study-badge progress">▶ ${t.studyNotStarted}</span>`;
+          link = `chapter.html?id=${ch.id}`;
+        }
+
+        const progressBar = unlocked && !passed && videoProgress > 0
+          ? `<div class="study-progress-bar"><div class="fill" style="width:${videoProgress}%"></div></div>`
+          : '';
+
+        html += `
+          <a class="study-item ${!unlocked ? 'locked' : ''}" href="${link}" ${!unlocked ? 'onclick="return false;"' : ''}>
+            <div class="study-icon ${iconClass}">
+              ${passed ? '✅' : !unlocked ? '🔒' : '📖'}
+            </div>
+            <div class="study-info">
+              <div class="study-title">${index + 1}. ${title}</div>
+              <div class="study-sub">${t.studyScenes(videos.length)} · ${t.studyReward}</div>
+              ${progressBar}
+            </div>
+            ${statusBadge}
+          </a>`;
+      });
+
+      if (allDone) {
+        html += `<div style="text-align:center; padding:16px; color:var(--success); font-size:14px; font-weight:600;">${t.studyAllDone}</div>`;
+      }
+
+      container.innerHTML = html;
+    }
+
     // ===== 다국어 적용 =====
+    document.getElementById('studySectionTitle').textContent = t.studyMission;
     document.getElementById('pageTitle').textContent = t.pageTitle;
     document.querySelector('.nav-label-home').textContent = t.home;
     document.querySelector('.nav-label-tasks').textContent = t.tasks;
@@ -533,9 +685,13 @@
     // ===== 초기화 =====
     SupabaseMode.init().then(connected => {
       if (connected) {
-        SupabaseMode.syncAll().then(() => loadData());
+        SupabaseMode.syncAll().then(() => {
+          loadData();
+          renderStudyMissions();
+        });
       } else {
         loadData();
+        renderStudyMissions();
       }
     });
   </script>
