@@ -1416,6 +1416,11 @@
             if (parent) sop.parent_id = parent.id;
           }
         }
+        // 챕터 이름 자동 보정: "Ch01" 같은 코드명 → "챕터 1" 로 변환
+        if (sop.doc_type === 'chapter' && /^[Cc]h\d+$/.test(sop.title.trim())) {
+          const num = parseInt(sop.title.replace(/[^0-9]/g, ''));
+          if (num) sop.title = `챕터 ${num}`;
+        }
         if (sop.script) sop.script.forEach((sc, idx) => {
           if (sc.imageUrl && sc.imageUrl.startsWith('idb:')) sc.imageUrl = null;
           if (sc.imageUrl && sc.imageUrl.startsWith('__stored__:')) {
@@ -1894,24 +1899,34 @@
         const hasQuiz = sop.quizzes && sop.quizzes.length > 0;
         const sceneQuizCount = sop.script ? sop.script.reduce((sum, sc) => sum + (sc.quizzes?.length || 0), 0) : 0;
         const isChecked = selectedSopIds.has(sop.id);
-        const numBadge = (indent && secNum !== undefined) ? `<div style="width:28px; height:28px; border-radius:50%; background:var(--primary); color:white; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0;">${secNum}</div>` : '';
+
+        // 섹션 번호 뱃지 (챕터 하위)
+        const numBadge = (indent && secNum !== undefined)
+          ? `<div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#6366F1,#4F46E5); color:white; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; flex-shrink:0; box-shadow:0 2px 8px rgba(99,102,241,0.3);">S${secNum}</div>`
+          : '';
+
+        // 생성 상태 아이콘
+        const statusIcon = hasScript ? '✅' : '⏳';
+        const sceneInfo = hasScript ? `${sop.script.length}씬` : '미생성';
+        const quizInfo = hasQuiz ? ` · 퀴즈 ${sop.quizzes.length}` : '';
+        const sceneQuizInfo = sceneQuizCount > 0 ? ` · 씬퀴즈 ${sceneQuizCount}` : '';
+
         return `
-          <div class="sop-list-item" style="position:relative; ${indent ? 'margin-left:32px; border-left:3px solid var(--primary-light);' : ''}">
+          <div class="sop-list-item" style="position:relative; ${indent ? 'margin-left:12px; border-left:none; background:rgba(30,41,59,0.5); border-radius:10px; margin-bottom:3px;' : ''}">
             <input type="checkbox" class="sop-checkbox" data-id="${sop.id}"
               ${isChecked ? 'checked' : ''}
               onclick="toggleSopSelect('${sop.id}', event)"
               style="width:18px; height:18px; cursor:pointer; flex-shrink:0; accent-color:var(--primary);">
             ${numBadge}
-            <div class="sop-info" onclick="openSopEditor('${sop.id}')" style="cursor:pointer;">
-              <h4>${sop.title}</h4>
-              <p>${sop.category || ''} · ${hasScript ? (sop.script.length + '씬') : '미생성'}${hasQuiz ? ' · 퀴즈 ' + sop.quizzes.length : ''}</p>
-              <div class="sop-badges" style="margin-top:6px;">
-                <span class="badge" style="background:${st.bg}; color:${st.color};">${st.label}</span>
-                ${hasScript ? '<span class="badge" style="background:var(--primary-light); color:var(--primary);">스크립트 ✓</span>' : ''}
-                ${sceneQuizCount > 0 ? '<span class="badge" style="background:rgba(99,102,241,0.15); color:var(--primary);">씬퀴즈 ' + sceneQuizCount + '</span>' : ''}
-              </div>
+            <div class="sop-info" onclick="openSopEditor('${sop.id}')" style="cursor:pointer; flex:1;">
+              <h4 style="font-size:15px; margin-bottom:3px;">${sop.title}</h4>
+              <p style="font-size:12px; color:#94A3B8;">${statusIcon} ${sceneInfo}${quizInfo}${sceneQuizInfo}</p>
             </div>
-            <span style="color:var(--gray-300); cursor:pointer;" onclick="openSopEditor('${sop.id}')">&#8250;</span>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+              <span class="badge" style="background:${st.bg}; color:${st.color}; font-size:11px;">${st.label}</span>
+              ${hasScript ? '<span class="badge" style="background:rgba(16,185,129,0.15); color:#10B981; font-size:10px;">스크립트 ✓</span>' : ''}
+            </div>
+            <span style="color:var(--gray-400); cursor:pointer; font-size:18px;" onclick="openSopEditor('${sop.id}')">›</span>
           </div>`;
       }
 
@@ -1923,33 +1938,59 @@
         const examCount = ch.exam_quizzes?.length || 0;
         const st = statusMap[ch.status] || statusMap.draft;
         const totalScenes = childSections.reduce((sum, s) => sum + (s.script?.length || 0), 0);
-        const totalQuizzes = childSections.reduce((sum, s) => sum + (s.quizzes?.length || 0), 0);
-        // 챕터 제목: "Ch01" 같은 짧은 이름이면 첫 섹션들 이름을 서브타이틀로 표시
-        const chTitle = ch.title;
-        const sectionPreview = childSections.slice(0, 3).map(s => s.title).join(', ');
-        const isShortTitle = chTitle.length <= 6; // "Ch01" 같은 짧은 제목
+        const generatedSections = childSections.filter(s => s.script && s.script.length > 0).length;
+
+        // 챕터 번호 추출
+        const chNumMatch = ch.title.match(/(\d+)/);
+        const chNum = chNumMatch ? parseInt(chNumMatch[1]) : '';
+
+        // 챕터 표시명: 짧은 제목이면 섹션들에서 의미있는 이름 생성
+        let chDisplayTitle = ch.title;
+        const isGenericTitle = /^(Ch\d+|새 챕터|chapter\s*\d+)$/i.test(ch.title.trim());
+        if (isGenericTitle && childSections.length > 0) {
+          chDisplayTitle = `챕터 ${chNum || '?'}: ${childSections[0].title}${childSections.length > 1 ? ' 외 ' + (childSections.length - 1) + '편' : ''}`;
+        }
+
+        // 진행률 바
+        const progress = childSections.length > 0 ? Math.round((generatedSections / childSections.length) * 100) : 0;
+        const progressColor = progress === 100 ? '#10B981' : progress > 0 ? '#f59e0b' : '#475569';
 
         html += `
-          <div class="sop-list-item" style="background:linear-gradient(135deg,#1E293B,#1a2744); border:1px solid rgba(245,158,11,0.3); cursor:pointer;" onclick="openChapterManager('${ch.id}')">
-            <div style="font-size:24px; width:48px; text-align:center;">📘</div>
-            <div class="sop-info">
-              <h4 style="color:#f59e0b;">${chTitle}</h4>
-              ${isShortTitle && sectionPreview ? `<p style="font-size:13px; color:var(--gray-300); margin-bottom:2px;">${sectionPreview}${childSections.length > 3 ? ' ...' : ''}</p>` : ''}
-              <p style="font-size:12px; color:var(--gray-400);">${childSections.length}개 섹션 · ${totalScenes}씬${totalQuizzes > 0 ? ' · 퀴즈 ' + totalQuizzes : ''}${examCount > 0 ? ' · 🎯 시험 ' + examCount + '문제' : ''}</p>
-              <div class="sop-badges" style="margin-top:6px;">
-                <span class="badge" style="background:${st.bg}; color:${st.color};">${st.label}</span>
-                <span class="badge" style="background:rgba(245,158,11,0.15); color:#f59e0b;">대챕터</span>
+          <div style="background:linear-gradient(135deg,#0F172A 0%,#1a2744 100%); border:2px solid rgba(245,158,11,0.4); border-radius:16px; padding:20px; margin-bottom:4px; cursor:pointer; transition:all .2s;"
+               onclick="openChapterManager('${ch.id}')"
+               onmouseover="this.style.borderColor='rgba(245,158,11,0.8)';this.style.transform='translateY(-1px)'"
+               onmouseout="this.style.borderColor='rgba(245,158,11,0.4)';this.style.transform='none'">
+            <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
+              <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#f59e0b,#d97706); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; color:#0F172A; flex-shrink:0;">${chNum || '📘'}</div>
+              <div style="flex:1; min-width:0;">
+                <h3 style="color:#f59e0b; font-size:17px; font-weight:700; margin:0 0 4px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${chDisplayTitle}</h3>
+                <p style="font-size:12px; color:#94A3B8; margin:0;">${childSections.length}개 섹션 · ${totalScenes}씬${examCount > 0 ? ' · 시험 ' + examCount + '문제' : ''}</p>
               </div>
+              <span style="color:#f59e0b; font-size:22px;">›</span>
             </div>
-            <span style="color:var(--gray-300);">&#8250;</span>
+            <!-- 진행률 바 -->
+            <div style="background:#1E293B; border-radius:6px; height:6px; overflow:hidden; margin-bottom:10px;">
+              <div style="width:${progress}%; height:100%; background:${progressColor}; border-radius:6px; transition:width .3s;"></div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span style="font-size:11px; color:${progressColor}; font-weight:600;">${generatedSections}/${childSections.length} 생성 완료</span>
+              <span class="badge" style="background:${st.bg}; color:${st.color}; font-size:11px;">${st.label}</span>
+              ${examCount > 0 ? '<span class="badge" style="background:rgba(16,185,129,0.15); color:#10B981; font-size:11px;">🎯 시험 준비됨</span>' : ''}
+            </div>
           </div>`;
-        childSections.forEach((s, i) => { html += renderSopItem(s, true, i + 1); });
+
+        // 섹션 목록
+        if (childSections.length > 0) {
+          html += `<div style="margin-left:16px; border-left:3px solid rgba(245,158,11,0.3); padding-left:0; margin-bottom:12px;">`;
+          childSections.forEach((s, i) => { html += renderSopItem(s, true, i + 1); });
+          html += `</div>`;
+        }
       });
 
       // 독립 섹션 (parent 없음)
       const orphans = sections.filter(s => !s.parent_id);
       if (orphans.length > 0 && chapters.length > 0) {
-        html += `<div style="padding:12px 16px; color:var(--gray-400); font-size:13px; font-weight:600; margin-top:8px;">📋 미배치 섹션</div>`;
+        html += `<div style="padding:14px 16px; color:#94A3B8; font-size:14px; font-weight:700; margin-top:16px; border-top:1px solid #334155;">📋 미배치 섹션 (${orphans.length}개)</div>`;
       }
       orphans.forEach(s => { html += renderSopItem(s, false); });
 
@@ -2053,8 +2094,9 @@
             // 대챕터 자동 생성 (없으면)
             if (!chapterMap[parsed.chapterKey]) {
               const chId = 'chapter-' + parsed.chapterKey + '-' + Date.now();
+              const chLabel = `챕터 ${parsed.chapterNum}`;
               const newChapter = {
-                id: chId, title: `Ch${String(parsed.chapterNum).padStart(2,'0')}`, category: '',
+                id: chId, title: chLabel, category: parsed.chapterKey.toUpperCase(),
                 status: 'draft', doc_type: 'chapter', parent_id: null,
                 order_num: parsed.chapterNum, content: '',
                 createdAt: new Date().toISOString().slice(0, 10),
@@ -2062,7 +2104,7 @@
               };
               sops.push(newChapter);
               chapterMap[parsed.chapterKey] = chId;
-              console.log(`[Upload] 📘 대챕터 자동 생성: Ch${String(parsed.chapterNum).padStart(2,'0')}`);
+              console.log(`[Upload] 📘 대챕터 자동 생성: ${chLabel}`);
             }
             parentId = chapterMap[parsed.chapterKey];
             orderNum = parsed.sectionNum;
