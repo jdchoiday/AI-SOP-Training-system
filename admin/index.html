@@ -336,7 +336,8 @@
             <button class="btn btn-outline" style="padding:10px 20px; font-size:14px;" onclick="document.getElementById('sopJsonInput').click()">&#128230; JSON 일괄 업로드</button>
             <button class="btn btn-outline" style="padding:10px 20px; font-size:14px;" onclick="document.getElementById('sopFileInput').click()">&#128196; 파일 업로드</button>
             <button class="btn btn-outline" style="padding:10px 20px; font-size:14px;" onclick="document.getElementById('sopFolderInput').click()">&#128193; 폴더 업로드</button>
-            <button class="btn btn-primary" style="padding:10px 20px; font-size:14px;" onclick="createNewSop()">+ 새 SOP 작성</button>
+            <button class="btn btn-primary" style="padding:10px 20px; font-size:14px;" onclick="createNewSop()">+ 새 섹션</button>
+            <button class="btn btn-primary" style="padding:10px 20px; font-size:14px; background:linear-gradient(135deg,#f59e0b,#d97706);" onclick="createNewChapter()">📘 새 챕터</button>
           </div>
           <input type="file" id="sopFileInput" accept=".txt,.pdf,.doc,.docx,.hwp,.md" multiple style="display:none;" onchange="handleSopFileUpload(event)">
           <input type="file" id="sopFolderInput" webkitdirectory multiple style="display:none;" onchange="handleSopFolderUpload(event)">
@@ -1865,20 +1866,25 @@
       const allChecked = sops.every(s => selectedSopIds.has(s.id));
       document.getElementById('sopSelectAllCheckbox').checked = allChecked;
 
-      container.innerHTML = sops.map(sop => {
-        const statusMap = {
-          draft: { label: '작성 중', color: 'var(--gray-500)', bg: 'var(--gray-100)' },
-          generated: { label: 'AI 생성 완료', color: 'var(--primary)', bg: 'var(--primary-light)' },
-          reviewed: { label: '검토 완료', color: '#92400e', bg: '#fef3c7' },
-          published: { label: '배포됨', color: 'var(--success)', bg: '#dcfce7' },
-        };
+      // 대챕터와 섹션 분리
+      const chapters = sops.filter(s => s.doc_type === 'chapter');
+      const sections = sops.filter(s => s.doc_type !== 'chapter');
+
+      const statusMap = {
+        draft: { label: '작성 중', color: 'var(--gray-500)', bg: 'var(--gray-100)' },
+        generated: { label: 'AI 생성 완료', color: 'var(--primary)', bg: 'var(--primary-light)' },
+        reviewed: { label: '검토 완료', color: '#92400e', bg: '#fef3c7' },
+        published: { label: '배포됨', color: 'var(--success)', bg: '#dcfce7' },
+      };
+
+      function renderSopItem(sop, indent) {
         const st = statusMap[sop.status] || statusMap.draft;
         const hasScript = sop.script && sop.script.length > 0;
         const hasQuiz = sop.quizzes && sop.quizzes.length > 0;
+        const sceneQuizCount = sop.script ? sop.script.reduce((sum, sc) => sum + (sc.quizzes?.length || 0), 0) : 0;
         const isChecked = selectedSopIds.has(sop.id);
-
         return `
-          <div class="sop-list-item" style="position:relative;">
+          <div class="sop-list-item" style="position:relative; ${indent ? 'margin-left:32px; border-left:3px solid var(--primary-light);' : ''}">
             <input type="checkbox" class="sop-checkbox" data-id="${sop.id}"
               ${isChecked ? 'checked' : ''}
               onclick="toggleSopSelect('${sop.id}', event)"
@@ -1886,16 +1892,49 @@
             <div class="sop-icon" style="background:${st.bg}; color:${st.color};" onclick="openSopEditor('${sop.id}')">&#128221;</div>
             <div class="sop-info" onclick="openSopEditor('${sop.id}')" style="cursor:pointer;">
               <h4>${sop.title}</h4>
-              <p>${sop.category || ''} · ${sop.createdAt || ''}</p>
+              <p>${sop.category || ''} · ${sop.createdAt || ''}${sop.parent_id ? ' · 📘 ' + (chapters.find(c => c.id === sop.parent_id)?.title || '') : ''}</p>
               <div class="sop-badges" style="margin-top:6px;">
                 <span class="badge" style="background:${st.bg}; color:${st.color};">${st.label}</span>
                 ${hasScript ? '<span class="badge" style="background:var(--primary-light); color:var(--primary);">스크립트 ✓</span>' : ''}
-                ${hasQuiz ? '<span class="badge" style="background:rgba(16,185,129,0.15); color:var(--success);">퀴즈 ' + sop.quizzes.length + '문제</span>' : ''}
+                ${hasQuiz ? '<span class="badge" style="background:rgba(16,185,129,0.15); color:var(--success);">섹션퀴즈 ' + sop.quizzes.length + '</span>' : ''}
+                ${sceneQuizCount > 0 ? '<span class="badge" style="background:rgba(99,102,241,0.15); color:var(--primary);">씬퀴즈 ' + sceneQuizCount + '</span>' : ''}
               </div>
             </div>
             <span style="color:var(--gray-300); cursor:pointer;" onclick="openSopEditor('${sop.id}')">&#8250;</span>
           </div>`;
-      }).join('');
+      }
+
+      let html = '';
+
+      // 대챕터 표시 (하위 섹션 포함)
+      chapters.forEach(ch => {
+        const childSections = sections.filter(s => s.parent_id === ch.id).sort((a, b) => (a.order_num || 0) - (b.order_num || 0));
+        const examCount = ch.exam_quizzes?.length || 0;
+        const st = statusMap[ch.status] || statusMap.draft;
+        html += `
+          <div class="sop-list-item" style="background:linear-gradient(135deg,#1E293B,#1a2744); border:1px solid rgba(245,158,11,0.3); cursor:pointer;" onclick="openChapterManager('${ch.id}')">
+            <div style="font-size:24px; width:48px; text-align:center;">📘</div>
+            <div class="sop-info">
+              <h4 style="color:#f59e0b;">${ch.title}</h4>
+              <p>${childSections.length}개 섹션${examCount > 0 ? ' · 🎯 시험 ' + examCount + '문제' : ''}</p>
+              <div class="sop-badges" style="margin-top:6px;">
+                <span class="badge" style="background:${st.bg}; color:${st.color};">${st.label}</span>
+                <span class="badge" style="background:rgba(245,158,11,0.15); color:#f59e0b;">대챕터</span>
+              </div>
+            </div>
+            <span style="color:var(--gray-300);">&#8250;</span>
+          </div>`;
+        childSections.forEach(s => { html += renderSopItem(s, true); });
+      });
+
+      // 독립 섹션 (parent 없음)
+      const orphans = sections.filter(s => !s.parent_id);
+      if (orphans.length > 0 && chapters.length > 0) {
+        html += `<div style="padding:12px 16px; color:var(--gray-400); font-size:13px; font-weight:600; margin-top:8px;">📋 미배치 섹션</div>`;
+      }
+      orphans.forEach(s => { html += renderSopItem(s, false); });
+
+      container.innerHTML = html;
       updateBulkBar();
     }
 
@@ -2331,8 +2370,8 @@ ${text.slice(0, 3000)}`;
       };
     }
 
-    // ===== 새 SOP 생성 =====
-    function createNewSop() {
+    // ===== 새 SOP(섹션) 생성 =====
+    function createNewSop(parentId) {
       if (!hasPermission('sop_create')) { alert('SOP 생성 권한이 없습니다.'); return; }
       const sops = getSops();
       const newSop = {
@@ -2341,6 +2380,8 @@ ${text.slice(0, 3000)}`;
         category: '기타',
         chapter: 'new',
         status: 'draft',
+        doc_type: 'section',
+        parent_id: parentId || null,
         content: '<h3>1. 첫 번째 절차</h3><ol><li>여기에 상세 단계를 입력하세요</li><li>구체적일수록 AI가 더 좋은 스크립트를 생성합니다</li></ol><h3>2. 두 번째 절차</h3><ol><li>단계를 추가하세요</li></ol>',
         createdAt: new Date().toISOString().slice(0, 10),
         script: null,
@@ -2348,8 +2389,180 @@ ${text.slice(0, 3000)}`;
       };
       sops.push(newSop);
       saveSops(sops);
-      AuditLog.add('sop', 'create', `새 SOP 생성: "${newSop.title}"`);
+      AuditLog.add('sop', 'create', `새 섹션 생성: "${newSop.title}"` + (parentId ? ` (챕터: ${parentId})` : ''));
       openSopEditor(newSop.id);
+    }
+
+    // ===== 새 대챕터 생성 =====
+    function createNewChapter() {
+      if (!hasPermission('sop_create')) { alert('SOP 생성 권한이 없습니다.'); return; }
+      const sops = getSops();
+      const chapterCount = sops.filter(s => s.doc_type === 'chapter').length;
+      const newChapter = {
+        id: 'chapter-' + Date.now(),
+        title: '새 챕터',
+        category: '',
+        status: 'draft',
+        doc_type: 'chapter',
+        parent_id: null,
+        order_num: chapterCount + 1,
+        content: '',
+        createdAt: new Date().toISOString().slice(0, 10),
+        script: null,
+        quizzes: null,
+        exam_quizzes: null
+      };
+      sops.push(newChapter);
+      saveSops(sops);
+      AuditLog.add('sop', 'create', `새 챕터 생성: "${newChapter.title}"`);
+      openChapterManager(newChapter.id);
+    }
+
+    // ===== 대챕터 관리 모달 =====
+    function openChapterManager(chapterId) {
+      const sops = getSops();
+      const chapter = sops.find(s => s.id === chapterId);
+      if (!chapter) return;
+
+      const sections = sops.filter(s => s.parent_id === chapterId).sort((a, b) => (a.order_num || 0) - (b.order_num || 0));
+      const unassigned = sops.filter(s => s.doc_type !== 'chapter' && !s.parent_id);
+
+      const modal = document.getElementById('modalOverlay');
+      const content = document.getElementById('modalContent');
+      content.className = 'modal modal-resizable';
+      content.innerHTML = `
+        <h3 style="margin-bottom:8px;">📘 챕터 관리: ${chapter.title}</h3>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:13px; color:var(--gray-400);">챕터 이름</label>
+          <input id="chapterTitleInput" type="text" value="${chapter.title}" placeholder="챕터 이름"
+            style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--gray-200); background:#0F172A; color:white; font-size:15px; margin-top:4px;">
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h4 style="font-size:15px;">📄 포함된 섹션 (${sections.length}개)</h4>
+          <button onclick="createNewSop('${chapterId}'); document.getElementById('modalOverlay').classList.remove('show');"
+            style="padding:6px 14px; font-size:13px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer;">
+            + 새 섹션 추가
+          </button>
+        </div>
+
+        <div id="chapterSectionsList" style="max-height:300px; overflow-y:auto; margin-bottom:16px;">
+          ${sections.length === 0 ? '<p style="color:var(--gray-500); text-align:center; padding:20px;">아직 섹션이 없습니다. 아래에서 기존 SOP를 배치하거나 새로 만드세요.</p>' :
+            sections.map((s, i) => `
+              <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:#0F172A; border-radius:8px; margin-bottom:6px;">
+                <span style="color:var(--primary); font-weight:700; font-size:13px;">${i + 1}</span>
+                <span style="flex:1; font-size:14px; cursor:pointer;" onclick="document.getElementById('modalOverlay').classList.remove('show'); openSopEditor('${s.id}')">${s.title}</span>
+                <span style="font-size:12px; color:var(--gray-500);">${s.script?.length || 0}씬 · ${s.quizzes?.length || 0}퀴즈</span>
+                <button onclick="_removeFromChapter('${s.id}','${chapterId}')" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:16px;" title="챕터에서 제거">✕</button>
+              </div>
+            `).join('')}
+        </div>
+
+        ${unassigned.length > 0 ? `
+          <h4 style="font-size:14px; margin-bottom:8px; color:var(--gray-400);">📋 배치 가능한 SOP (${unassigned.length}개)</h4>
+          <div style="max-height:200px; overflow-y:auto; margin-bottom:16px;">
+            ${unassigned.map(s => `
+              <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; background:rgba(99,102,241,0.1); border-radius:8px; margin-bottom:4px; cursor:pointer;"
+                   onclick="_assignToChapter('${s.id}','${chapterId}')">
+                <span style="font-size:14px; flex:1;">${s.title}</span>
+                <span style="font-size:12px; color:var(--gray-500);">${s.category || ''}</span>
+                <span style="color:var(--primary); font-size:18px;">+</span>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        <div style="display:flex; gap:8px; justify-content:flex-end; border-top:1px solid var(--gray-200); padding-top:16px;">
+          ${chapter.exam_quizzes?.length ? `<span style="font-size:12px; color:var(--success); display:flex; align-items:center;">✅ 종합시험 ${chapter.exam_quizzes.length}문제</span>` : ''}
+          <button onclick="_generateChapterExam('${chapterId}')" style="padding:8px 16px; background:linear-gradient(135deg,#f59e0b,#d97706); color:white; border:none; border-radius:8px; cursor:pointer; font-size:13px;">
+            🎯 종합시험 생성 (30문제)
+          </button>
+          <button onclick="_saveChapter('${chapterId}')" style="padding:8px 16px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-size:13px;">
+            💾 저장
+          </button>
+          <button onclick="document.getElementById('modalOverlay').classList.remove('show')" style="padding:8px 16px; background:var(--gray-100); color:var(--gray-700); border:none; border-radius:8px; cursor:pointer; font-size:13px;">
+            닫기
+          </button>
+        </div>
+      `;
+      modal.classList.add('show');
+    }
+
+    // 섹션을 챕터에 배치
+    function _assignToChapter(sopId, chapterId) {
+      const sops = getSops();
+      const sop = sops.find(s => s.id === sopId);
+      if (!sop) return;
+      sop.parent_id = chapterId;
+      sop.doc_type = 'section';
+      // order_num 자동 배정
+      const siblings = sops.filter(s => s.parent_id === chapterId);
+      sop.order_num = siblings.length; // 0-based (방금 추가한 것 포함)
+      saveSops(sops);
+      openChapterManager(chapterId); // 새로고침
+    }
+
+    // 섹션을 챕터에서 제거
+    function _removeFromChapter(sopId, chapterId) {
+      const sops = getSops();
+      const sop = sops.find(s => s.id === sopId);
+      if (!sop) return;
+      sop.parent_id = null;
+      saveSops(sops);
+      openChapterManager(chapterId);
+    }
+
+    // 챕터 저장
+    function _saveChapter(chapterId) {
+      const sops = getSops();
+      const chapter = sops.find(s => s.id === chapterId);
+      if (!chapter) return;
+      const titleInput = document.getElementById('chapterTitleInput');
+      if (titleInput) chapter.title = titleInput.value.trim() || chapter.title;
+      saveSops(sops);
+      document.getElementById('modalOverlay').classList.remove('show');
+      renderSopList();
+    }
+
+    // 챕터 종합시험 AI 자동 생성 (30문제)
+    async function _generateChapterExam(chapterId) {
+      const sops = getSops();
+      const chapter = sops.find(s => s.id === chapterId);
+      const sections = sops.filter(s => s.parent_id === chapterId);
+      if (sections.length === 0) { alert('섹션이 없습니다. 먼저 섹션을 배치하세요.'); return; }
+
+      if (!confirm(`${sections.length}개 섹션 기반 종합시험 30문제를 AI로 생성합니다.\n예상 시간: ~15초\n\n진행하시겠습니까?`)) return;
+
+      // 각 섹션의 콘텐츠 요약 수집
+      const sectionData = sections.map(s => ({
+        title: s.title,
+        content: s.content ? s.content.replace(/<[^>]+>/g, '').slice(0, 800) : '',
+        narration: s.script ? s.script.map(sc => sc.narration).join(' ').slice(0, 500) : ''
+      }));
+
+      try {
+        showLoading('종합시험 30문제 생성 중...');
+        const res = await fetch('/api/quiz', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: 'exam', sections: sectionData, count: 30 })
+        });
+        hideLoading();
+
+        if (!res.ok) { alert('시험 생성 실패: ' + (await res.text())); return; }
+        const data = await res.json();
+        if (data.quizzes?.length > 0) {
+          chapter.exam_quizzes = data.quizzes;
+          saveSops(sops);
+          alert(`✅ 종합시험 ${data.quizzes.length}문제 생성 완료!`);
+          openChapterManager(chapterId); // 새로고침
+        } else {
+          alert('퀴즈를 생성하지 못했습니다.');
+        }
+      } catch (e) {
+        hideLoading();
+        alert('시험 생성 오류: ' + e.message);
+      }
     }
 
     // ===== SOP 에디터 열기 =====
@@ -3197,30 +3410,54 @@ Output ONLY the prompt, nothing else.`;
         }
       }
 
-      // 단일 씬 이미지 생성 (재시도 포함)
+      // 단일 씬 이미지 + 퀴즈 동시 생성 (재시도 포함)
       async function generateOneImage(scene, sceneIdx, retry = 0) {
         try {
-          const imgRes = await fetchWithTimeout('/api/image', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'generate-multi', visual: scene.visual || '', narration: scene.narration, sceneIndex: sceneIdx, totalScenes: sop.script.length })
-          }, FETCH_TIMEOUT);
+          // 이미지 + 퀴즈 동시 요청 (병렬)
+          const [imgRes, quizRes] = await Promise.all([
+            fetchWithTimeout('/api/image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'generate-multi', visual: scene.visual || '', narration: scene.narration, sceneIndex: sceneIdx, totalScenes: sop.script.length })
+            }, FETCH_TIMEOUT),
+            // 씬별 퀴즈 3개 자동 생성
+            fetchWithTimeout('/api/quiz', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ narration: scene.narration, count: 3, mode: 'scene', sceneIndex: sceneIdx })
+            }, 35000).catch(e => {
+              console.warn(`씬 ${scene.scene} 퀴즈 생성 실패 (이미지는 계속):`, e.message);
+              return null;
+            })
+          ]);
 
+          // 이미지 처리
           if (!imgRes.ok) {
             const errText = await imgRes.text().catch(() => '');
             throw new Error(`HTTP ${imgRes.status}: ${errText.slice(0, 100)}`);
           }
-
           const imgData = await imgRes.json();
           if (imgData.images?.[0]?.imageUrl) {
             scene.imageUrl = imgData.images[0].imageUrl;
-            return true;
           } else {
             throw new Error(imgData.error || 'No image in response');
           }
+
+          // 퀴즈 처리 (실패해도 이미지 생성은 성공)
+          if (quizRes && quizRes.ok) {
+            try {
+              const quizData = await quizRes.json();
+              if (quizData.quizzes && quizData.quizzes.length > 0) {
+                scene.quizzes = quizData.quizzes;
+                console.log(`[Quiz] 씬 ${scene.scene}: ${quizData.quizzes.length}개 퀴즈 생성됨`);
+              }
+            } catch (qe) { console.warn(`씬 ${scene.scene} 퀴즈 파싱 실패:`, qe.message); }
+          }
+
+          return true;
         } catch (e) {
           if (retry < RETRY_MAX) {
-            const waitSec = 5 + retry * 5; // 5초, 10초 대기
+            const waitSec = 5 + retry * 5;
             console.warn(`씬 ${scene.scene} 재시도 (${retry + 1}/${RETRY_MAX}), ${waitSec}초 대기:`, e.message);
             const statusEl = document.getElementById('imgGenStatus');
             if (statusEl) statusEl.textContent = `씬 ${scene.scene} 실패 — ${waitSec}초 후 재시도 (${retry + 1}/${RETRY_MAX})...`;
@@ -3281,6 +3518,29 @@ Output ONLY the prompt, nothing else.`;
           }
         }
       }
+
+      // 씬별 퀴즈 집계
+      const totalQuizzes = sop.script.reduce((sum, sc) => sum + (sc.quizzes?.length || 0), 0);
+      console.log(`[GenAll] 이미지 ${done - failed}/${total} 성공, 퀴즈 총 ${totalQuizzes}개 생성`);
+
+      // 섹션 퀴즈 3개 자동 생성 (전체 나레이션 기반)
+      try {
+        const statusEl = document.getElementById('imgGenStatus');
+        if (statusEl) statusEl.textContent = '📝 섹션 종합 퀴즈 생성 중...';
+        const allNarration = sop.script.map(sc => sc.narration).join('\n');
+        const secQuizRes = await fetch('/api/quiz', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ narration: allNarration.slice(0, 3000), count: 3, mode: 'section' })
+        });
+        if (secQuizRes.ok) {
+          const secData = await secQuizRes.json();
+          if (secData.quizzes?.length > 0) {
+            sop.quizzes = secData.quizzes;
+            console.log(`[Quiz] 섹션 종합 퀴즈 ${secData.quizzes.length}개 생성됨`);
+          }
+        }
+      } catch (e) { console.warn('[Quiz] 섹션 퀴즈 생성 실패:', e.message); }
 
       // 최종 저장
       try { saveSops(sops); } catch(e) { console.warn('[Save] 최종 저장 실패:', e.message); }

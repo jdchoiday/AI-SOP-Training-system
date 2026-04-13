@@ -647,8 +647,9 @@
     // ===== URL에서 챕터(SOP) ID 가져오기 =====
     const params = new URLSearchParams(window.location.search);
     const chapterId = params.get('id');
+    const isExamMode = params.get('exam') === 'true'; // 챕터 종합시험 모드
     const sop = SopStore.getById(chapterId);
-    const chapter = sop ? { id: sop.id, title: sop.title, title_en: sop.title_en, title_vn: sop.title_vn } : null;
+    const chapter = sop ? { id: sop.id, title: sop.title, title_en: sop.title_en, title_vn: sop.title_vn, doc_type: sop.doc_type } : null;
     const videos = SopStore.getVideos(chapterId);
     const chapterQuizzes = SopStore.getQuizzes(chapterId);
 
@@ -658,21 +659,55 @@
       return;
     }
 
-    // ===== 다음 챕터 찾기 =====
-    function getNextChapter() {
-      const allChapters = SopStore.getChapters();
-      const currentIdx = allChapters.findIndex(c => c.id === chapterId);
-      if (currentIdx >= 0 && currentIdx < allChapters.length - 1) {
-        return allChapters[currentIdx + 1];
+    // === 챕터 종합시험 모드 (대챕터 → 30문제 시험) ===
+    if (isExamMode && sop.doc_type === 'chapter') {
+      const examQuizzes = SopStore.getExamQuizzes(chapterId);
+      if (examQuizzes.length > 0) {
+        // 종합시험 전용 UI 바로 실행
+        setTimeout(() => _startChapterFinalExam(examQuizzes, chapter), 100);
+      } else {
+        alert('종합시험 문제가 아직 생성되지 않았습니다.');
+        window.location.href = 'app.html';
+        return;
       }
-      return null; // 마지막 챕터
+    }
+
+    // ===== 다음 챕터/섹션 찾기 =====
+    function getNextChapter() {
+      // 대챕터 내 섹션이면 → 같은 챕터의 다음 섹션
+      if (sop.parent_id) {
+        const siblings = SopStore.getSections(sop.parent_id);
+        const myIdx = siblings.findIndex(s => s.id === chapterId);
+        if (myIdx >= 0 && myIdx < siblings.length - 1) {
+          return { id: siblings[myIdx + 1].id, title: siblings[myIdx + 1].title };
+        }
+        // 마지막 섹션이면 → 챕터 종합시험으로 이동
+        const parentChapter = SopStore.getById(sop.parent_id);
+        if (parentChapter?.exam_quizzes?.length > 0) {
+          return { id: sop.parent_id, title: parentChapter.title + ' 종합시험', isExam: true };
+        }
+        return null;
+      }
+      // 독립 섹션이면 기존 로직
+      const chapterData = SopStore.getChapters();
+      const allFlat = [...(chapterData.chapters || []), ...(chapterData.orphanSections || [])];
+      // 플랫 목록에서 찾기
+      const flat = [];
+      allFlat.forEach(item => {
+        if (item.sections) { item.sections.forEach(s => flat.push(s)); }
+        else flat.push(item);
+      });
+      const currentIdx = flat.findIndex(c => c.id === chapterId);
+      if (currentIdx >= 0 && currentIdx < flat.length - 1) return flat[currentIdx + 1];
+      return null;
     }
 
     function renderNextChapterBtn() {
       const next = getNextChapter();
       if (next) {
+        const href = next.isExam ? `chapter.html?id=${next.id}&exam=true` : `chapter.html?id=${next.id}`;
         return `
-          <a href="chapter.html?id=${next.id}" style="
+          <a href="${href}" style="
             display:block; width:100%; padding:14px 20px; margin-top:12px;
             background:linear-gradient(135deg, #10B981 0%, #059669 100%);
             color:white; font-size:15px; font-weight:700; text-align:center;
@@ -959,11 +994,18 @@
         setTimeout(() => toast.remove(), 2500);
         return;
       }
-      // 챕터 퀴즈가 이미 있으면 미니 퀴즈 건너뛰기 (중복 방지)
       AI.stopTTS();
       document.getElementById('videoPlayer').src = '';
-      if (chapterQuizzes && chapterQuizzes.length > 0) {
-        // 챕터 끝에 퀴즈가 있으므로 비디오만 완료 처리
+
+      // 씬별 퀴즈가 있으면 항상 표시 (이미지 생성 시 자동 생성됨)
+      const _vidIdx = videos.findIndex(v => v.id === currentVideoId);
+      const _sceneQuizzes = _vidIdx >= 0 ? SopStore.getSceneQuizzes(chapterId, _vidIdx) : [];
+
+      if (_sceneQuizzes.length > 0) {
+        // 씬에 퀴즈가 있으면 퀴즈 먼저 → 완료 처리
+        showMiniQuiz(currentVideoId);
+      } else if (chapterQuizzes && chapterQuizzes.length > 0) {
+        // 씬 퀴즈 없고 섹션 퀴즈만 있으면 비디오만 완료
         Progress.completeVideo(currentVideoId, chapterId);
         const _u = JSON.parse(localStorage.getItem('sop_user') || 'null');
         if (_u?.id && window.SupabaseMode?._ready) {
@@ -972,7 +1014,7 @@
         showView('videoListView');
         renderVideoList();
       } else {
-        // 챕터 퀴즈 없으면 미니 퀴즈 실행
+        // 아무 퀴즈도 없으면 AI 미니 퀴즈 실행
         showMiniQuiz(currentVideoId);
       }
     });
@@ -999,11 +1041,20 @@
       mqCorrect = 0;
       const container = document.getElementById('miniQuizContent');
 
-      // Show loading
+      // 1순위: 씬에 미리 생성된 퀴즈 사용 (이미지 생성 시 동시 생성됨)
+      const videoIdx = videos.findIndex(v => v.id === videoId);
+      const sceneQuizzes = videoIdx >= 0 ? SopStore.getSceneQuizzes(chapterId, videoIdx) : [];
+      if (sceneQuizzes.length > 0) {
+        mqQuestions = sceneQuizzes;
+        showView('miniQuizView');
+        renderMiniQuizQuestion();
+        return;
+      }
+
+      // 2순위: 캐시된 퀴즈
       container.innerHTML = `<div class="mq-loading"><div class="spinner"></div><p style="font-size:14px;color:var(--gray-500);">${t.mqLoading}</p></div>`;
       showView('miniQuizView');
 
-      // Try to get cached quiz
       const _mqEmail3 = (JSON.parse(localStorage.getItem('sop_user') || '{}').email || 'demo');
       const cacheKey = 'sop_miniquiz_' + _mqEmail3 + '_' + videoId;
       const cached = localStorage.getItem(cacheKey);
@@ -1014,13 +1065,12 @@
         } catch(e) {}
       }
 
-      // Generate quiz
+      // 3순위: AI 실시간 생성
       mqQuestions = await generateMiniQuiz(videoId);
       if (mqQuestions.length > 0) {
         localStorage.setItem(cacheKey, JSON.stringify(mqQuestions));
         renderMiniQuizQuestion();
       } else {
-        // No quiz could be generated - just complete
         completeMiniQuizVideo();
       }
     }
@@ -1628,17 +1678,41 @@ ${narration.slice(0, 1500)}
       showView('examResultView');
     }
 
-    // ===== 초기 렌더링 =====
-    renderVideoList();
+    // ===== 챕터 종합시험 (대챕터 exam_quizzes 30문제) =====
+    function _startChapterFinalExam(examQs, chapterInfo) {
+      // 기존 exam 인프라 재활용
+      examQuestions = examQs.map(q => ({
+        type: q.type === 'short' ? 'sa' : 'mc',
+        question: (lang === 'en' ? q.question_en : lang === 'vi' ? q.question_vn : q.question) || q.question,
+        options: (lang === 'en' ? q.options_en : lang === 'vi' ? q.options_vn : q.options) || q.options || [],
+        correct: q.correct,
+        explanation: q.explanation || '',
+        keywords: q.keywords || [],
+        sampleAnswer: q.sampleAnswer || '',
+      }));
+      examAnswers = new Array(examQuestions.length).fill(null);
+      examCurrentIndex = 0;
 
-    // Auto-resume: scroll to last watched video
-    const lastVideo = localStorage.getItem('sop_last_video_' + chapterId);
-    if (lastVideo) {
-      const items = document.querySelectorAll('.video-item');
-      const idx = videos.findIndex(v => v.id === lastVideo);
-      if (idx >= 0 && items[idx]) {
-        items[idx].style.boxShadow = '0 0 0 2px var(--primary)';
-        items[idx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const title = (lang === 'en' ? 'Final Exam: ' : lang === 'vi' ? 'Thi tổng hợp: ' : '종합시험: ') + getLocalizedText(chapterInfo, 'title');
+      document.getElementById('examTitle').textContent = title;
+      document.getElementById('examPrevBtn').textContent = t.examPrev;
+      showView('chapterExamView');
+      renderExamQuestion(0);
+    }
+
+    // ===== 초기 렌더링 =====
+    if (!isExamMode) {
+      renderVideoList();
+
+      // Auto-resume: scroll to last watched video
+      const lastVideo = localStorage.getItem('sop_last_video_' + chapterId);
+      if (lastVideo) {
+        const items = document.querySelectorAll('.video-item');
+        const idx = videos.findIndex(v => v.id === lastVideo);
+        if (idx >= 0 && items[idx]) {
+          items[idx].style.boxShadow = '0 0 0 2px var(--primary)';
+          items[idx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
       }
     }
   </script>

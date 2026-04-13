@@ -335,19 +335,30 @@
     });
 
     // ===== 챕터 데이터 (SOP에서 자동 생성, 학습 경로 필터 적용) =====
+    // 2단 계층: { chapters: [...], orphanSections: [...] }
+    const chapterData = SopStore.getChapters();
+    // 하위호환: orphanSections를 기존 chapters처럼 사용
     const chapters = (() => {
-      const allChapters = SopStore.getChapters();
-      if (!user) return allChapters;
-      // Get employee's branch
+      // 대챕터가 있으면 대챕터 + 독립 섹션 순서로 플랫 목록 생성 (Progress 호환)
+      const flat = [];
+      if (chapterData.chapters) {
+        chapterData.chapters.forEach(ch => {
+          // 대챕터 자체도 목록에 (+ sections 포함)
+          flat.push(ch);
+        });
+      }
+      if (chapterData.orphanSections) {
+        chapterData.orphanSections.forEach(s => flat.push(s));
+      }
+      // 학습 경로 필터
+      if (!user) return flat;
       const emp = typeof EmployeeStore !== 'undefined' ? EmployeeStore.getCurrentEmployee() : null;
       const branch = emp?.branch || user.branch;
-      if (!branch) return allChapters;
-      // Check learning path assignments
+      if (!branch) return flat;
       const paths = JSON.parse(localStorage.getItem('sop_learning_paths') || '{}');
-      const assigned = paths[branch]; // undefined = all SOPs
-      if (!assigned) return allChapters; // no specific path = show all
-      if (assigned.length === 0) return allChapters; // empty array = show all (fallback)
-      return allChapters.filter(ch => assigned.includes(ch.id));
+      const assigned = paths[branch];
+      if (!assigned || assigned.length === 0) return flat;
+      return flat.filter(ch => assigned.includes(ch.id));
     })();
 
     // ===== 전체 진행률 =====
@@ -408,7 +419,7 @@
       document.getElementById('nextActionText').textContent = nextText;
     }
 
-    // ===== 챕터 목록 렌더링 =====
+    // ===== 챕터 목록 렌더링 (2단 계층 지원) =====
     function renderChapters() {
       const container = document.getElementById('chapterList');
       container.innerHTML = '';
@@ -419,49 +430,118 @@
         return;
       }
 
+      const lockMsg = t.completePreviousChapter.replace(/'/g, "\\'");
+      let globalIndex = 0; // 전체 순차 잠금용
+
       chapters.forEach((ch, index) => {
-        const unlocked = Progress.isChapterUnlocked(index);
-        const passed = Progress.isChapterPassed(ch.id);
-        const videoProgress = Progress.getChapterVideoProgress(ch.id);
-        const videos = SopStore.getVideos(ch.id);
-        const totalDuration = videos.reduce((sum, v) => sum + v.duration, 0);
+        if (ch.doc_type === 'chapter' && ch.sections?.length > 0) {
+          // === 대챕터 (섹션 포함) ===
+          const allSectionsPassed = ch.sections.every(s => Progress.isChapterPassed(s.id));
+          const passedCount = ch.sections.filter(s => Progress.isChapterPassed(s.id)).length;
+          const chapterProgress = ch.sections.length > 0 ? Math.round(passedCount / ch.sections.length * 100) : 0;
 
-        let statusClass = unlocked ? '' : 'locked';
-        if (passed) statusClass = 'completed';
+          container.innerHTML += `
+            <div class="card" style="padding:0; overflow:hidden; margin-bottom:16px; border:1px solid ${allSectionsPassed ? 'var(--success)' : 'rgba(245,158,11,0.3)'};">
+              <div style="padding:16px 20px; background:linear-gradient(135deg,#1a2744,#1E293B); display:flex; align-items:center; gap:12px; cursor:pointer;"
+                   onclick="this.parentElement.querySelector('.ch-sections').classList.toggle('collapsed')">
+                <span style="font-size:28px;">${allSectionsPassed ? '✅' : '📘'}</span>
+                <div style="flex:1;">
+                  <h3 style="font-size:16px; color:#f59e0b; margin-bottom:2px;">${getLocalizedText(ch, 'title')}</h3>
+                  <p style="font-size:13px; color:var(--gray-400);">${ch.sections.length}개 섹션 · ${passedCount}/${ch.sections.length} 완료</p>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:18px; font-weight:700; color:${allSectionsPassed ? 'var(--success)' : '#f59e0b'};">${chapterProgress}%</div>
+                  <span style="font-size:12px; color:var(--gray-500);">▼ 펼치기</span>
+                </div>
+              </div>
+              <div style="background:rgba(245,158,11,0.05); height:4px;">
+                <div style="height:100%; background:linear-gradient(90deg,#f59e0b,#d97706); width:${chapterProgress}%; transition:width 0.3s;"></div>
+              </div>
+              <div class="ch-sections" style="padding:8px 12px;">
+                ${ch.sections.map((sec, si) => {
+                  const secUnlocked = si === 0 ? Progress.isChapterUnlocked(globalIndex) : Progress.isChapterPassed(ch.sections[si - 1].id);
+                  const secPassed = Progress.isChapterPassed(sec.id);
+                  const secVideoProgress = Progress.getChapterVideoProgress(sec.id);
+                  const videos = SopStore.getVideos(sec.id);
+                  globalIndex++;
 
-        let statusIcon = '';
-        if (passed) {
-          statusIcon = '<span style="color:var(--success);font-size:20px;">&#9989;</span>';
-        } else if (!unlocked) {
-          statusIcon = '<svg width="20" height="20" fill="none" stroke="var(--gray-300)" stroke-width="2"><path d="M10 2a4 4 0 014 4v2H6V6a4 4 0 014-4zM4 10h12v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z"/></svg>';
-        } else {
-          statusIcon = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 4l8 8-8 8"/></svg>';
-        }
+                  let secIcon = secPassed ? '<span style="color:var(--success);font-size:18px;">✅</span>'
+                    : !secUnlocked ? '<span style="color:var(--gray-400);">🔒</span>'
+                    : '<span style="color:var(--primary);">▶</span>';
 
-        const subtitle = !unlocked
-          ? t.completePrevious
-          : passed
-            ? t.completedScore(Progress.getAllResults().chapterResults[ch.id]?.score || 0)
-            : t.scenesInfo(videos.length, ch.estimatedMinutes);
+                  const secSubtitle = !secUnlocked ? t.completePrevious
+                    : secPassed ? t.completedScore(Progress.getAllResults().chapterResults[sec.id]?.score || 0)
+                    : t.scenesInfo(videos.length, sec.estimatedMinutes || 0);
 
-        const progressHTML = unlocked && !passed && videoProgress > 0
-          ? `<div class="progress-bar" style="margin-top:8px;height:4px;"><div class="fill" style="width:${videoProgress}%"></div></div>`
-          : '';
+                  const secProgressHTML = secUnlocked && !secPassed && secVideoProgress > 0
+                    ? `<div class="progress-bar" style="margin-top:6px;height:3px;"><div class="fill" style="width:${secVideoProgress}%"></div></div>` : '';
 
-        const link = unlocked ? `chapter.html?id=${ch.id}` : '#';
-        const lockMsg = t.completePreviousChapter.replace(/'/g, "\\'");
-
-        container.innerHTML += `
-          <a class="chapter-item ${statusClass}" href="${link}" ${!unlocked ? `onclick="showToast('${lockMsg}'); return false;"` : ''}>
-            <div class="chapter-num">${index + 1}</div>
-            <div class="chapter-info">
-              <h3>${getLocalizedText(ch, 'title')}</h3>
-              <p>${subtitle}</p>
-              ${progressHTML}
+                  return `
+                    <a class="chapter-item ${secPassed ? 'completed' : !secUnlocked ? 'locked' : ''}"
+                       href="${secUnlocked ? 'chapter.html?id=' + sec.id : '#'}"
+                       ${!secUnlocked ? `onclick="showToast('${lockMsg}'); return false;"` : ''}
+                       style="padding:12px 14px; margin-bottom:6px;">
+                      <div class="chapter-num" style="width:28px; height:28px; font-size:13px;">${si + 1}</div>
+                      <div class="chapter-info" style="flex:1;">
+                        <h3 style="font-size:14px;">${getLocalizedText(sec, 'title')}</h3>
+                        <p style="font-size:12px;">${secSubtitle}</p>
+                        ${secProgressHTML}
+                      </div>
+                      ${secIcon}
+                    </a>`;
+                }).join('')}
+                ${allSectionsPassed && ch.examQuizCount > 0 ? `
+                  <a class="chapter-item" href="chapter.html?id=${ch.id}&exam=true"
+                     style="padding:12px 14px; margin-top:8px; background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(217,119,6,0.1)); border:1px solid rgba(245,158,11,0.3);">
+                    <div style="font-size:22px;">🎯</div>
+                    <div class="chapter-info" style="flex:1;">
+                      <h3 style="font-size:14px; color:#f59e0b;">챕터 종합시험</h3>
+                      <p style="font-size:12px;">${ch.examQuizCount}문제 · 70% 이상 합격</p>
+                    </div>
+                    <span style="color:#f59e0b;">▶</span>
+                  </a>
+                ` : ''}
+              </div>
             </div>
-            ${statusIcon}
-          </a>
-        `;
+          `;
+        } else {
+          // === 독립 섹션 (기존 방식) ===
+          const unlocked = Progress.isChapterUnlocked(globalIndex);
+          const passed = Progress.isChapterPassed(ch.id);
+          const videoProgress = Progress.getChapterVideoProgress(ch.id);
+          const videos = SopStore.getVideos(ch.id);
+          globalIndex++;
+
+          let statusClass = unlocked ? '' : 'locked';
+          if (passed) statusClass = 'completed';
+
+          let statusIcon = passed
+            ? '<span style="color:var(--success);font-size:20px;">&#9989;</span>'
+            : !unlocked
+              ? '<svg width="20" height="20" fill="none" stroke="var(--gray-300)" stroke-width="2"><path d="M10 2a4 4 0 014 4v2H6V6a4 4 0 014-4zM4 10h12v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z"/></svg>'
+              : '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 4l8 8-8 8"/></svg>';
+
+          const subtitle = !unlocked ? t.completePrevious
+            : passed ? t.completedScore(Progress.getAllResults().chapterResults[ch.id]?.score || 0)
+            : t.scenesInfo(videos.length, ch.estimatedMinutes || 0);
+
+          const progressHTML = unlocked && !passed && videoProgress > 0
+            ? `<div class="progress-bar" style="margin-top:8px;height:4px;"><div class="fill" style="width:${videoProgress}%"></div></div>` : '';
+
+          const link = unlocked ? `chapter.html?id=${ch.id}` : '#';
+
+          container.innerHTML += `
+            <a class="chapter-item ${statusClass}" href="${link}" ${!unlocked ? `onclick="showToast('${lockMsg}'); return false;"` : ''}>
+              <div class="chapter-num">${globalIndex}</div>
+              <div class="chapter-info">
+                <h3>${getLocalizedText(ch, 'title')}</h3>
+                <p>${subtitle}</p>
+                ${progressHTML}
+              </div>
+              ${statusIcon}
+            </a>
+          `;
+        }
       });
     }
 

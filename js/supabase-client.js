@@ -224,6 +224,10 @@ const SupabaseMode = {
         order_num: sop.order_num || 0,
         script: scriptClean || null,
         quizzes: sop.quizzes || null,
+        // 챕터/섹션 계층 구조 (v8)
+        doc_type: sop.doc_type || 'section',
+        parent_id: sop.parent_id || null,
+        exam_quizzes: sop.exam_quizzes || null,
         updated_at: new Date().toISOString(),
       };
 

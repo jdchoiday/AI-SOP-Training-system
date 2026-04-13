@@ -62,18 +62,88 @@ const SopStore = {
     });
   },
 
-  // SOP → 챕터 형식으로 변환
+  // SOP → 챕터 형식으로 변환 (2단 계층 지원)
   getChapters() {
-    return this.getPublished().map((sop, i) => ({
-      id: sop.id,
-      title: sop.title,
-      title_en: sop.title_en || sop.title,
-      title_vn: sop.title_vn || sop.title,
-      description: sop.category || '',
-      order_num: sop.order_num || (i + 1),
-      is_active: true,
-      videoCount: sop.script ? sop.script.length : 0,
-      estimatedMinutes: sop.script ? Math.round(sop.script.length * 0.7) : 0,
+    const published = this.getPublished();
+    const chapters = []; // 대챕터 목록
+    const orphanSections = []; // parent 없는 섹션 (하위호환)
+
+    // 1) 대챕터 수집
+    published.filter(s => s.doc_type === 'chapter').forEach(ch => {
+      chapters.push({
+        id: ch.id,
+        title: ch.title,
+        title_en: ch.title_en || ch.title,
+        title_vn: ch.title_vn || ch.title,
+        description: ch.category || '',
+        order_num: ch.order_num || 999,
+        is_active: true,
+        doc_type: 'chapter',
+        sections: [], // 하위 섹션
+        examQuizCount: ch.exam_quizzes ? ch.exam_quizzes.length : 0,
+      });
+    });
+
+    // 2) 섹션 분배
+    published.filter(s => s.doc_type !== 'chapter').forEach((sop, i) => {
+      const section = {
+        id: sop.id,
+        title: sop.title,
+        title_en: sop.title_en || sop.title,
+        title_vn: sop.title_vn || sop.title,
+        description: sop.category || '',
+        order_num: sop.order_num || (i + 1),
+        is_active: true,
+        doc_type: 'section',
+        parent_id: sop.parent_id || null,
+        videoCount: sop.script ? sop.script.length : 0,
+        estimatedMinutes: sop.script ? Math.round(sop.script.length * 0.7) : 0,
+        quizCount: sop.quizzes ? sop.quizzes.length : 0,
+      };
+
+      if (sop.parent_id) {
+        const parent = chapters.find(c => c.id === sop.parent_id);
+        if (parent) {
+          parent.sections.push(section);
+          return;
+        }
+      }
+      orphanSections.push(section);
+    });
+
+    // 3) 대챕터 섹션 정렬
+    chapters.forEach(ch => ch.sections.sort((a, b) => a.order_num - b.order_num));
+    chapters.sort((a, b) => a.order_num - b.order_num);
+
+    // 4) parent 없는 섹션은 독립 챕터처럼 표시 (하위호환)
+    orphanSections.sort((a, b) => a.order_num - b.order_num);
+
+    return { chapters, orphanSections };
+  },
+
+  // 특정 대챕터의 섹션 목록
+  getSections(chapterId) {
+    return this.getPublished()
+      .filter(s => s.parent_id === chapterId && s.doc_type !== 'chapter')
+      .sort((a, b) => (a.order_num || 0) - (b.order_num || 0));
+  },
+
+  // 대챕터의 종합시험 퀴즈
+  getExamQuizzes(chapterId) {
+    const ch = this.getById(chapterId);
+    if (!ch || !ch.exam_quizzes) return [];
+    return ch.exam_quizzes.map((q, i) => ({
+      id: `${chapterId}-exam-q${i + 1}`,
+      question: q.question,
+      question_en: q.question_en || q.question,
+      question_vn: q.question_vn || q.question,
+      options: q.options || [],
+      options_en: q.options_en || q.options || [],
+      options_vn: q.options_vn || q.options || [],
+      correct: q.correct,
+      explanation: q.explanation || '',
+      difficulty: q.difficulty || 'medium',
+      type: q.type || 'mc',
     }));
   },
 
@@ -96,7 +166,7 @@ const SopStore = {
     };});
   },
 
-  // SOP의 퀴즈 가져오기
+  // SOP의 섹션 퀴즈 가져오기
   getQuizzes(sopId) {
     const sop = this.getById(sopId);
     if (!sop || !sop.quizzes) return [];
@@ -109,6 +179,24 @@ const SopStore = {
       options_en: q.options_en || q.options,
       options_vn: q.options_vn || q.options,
       correct: q.correct,
+      explanation: q.explanation || '',
+    }));
+  },
+
+  // 특정 씬의 퀴즈 가져오기 (script[i].quizzes)
+  getSceneQuizzes(sopId, sceneIndex) {
+    const sop = this.getById(sopId);
+    if (!sop?.script?.[sceneIndex]?.quizzes) return [];
+    return sop.script[sceneIndex].quizzes.map((q, i) => ({
+      id: `${sopId}-s${sceneIndex}-q${i + 1}`,
+      question: q.question,
+      question_en: q.question_en || q.question,
+      question_vn: q.question_vn || q.question,
+      options: q.options || [],
+      options_en: q.options_en || q.options || [],
+      options_vn: q.options_vn || q.options || [],
+      correct: q.correct,
+      explanation: q.explanation || '',
     }));
   },
 
