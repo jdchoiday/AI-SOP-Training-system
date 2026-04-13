@@ -3162,16 +3162,29 @@ ${text.slice(0, 3000)}`;
       if (sections.length === 0) return [];
 
       // 질문/퀴즈 섹션 필터링 — 씬이 아닌 퀴즈로 별도 보관
-      const quizPattern = /^(질문\s*\d+|문제\s*\d+|퀴즈\s*\d+|Q\d+|question\s*\d+)/i;
       const quizSections = [];
       const contentSections = [];
       sections.forEach(sec => {
         const fullText = (sec.title + ' ' + sec.steps.join(' ')).trim();
-        // 질문/퀴즈 패턴 감지: "질문 1:", "문제 2:", 또는 물음표로 끝나는 짧은 텍스트
-        const isQuiz = quizPattern.test(fullText) ||
-                        (fullText.endsWith('?') && fullText.length < 200 && /^(질문|문제|퀴즈|Q\.)/.test(fullText));
+        // 다양한 질문/퀴즈 패턴 감지
+        const isQuiz =
+          // "질문 1:", "질문1:", "질문 :" 등
+          /^질문\s*\d*\s*[:.]/i.test(fullText) ||
+          // "문제 1:", "퀴즈 2:" 등
+          /^(문제|퀴즈)\s*\d*\s*[:.]/i.test(fullText) ||
+          // "Q1.", "Q 1:" 등
+          /^Q\s*\d+/i.test(fullText) ||
+          // "question 1:" 등
+          /^question\s*\d+/i.test(fullText) ||
+          // 텍스트 중간에 "질문 1:" 이 포함된 경우 (앞에 공백이나 특수문자)
+          /질문\s*\d+\s*[:.]/.test(fullText) ||
+          // 물음표로 끝나면서 "생각해보세요", "설명하", "다른가요" 등 질문 어미 포함
+          (/[?？]$/.test(fullText) && fullText.length < 250) ||
+          // "~해보세요.", "~생각해보세요." 로 끝나는 과제형 질문
+          (/생각해\s*보세요|설명해\s*보세요|작성해\s*보세요|토론해\s*보세요/.test(fullText) && fullText.length < 250);
         if (isQuiz) {
           quizSections.push(sec);
+          console.log(`[QuizFilter] 질문 감지 → 씬 제외: "${fullText.slice(0, 50)}..."`);
         } else {
           contentSections.push(sec);
         }
@@ -3504,6 +3517,10 @@ Output ONLY the prompt, nothing else.`;
 
     // ===== 이미지 일괄 사전 생성 =====
     window._generateAllImages = async function() {
+      if (_isGeneratingImages) {
+        alert('이미지 생성이 이미 진행 중입니다. 완료될 때까지 기다려주세요.');
+        return;
+      }
       _isGeneratingImages = true;
       try {
       const sops = getSops();
