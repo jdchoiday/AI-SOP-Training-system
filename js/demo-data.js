@@ -9,7 +9,16 @@ const SopStore = {
   _key: 'sop_documents',
 
   getAll() {
-    return JSON.parse(localStorage.getItem(this._key) || '[]');
+    const sops = JSON.parse(localStorage.getItem(this._key) || '[]');
+    // __stored__ 포인터 → 별도 저장소에서 이미지 복원
+    sops.forEach(sop => {
+      if (sop.script) sop.script.forEach((sc, idx) => {
+        if (sc.imageUrl && sc.imageUrl.startsWith('__stored__:')) {
+          sc.imageUrl = localStorage.getItem(`sop_img_${sop.id}_${idx}`) || null;
+        }
+      });
+    });
+    return sops;
   },
 
   save(sops) {
@@ -354,8 +363,15 @@ const Progress = {
   getTotalProgress() {
     const chapters = SopStore.getChapters();
     if (chapters.length === 0) return 0;
-    const passed = chapters.filter(ch => this.isChapterPassed(ch.id)).length;
-    return Math.round((passed / chapters.length) * 100);
+    // 각 챕터별로: 영상 시청 50% + 퀴즈 통과 50%
+    let totalScore = 0;
+    chapters.forEach(ch => {
+      const videoPct = this.getChapterVideoProgress(ch.id); // 0~100
+      const quizPassed = this.isChapterPassed(ch.id);
+      // 영상 시청 비율 50% + 퀴즈 통과 50%
+      totalScore += (videoPct / 100) * 50 + (quizPassed ? 50 : 0);
+    });
+    return Math.round(totalScore / chapters.length);
   },
 
   getAllResults() {
