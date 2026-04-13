@@ -2990,7 +2990,8 @@ ${text.slice(0, 3000)}`;
           </div>
         </div>`;
 
-      document.getElementById('generateBtn').disabled = true;
+      const _genBtn = document.getElementById('generateBtn');
+      if (_genBtn) _genBtn.disabled = true;
 
       (async () => {
         try {
@@ -3045,8 +3046,8 @@ ${text.slice(0, 3000)}`;
           hideLoading();
           alert('생성 중 오류: ' + e.message);
         } finally {
-          document.getElementById('generateBtn').disabled = false;
-          document.getElementById('generateBtn').innerHTML = '&#128260; 다시 생성';
+          const _genBtn2 = document.getElementById('generateBtn');
+          if (_genBtn2) { _genBtn2.disabled = false; _genBtn2.innerHTML = '&#128260; 다시 생성'; }
         }
       })();
     }
