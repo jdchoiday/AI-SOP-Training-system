@@ -3,19 +3,20 @@
   "buildCommand": "",
   "outputDirectory": ".",
   "rewrites": [
+    { "source": "/api/auth", "destination": "/api/auth" },
     { "source": "/api/gemini", "destination": "/api/gemini" },
+    { "source": "/api/image", "destination": "/api/image" },
     { "source": "/api/siliconflow", "destination": "/api/siliconflow" },
     { "source": "/api/tts", "destination": "/api/tts" }
   ],
   "functions": {
+    "api/image.js": {
+      "maxDuration": 60
+    },
     "api/tts.js": {
       "maxDuration": 25
     }
   },
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
-  ],
   "headers": [
     {
       "source": "/(.*)",
