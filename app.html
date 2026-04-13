@@ -6,7 +6,7 @@
   <title>SOP Training - 내 학습</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2563eb">
+  <meta name="theme-color" content="#0F172A">
   <link rel="icon" href="assets/icon-192.svg">
 </head>
 <body>
@@ -16,8 +16,11 @@
     <a href="app.html" class="active">
       <span class="nav-icon">&#127968;</span> <span class="nav-label-home">홈</span>
     </a>
-    <a href="ai-chat.html">
-      <span class="nav-icon">&#129302;</span> <span class="nav-label-chat">AI 질문</span>
+    <a href="tasks.html">
+      <span class="nav-icon">&#9989;</span> <span class="nav-label-tasks">성과제</span>
+    </a>
+    <a href="praise.html">
+      <span class="nav-icon">&#128588;</span> <span class="nav-label-praise">칭찬</span>
     </a>
     <a href="my-results.html">
       <span class="nav-icon">&#127942;</span> <span class="nav-label-results">내 결과</span>
@@ -35,7 +38,7 @@
           &#128276;<span id="notifDot" style="display:none; position:absolute; top:2px; right:2px; width:8px; height:8px; background:var(--danger); border-radius:50%;"></span>
         </button>
         <a href="change-password.html" title="설정" style="text-decoration:none; font-size:20px; line-height:1; padding:4px; cursor:pointer;">&#9881;</a>
-        <div class="user-avatar" id="userAvatar" title="로그아웃">?</div>
+        <a href="profile.html" class="user-avatar" id="userAvatar" title="내 프로필" style="text-decoration:none; overflow:hidden;">?</a>
       </div>
     </div>
 
@@ -52,6 +55,12 @@
       </div>
     </div>
 
+    <!-- ===== 신입 모험가 퀘스트 ===== -->
+    <div id="rookieQuestCard"></div>
+
+    <!-- ===== 3파트 스탯 카드 (MY STATS) ===== -->
+    <div id="scoreCard"></div>
+
     <!-- ===== 오늘의 할 일 카드 ===== -->
     <div class="card" id="nextActionCard" style="border-left:3px solid var(--primary);">
       <p style="font-size:12px; color:var(--gray-500); margin-bottom:4px;" id="nextTodoLabel"></p>
@@ -65,6 +74,28 @@
       <!-- JS에서 동적 생성 -->
     </div>
 
+    <!-- ===== 리더보드 (화려한 1등 게시판) ===== -->
+    <div id="leaderboardSection" style="display:none; margin-top:20px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <h3 style="font-size:16px; color:var(--gray-700);" id="leaderboardTitle">🏆 XP 리더보드</h3>
+        <button onclick="toggleLeaderboard()" id="lbToggle" style="background:none; border:none; font-size:13px; color:var(--primary); cursor:pointer; font-weight:600;">접기 ▲</button>
+      </div>
+      <div id="leaderboardContent">
+        <!-- JS 동적 생성 -->
+      </div>
+    </div>
+
+    <!-- ===== XP 가이드 (어떤 액션이 얼마의 XP?) ===== -->
+    <div id="xpGuideCard" class="card" style="margin-top:16px; display:none; border:1px solid var(--primary-light); background:linear-gradient(135deg, #f0f7ff 0%, #fef9ef 100%);">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <h3 style="font-size:15px; color:var(--gray-700);" id="xpGuideTitle">💡 XP 획득 가이드</h3>
+        <button onclick="toggleXpGuide()" id="xpGuideToggle" style="background:none; border:none; font-size:13px; color:var(--primary); cursor:pointer; font-weight:600;">접기 ▲</button>
+      </div>
+      <div id="xpGuideBody">
+        <!-- JS 동적 생성 -->
+      </div>
+    </div>
+
     <!-- 모바일 하단 네비 중복은 CSS가 처리 -->
 
   </div>
@@ -75,6 +106,8 @@
   <script src="js/ai-provider.js"></script>
   <script src="js/sop-content-kids.js"></script>
   <script src="js/demo-data.js"></script>
+  <script src="js/xp-system.js"></script>
+  <script src="js/xp-ui.js"></script>
   <script>
     // ===== 다국어 텍스트 =====
     const T = {
@@ -88,7 +121,7 @@
         welcome: (name) => `안녕하세요, ${name || '직원'}님!`,
         startLearning: '학습을 시작해보세요',
         progressLabel: '전체 진행률',
-        chapterProgress: (total, passed) => `${total}개 챕터 중 ${passed}개 완료`,
+        chapterProgress: (total, passed, videoDone) => `${total}개 챕터 중 ${passed}개 완료` + (videoDone > 0 && passed < total ? ` (${videoDone}개 영상 학습중)` : ''),
         nextTodo: '다음 할 일',
         startChapter: (n) => `챕터 ${n} 시작하기`,
         allComplete: '모든 학습을 완료했습니다!',
@@ -101,6 +134,40 @@
         completePreviousChapter: '이전 챕터를 먼저 통과해야 합니다',
         completedScore: (score) => `완료! 점수: ${score}점`,
         scenesInfo: (scenes, mins) => `${scenes}개 씬 · 약 ${mins}분`,
+        leaderboard: '🏆 XP 리더보드',
+        lbCollapse: '접기 ▲', lbExpand: '펼치기 ▼',
+        lbRank: '순위', lbName: '이름', lbXp: 'XP', lbTier: '티어',
+        lbEmpty: '아직 데이터가 없습니다',
+        lbBranch: '지점',
+        xpGuide: '💡 XP 획득 가이드',
+        xpGuideItems: [
+          { icon: '📺', action: '챕터 영상 학습 완료', xp: 'CHAPTER_COMPLETE' },
+          { icon: '✅', action: '퀴즈 정답 1개', xp: 'QUIZ_CORRECT' },
+          { icon: '💯', action: '퀴즈 만점 보너스', xp: 'QUIZ_PERFECT_BONUS' },
+          { icon: '🎓', action: '전체 과정 완주', xp: 'COURSE_COMPLETE' },
+          { icon: '🤝', action: '칭찬 보내기', xp: 'PRAISE_SEND_XP' },
+          { icon: '⭐', action: (n) => `칭찬 ${n}개 모으기`, xp: 'PRAISE_XP_PER_STACK' },
+        ],
+        xpPerAction: 'XP',
+        // 퀘스트
+        questTitle: '🎮 신입 모험가 퀘스트',
+        questSubtitle: '미션을 클리어하고 EXP를 획득하세요!',
+        questComplete: '🏆 신입 졸업! 보너스 +100 EXP',
+        questCompleteDesc: '모든 퀘스트를 클리어했습니다!',
+        questProgress: (done, total) => `${done}/${total} 클리어`,
+        questClaimed: '수령 완료',
+        questClaim: 'EXP 받기',
+        questGo: '도전',
+        questDone: '클리어!',
+        questBonusClaim: '보너스 받기',
+        questBonusClaimed: '수령 완료',
+        quests: [
+          { id: 'profile', icon: '👤', title: '자기소개', desc: '프로필 사진 + 한줄소개 등록', xp: 30, link: 'profile.html' },
+          { id: 'video', icon: '📺', title: '첫 수업', desc: '교육 영상 1개 시청 완료', xp: 50, link: null },
+          { id: 'quiz', icon: '🧠', title: '도전자', desc: '미니퀴즈 1회 통과', xp: 50, link: null },
+          { id: 'praise', icon: '💬', title: '응원단', desc: '동료에게 부스트 1회 보내기', xp: 30, link: 'praise.html' },
+          { id: 'team', icon: '🤝', title: '첫 미션', desc: '챌린지 1개 참여하기', xp: 50, link: 'team-tasks.html' },
+        ],
       },
       en: {
         home: 'Home', aiChat: 'AI Q&A', myResults: 'Results',
@@ -112,7 +179,7 @@
         welcome: (name) => `Hello, ${name || 'Staff'}!`,
         startLearning: 'Start your training',
         progressLabel: 'Overall progress',
-        chapterProgress: (total, passed) => `${passed} of ${total} chapters completed`,
+        chapterProgress: (total, passed, videoDone) => `${passed} of ${total} chapters completed` + (videoDone > 0 && passed < total ? ` (${videoDone} videos in progress)` : ''),
         nextTodo: 'Next to do',
         startChapter: (n) => `Start Chapter ${n}`,
         allComplete: 'All training completed!',
@@ -125,6 +192,40 @@
         completePreviousChapter: 'You must pass the previous chapter first',
         completedScore: (score) => `Completed! Score: ${score}`,
         scenesInfo: (scenes, mins) => `${scenes} scenes · ~${mins} min`,
+        leaderboard: '🏆 XP Leaderboard',
+        lbCollapse: 'Collapse ▲', lbExpand: 'Expand ▼',
+        lbRank: 'Rank', lbName: 'Name', lbXp: 'XP', lbTier: 'Tier',
+        lbEmpty: 'No data yet',
+        lbBranch: 'Branch',
+        xpGuide: '💡 XP Guide',
+        xpGuideItems: [
+          { icon: '📺', action: 'Complete chapter video', xp: 'CHAPTER_COMPLETE' },
+          { icon: '✅', action: '1 quiz correct answer', xp: 'QUIZ_CORRECT' },
+          { icon: '💯', action: 'Perfect quiz bonus', xp: 'QUIZ_PERFECT_BONUS' },
+          { icon: '🎓', action: 'Complete all courses', xp: 'COURSE_COMPLETE' },
+          { icon: '🤝', action: 'Send praise', xp: 'PRAISE_SEND_XP' },
+          { icon: '⭐', action: (n) => `Collect ${n} praises`, xp: 'PRAISE_XP_PER_STACK' },
+        ],
+        xpPerAction: 'XP',
+        // Quests
+        questTitle: '🎮 Rookie Adventure Quest',
+        questSubtitle: 'Complete missions and earn EXP!',
+        questComplete: '🏆 Graduated! Bonus +100 EXP',
+        questCompleteDesc: 'All quests cleared!',
+        questProgress: (done, total) => `${done}/${total} cleared`,
+        questClaimed: 'Claimed',
+        questClaim: 'Claim EXP',
+        questGo: 'Go',
+        questDone: 'Done!',
+        questBonusClaim: 'Claim Bonus',
+        questBonusClaimed: 'Claimed',
+        quests: [
+          { id: 'profile', icon: '👤', title: 'Introduction', desc: 'Add profile photo + short bio', xp: 30, link: 'profile.html' },
+          { id: 'video', icon: '📺', title: 'First Lesson', desc: 'Watch 1 training video', xp: 50, link: null },
+          { id: 'quiz', icon: '🧠', title: 'Challenger', desc: 'Pass 1 mini quiz', xp: 50, link: null },
+          { id: 'praise', icon: '💬', title: 'Cheerleader', desc: 'Send 1 boost to a colleague', xp: 30, link: 'praise.html' },
+          { id: 'team', icon: '🤝', title: 'First Mission', desc: 'Join 1 challenge', xp: 50, link: 'team-tasks.html' },
+        ],
       },
       vi: {
         home: 'Trang chủ', aiChat: 'Hỏi AI', myResults: 'Kết quả',
@@ -136,7 +237,7 @@
         welcome: (name) => `Xin chào, ${name || 'Nhân viên'}!`,
         startLearning: 'Bắt đầu học tập',
         progressLabel: 'Tiến độ tổng thể',
-        chapterProgress: (total, passed) => `Hoàn thành ${passed}/${total} chương`,
+        chapterProgress: (total, passed, videoDone) => `Hoàn thành ${passed}/${total} chương` + (videoDone > 0 && passed < total ? ` (${videoDone} video đang học)` : ''),
         nextTodo: 'Việc tiếp theo',
         startChapter: (n) => `Bắt đầu Chương ${n}`,
         allComplete: 'Đã hoàn thành tất cả bài học!',
@@ -149,6 +250,40 @@
         completePreviousChapter: 'Bạn phải vượt qua chương trước',
         completedScore: (score) => `Hoàn thành! Điểm: ${score}`,
         scenesInfo: (scenes, mins) => `${scenes} cảnh · ~${mins} phút`,
+        leaderboard: '🏆 Bảng xếp hạng XP',
+        lbCollapse: 'Thu gọn ▲', lbExpand: 'Mở rộng ▼',
+        lbRank: 'Hạng', lbName: 'Tên', lbXp: 'XP', lbTier: 'Cấp',
+        lbEmpty: 'Chưa có dữ liệu',
+        lbBranch: 'Chi nhánh',
+        xpGuide: '💡 Hướng dẫn XP',
+        xpGuideItems: [
+          { icon: '📺', action: 'Hoàn thành video chương', xp: 'CHAPTER_COMPLETE' },
+          { icon: '✅', action: '1 câu trả lời đúng', xp: 'QUIZ_CORRECT' },
+          { icon: '💯', action: 'Thưởng điểm tuyệt đối', xp: 'QUIZ_PERFECT_BONUS' },
+          { icon: '🎓', action: 'Hoàn thành toàn bộ khóa', xp: 'COURSE_COMPLETE' },
+          { icon: '🤝', action: 'Gửi lời khen', xp: 'PRAISE_SEND_XP' },
+          { icon: '⭐', action: (n) => `Thu thập ${n} lời khen`, xp: 'PRAISE_XP_PER_STACK' },
+        ],
+        xpPerAction: 'XP',
+        // Quests
+        questTitle: '🎮 Nhiệm vụ Tân binh',
+        questSubtitle: 'Hoàn thành nhiệm vụ và nhận EXP!',
+        questComplete: '🏆 Tốt nghiệp! Thưởng +100 EXP',
+        questCompleteDesc: 'Đã hoàn thành tất cả nhiệm vụ!',
+        questProgress: (done, total) => `${done}/${total} hoàn thành`,
+        questClaimed: 'Đã nhận',
+        questClaim: 'Nhận EXP',
+        questGo: 'Đi',
+        questDone: 'Xong!',
+        questBonusClaim: 'Nhận thưởng',
+        questBonusClaimed: 'Đã nhận',
+        quests: [
+          { id: 'profile', icon: '👤', title: 'Giới thiệu', desc: 'Thêm ảnh + mô tả ngắn', xp: 30, link: 'profile.html' },
+          { id: 'video', icon: '📺', title: 'Bài đầu tiên', desc: 'Xem 1 video đào tạo', xp: 50, link: null },
+          { id: 'quiz', icon: '🧠', title: 'Thử thách', desc: 'Vượt qua 1 bài kiểm tra', xp: 50, link: null },
+          { id: 'praise', icon: '💬', title: 'Cổ vũ', desc: 'Gửi 1 lời khen cho đồng nghiệp', xp: 30, link: 'praise.html' },
+          { id: 'team', icon: '🤝', title: 'Nhiệm vụ đầu', desc: 'Tham gia 1 thử thách', xp: 50, link: 'team-tasks.html' },
+        ],
       }
     };
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
@@ -165,21 +300,38 @@
     if (!user) {
       window.location.href = 'index.html';
     } else {
-      document.getElementById('userAvatar').textContent = (user.name || '?')[0];
+      // 아바타 표시 (프로필 사진/이모지/이니셜)
+      const avatarEl = document.getElementById('userAvatar');
+      if (user.avatarType === 'photo' && user.avatarData) {
+        avatarEl.innerHTML = `<img src="${user.avatarData}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+      } else if (user.avatarType === 'emoji' && user.avatarData) {
+        avatarEl.textContent = user.avatarData;
+        avatarEl.style.fontSize = '20px';
+      } else {
+        avatarEl.textContent = (user.name || '?')[0];
+      }
       document.getElementById('welcomeMsg').textContent = t.welcome(user.name);
     }
 
-    // Supabase 초기화 (최초 1회만 동기화)
-    if (!sessionStorage.getItem('sb_synced')) {
-      SupabaseMode.init().then(connected => {
-        if (connected) {
-          SupabaseMode.syncAll().then(() => {
-            sessionStorage.setItem('sb_synced', '1');
+    // Supabase 초기화 (매번 최신 데이터 동기화)
+    SupabaseMode.init().then(connected => {
+      if (connected) {
+        SupabaseMode.syncAll().then(() => {
+          // 데이터가 바뀌었으면 UI 갱신
+          const newChapters = SopStore.getChapters();
+          if (newChapters.length !== chapters.length) {
             location.reload();
-          });
-        }
-      });
-    }
+          }
+          // Supabase 동기화 후 티어 카드 + 칭찬 미니 카드 + 리더보드 렌더링
+          renderTierCard();
+          renderPraiseMiniCard();
+          renderTasksMiniCard();
+          renderTeamTasksMiniCard();
+          renderScoreCard();
+          renderLeaderboard();
+        });
+      }
+    });
 
     // ===== 챕터 데이터 (SOP에서 자동 생성, 학습 경로 필터 적용) =====
     const chapters = (() => {
@@ -198,17 +350,27 @@
     })();
 
     // ===== 전체 진행률 =====
-    function updateProgress() {
+    async function updateProgress() {
       const pct = Progress.getTotalProgress();
       document.getElementById('totalProgress').style.width = pct + '%';
       document.getElementById('progressPercent').textContent = pct + '%';
 
       const passedCount = chapters.filter(ch => Progress.isChapterPassed(ch.id)).length;
+      const allResults = Progress.getAllResults();
+      const videoDoneCount = allResults.completedVideos ? allResults.completedVideos.length : 0;
       document.getElementById('progressSummary').textContent =
-        t.chapterProgress(chapters.length, passedCount);
+        t.chapterProgress(chapters.length, passedCount, videoDoneCount);
 
       if (pct >= 100) {
         document.getElementById('totalProgress').classList.add('success');
+        // 전체 완주 +200 XP (1회만, 중복 방지는 DB UNIQUE)
+        const empId = await getEmployeeId();
+        if (empId) {
+          try {
+            const xpResult = await XpService.addXp(empId, XP_CONFIG.COURSE_COMPLETE, 'course_complete', 'all');
+            if (xpResult?.leveledUp) showLevelUpCelebration(xpResult.oldTier, xpResult.newTier, lang);
+          } catch (e) { console.warn('[XP] 완주 XP 오류:', e); }
+        }
       }
     }
 
@@ -318,7 +480,8 @@
 
     // ===== 다국어 적용 =====
     document.querySelector('.nav-label-home').textContent = t.home;
-    document.querySelector('.nav-label-chat').textContent = t.aiChat;
+    if (document.querySelector('.nav-label-tasks')) document.querySelector('.nav-label-tasks').textContent = lang === 'en' ? 'Tasks' : lang === 'vi' ? 'Nhiệm vụ' : '성과제';
+    if (document.querySelector('.nav-label-praise')) document.querySelector('.nav-label-praise').textContent = lang === 'en' ? 'Praise' : lang === 'vi' ? 'Khen ngợi' : '칭찬';
     document.querySelector('.nav-label-results').textContent = t.myResults;
     document.getElementById('progressLabel').textContent = t.progressLabel;
     document.getElementById('progressSummary').textContent = t.startLearning;
@@ -337,8 +500,8 @@
         : (lang === 'en' ? 'Discover your work style' : lang === 'vi' ? 'Khám phá phong cách làm việc' : '나의 업무 스타일 알아보기');
       const icon = mbtiData ? '&#9989;' : '&#129504;';
       container.innerHTML += `
-        <a class="chapter-item ${mbtiData ? 'completed' : ''}" href="mbti.html" style="border-left:3px solid #7c3aed;">
-          <div class="chapter-num" style="background:#f3e8ff; color:#7c3aed;">M</div>
+        <a class="chapter-item ${mbtiData ? 'completed' : ''}" href="mbti.html" style="border-left:3px solid #F59E0B;">
+          <div class="chapter-num" style="background:rgba(245,158,11,0.1); color:#F59E0B;">M</div>
           <div class="chapter-info">
             <h3>${mbtiLabel}</h3>
             <p>${mbtiSub}</p>
@@ -348,11 +511,706 @@
       `;
     }
 
+    // ===== 직원 실제 ID 조회 헬퍼 (데모 로그인 대응) =====
+    let _resolvedEmpId = null;
+    async function getEmployeeId() {
+      if (_resolvedEmpId) return _resolvedEmpId;
+      if (!SupabaseMode._ready || !user?.id) return user?.id;
+      const { data: d1 } = await SupabaseMode._client
+        .from('employees').select('id').eq('id', user.id).maybeSingle();
+      if (d1) { _resolvedEmpId = d1.id; return _resolvedEmpId; }
+      if (user.email) {
+        const { data: d2 } = await SupabaseMode._client
+          .from('employees').select('id').eq('email', user.email).maybeSingle();
+        if (d2) { _resolvedEmpId = d2.id; return _resolvedEmpId; }
+      }
+      return user.id;
+    }
+
+    // ===== 티어 카드 렌더링 (XP 시스템) =====
+    async function renderTierCard() {
+      const empId = await getEmployeeId();
+      if (!empId || !SupabaseMode._ready) return;
+      // 중복 렌더링 방지
+      const existing = document.getElementById('xp-tier-card');
+      if (existing) existing.remove();
+      try {
+        const totalXp = await XpService.getTotal(empId);
+        const tier = calculateTier(totalXp);
+        const container = document.getElementById('chapterList');
+        const wrapper = document.createElement('div');
+        wrapper.id = 'xp-tier-card';
+        wrapper.innerHTML = createTierCardHTML(tier, lang);
+        container.insertBefore(wrapper, container.firstChild);
+      } catch (e) { console.warn('[XP] 티어 카드 오류:', e); }
+    }
+
+    // ===== 칭찬 미니 카드 (홈 화면) =====
+    async function renderPraiseMiniCard() {
+      const empId = await getEmployeeId();
+      if (!empId || !SupabaseMode._ready) return;
+      try {
+        const stack = await PraiseService.getStackProgress(empId);
+        const container = document.getElementById('chapterList');
+        const needed = stack.needed;
+        const current = stack.current;
+        let dots = '';
+        for (let i = 0; i < needed; i++) {
+          dots += i < current ? '⭐' : '☆';
+        }
+        const remaining = needed - current;
+        const subText = remaining > 0
+          ? (lang === 'en' ? `${remaining} more to earn +${XP_CONFIG.PRAISE_XP_PER_STACK} XP!`
+             : lang === 'vi' ? `Cần thêm ${remaining} để nhận +${XP_CONFIG.PRAISE_XP_PER_STACK} XP!`
+             : `${remaining}개 더 받으면 +${XP_CONFIG.PRAISE_XP_PER_STACK} XP!`)
+          : (lang === 'en' ? '🎉 XP conversion complete!' : lang === 'vi' ? '🎉 Đã chuyển đổi XP!' : '🎉 XP 전환 완료!');
+
+        const praiseLabel = lang === 'en' ? 'Received Praise' : lang === 'vi' ? 'Lời khen nhận được' : '받은 칭찬';
+        const card = document.createElement('a');
+        card.href = 'praise.html';
+        card.className = 'chapter-item';
+        card.id = 'praise-mini-card';
+        card.style.cssText = 'border-left:3px solid #f59e0b; text-decoration:none;';
+        card.innerHTML = `
+          <div class="chapter-num" style="background:#fef3c7; color:#f59e0b;">🤝</div>
+          <div class="chapter-info">
+            <h3>${praiseLabel}  ${dots}</h3>
+            <p>${subText}</p>
+          </div>
+          <span style="font-size:16px;">→</span>
+        `;
+        // 티어 카드 다음에
+        const tierCard = document.getElementById('xp-tier-card');
+        if (tierCard && tierCard.nextSibling) {
+          container.insertBefore(card, tierCard.nextSibling);
+        } else {
+          container.insertBefore(card, container.firstChild);
+        }
+      } catch (e) { console.warn('[Praise] 미니 카드 오류:', e); }
+    }
+
+    // ===== 성과제 미니 카드 (홈 화면) =====
+    async function renderTasksMiniCard() {
+      let empId = user?.id;
+      if (!empId || !SupabaseMode._ready) return;
+      try {
+        // employees 테이블에서 실제 ID 확인 (데모 로그인 대응)
+        const { data: empCheck } = await SupabaseMode._client
+          .from('employees').select('id').eq('id', empId).maybeSingle();
+        if (!empCheck && user.email) {
+          const { data: byEmail } = await SupabaseMode._client
+            .from('employees').select('id').eq('email', user.email).maybeSingle();
+          if (byEmail) empId = byEmail.id;
+        }
+
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+        // 오늘 완료 ���
+        const { data: logs } = await SupabaseMode._client
+          .from('basic_task_logs')
+          .select('id')
+          .eq('employee_id', empId)
+          .eq('completed_date', dateStr);
+
+        // 전체 활성 템플릿 수
+        const { data: tmpls } = await SupabaseMode._client
+          .from('basic_task_templates')
+          .select('id')
+          .eq('is_active', true)
+          .eq('category', 'daily');
+
+        const done = logs?.length || 0;
+        const total = tmpls?.length || 0;
+        if (total === 0) return; // 성과제가 없으면 카드 안 보임
+
+        // 포인트 조회
+        const { data: empData } = await SupabaseMode._client
+          .from('employees')
+          .select('quarter_points')
+          .eq('id', empId)
+          .maybeSingle();
+        const qp = empData?.quarter_points || 0;
+
+        const taskLabel = lang === 'en' ? 'Today\'s Tasks' : lang === 'vi' ? 'Nhiệm vụ hôm nay' : '오늘의 성과제';
+        const subText = `${done}/${total} ${lang === 'en' ? 'completed' : lang === 'vi' ? 'hoàn thành' : '완료'} · ${qp} P`;
+
+        const container = document.getElementById('chapterList');
+        const card = document.createElement('a');
+        card.href = 'tasks.html';
+        card.className = 'chapter-item';
+        card.id = 'tasks-mini-card';
+        card.style.cssText = 'border-left:3px solid var(--success); text-decoration:none;';
+        card.innerHTML = `
+          <div class="chapter-num" style="background:#dcfce7; color:var(--success);">&#9989;</div>
+          <div class="chapter-info">
+            <h3>${taskLabel}  ${done}/${total}</h3>
+            <p>${subText}</p>
+          </div>
+          <span style="font-size:16px;">&#8594;</span>
+        `;
+        // 칭찬 카드 다음에
+        const praiseCard = document.getElementById('praise-mini-card');
+        if (praiseCard && praiseCard.nextSibling) {
+          container.insertBefore(card, praiseCard.nextSibling);
+        } else {
+          const tierCard = document.getElementById('xp-tier-card');
+          if (tierCard && tierCard.nextSibling) {
+            container.insertBefore(card, tierCard.nextSibling);
+          } else {
+            container.insertBefore(card, container.firstChild);
+          }
+        }
+      } catch (e) { console.warn('[Tasks] 미니 카드 오류:', e); }
+    }
+
+    // ===== 팀 테스크 미니 카드 (홈 화면) =====
+    async function renderTeamTasksMiniCard() {
+      if (!SupabaseMode._ready) return;
+      const empId = await getEmployeeId();
+      if (!empId) return;
+      try {
+        // 내가 참여 중인 팀 테스크 수
+        const { data: myMembers } = await SupabaseMode._client
+          .from('team_task_members').select('task_id').eq('employee_id', empId).in('status', ['accepted','completed']);
+        const { data: myCreated } = await SupabaseMode._client
+          .from('team_tasks').select('id').eq('creator_id', empId);
+
+        const myTaskIds = new Set([
+          ...(myMembers || []).map(m => m.task_id),
+          ...(myCreated || []).map(t => t.id)
+        ]);
+
+        if (myTaskIds.size === 0) {
+          // 참여 가능한 오픈 테스크가 있으면 안내
+          const { data: openTasks } = await SupabaseMode._client
+            .from('team_tasks').select('id').eq('status', 'open').eq('is_public', true).limit(1);
+          if (!openTasks || openTasks.length === 0) return;
+        }
+
+        // 진행중 vs 완료
+        const { data: allMyTasks } = await SupabaseMode._client
+          .from('team_tasks').select('id, status').in('id', [...myTaskIds]);
+        const active = (allMyTasks || []).filter(t => t.status !== 'completed' && t.status !== 'cancelled').length;
+        const completed = (allMyTasks || []).filter(t => t.status === 'completed').length;
+
+        const teamLabel = lang === 'en' ? 'Team Tasks' : lang === 'vi' ? 'Nhiệm vụ nhóm' : '팀 테스크';
+        const subText = lang === 'en'
+          ? `${active} active · ${completed} completed`
+          : lang === 'vi'
+            ? `${active} đang làm · ${completed} hoàn thành`
+            : `${active}개 진행중 · ${completed}개 완료`;
+
+        const container = document.getElementById('chapterList');
+        // Remove old card if exists
+        const old = document.getElementById('team-tasks-mini-card');
+        if (old) old.remove();
+
+        const card = document.createElement('a');
+        card.href = 'team-tasks.html';
+        card.className = 'chapter-item';
+        card.id = 'team-tasks-mini-card';
+        card.style.cssText = 'border-left:3px solid #F59E0B; text-decoration:none;';
+        card.innerHTML = `
+          <div class="chapter-num" style="background:rgba(245,158,11,0.1); color:#F59E0B;">👥</div>
+          <div class="chapter-info">
+            <h3>${teamLabel}</h3>
+            <p>${subText}</p>
+          </div>
+          <span style="font-size:16px;">&#8594;</span>
+        `;
+        // tasks-mini-card 다음에 삽입
+        const tasksMini = document.getElementById('tasks-mini-card');
+        if (tasksMini && tasksMini.nextSibling) {
+          container.insertBefore(card, tasksMini.nextSibling);
+        } else {
+          const praiseCard = document.getElementById('praise-mini-card');
+          if (praiseCard && praiseCard.nextSibling) {
+            container.insertBefore(card, praiseCard.nextSibling);
+          } else {
+            container.insertBefore(card, container.firstChild);
+          }
+        }
+      } catch (e) { console.warn('[TeamTasks] 미니 카드 오류:', e); }
+    }
+
+    // ===== 3파트 스탯 카드 (MY STATS) =====
+    async function renderScoreCard() {
+      const container = document.getElementById('scoreCard');
+      if (!container || !SupabaseMode._ready) return;
+      const empId = await getEmployeeId();
+      if (!empId) return;
+
+      try {
+        // Part 1: Attendance (basic_task_logs) — max 40
+        let part1 = 0;
+        try {
+          const now = new Date();
+          const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+          const daysSinceStart = Math.max(1, Math.ceil((now - quarterStart) / 86400000));
+          const { data: templates } = await SupabaseMode._client
+            .from('basic_task_templates').select('id').eq('category', 'daily').eq('is_active', true);
+          const dailyCount = templates?.length || 1;
+          const { data: logs } = await SupabaseMode._client
+            .from('basic_task_logs').select('id').eq('employee_id', empId)
+            .gte('completed_date', quarterStart.toISOString().slice(0, 10));
+          const completedCount = logs?.length || 0;
+          const maxTasks = daysSinceStart * dailyCount;
+          part1 = Math.min(40, Math.round((completedCount / maxTasks) * 40));
+        } catch (e) {}
+
+        // Part 2: Special Tasks (team_tasks) — max 30
+        let part2 = 0;
+        try {
+          const { data: myMemberships } = await SupabaseMode._client
+            .from('team_task_members').select('task_id, status').eq('employee_id', empId);
+          const totalTasks = myMemberships?.length || 0;
+          const completedTasks = myMemberships?.filter(m => m.status === 'completed').length || 0;
+          const completionRate = totalTasks > 0 ? completedTasks / totalTasks : 0;
+          let avgScore = 0.5;
+          if (completedTasks > 0) {
+            const taskIds = myMemberships.filter(m => m.status === 'completed').map(m => m.task_id);
+            const { data: tasks } = await SupabaseMode._client
+              .from('team_tasks').select('review_score').in('id', taskIds.slice(0, 50));
+            const scores = (tasks || []).filter(tk => tk.review_score).map(tk => tk.review_score);
+            avgScore = scores.length > 0 ? scores.reduce((a,b) => a+b, 0) / scores.length / 5 : 0.5;
+          }
+          part2 = Math.min(30, Math.round((completionRate * 0.6 + avgScore * 0.4) * 30));
+        } catch (e) {}
+
+        // Part 3: Education (chapter results) — max 30
+        let part3 = 0;
+        try {
+          const totalChapters = chapters.length || 1;
+          const passedChapters = chapters.filter(ch => Progress.isChapterPassed(ch.id)).length;
+          const allResults = Progress.getAllResults();
+          const scores = Object.values(allResults.chapterResults || {}).map(r => r.score || 0);
+          const avgChapterScore = scores.length > 0 ? scores.reduce((a,b) => a+b, 0) / scores.length / 100 : 0;
+          part3 = Math.min(30, Math.round((passedChapters / totalChapters * 0.5 + avgChapterScore * 0.5) * 30));
+        } catch (e) {}
+
+        const total = part1 + part2 + part3;
+        let rankText = '';
+        try {
+          const { data: allGam } = await SupabaseMode._client.from('user_gamification').select('employee_id, total_xp').order('total_xp', { ascending: false });
+          if (allGam) {
+            const myIdx = allGam.findIndex(g => g.employee_id === empId);
+            if (myIdx >= 0) rankText = `#${myIdx + 1} / ${allGam.length}`;
+          }
+        } catch (e) {}
+
+        const scoreLabel = lang === 'en' ? 'MY STATS' : lang === 'vi' ? 'MY STATS' : 'MY STATS';
+        const attendLabel = lang === 'en' ? 'Attendance' : lang === 'vi' ? 'Chuyen can' : '출석';
+        const missionLabel = lang === 'en' ? 'Missions' : lang === 'vi' ? 'Nhiem vu' : '미션';
+        const trainLabel = lang === 'en' ? 'Training' : lang === 'vi' ? 'Dao tao' : '트레이닝';
+        const rankLabel = lang === 'en' ? 'Season Ranking' : lang === 'vi' ? 'Xep hang' : '시즌 랭킹';
+
+        container.innerHTML = `
+          <div class="stats-power-card">
+            <div class="stats-power-header">
+              <div class="stats-power-title">${scoreLabel}</div>
+              <div class="stats-power-total">${total}<span style="font-size:14px;opacity:0.6;">/100</span></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-icon" style="background:rgba(16,185,129,0.15);color:#10B981;">⚡</div>
+              <div class="stat-bar-wrap">
+                <div class="stat-label"><span class="stat-label-name">${attendLabel}</span><span class="stat-label-value">${part1}/40</span></div>
+                <div class="stat-bar"><div class="stat-bar-fill attendance" style="width:${(part1/40)*100}%;"></div></div>
+              </div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-icon" style="background:rgba(245,158,11,0.15);color:#F59E0B;">🎯</div>
+              <div class="stat-bar-wrap">
+                <div class="stat-label"><span class="stat-label-name">${missionLabel}</span><span class="stat-label-value">${part2}/30</span></div>
+                <div class="stat-bar"><div class="stat-bar-fill mission" style="width:${(part2/30)*100}%;"></div></div>
+              </div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-icon" style="background:rgba(56,189,248,0.15);color:#38BDF8;">📚</div>
+              <div class="stat-bar-wrap">
+                <div class="stat-label"><span class="stat-label-name">${trainLabel}</span><span class="stat-label-value">${part3}/30</span></div>
+                <div class="stat-bar"><div class="stat-bar-fill training" style="width:${(part3/30)*100}%;"></div></div>
+              </div>
+            </div>
+            ${rankText ? `<div class="stats-rank-row">${rankLabel} <strong>${rankText}</strong></div>` : ''}
+          </div>`;
+      } catch (e) { console.warn('[ScoreCard]', e); }
+    }
+
+    // ===== 리더보드 렌더링 =====
+    let lbOpen = true;
+    function toggleLeaderboard() {
+      lbOpen = !lbOpen;
+      document.getElementById('leaderboardContent').style.display = lbOpen ? 'block' : 'none';
+      document.getElementById('lbToggle').textContent = lbOpen ? (t.lbCollapse || '접기 ▲') : (t.lbExpand || '펼치기 ▼');
+    }
+
+    async function renderLeaderboard() {
+      if (!SupabaseMode._ready) return;
+      const section = document.getElementById('leaderboardSection');
+      section.style.display = 'block';
+      document.getElementById('leaderboardTitle').textContent = t.leaderboard || '🏆 XP 리더보드';
+      document.getElementById('lbToggle').textContent = lbOpen ? (t.lbCollapse || '접기 ▲') : (t.lbExpand || '펼치기 ▼');
+
+      try {
+        const allGam = await XpService.getAllGamification();
+        if (!allGam || allGam.length === 0) {
+          document.getElementById('leaderboardContent').innerHTML = `<div class="card" style="text-align:center; padding:20px; color:var(--gray-500);">${t.lbEmpty}</div>`;
+          return;
+        }
+
+        // 직원 정보 매핑
+        const emps = EmployeeStore.getAll();
+        const empMap = {};
+        emps.forEach(e => { empMap[e.id] = e; empMap[e.email] = e; });
+
+        const ranked = allGam
+          .sort((a, b) => b.total_xp - a.total_xp)
+          .slice(0, 10);
+
+        const container = document.getElementById('leaderboardContent');
+        let html = '';
+
+        // 1등 — 화려한 챔피언 카드
+        if (ranked.length > 0) {
+          const top = ranked[0];
+          const topEmp = empMap[top.employee_id] || {};
+          const topTier = calculateTier(top.total_xp);
+          const topName = topEmp.name || top.employee_id.slice(0, 8);
+          const topBranch = topEmp.branch || '';
+          const initial = topName[0] || '?';
+
+          html += `
+          <div style="
+            background: linear-gradient(135deg, #ffd700 0%, #ffb347 30%, #ff6b35 70%, #ff4757 100%);
+            border-radius:16px; padding:24px; text-align:center; margin-bottom:12px;
+            box-shadow: 0 8px 32px rgba(255,107,53,0.3);
+            position:relative; overflow:hidden;
+          ">
+            <div style="position:absolute; top:-20px; left:-20px; font-size:80px; opacity:0.1; transform:rotate(-15deg);">👑</div>
+            <div style="position:absolute; bottom:-10px; right:-10px; font-size:60px; opacity:0.1;">⚡</div>
+            <div style="
+              width:72px; height:72px; border-radius:50%; background:rgba(30,41,59,0.85);
+              display:flex; align-items:center; justify-content:center;
+              margin:0 auto 12px; font-size:28px; font-weight:bold;
+              color:#ff6b35; box-shadow:0 4px 12px rgba(0,0,0,0.2);
+              border:3px solid #fff;
+            ">
+              ${initial}
+            </div>
+            <div style="font-size:24px; margin-bottom:4px;">👑</div>
+            <div style="font-size:20px; font-weight:800; color:white; text-shadow:0 2px 4px rgba(0,0,0,0.3);">
+              ${topName}
+            </div>
+            <div style="font-size:13px; color:rgba(255,255,255,0.85); margin-top:4px;">${topBranch}</div>
+            <div style="
+              display:inline-flex; align-items:center; gap:8px;
+              background:rgba(255,255,255,0.25); border-radius:20px;
+              padding:6px 16px; margin-top:12px; backdrop-filter:blur(4px);
+            ">
+              <span style="font-size:22px;">${topTier.emoji}</span>
+              <span style="font-size:18px; font-weight:800; color:white;">${top.total_xp.toLocaleString()} XP</span>
+            </div>
+            <div style="font-size:12px; color:rgba(255,255,255,0.8); margin-top:8px;">
+              ${topTier['title' + (lang === 'ko' ? 'Ko' : lang === 'vi' ? 'Vn' : 'En')]}
+            </div>
+          </div>`;
+        }
+
+        // 2~10등 리스트
+        if (ranked.length > 1) {
+          html += '<div class="card" style="padding:0; overflow:hidden;">';
+          for (let i = 1; i < ranked.length; i++) {
+            const r = ranked[i];
+            const emp = empMap[r.employee_id] || {};
+            const tier = calculateTier(r.total_xp);
+            const name = emp.name || r.employee_id.slice(0, 8);
+            const isMe = r.employee_id === (_resolvedEmpId || user?.id);
+            const rankEmoji = i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+            const bgColor = isMe ? 'rgba(16,185,129,0.06)' : 'transparent';
+            const border = i < ranked.length - 1 ? 'border-bottom:1px solid var(--gray-100);' : '';
+
+            html += `
+            <div style="display:flex; align-items:center; padding:12px 16px; gap:12px; ${border} background:${bgColor};">
+              <div style="
+                width:28px; text-align:center;
+                font-weight:800; font-size:${rankEmoji ? '18px' : '15px'};
+                color:${i <= 2 ? '#f59e0b' : 'var(--gray-500)'};
+              ">${rankEmoji || (i + 1)}</div>
+              <div style="
+                width:36px; height:36px; border-radius:50%;
+                background:${isMe ? 'var(--primary)' : 'var(--gray-200)'};
+                color:${isMe ? 'white' : 'var(--gray-700)'};
+                display:flex; align-items:center; justify-content:center;
+                font-weight:600; font-size:14px;
+              ">${(name[0] || '?')}</div>
+              <div style="flex:1; min-width:0;">
+                <div style="font-weight:${isMe ? '700' : '500'}; font-size:14px; ${isMe ? 'color:var(--primary);' : ''}">${name}${isMe ? ' ★' : ''}</div>
+                <div style="font-size:11px; color:var(--gray-500);">${tier.emoji} ${tier['title' + (lang === 'ko' ? 'Ko' : lang === 'vi' ? 'Vn' : 'En')]}</div>
+              </div>
+              <div style="font-weight:700; font-size:14px; color:var(--gray-700);">${r.total_xp.toLocaleString()}</div>
+            </div>`;
+          }
+          html += '</div>';
+        }
+
+        container.innerHTML = html;
+      } catch (e) {
+        console.warn('[Leaderboard] 오류:', e);
+      }
+    }
+
+    // ===== 신입 모험가 퀘스트 시스템 =====
+    const QUEST_STORAGE_KEY = 'sop_rookie_quest_' + (user?.email || 'demo');
+
+    function getQuestState() {
+      try { return JSON.parse(localStorage.getItem(QUEST_STORAGE_KEY) || '{}'); } catch { return {}; }
+    }
+    function saveQuestState(state) {
+      localStorage.setItem(QUEST_STORAGE_KEY, JSON.stringify(state));
+    }
+
+    // 각 퀘스트 완료 여부 체크
+    async function checkQuestCompletion() {
+      const state = getQuestState();
+      if (state.allDismissed) return state; // 완전히 닫은 경우
+
+      // 1) 프로필 완료 체크
+      const profileData = localStorage.getItem('sop_profile_' + (user?.email || ''));
+      if (profileData) {
+        try {
+          const p = JSON.parse(profileData);
+          if ((p.intro && p.intro.trim()) || (p.avatarType && p.avatarType !== 'initial')) {
+            state.profile = true;
+          }
+        } catch {}
+      }
+
+      // 2) 영상 시청 체크
+      const progress = Progress.getAllResults();
+      if (progress.completedVideos && progress.completedVideos.length > 0) {
+        state.video = true;
+      }
+
+      // 3) 퀴즈 통과 체크
+      const chapterResults = progress.chapterResults || {};
+      if (Object.keys(chapterResults).length > 0) {
+        state.quiz = true;
+      } else {
+        // 미니퀴즈도 체크
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('sop_miniquiz_score_')) {
+            state.quiz = true;
+            break;
+          }
+        }
+      }
+
+      // 4) 칭찬 보내기 체크 (Supabase)
+      if (SupabaseMode._ready) {
+        try {
+          const empId = await getEmployeeId();
+          if (empId) {
+            const { data: praises } = await SupabaseMode._client
+              .from('praise_logs').select('id').eq('from_employee_id', empId).limit(1);
+            if (praises && praises.length > 0) state.praise = true;
+
+            // 5) 챌린지 참여 체크
+            const { data: members } = await SupabaseMode._client
+              .from('team_task_members').select('id').eq('employee_id', empId).limit(1);
+            const { data: created } = await SupabaseMode._client
+              .from('team_tasks').select('id').eq('creator_id', empId).limit(1);
+            if ((members && members.length > 0) || (created && created.length > 0)) state.team = true;
+          }
+        } catch {}
+      }
+
+      saveQuestState(state);
+      return state;
+    }
+
+    // 퀘스트 EXP 수령
+    async function claimQuestXp(questId, xpAmount) {
+      const state = getQuestState();
+      if (state['claimed_' + questId]) return;
+
+      const empId = await getEmployeeId();
+      if (empId && SupabaseMode._ready) {
+        try {
+          const result = await XpService.addXp(empId, xpAmount, 'quest', 'rookie_' + questId, '신입 퀘스트: ' + questId);
+          if (result) {
+            showXpToast(xpAmount);
+            if (result.leveledUp) showLevelUpCelebration(result.oldTier, result.newTier, lang);
+          }
+        } catch {}
+      }
+      state['claimed_' + questId] = true;
+      saveQuestState(state);
+      renderRookieQuest();
+    }
+
+    // 보너스(전체 클리어) EXP 수령
+    async function claimQuestBonus() {
+      const state = getQuestState();
+      if (state.bonusClaimed) return;
+
+      const empId = await getEmployeeId();
+      if (empId && SupabaseMode._ready) {
+        try {
+          const result = await XpService.addXp(empId, 100, 'quest', 'rookie_bonus', '신입 퀘스트 졸업 보너스');
+          if (result) {
+            showXpToast(100, true);
+            if (result.leveledUp) showLevelUpCelebration(result.oldTier, result.newTier, lang);
+          }
+        } catch {}
+      }
+      state.bonusClaimed = true;
+      saveQuestState(state);
+      renderRookieQuest();
+    }
+
+    // 퀘스트 카드 숨기기 (졸업 후)
+    function dismissQuest() {
+      const state = getQuestState();
+      state.allDismissed = true;
+      saveQuestState(state);
+      document.getElementById('rookieQuestCard').innerHTML = '';
+    }
+
+    // 퀘스트 UI 렌더링
+    async function renderRookieQuest() {
+      const container = document.getElementById('rookieQuestCard');
+      if (!container) return;
+
+      const state = await checkQuestCompletion();
+      if (state.allDismissed) { container.innerHTML = ''; return; }
+
+      const quests = t.quests || [];
+      if (quests.length === 0) return;
+
+      const doneCount = quests.filter(q => state[q.id]).length;
+      const allDone = doneCount === quests.length;
+      const allClaimed = quests.every(q => state['claimed_' + q.id]);
+      const pct = Math.round((doneCount / quests.length) * 100);
+
+      // 퀘스트 아이템 HTML
+      let questsHtml = '';
+      quests.forEach(q => {
+        const done = !!state[q.id];
+        const claimed = !!state['claimed_' + q.id];
+        const first = chapters[0];
+        const link = q.link || (first ? `chapter.html?id=${first.id}` : '#');
+
+        let actionBtn;
+        if (done && claimed) {
+          actionBtn = `<span class="quest-badge-done">${t.questClaimed}</span>`;
+        } else if (done && !claimed) {
+          actionBtn = `<button class="quest-claim-btn" onclick="event.stopPropagation();claimQuestXp('${q.id}',${q.xp})">${t.questClaim} +${q.xp}</button>`;
+        } else {
+          actionBtn = `<a href="${link}" class="quest-go-btn">${t.questGo}</a>`;
+        }
+
+        questsHtml += `
+          <div class="quest-item ${done ? 'quest-done' : ''}">
+            <div class="quest-icon ${done ? 'quest-icon-done' : ''}">${done ? '✅' : q.icon}</div>
+            <div class="quest-info">
+              <div class="quest-name">${q.title}</div>
+              <div class="quest-desc">${q.desc}</div>
+            </div>
+            <div class="quest-action">
+              ${actionBtn}
+            </div>
+          </div>`;
+      });
+
+      // 보너스 영역
+      let bonusHtml = '';
+      if (allDone) {
+        if (state.bonusClaimed) {
+          bonusHtml = `
+            <div class="quest-bonus quest-bonus-claimed">
+              <span>🏆 ${t.questCompleteDesc}</span>
+              <button class="quest-dismiss-btn" onclick="dismissQuest()">✕</button>
+            </div>`;
+        } else {
+          bonusHtml = `
+            <div class="quest-bonus quest-bonus-ready">
+              <span>${t.questComplete}</span>
+              <button class="quest-claim-btn quest-claim-bonus" onclick="claimQuestBonus()">${t.questBonusClaim}</button>
+            </div>`;
+        }
+      }
+
+      container.innerHTML = `
+        <div class="quest-card">
+          <div class="quest-header">
+            <div>
+              <div class="quest-title">${t.questTitle}</div>
+              <div class="quest-subtitle">${t.questSubtitle}</div>
+            </div>
+            <div class="quest-progress-ring">
+              <svg viewBox="0 0 36 36" class="quest-ring-svg">
+                <path class="quest-ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                <path class="quest-ring-fill" stroke-dasharray="${pct}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+              </svg>
+              <div class="quest-ring-text">${doneCount}/${quests.length}</div>
+            </div>
+          </div>
+          <div class="quest-list">
+            ${questsHtml}
+          </div>
+          ${bonusHtml}
+        </div>`;
+    }
+
+    // ===== XP 가이드 렌더링 =====
+    let xpGuideOpen = true;
+    function toggleXpGuide() {
+      xpGuideOpen = !xpGuideOpen;
+      document.getElementById('xpGuideBody').style.display = xpGuideOpen ? 'block' : 'none';
+      document.getElementById('xpGuideToggle').textContent = xpGuideOpen ? (t.lbCollapse || '접기 ▲') : (t.lbExpand || '펼치기 ▼');
+    }
+
+    function renderXpGuide() {
+      const card = document.getElementById('xpGuideCard');
+      card.style.display = 'block';
+      document.getElementById('xpGuideTitle').textContent = t.xpGuide || '💡 XP 획득 가이드';
+      document.getElementById('xpGuideToggle').textContent = xpGuideOpen ? (t.lbCollapse || '접기 ▲') : (t.lbExpand || '펼치기 ▼');
+
+      const items = t.xpGuideItems || [];
+      let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
+
+      items.forEach(item => {
+        const xpVal = XP_CONFIG[item.xp] || 0;
+        const actionText = typeof item.action === 'function' ? item.action(XP_CONFIG.PRAISE_STACK_COUNT) : item.action;
+        html += `
+        <div style="display:flex; align-items:center; padding:10px 12px; background:var(--bg-card); border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+          <span style="font-size:20px; margin-right:12px;">${item.icon}</span>
+          <span style="flex:1; font-size:14px; color:var(--gray-700);">${actionText}</span>
+          <span style="
+            font-weight:800; font-size:14px; color:var(--primary);
+            background:var(--primary-light); padding:3px 10px; border-radius:12px;
+          ">+${xpVal} ${t.xpPerAction || 'XP'}</span>
+        </div>`;
+      });
+
+      html += '</div>';
+      document.getElementById('xpGuideBody').innerHTML = html;
+    }
+
     // ===== 초기화 =====
     updateProgress();
     updateNextAction();
     renderChapters();
     renderMbtiCard();
+    renderTierCard();
+    renderPraiseMiniCard();
+    renderTasksMiniCard();
+    renderTeamTasksMiniCard();
+    renderRookieQuest();
+    renderXpGuide();
+    renderLeaderboard();
 
     // ===== 알림 시스템 =====
     const notifKey = 'sop_notif_enabled_' + (user?.email || '');
@@ -378,7 +1236,7 @@
     }
 
     async function requestNotificationPermission() {
-      if (!('Notification' in window)) { showToast('이 브라우저는 알림을 지원하지 않습니다'); return; }
+      if (!('Notification' in window)) { showToast(lang === 'en' ? 'This browser does not support notifications' : lang === 'vi' ? 'Trình duyệt không hỗ trợ thông báo' : '이 브라우저는 알림을 지원하지 않습니다'); return; }
       let perm = Notification.permission;
       if (perm === 'default') perm = await Notification.requestPermission();
       if (perm === 'granted') {
@@ -467,14 +1325,8 @@
     }
     checkPendingNotifications();
 
-    // 로그아웃
-    document.getElementById('userAvatar').addEventListener('click', () => {
-      if (confirm(t.logoutConfirm)) {
-        localStorage.removeItem('sop_user');
-        localStorage.removeItem('sop_login_time');
-        window.location.href = 'index.html';
-      }
-    });
+    // 로그아웃 (설정 아이콘 길게 클릭 or change-password에서 처리)
+    // 아바타는 프로필 링크로 변경됨
   </script>
 
 </body>
