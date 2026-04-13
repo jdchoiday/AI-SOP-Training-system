@@ -24,7 +24,7 @@ module.exports = async (req, res) => {
   if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not set' });
 
   try {
-    const { action = 'generate', visual, narration, sceneIndex, totalScenes } = req.body || {};
+    const { action = 'generate', visual, narration, sceneIndex, totalScenes, portrait = true } = req.body || {};
 
     if (action === 'status') {
       return res.status(200).json({ status: 'Succeed', message: 'Image mode - no polling needed' });
@@ -70,12 +70,13 @@ module.exports = async (req, res) => {
           let mime = imagePart.inlineData.mimeType || 'image/jpeg';
           const origSize = Math.round(base64.length / 1024);
 
-          // JPEG 압축
+          // JPEG 압축 (세로/가로 비율 선택)
           if (sharp) {
             try {
               const buf = Buffer.from(base64, 'base64');
+              const [w, h] = portrait ? [720, 1280] : [1280, 720];
               const jpegBuf = await sharp(buf)
-                .resize(1280, 720, { fit: 'cover' })
+                .resize(w, h, { fit: 'cover' })
                 .jpeg({ quality: 82 })
                 .toBuffer();
               base64 = jpegBuf.toString('base64');
@@ -116,40 +117,30 @@ module.exports = async (req, res) => {
   }
 };
 
-// scene-prompts.js 로드 실패 시 폴백 프롬프트
+// scene-prompts.js 로드 실패 시 폴백 프롬프트 (새 룰: 교육 인포그래픽)
 function buildFallbackPrompt(narration, sceneIndex) {
-  const cameras = ['와이드 샷', '미디엄 샷', '클로즈업', '오버더숄더 샷', '아이레벨 샷'];
-  const camera = cameras[(sceneIndex || 0) % cameras.length];
-
-  // 나레이션 언어 감지
   const hasVie = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(narration || '');
   const isEn = !hasVie && /^[\x00-\x7F\s.,!?;:'"()\-\d\n]+$/.test((narration || '').slice(0, 200));
-  const textLang = hasVie
-    ? '★ 이미지 안의 모든 텍스트(라벨, 제목, 포스터 문구)는 반드시 베트남어(tiếng Việt)로 작성하세요.'
-    : isEn
-      ? '★ All text inside the image (labels, titles, poster text) MUST be written in English. No Korean or Vietnamese.'
-      : '★ 이미지 안의 모든 텍스트(라벨, 제목, 포스터 문구)는 반드시 한국어로 작성하세요.';
+  const lang = hasVie ? 'Vietnamese' : isEn ? 'English' : 'Korean';
 
-  return `다음 나레이션의 장면을 시각적으로 생성해주세요.
+  const visualTypes = ['concept explanation', 'process flow', 'comparison', 'structure diagram', 'cause-effect', 'checklist', 'workflow'];
+  const suggestedType = visualTypes[(sceneIndex || 0) % visualTypes.length];
 
-나레이션: "${narration}"
+  return `Generate a VERTICAL portrait 9:16 educational infographic.
 
-${textLang}
+Narration: "${narration}"
 
-중요: 단순히 같은 스타일의 사진만 만들지 마세요.
-나레이션 내용에 따라 가장 적합한 시각 타입을 선택하세요:
-- 절차 설명 → 단계별 인포그래픽
-- 비교/대조 → 좌우 분할 비교 이미지
-- 감정/관계 → 인물 중심 감성 사진
-- 도구/재료 → 오버헤드 플랫레이
-- 규칙/안전 → 일러스트 포스터
-- 행동/동작 → 시네마틱 모션 사진
+Create a structured educational diagram that helps a first-time learner understand this content.
 
-장면 요구사항:
-- ${camera}으로 촬영
-- 나레이션의 핵심 교육 내용을 시각적으로 전달
-- 장소: 밝고 현대적인 한국 키즈카페/실내놀이터/교육실
-- 인물: 20대 한국인 여성, 라이트블루 폴로셔츠와 베이지색 앞치마 착용
-- 16:9 가로 비율
-- 외설적이거나 폭력적인 내용 절대 금지`;
+Layout:
+- TOP: Bold short title in ${lang}
+- CENTER: Main infographic diagram (suggested type: ${suggestedType})
+  Use labeled boxes, arrows, icons, flow charts, comparison blocks as needed
+- BOTTOM: 3 short keyword boxes in ${lang}
+
+Style: Clean flat 2D infographic, white/light background, modern educational publishing
+Text: Short ${lang} keywords only, no full sentences, large and readable
+Must be: portrait orientation (taller than wide), structured, clear hierarchy
+
+Avoid: realistic photos, cinematic style, decorative backgrounds, emotional characters, poster style, long text, landscape format`;
 }

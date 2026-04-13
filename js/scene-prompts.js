@@ -458,63 +458,122 @@ function extractActions(text) {
   return matches;
 }
 
+// ===== 교육 인포그래픽 시각 타입 =====
+const VISUAL_TYPES = [
+  'concept explanation',   // 개념 설명 다이어그램
+  'process flow',          // 절차/순서 흐름도
+  'comparison',            // 비교 (좌우 분할, O/X)
+  'structure diagram',     // 구조도/계층도
+  'cause-effect',          // 원인-결과 관계도
+  'checklist',             // 체크리스트
+  'workflow',              // 실무 워크플로우
+];
+
 /**
- * AI 동적 프롬프트 생성을 위한 시각 타입 분석 프롬프트
- * Gemini에게 보낼 메타 프롬프트를 생성
+ * 교육 인포그래픽 프롬프트 생성 (새 룰 v2)
+ * - 9:16 세로 포맷 (모바일 퍼스트)
+ * - 교육 인포그래픽 전용 (사진/시네마틱 금지)
+ * - 3단 레이아웃: 제목 / 핵심 다이어그램 / 키워드 3개
+ * - 1씬 = 1핵심 원칙
  * @param {string} narration - 나레이션 텍스트
  * @param {number} sceneIndex - 씬 번호
  * @param {number} totalScenes - 전체 씬 수
- * @returns {string} Gemini 메타 프롬프트
+ * @returns {string} Gemini 이미지 생성 프롬프트
  */
 function buildSmartVisualPrompt(narration, sceneIndex, totalScenes) {
   narration = narration || '';
+  const sceneNum = (sceneIndex || 0) + 1;
+  const total = totalScenes || 10;
+
   // 나레이션 언어 자동 감지
   const hasVietnamese = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(narration);
   const isEnglish = !hasVietnamese && /^[\x00-\x7F\s.,!?;:'"()\-\d\n]+$/.test((narration || '').slice(0, 200));
 
-  let textLangInstruction;
+  let lang = 'Korean';
+  let langExamples = '"핵심 개념", "1단계", "비교", "원인 → 결과"';
   if (hasVietnamese) {
-    textLangInstruction = `★★★ 이미지 안의 모든 텍스트(라벨, 제목, 번호 설명, 포스터 문구 등)는 반드시 베트남어(tiếng Việt)로 작성하세요.
-예시: "Rửa tay", "Bước 1", "An toàn", "Quy tắc", "Trước / Sau"
-영어나 한국어 텍스트를 이미지에 넣지 마세요.`;
+    lang = 'Vietnamese';
+    langExamples = '"Khái niệm", "Bước 1", "So sánh", "Nguyên nhân → Kết quả"';
   } else if (isEnglish) {
-    textLangInstruction = `★★★ All text inside the image (labels, titles, step descriptions, poster text, etc.) MUST be written in English.
-Examples: "Wash Hands", "Step 1", "Safety Rules", "Before / After"
-Do NOT put Korean or Vietnamese text in the image.`;
-  } else {
-    textLangInstruction = `★★★ 이미지 안의 모든 텍스트(라벨, 제목, 번호 설명, 포스터 문구 등)는 반드시 한국어로 작성하세요.
-예시: "손 씻기", "1단계", "안전 수칙", "이전 / 이후"
-영어나 베트남어 텍스트를 이미지에 넣지 마세요.`;
+    lang = 'English';
+    langExamples = '"Key Concept", "Step 1", "Compare", "Cause → Effect"';
   }
 
-  return `당신은 교육 영상의 시각 디렉터입니다.
+  // 시각 타입 순환 (같은 타입 반복 방지)
+  const typeIndex = (sceneIndex || 0) % VISUAL_TYPES.length;
+  const suggestedType = VISUAL_TYPES[typeIndex];
 
-다음 나레이션에 가장 적합한 이미지를 생성해주세요.
+  return `You are an educational scene reconstruction AI for vertical digital textbooks.
 
-나레이션: "${narration}"
-씬: ${(sceneIndex || 0) + 1}/${totalScenes || 10}
+Generate a VERTICAL portrait image (9:16 aspect ratio, taller than wide, like a mobile phone screen).
 
-${textLangInstruction}
+=== NARRATION TO VISUALIZE ===
+"${narration}"
+Scene ${sceneNum} of ${total}
 
-시각 타입 선택 기준 (반드시 다양하게 사용):
-- 절차/순서 설명 → 단계별 인포그래픽 (번호 매겨진 아이콘 배열)
-- 올바른/잘못된 비교 → 좌우 분할 비교 이미지 (BEFORE/AFTER)
-- 감정/관계 장면 → 인물 중심 감정 사진 (얕은 심도, 따뜻한 조명)
-- 도구/재료 → 오버헤드 플랫레이 사진 (깔끔하게 배치된 물건들)
-- 안전/규칙 → 일러스트 포스터 (아이콘 + 텍스트)
-- 행동/동작 → 시네마틱 모션 사진 (모션블러, 드라마틱 앵글)
-- 핵심 요약 → 키포인트 인포그래픽 (별표, 체크마크)
-- 그 외 → 실제 키즈카페 장면 사진
+=== INSTRUCTIONS ===
+Analyze the narration above and create a structured educational infographic that helps a first-time learner understand the core concept.
 
-장면 요구사항:
-- 나레이션의 **핵심 교육 내용**을 시각적으로 전달 (배경 분위기가 아닌 핵심 행동/개념)
-- 인물 등장 시: 20대 한국인 여성, 라이트블루 폴로셔츠와 베이지색 앞치마 (키즈카페 직원)
-- 아이 등장 시: 실제 한국 유아/어린이
-- 장소: 밝은 현대적 키즈카페/실내놀이터/교육실
-- 16:9 가로 비율
-- 외설적이거나 폭력적인 내용 절대 금지
+Your goal is NOT to decorate. Your goal is to improve comprehension.
 
-**이전 씬과 다른 시각 타입**을 사용하여 다양성을 유지하세요.`;
+=== LAYOUT (3-zone vertical structure) ===
+TOP ZONE (15%):
+- Short bold title summarizing the core learning point
+- Text in ${lang}, large and readable
+
+CENTER ZONE (65%):
+- Main educational diagram/infographic
+- Choose the best visual type for this content:
+  * concept explanation → labeled diagram with icons and arrows
+  * process flow → numbered steps with flow arrows
+  * comparison → side-by-side blocks (O vs X, before/after)
+  * structure diagram → hierarchy or tree with labeled boxes
+  * cause-effect → connected blocks showing relationships
+  * checklist → numbered items with icons
+  * workflow → step-by-step practical guide
+- Suggested type for this scene: ${suggestedType}
+- Use diagrams, arrows, icons, labeled boxes, comparison blocks, charts
+- Make the concept understandable within 3 seconds
+
+BOTTOM ZONE (20%):
+- Exactly 3 keyword boxes in a horizontal row
+- Each keyword = 2-4 characters in ${lang}
+- Examples: ${langExamples}
+
+=== STYLE RULES (NON-NEGOTIABLE) ===
+- Clean flat 2D infographic, modern educational publishing style
+- Background: plain white or very light solid color
+- NO realistic photos, NO cinematic style, NO poster style
+- NO emotional character illustrations with detailed faces
+- Use only simple flat icons, stick figures, or labeled shapes if people needed
+- All text in ${lang}, large and readable
+- Clean spacing, clear visual hierarchy
+- Professional, calm, structured textbook design
+- High legibility on mobile screens
+
+=== TEXT RULES ===
+- Use only short ${lang} keywords (2-6 characters each)
+- NO full sentences on screen
+- NO paragraph text
+- Maximum 3 keyword blocks at bottom
+- Labels on diagrams must be short and readable
+- The screen supports voice narration, not duplicate it
+
+=== MUST AVOID ===
+- Decorative clutter or ornamental backgrounds
+- Poster style, advertising style, magazine style
+- Cinematic mood, dramatic lighting, lens effects
+- Emotional character focus or detailed face illustrations
+- Crowded background with furniture/rooms/scenery
+- Long text blocks or explanatory sentences
+- Fantasy elements, vague symbolism
+- Realistic photo style
+- 16:9 landscape format (MUST be 9:16 portrait)
+
+=== EDUCATIONAL PRINCIPLE ===
+- A learner should understand the main point even with audio off
+- The image structures the content, the narration explains it
+- Prioritize clarity, sequence, and educational usefulness over beauty`;
 }
 
 // Node.js (api/image.js)에서 사용
