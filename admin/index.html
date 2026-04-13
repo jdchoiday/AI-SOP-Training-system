@@ -3164,50 +3164,86 @@ Output ONLY the prompt, nothing else.`;
       }
 
       let done = 0;
-      const BATCH_SIZE = 3; // 3개씩 병렬 생성
+      let failed = 0;
+      const BATCH_SIZE = 2; // 2개씩 (Gemini 레이트 리밋 방지)
+      const FETCH_TIMEOUT = 55000; // 55초 (Vercel 60초 제한보다 약간 짧게)
+      const RETRY_MAX = 1; // 실패 시 1회 재시도
+
+      // 타임아웃 포함 fetch 헬퍼
+      async function fetchWithTimeout(url, options, timeoutMs) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const res = await fetch(url, { ...options, signal: controller.signal });
+          clearTimeout(timer);
+          return res;
+        } catch (e) {
+          clearTimeout(timer);
+          throw e;
+        }
+      }
+
+      // 단일 씬 이미지 생성 (재시도 포함)
+      async function generateOneImage(scene, sceneIdx, retry = 0) {
+        try {
+          const imgRes = await fetchWithTimeout('/api/image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'generate-multi', visual: scene.visual || '', narration: scene.narration, sceneIndex: sceneIdx, totalScenes: sop.script.length })
+          }, FETCH_TIMEOUT);
+
+          if (!imgRes.ok) {
+            const errText = await imgRes.text().catch(() => '');
+            throw new Error(`HTTP ${imgRes.status}: ${errText.slice(0, 100)}`);
+          }
+
+          const imgData = await imgRes.json();
+          if (imgData.images?.[0]?.imageUrl) {
+            scene.imageUrl = imgData.images[0].imageUrl;
+            return true;
+          } else {
+            throw new Error(imgData.error || 'No image in response');
+          }
+        } catch (e) {
+          if (retry < RETRY_MAX) {
+            console.warn(`씬 ${scene.scene} 재시도 (${retry + 1}/${RETRY_MAX}):`, e.message);
+            await new Promise(r => setTimeout(r, 3000)); // 3초 대기 후 재시도
+            return generateOneImage(scene, sceneIdx, retry + 1);
+          }
+          console.error(`씬 ${scene.scene} 최종 실패:`, e.message);
+          return false;
+        }
+      }
 
       for (let b = 0; b < sceneJobs.length; b += BATCH_SIZE) {
         const batch = sceneJobs.slice(b, b + BATCH_SIZE);
         const statusEl = document.getElementById('imgGenStatus');
-        if (statusEl) statusEl.textContent = `씬 ${batch.map(i => sop.script[i].scene).join(', ')} 병렬 생성 중...`;
+        if (statusEl) statusEl.textContent = `씬 ${batch.map(i => sop.script[i].scene).join(', ')} 생성 중... (실패: ${failed})`;
 
         // 배치 내 병렬 처리
-        await Promise.all(batch.map(async (i) => {
-          const scene = sop.script[i];
-          try {
-            // 나레이션 → 서버에서 바로 이미지 생성 (Gemini 이중 호출 제거)
-            const imgRes = await fetch('/api/image', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'generate-multi', visual: scene.visual || '', narration: scene.narration, sceneIndex: i, totalScenes: sop.script.length })
-            });
-            const imgData = await imgRes.json();
-
-            if (imgData.images && imgData.images.length > 0 && imgData.images[0].imageUrl) {
-              scene.imageUrl = imgData.images[0].imageUrl;
-            }
-          } catch (e) {
-            console.warn(`씬 ${scene.scene} 이미지 생성 실패:`, e.message);
-          }
-
+        const results = await Promise.all(batch.map(async (i) => {
+          const ok = await generateOneImage(sop.script[i], i);
           done++;
+          if (!ok) failed++;
           const countEl = document.getElementById('imgGenCount');
           const barEl = document.getElementById('imgGenBar');
-          if (countEl) countEl.textContent = `${done} / ${total}`;
+          if (countEl) countEl.textContent = `${done} / ${total}` + (failed > 0 ? ` (❌${failed})` : '');
           if (barEl) barEl.style.width = (done / total * 100) + '%';
+          return ok;
         }));
 
-        // 배치마다 중간 저장
-        saveSops(sops);
+        // 배치마다 중간 저장 (alert 방지: try/catch)
+        try { saveSops(sops); } catch(e) { console.warn('[Save] 중간 저장 실패:', e.message); }
 
-        // 배치 간 1초 딜레이 (API 제한 방지)
+        // 배치 간 딜레이 (레이트 리밋 방지, 점점 늘림)
         if (b + BATCH_SIZE < sceneJobs.length) {
-          await new Promise(r => setTimeout(r, 1000));
+          const delay = 2000 + Math.floor(b / BATCH_SIZE) * 500; // 2초~점진 증가
+          await new Promise(r => setTimeout(r, Math.min(delay, 5000)));
         }
       }
 
-      // 저장 (중간 저장은 5개마다)
-      saveSops(sops);
+      // 최종 저장
+      try { saveSops(sops); } catch(e) { console.warn('[Save] 최종 저장 실패:', e.message); }
 
       // 프로그레스 제거 후 리뷰 패널 열기
       const progressEl = document.getElementById(progressId);

@@ -23,10 +23,44 @@ const VOICES = {
   'vi-VN': { female: 'vi-VN-HoaiMyNeural', male: 'vi-VN-NamMinhNeural' },
 };
 
+// 브랜드/고유명사 발음 사전 (TTS가 잘못 읽는 단어 교정)
+// 관리자가 추가 가능하도록 별도 객체로 분리
+const PRONUNCIATION_DICT = {
+  // 브랜드명
+  'AION': '아이온',
+  'Aion': '아이온',
+  'aion': '아이온',
+  'Kiwooza': '키우자',
+  'kiwooza': '키우자',
+  'KIWOOZA': '키우자',
+  'SOP': '에스오피',
+  'POS': '포스',
+  'CCTV': '씨씨티비',
+  'OJT': '오제이티',
+  'KPI': '케이피아이',
+  'MBTI': '엠비티아이',
+  'QR': '큐알',
+  'WiFi': '와이파이',
+  'wifi': '와이파이',
+  'WIFI': '와이파이',
+  'AI': '에이아이',
+  'CEO': '씨이오',
+  'VP': '브이피',
+};
+
 // 한국어 텍스트를 자연스럽게 읽을 수 있도록 전처리
 // 핵심: 과도한 쉼 제거, 실제 사람처럼 빠르게 읽되 핵심 구간만 끊기
 function preprocessKoreanText(text) {
   let result = text;
+
+  // 0. 발음 사전 적용 (긴 단어부터 먼저 치환하여 부분 매칭 방지)
+  const sortedKeys = Object.keys(PRONUNCIATION_DICT).sort((a, b) => b.length - a.length);
+  for (const word of sortedKeys) {
+    // 단어 경계를 고려한 치환 (예: "AION" → "아이온", 단 "CAION" 같은건 안 바꿈)
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(?<![A-Za-z])${escaped}(?![A-Za-z])`, 'g');
+    result = result.replace(regex, PRONUNCIATION_DICT[word]);
+  }
 
   // 1. 마침표 뒤 공백 확보
   result = result.replace(/\.([^\s\d])/g, '. $1');

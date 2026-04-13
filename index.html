@@ -6,7 +6,7 @@
   <title>SOP Training System - 로그인</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2563eb">
+  <meta name="theme-color" content="#0F172A">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="icon" href="assets/icon-192.svg">
 </head>
@@ -56,14 +56,17 @@
         <a href="#" onclick="showPasswordReset(); return false;" style="color:var(--primary); font-size:13px; text-decoration:none;" id="forgotLink">비밀번호를 잊으셨나요?</a>
       </p>
 
-      <!-- 비밀번호 재설정 폼 (숨김) -->
-      <div id="resetForm" style="display:none; margin-top:16px; padding:16px; background:var(--gray-50); border-radius:10px;">
+      <!-- 비밀번호 재설정 안내 (숨김) -->
+      <div id="resetForm" style="display:none; margin-top:16px; padding:16px; background:var(--gray-50); border-radius:10px; text-align:center;">
+        <p style="font-size:32px; margin-bottom:8px;">🔒</p>
         <p style="font-size:14px; font-weight:600; margin-bottom:8px;" id="resetTitle">비밀번호 재설정</p>
-        <p style="font-size:13px; color:var(--gray-500); margin-bottom:12px;" id="resetDesc">관리자에게 문의하거나 아래에서 이메일을 확인하세요</p>
-        <input type="email" id="resetEmail" placeholder="가입한 이메일" style="width:100%;padding:10px;border:1px solid var(--gray-200);border-radius:8px;margin-bottom:8px;">
-        <button onclick="handlePasswordReset()" class="btn btn-primary" style="width:100%;padding:10px;">확인</button>
-        <p id="resetResult" style="font-size:13px; margin-top:8px; display:none;"></p>
+        <p style="font-size:13px; color:var(--gray-600); line-height:1.5;" id="resetDesc">관리자에게 문의하여 비밀번호를 초기화하세요</p>
       </div>
+
+      <!-- 회원가입 링크 -->
+      <p style="text-align:center; margin-top:16px;">
+        <a href="register.html" style="color:var(--primary); font-size:13px; text-decoration:none; font-weight:600;" id="registerLink">계정이 없나요? 회원가입</a>
+      </p>
 
       <!-- 언어 전환 -->
       <div style="text-align:center; margin-top:24px;">
@@ -109,15 +112,9 @@
         errorNetwork: '네트워크 오류가 발생했습니다. 다시 시도해주세요.',
         forgotPassword: '비밀번호를 잊으셨나요?',
         resetTitle: '비밀번호 재설정',
-        resetDesc: '관리자에게 문의하거나 아래에서 이메일을 확인하세요',
-        resetPlaceholder: '가입한 이메일',
-        resetBtn: '확인',
-        resetEnterEmail: '이메일을 입력하세요',
-        resetTempPw: '임시 비밀번호',
-        resetTempPwSub: '이 비밀번호로 로그인 후 변경하세요',
-        resetAccountIs: '계정입니다.',
-        resetNotFound: '등록된 이메일이 아닙니다. 관리자에게 문의하세요.',
+        resetDesc: '관리자에게 문의하여 비밀번호를 초기화하세요',
         admin: '관리자', staff: '직원',
+        registerLink: '계정이 없나요? 회원가입',
       },
       en: {
         title: 'SOP Training',
@@ -131,15 +128,9 @@
         errorNetwork: 'Network error. Please try again.',
         forgotPassword: 'Forgot your password?',
         resetTitle: 'Reset Password',
-        resetDesc: 'Contact an admin or verify your email below',
-        resetPlaceholder: 'Registered email',
-        resetBtn: 'Confirm',
-        resetEnterEmail: 'Please enter your email',
-        resetTempPw: 'Temporary password',
-        resetTempPwSub: 'Use this password to log in, then change it',
-        resetAccountIs: 'account.',
-        resetNotFound: 'Email not registered. Please contact an administrator.',
+        resetDesc: 'Contact your administrator to reset your password',
         admin: 'Admin', staff: 'Staff',
+        registerLink: "Don't have an account? Register",
       },
       vi: {
         title: 'SOP Training',
@@ -153,15 +144,9 @@
         errorNetwork: 'Lỗi mạng. Vui lòng thử lại.',
         forgotPassword: 'Quên mật khẩu?',
         resetTitle: 'Đặt lại mật khẩu',
-        resetDesc: 'Liên hệ quản trị viên hoặc xác minh email bên dưới',
-        resetPlaceholder: 'Email đã đăng ký',
-        resetBtn: 'Xác nhận',
-        resetEnterEmail: 'Vui lòng nhập email',
-        resetTempPw: 'Mật khẩu tạm',
-        resetTempPwSub: 'Đăng nhập bằng mật khẩu này rồi đổi lại',
-        resetAccountIs: 'tài khoản.',
-        resetNotFound: 'Email chưa đăng ký. Vui lòng liên hệ quản trị viên.',
+        resetDesc: 'Liên hệ quản trị viên để đặt lại mật khẩu',
         admin: 'Quản trị viên', staff: 'Nhân viên',
+        registerLink: 'Chưa có tài khoản? Đăng ký',
       }
     };
 
@@ -185,7 +170,7 @@
       document.getElementById('forgotLink').textContent = t.forgotPassword;
       document.getElementById('resetTitle').textContent = t.resetTitle;
       document.getElementById('resetDesc').textContent = t.resetDesc;
-      document.getElementById('resetEmail').placeholder = t.resetPlaceholder;
+      document.getElementById('registerLink').textContent = t.registerLink;
     }
 
     // 페이지 로드시 언어 적용
@@ -195,48 +180,6 @@
     function showPasswordReset() {
       const form = document.getElementById('resetForm');
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
-    }
-
-    async function handlePasswordReset() {
-      const email = document.getElementById('resetEmail').value.trim();
-      const result = document.getElementById('resetResult');
-      const tx = TEXTS[currentLang];
-      if (!email) { result.textContent = tx.resetEnterEmail; result.style.color = 'var(--danger)'; result.style.display = 'block'; return; }
-
-      // Supabase에서 확인 후 임시 비밀번호 설정
-      if (window.SupabaseMode && SupabaseMode._ready) {
-        try {
-          const { data, error } = await SupabaseMode.client
-            .from('employees')
-            .select('id, name')
-            .eq('email', email)
-            .single();
-
-          if (data) {
-            const tempPw = Math.random().toString(36).slice(-6);
-            await SupabaseMode.client
-              .from('employees')
-              .update({ password_hash: tempPw })
-              .eq('email', email);
-
-            result.innerHTML = `✅ ${tx.resetTempPw}: <strong style="font-size:18px;color:var(--primary);">${tempPw}</strong><br><span style="font-size:12px;">${tx.resetTempPwSub}</span>`;
-            result.style.color = 'var(--success)';
-            result.style.display = 'block';
-            return;
-          }
-        } catch(e) { console.error('Reset error:', e); }
-      }
-
-      // 데모 계정 체크 (폴백)
-      const demoAccounts = {'admin@test.com': tx.admin, 'manager@test.com': '지점장', 'staff@test.com': tx.staff};
-      if (demoAccounts[email]) {
-        result.innerHTML = `✅ <strong>${demoAccounts[email]}</strong> ${tx.resetAccountIs}<br>${tx.password}: <strong style="font-size:18px;color:var(--primary);">1234</strong>`;
-        result.style.color = 'var(--success)';
-      } else {
-        result.textContent = tx.resetNotFound;
-        result.style.color = 'var(--danger)';
-      }
-      result.style.display = 'block';
     }
 
     // ===== 로그인 처리 =====
@@ -269,6 +212,18 @@
             user = { id: 'demo-manager', email, role: 'admin', name: '강남점장', adminRole: 'branch_manager', adminBranch: '서울 강남점' };
           } else if (email === 'staff@test.com' && password === '1234') {
             user = { id: 'demo-staff', email, role: 'staff', name: '직원1' };
+          }
+          // 데모 로그인이라도 Supabase에 해당 이메일의 직원이 있으면 실제 ID 사용
+          if (user && user.role !== 'admin' && SupabaseMode._ready) {
+            try {
+              const { data: empData } = await SupabaseMode._client
+                .from('employees').select('id, name, branch').eq('email', email).maybeSingle();
+              if (empData) {
+                user.id = empData.id;
+                user.name = empData.name || user.name;
+                user.branch = empData.branch || user.branch;
+              }
+            } catch (e) { /* ignore */ }
           }
         }
 

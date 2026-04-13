@@ -661,6 +661,18 @@ const SlidePlayer = (() => {
     return _langCache.get(key) + '_' + key;
   }
 
+  // 저장된 TTS 설정 로드
+  function _getTtsSettings() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('sop_tts_settings') || 'null');
+      return {
+        gender: saved?.ttsGender || 'female',
+        rate: saved?.ttsRate || '+0%',
+        pitch: saved?.ttsPitch || '+0Hz',
+      };
+    } catch (e) { return { gender: 'female', rate: '+0%', pitch: '+0Hz' }; }
+  }
+
   async function _fetchTTSAudio(text) {
     if (!text || text.trim().length === 0) return null;
 
@@ -671,15 +683,16 @@ const SlidePlayer = (() => {
 
     try {
       const lang = _ttsLang(text);
+      const ttsSettings = _getTtsSettings();
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: text,
           lang: lang,
-          gender: 'female',
-          rate: '+0%',
-          pitch: '+0Hz',
+          gender: ttsSettings.gender,
+          rate: ttsSettings.rate,
+          pitch: ttsSettings.pitch,
         }),
       });
 
