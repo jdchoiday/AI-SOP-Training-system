@@ -6,7 +6,7 @@
   <title>SOP Training - 직원 가입</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2563eb">
+  <meta name="theme-color" content="#0F172A">
   <link rel="icon" href="assets/icon-192.svg">
 </head>
 <body>
@@ -31,10 +31,27 @@
           <label for="regPassword" id="labelPassword">비밀번호</label>
           <input type="password" id="regPassword" placeholder="" required minlength="4">
         </div>
-        <div class="form-group">
+
+        <!-- 초대 모드: readonly 지점 -->
+        <div class="form-group" id="branchGroupReadonly" style="display:none;">
           <label id="labelBranch">지점</label>
           <input type="text" id="regBranch" readonly style="background:var(--gray-50);color:var(--gray-700);">
         </div>
+
+        <!-- 자유 가입: 지점 선택 드롭다운 -->
+        <div class="form-group" id="branchGroupSelect" style="display:none;">
+          <label id="labelBranchSelect">지점</label>
+          <select id="regBranchSelect" style="padding:10px;border:1px solid rgba(148,163,184,0.12);border-radius:8px;font-size:14px;width:100%;background:rgba(30,41,59,0.85);color:#F1F5F9;">
+          </select>
+        </div>
+
+        <!-- 팀 선택 -->
+        <div class="form-group" id="teamGroup" style="display:none;">
+          <label id="labelTeam">팀</label>
+          <select id="regTeam" style="padding:10px;border:1px solid rgba(148,163,184,0.12);border-radius:8px;font-size:14px;width:100%;background:rgba(30,41,59,0.85);color:#F1F5F9;">
+          </select>
+        </div>
+
         <button type="submit" class="btn btn-primary" id="submitBtn">가입하기</button>
       </form>
 
@@ -55,6 +72,13 @@
       <div style="text-align:center; margin-top:24px;">
         <a href="index.html" style="color:var(--gray-500); font-size:13px; text-decoration:none;" id="alreadyHaveAccount">이미 계정이 있나요? 로그인</a>
       </div>
+
+      <!-- 언어 전환 -->
+      <div style="text-align:center; margin-top:16px;">
+        <button onclick="switchLang('ko')" class="btn btn-outline" style="padding:6px 14px; font-size:12px;">한국어</button>
+        <button onclick="switchLang('en')" class="btn btn-outline" style="padding:6px 14px; font-size:12px;">English</button>
+        <button onclick="switchLang('vi')" class="btn btn-outline" style="padding:6px 14px; font-size:12px;">Tiếng Việt</button>
+      </div>
     </div>
   </div>
 
@@ -65,11 +89,12 @@
     // ===== 다국어 텍스트 =====
     const T = {
       ko: {
-        pageTitle: '직원 가입', checkingInvite: '초대 링크를 확인하고 있습니다...',
+        pageTitle: '직원 가입', checkingInvite: '확인 중...',
+        freeRegistration: '직원 가입',
         staffRegistration: (branch) => `${branch} 직원 가입`,
         name: '이름', namePlaceholder: '홍길동',
         email: '이메일', password: '비밀번호', passwordPlaceholder: '4자리 이상',
-        branch: '지점', submit: '가입하기',
+        branch: '지점', selectBranch: '지점을 선택하세요', submit: '가입하기',
         invalidInvite: '유효하지 않은 초대 링크입니다',
         invalidDesc: '관리자에게 새 초대 링크를 요청하세요',
         goLogin: '로그인 페이지로',
@@ -77,17 +102,24 @@
         successDesc: '로그인하여 교육을 시작하세요',
         loginBtn: '로그인 하기',
         alreadyHaveAccount: '이미 계정이 있나요? 로그인',
+        team: '팀', selectTeam: '팀을 선택하세요',
         fillAllFields: '모든 필드를 올바르게 입력하세요',
         emailExists: '이미 등록된 이메일입니다',
         expired: '초대 코드가 만료되었습니다',
+        selectTeamRequired: '팀을 선택해주세요',
+        selectBranchRequired: '지점을 선택해주세요',
+        networkError: '가입에 실패했습니다. 다시 시도해주세요.',
       },
       en: {
-        pageTitle: 'Staff Registration', checkingInvite: 'Verifying invitation link...',
+        pageTitle: 'Staff Registration', checkingInvite: 'Loading...',
+        freeRegistration: 'Staff Registration',
         staffRegistration: (branch) => `${branch} — Staff Registration`,
         name: 'Name', namePlaceholder: 'John Doe',
         email: 'Email', password: 'Password', passwordPlaceholder: 'At least 4 characters',
-        branch: 'Branch', submit: 'Register',
+        branch: 'Branch', selectBranch: 'Select your branch', team: 'Team', selectTeam: 'Select your team', submit: 'Register',
         invalidInvite: 'Invalid invitation link',
+        selectTeamRequired: 'Please select a team',
+        selectBranchRequired: 'Please select a branch',
         invalidDesc: 'Please request a new invitation link from your admin',
         goLogin: 'Go to Login',
         successTitle: 'Registration complete!',
@@ -97,14 +129,18 @@
         fillAllFields: 'Please fill in all fields correctly',
         emailExists: 'This email is already registered',
         expired: 'Invitation code has expired',
+        networkError: 'Registration failed. Please try again.',
       },
       vi: {
-        pageTitle: 'Đăng ký nhân viên', checkingInvite: 'Đang xác minh liên kết mời...',
+        pageTitle: 'Đăng ký nhân viên', checkingInvite: 'Đang tải...',
+        freeRegistration: 'Đăng ký nhân viên',
         staffRegistration: (branch) => `Đăng ký nhân viên ${branch}`,
         name: 'Họ tên', namePlaceholder: 'Nguyễn Văn A',
         email: 'Email', password: 'Mật khẩu', passwordPlaceholder: 'Ít nhất 4 ký tự',
-        branch: 'Chi nhánh', submit: 'Đăng ký',
+        branch: 'Chi nhánh', selectBranch: 'Chọn chi nhánh', team: 'Nhóm', selectTeam: 'Chọn nhóm của bạn', submit: 'Đăng ký',
         invalidInvite: 'Liên kết mời không hợp lệ',
+        selectTeamRequired: 'Vui lòng chọn nhóm',
+        selectBranchRequired: 'Vui lòng chọn chi nhánh',
         invalidDesc: 'Vui lòng yêu cầu quản trị viên gửi liên kết mời mới',
         goLogin: 'Đến trang đăng nhập',
         successTitle: 'Đăng ký thành công!',
@@ -114,6 +150,7 @@
         fillAllFields: 'Vui lòng điền đầy đủ thông tin',
         emailExists: 'Email này đã được đăng ký',
         expired: 'Mã mời đã hết hạn',
+        networkError: 'Đăng ký thất bại. Vui lòng thử lại.',
       }
     };
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
@@ -140,17 +177,136 @@
     const urlParams = new URLSearchParams(window.location.search);
     const inviteCode = urlParams.get('code');
     let currentInvite = null;
+    let freeMode = false;
+    let _branchTeams = {}; // 전역 보관용
 
+    // ===== Supabase에서 지점/팀 데이터 직접 가져오기 =====
+    async function fetchBranchTeamsFromDB() {
+      const result = {};
+
+      if (!SupabaseMode._ready) return result;
+
+      // 1) branch_teams 테이블
+      try {
+        const { data, error } = await SupabaseMode.client
+          .from('branch_teams')
+          .select('*')
+          .order('created_at');
+        if (error) console.warn('[Register] branch_teams 에러:', error.message);
+        if (data && data.length > 0) {
+          data.forEach(row => {
+            if (!result[row.branch]) result[row.branch] = [];
+            if (row.team && !result[row.branch].includes(row.team)) {
+              result[row.branch].push(row.team);
+            }
+          });
+          return result;
+        }
+      } catch(e) { console.log('[Register] branch_teams 에러:', e.message); }
+
+      // 2) branch_teams가 비어있으면 → employees에서 고유 지점/팀 추출
+      try {
+        const { data: emps, error } = await SupabaseMode.client
+          .from('employees')
+          .select('branch, team');
+        if (error) console.warn('[Register] employees 에러:', error.message);
+        if (emps && emps.length > 0) {
+          emps.forEach(emp => {
+            if (emp.branch) {
+              if (!result[emp.branch]) result[emp.branch] = [];
+              if (emp.team && !result[emp.branch].includes(emp.team)) {
+                result[emp.branch].push(emp.team);
+              }
+            }
+          });
+        }
+      } catch(e) { console.log('[Register] employees 에러:', e.message); }
+
+      return result;
+    }
+
+    // ===== 메인 초기화 =====
     async function init() {
-      if (!inviteCode) {
-        showInvalid();
-        return;
-      }
-
       // Supabase 초기화
       await SupabaseMode.init();
 
-      // 초대 코드 검증
+      // 초대 코드가 있으면 기존 초대 플로우
+      if (inviteCode) {
+        await initWithInvite();
+        return;
+      }
+
+      // ===== 자유 가입 모드 =====
+      freeMode = true;
+      document.getElementById('inviteInfo').textContent = t.freeRegistration;
+
+      // Supabase에서 지점/팀 직접 가져오기
+      _branchTeams = await fetchBranchTeamsFromDB();
+
+      // DB에서 못 가져왔으면 localStorage 체크
+      if (Object.keys(_branchTeams).length === 0) {
+        _branchTeams = JSON.parse(localStorage.getItem('sop_branch_teams') || '{}');
+      }
+
+      const branches = Object.keys(_branchTeams);
+
+      // 지점이 있으면 드롭다운 표시
+      if (branches.length > 0) {
+        document.getElementById('branchGroupReadonly').style.display = 'none';
+        document.getElementById('branchGroupSelect').style.display = 'block';
+        document.getElementById('labelBranchSelect').textContent = t.branch;
+
+        const branchSelect = document.getElementById('regBranchSelect');
+        branchSelect.innerHTML = `<option value="">${t.selectBranch}</option>` +
+          branches.map(b => `<option value="${b}">${b}</option>`).join('');
+
+        // 지점 선택 시 팀 자동 로드
+        branchSelect.addEventListener('change', function() {
+          const sel = this.value;
+          const teamGroup = document.getElementById('teamGroup');
+          const teamSelect = document.getElementById('regTeam');
+          document.getElementById('labelTeam').textContent = t.team;
+
+          if (!sel) { teamGroup.style.display = 'none'; return; }
+
+          const teams = _branchTeams[sel] || [];
+          if (teams.length > 0) {
+            teamGroup.style.display = 'block';
+            teamSelect.disabled = false;
+            teamSelect.style.background = 'rgba(30,41,59,0.85)';
+            teamSelect.innerHTML = `<option value="">${t.selectTeam}</option>` +
+              teams.map(tm => `<option value="${tm}">${tm}</option>`).join('');
+          } else {
+            teamGroup.style.display = 'none';
+          }
+        });
+
+        // 지점이 1개뿐이면 자동 선택
+        if (branches.length === 1) {
+          document.getElementById('regBranchSelect').value = branches[0];
+          document.getElementById('regBranchSelect').dispatchEvent(new Event('change'));
+        }
+      } else {
+        // 지점 데이터가 아예 없으면 → 직접 입력 모드
+        console.log('[Register] 지점 데이터 없음 → 직접 입력 모드');
+        document.getElementById('branchGroupReadonly').style.display = 'block';
+        document.getElementById('branchGroupSelect').style.display = 'none';
+        const branchInput = document.getElementById('regBranch');
+        branchInput.readOnly = false;
+        branchInput.style.background = 'rgba(30,41,59,0.85)';
+        branchInput.placeholder = t.branch;
+      }
+
+      document.getElementById('registerForm').style.display = 'block';
+    }
+
+    // ===== 초대 코드 모드 =====
+    async function initWithInvite() {
+      // Supabase 동기화
+      if (SupabaseMode._ready) {
+        try { await SupabaseMode.syncBranchTeams(); } catch(e) {}
+      }
+
       let invite = null;
 
       // 1) Supabase에서 확인
@@ -163,41 +319,56 @@
             .single();
           if (data && data.used_count < data.max_uses) {
             if (data.expires_at && new Date(data.expires_at) < new Date()) {
-              showExpired();
-              return;
+              showExpired(); return;
             }
             invite = {
-              code: data.code,
-              branch: data.branch,
-              maxUses: data.max_uses,
-              usedCount: data.used_count,
+              code: data.code, branch: data.branch,
+              maxUses: data.max_uses, usedCount: data.used_count,
               expiresAt: data.expires_at
             };
           }
         } catch(e) { console.log('Supabase invite check:', e); }
       }
 
-      // 2) localStorage에서 확인 (폴백)
+      // 2) localStorage 폴백
       if (!invite) {
         const invites = JSON.parse(localStorage.getItem('sop_invitations') || '[]');
         const local = invites.find(i => i.code === inviteCode && i.usedCount < i.maxUses);
         if (local) {
           if (local.expiresAt && new Date(local.expiresAt) < new Date()) {
-            showExpired();
-            return;
+            showExpired(); return;
           }
           invite = local;
         }
       }
 
-      if (!invite) {
-        showInvalid();
-        return;
-      }
+      if (!invite) { showInvalid(); return; }
 
       currentInvite = invite;
       document.getElementById('inviteInfo').textContent = t.staffRegistration(invite.branch);
+      document.getElementById('branchGroupReadonly').style.display = 'block';
       document.getElementById('regBranch').value = invite.branch;
+
+      // 팀 처리
+      const teamGroup = document.getElementById('teamGroup');
+      const teamSelect = document.getElementById('regTeam');
+      document.getElementById('labelTeam').textContent = t.team;
+
+      if (invite.team) {
+        teamGroup.style.display = 'block';
+        teamSelect.innerHTML = `<option value="${invite.team}">${invite.team}</option>`;
+        teamSelect.disabled = true;
+        teamSelect.style.background = 'var(--gray-50)';
+      } else {
+        const branchTeams = JSON.parse(localStorage.getItem('sop_branch_teams') || '{}');
+        const teams = branchTeams[invite.branch] || [];
+        if (teams.length > 0) {
+          teamGroup.style.display = 'block';
+          teamSelect.innerHTML = `<option value="">${t.selectTeam}</option>` +
+            teams.map(tm => `<option value="${tm}">${tm}</option>`).join('');
+        }
+      }
+
       document.getElementById('registerForm').style.display = 'block';
     }
 
@@ -214,8 +385,11 @@
       document.getElementById('invalidTitle').textContent = t.expired;
     }
 
+    // ===== 가입 처리 =====
     document.getElementById('registerForm').addEventListener('submit', async function(e) {
       e.preventDefault();
+      document.getElementById('errorMsg').style.display = 'none';
+
       const name = document.getElementById('regName').value.trim();
       const email = document.getElementById('regEmail').value.trim();
       const password = document.getElementById('regPassword').value;
@@ -226,18 +400,75 @@
         return;
       }
 
-      // 이메일 중복 체크
+      // 지점 결정
+      let branch = '';
+      if (freeMode) {
+        const branchSelect = document.getElementById('regBranchSelect');
+        const branchInput = document.getElementById('regBranch');
+        // 드롭다운이 보이면 드롭다운에서, 아니면 직접 입력에서
+        if (document.getElementById('branchGroupSelect').style.display !== 'none') {
+          branch = branchSelect.value;
+        } else {
+          branch = branchInput.value.trim();
+        }
+        if (!branch) {
+          document.getElementById('errorMsg').textContent = t.selectBranchRequired;
+          document.getElementById('errorMsg').style.display = 'block';
+          return;
+        }
+      } else {
+        branch = currentInvite.branch;
+      }
+
+      // 팀 선택 체크
+      const teamSelect = document.getElementById('regTeam');
+      const teamGroup = document.getElementById('teamGroup');
+      const team = teamSelect?.value || '';
+      if (teamGroup.style.display !== 'none' && !teamSelect.disabled && !team) {
+        document.getElementById('errorMsg').textContent = t.selectTeamRequired;
+        document.getElementById('errorMsg').style.display = 'block';
+        return;
+      }
+
+      // 버튼 로딩 상태
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner"></span>';
+
+      // Supabase 이메일 중복 체크
+      if (SupabaseMode._ready && SupabaseMode._client) {
+        try {
+          const { data: existingSupa } = await SupabaseMode._client
+            .from('employees')
+            .select('id')
+            .eq('email', email)
+            .single();
+          if (existingSupa) {
+            document.getElementById('errorMsg').textContent = t.emailExists;
+            document.getElementById('errorMsg').style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.textContent = t.submit;
+            return;
+          }
+        } catch (e) {
+          // .single() throws when no match - OK
+        }
+      }
+
+      // localStorage 중복 체크
       const existing = EmployeeStore.getAll();
       if (existing.find(e => e.email === email)) {
         document.getElementById('errorMsg').textContent = t.emailExists;
         document.getElementById('errorMsg').style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = t.submit;
         return;
       }
 
       // 직원 등록
       const newEmp = {
         id: 'emp-' + Date.now(),
-        name, email, branch: currentInvite.branch,
+        name, email, branch, team,
         role: 'staff',
         created: new Date().toISOString().slice(0, 10)
       };
@@ -248,31 +479,56 @@
       // Supabase에도 저장
       if (SupabaseMode._ready) {
         try {
+          const hashRes = await fetch('/api/auth', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'hash', password })
+          });
+          const hashData = await hashRes.json();
+          if (!hashData.hash) throw new Error('Hash API failed');
+
           await SupabaseMode.client.from('employees').insert({
-            name, email, password_hash: password,
-            branch: currentInvite.branch, role: 'staff'
+            name, email, password_hash: hashData.hash,
+            branch, team, role: 'staff'
           });
 
-          // 초대 사용 횟수 증가
-          await SupabaseMode.client.from('invitations')
-            .update({ used_count: currentInvite.usedCount + 1 })
-            .eq('code', currentInvite.code);
-        } catch(e) { console.error('Supabase register error:', e); }
+          // 초대 모드일 때만 사용 횟수 증가
+          if (currentInvite) {
+            await SupabaseMode.client.from('invitations')
+              .update({ used_count: currentInvite.usedCount + 1 })
+              .eq('code', currentInvite.code);
+          }
+        } catch(e) {
+          console.error('Supabase register error:', e);
+          const emps = EmployeeStore.getAll();
+          EmployeeStore.save(emps.filter(emp => emp.id !== newEmp.id));
+          document.getElementById('errorMsg').textContent = t.networkError;
+          document.getElementById('errorMsg').style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = t.submit;
+          return;
+        }
       }
 
-      // localStorage 초대 사용 횟수 업데이트
-      const invites = JSON.parse(localStorage.getItem('sop_invitations') || '[]');
-      const idx = invites.findIndex(i => i.code === currentInvite.code);
-      if (idx !== -1) {
-        invites[idx].usedCount++;
-        localStorage.setItem('sop_invitations', JSON.stringify(invites));
+      // 초대 사용 횟수 업데이트
+      if (currentInvite) {
+        const invites = JSON.parse(localStorage.getItem('sop_invitations') || '[]');
+        const idx = invites.findIndex(i => i.code === currentInvite.code);
+        if (idx !== -1) {
+          invites[idx].usedCount++;
+          localStorage.setItem('sop_invitations', JSON.stringify(invites));
+        }
       }
 
-      // 성공 표시
+      // 성공
       document.getElementById('registerForm').style.display = 'none';
       document.getElementById('inviteInfo').style.display = 'none';
       document.getElementById('successMsg').style.display = 'block';
     });
+
+    function switchLang(newLang) {
+      localStorage.setItem('sop_lang', newLang);
+      window.location.reload();
+    }
 
     init();
   </script>

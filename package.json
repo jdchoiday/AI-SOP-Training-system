@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "node-edge-tts": "^1.2.10",
+    "sharp": "^0.34.5",
     "ws": "^8.18.0"
   }
 }
