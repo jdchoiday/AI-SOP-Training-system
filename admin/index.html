@@ -3161,9 +3161,28 @@ ${text.slice(0, 3000)}`;
 
       if (sections.length === 0) return [];
 
-      // 섹션 → 씬 변환 + 이미지 분배
+      // 질문/퀴즈 섹션 필터링 — 씬이 아닌 퀴즈로 별도 보관
+      const quizPattern = /^(질문\s*\d+|문제\s*\d+|퀴즈\s*\d+|Q\d+|question\s*\d+)/i;
+      const quizSections = [];
+      const contentSections = [];
+      sections.forEach(sec => {
+        const fullText = (sec.title + ' ' + sec.steps.join(' ')).trim();
+        // 질문/퀴즈 패턴 감지: "질문 1:", "문제 2:", 또는 물음표로 끝나는 짧은 텍스트
+        const isQuiz = quizPattern.test(fullText) ||
+                        (fullText.endsWith('?') && fullText.length < 200 && /^(질문|문제|퀴즈|Q\.)/.test(fullText));
+        if (isQuiz) {
+          quizSections.push(sec);
+        } else {
+          contentSections.push(sec);
+        }
+      });
+      if (quizSections.length > 0) {
+        console.log(`[_sopContentToScenes] ${quizSections.length}개 질문 항목 필터링 (씬에서 제외)`);
+      }
+
+      // 섹션 → 씬 변환 + 이미지 분배 (질문 제외)
       let imgPool = [...extractedImages];
-      const scenes = sections.map((sec, i) => {
+      const scenes = contentSections.map((sec, i) => {
         // 나레이션: 섹션 제목 + 단계들을 합침
         const narration = sec.title
           ? `[${sec.title}] ${sec.steps.join(' ')}`
