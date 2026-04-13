@@ -240,20 +240,21 @@ const SlidePlayer = (() => {
         @keyframes sp-skeletonPulse { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 
         .sp-scene-visual {
-          width: 100%; max-width: 480px;
+          width: 100%;
           border-radius: 16px; overflow: hidden;
-          margin-bottom: 0; position: relative;
+          position: relative;
           background: rgba(255,255,255,0.04);
           border: 1px solid rgba(255,255,255,0.06);
-          aspect-ratio: 9/16;
-          max-height: 70vh;
+          min-height: 200px;
         }
         .sp-scene-visual img {
-          width: 100%; height: 100%; object-fit: contain;
+          width: 100%; height: auto; max-height: 55vh;
+          object-fit: contain; display: block; margin: 0 auto;
           animation: sp-imgReveal 0.6s ease;
         }
         @media (max-width: 600px) {
-          .sp-scene-visual { max-width: 100%; max-height: 65vh; border-radius: 12px; }
+          .sp-scene-visual { border-radius: 12px; }
+          .sp-scene-visual img { max-height: 50vh; }
         }
         .sp-scene-visual .sp-img-skeleton {
           position: absolute; inset: 0;
@@ -304,9 +305,8 @@ const SlidePlayer = (() => {
         }
 
         .sp-slide-container {
-          width: 100%; max-width: 520px;
+          width: 100%; max-width: 600px;
           animation: sp-slideUp 0.45s ease;
-          display: flex; flex-direction: column; align-items: center;
         }
 
         /* Scene badge */
@@ -592,25 +592,21 @@ const SlidePlayer = (() => {
       <div class="sp-scene-badge" style="color:${accent.secondary};background:${accent.bg}">
         ${t().slideTitle(num, total)}
       </div>
-      <div style="position:relative; width:100%; flex:1; min-height:0; display:flex; flex-direction:column;">
-        <div class="sp-scene-visual" id="spSceneVisual" style="flex:1; min-height:0;"></div>
-      </div>
-      <!-- 자막 영역 (넓고 잘 보이게) -->
+      <div class="sp-scene-visual" id="spSceneVisual"></div>
       <div id="spSubtitleArea" style="
-        width:100%; padding:16px 20px;
-        background:linear-gradient(180deg, rgba(15,23,42,0.85), rgba(15,23,42,0.95));
+        width:100%; padding:18px 24px; margin-top:12px;
+        background:linear-gradient(180deg, rgba(15,23,42,0.9), rgba(15,23,42,0.97));
         backdrop-filter:blur(12px);
-        border-radius:14px; margin-top:10px;
-        min-height:88px;
+        border-radius:14px; min-height:80px;
         display:flex; align-items:center; justify-content:center;
-        border:1px solid rgba(255,255,255,0.08);
-        box-shadow:0 4px 20px rgba(0,0,0,0.3);
+        border:1px solid rgba(255,255,255,0.1);
+        box-shadow:0 4px 24px rgba(0,0,0,0.4);
       ">
         <div id="spSubtitleText" style="
           color:#F8FAFC; font-weight:500; letter-spacing:0.3px;
           line-height:1.8; text-align:center; word-break:keep-all;
-          opacity:0; transition:opacity 0.4s ease, font-size 0.3s ease;
-          padding:4px 8px; max-width:100%;
+          opacity:0; transition:opacity 0.4s ease;
+          padding:4px 12px;
         "></div>
       </div>
     `;
@@ -618,7 +614,7 @@ const SlidePlayer = (() => {
     // 사전 생성된 이미지가 있으면 즉시 표시, 없으면 API 호출
     if (scene.imageUrl) {
       const vis = document.getElementById('spSceneVisual');
-      if (vis) vis.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:100%;object-fit:contain;border-radius:12px;" alt="scene">`;
+      if (vis) vis.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:auto;max-height:55vh;object-fit:contain;display:block;margin:0 auto;border-radius:12px;" alt="scene">`;
     } else {
       _currentImagePromise = _loadSceneImage(scene.visual, scene.narration);
       _preloadNextImage();
