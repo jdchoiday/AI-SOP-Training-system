@@ -379,6 +379,7 @@ ${historyText}
         });
         const data = await res.json();
         if (data.error) throw new Error(data.error.message || data.error);
+        if (!data.candidates?.[0]?.content?.parts?.[0]?.text) throw new Error('Empty response from proxy');
         return data.candidates[0].content.parts[0].text;
       }
 
@@ -398,6 +399,7 @@ ${historyText}
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error.message);
+      if (!data.candidates?.[0]?.content?.parts?.[0]?.text) throw new Error('Empty response from Gemini');
       return data.candidates[0].content.parts[0].text;
     }
 
@@ -470,7 +472,7 @@ ${historyText}
   },
 
   _narrationToVisual(narration, section) {
-    const text = (narration + ' ' + section).toLowerCase();
+    const text = ((narration || '') + ' ' + (section || '')).toLowerCase();
     const scenes = [
       { kw: ['손 씻', '손씻', '비누', '세정'], en: 'A Korean woman carefully washing hands with soap under running water at a clean sink. Bright modern washroom.' },
       { kw: ['청소', '소독', '닦', '쓸'], en: 'A person in uniform wiping surfaces with disinfectant spray and cloth. Bright tidy room.' },

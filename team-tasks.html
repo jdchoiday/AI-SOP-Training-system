@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOP Training - 팀 테스크</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0F172A">
+  <link rel="icon" href="assets/icon-192.svg">
+  <style>
+    /* ===== 팀 테스크 전용 CSS ===== */
+    .task-board { display: flex; flex-direction: column; gap: 12px; }
+
+    .task-card {
+      background: rgba(30,41,59,0.85); border-radius: var(--radius); padding: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+      border-left: 4px solid var(--gray-300); position: relative;
+    }
+    .task-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+    .task-card.priority-high { border-left-color: #f59e0b; }
+    .task-card.priority-urgent { border-left-color: #ef4444; }
+    .task-card.status-completed { border-left-color: #22c55e; opacity: 0.85; }
+    .task-card.status-in_progress { border-left-color: var(--primary); }
+
+    .task-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .task-card-title { font-size: 15px; font-weight: 700; color: var(--gray-900); line-height: 1.3; }
+    .task-card-badge {
+      font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; white-space: nowrap;
+    }
+    .badge-open { background: #e0f2fe; color: #0284c7; }
+    .badge-in_progress { background: rgba(16,185,129,0.15); color: #10B981; }
+    .badge-review { background: #fef3c7; color: #d97706; }
+    .badge-completed { background: #dcfce7; color: #16a34a; }
+    .badge-cancelled { background: #f1f5f9; color: #64748b; }
+
+    .task-card-meta { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--gray-500); margin-bottom: 10px; flex-wrap: wrap; }
+    .task-card-meta span { display: flex; align-items: center; gap: 3px; }
+
+    .task-card-members { display: flex; align-items: center; gap: -6px; }
+    .member-avatar {
+      width: 28px; height: 28px; border-radius: 50%; font-size: 12px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid #1E293B; margin-left: -6px;
+    }
+    .member-avatar:first-child { margin-left: 0; }
+    .member-avatar.leader { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: white; }
+    .member-avatar.member { background: var(--primary-light); color: var(--primary); }
+    .member-avatar.supporter { background: #f0fdf4; color: #22c55e; }
+    .member-avatar.more { background: var(--gray-100); color: var(--gray-500); font-size: 10px; }
+
+    .task-card-footer { display: flex; align-items: center; justify-content: space-between; }
+    .task-card-reward { display: flex; gap: 8px; }
+    .reward-tag { font-size: 11px; padding: 2px 6px; border-radius: 6px; font-weight: 600; }
+    .reward-xp { background: rgba(245,158,11,0.15); color: #F59E0B; }
+    .reward-p { background: #fef3c7; color: #d97706; }
+
+    .task-deadline { font-size: 11px; color: var(--gray-400); }
+    .task-deadline.overdue { color: #ef4444; font-weight: 600; }
+    .task-deadline.soon { color: #f59e0b; font-weight: 600; }
+
+    /* 필터 탭 */
+    .filter-tabs { display: flex; gap: 6px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
+    .filter-tab {
+      padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+      background: var(--gray-100); color: var(--gray-500); cursor: pointer;
+      white-space: nowrap; transition: all 0.2s; border: none;
+    }
+    .filter-tab.active { background: var(--primary); color: white; }
+
+    /* FAB 생성 버튼 */
+    .fab-create {
+      position: fixed; bottom: 80px; right: 20px; z-index: 30;
+      width: 56px; height: 56px; border-radius: 50%; border: none;
+      background: linear-gradient(135deg, var(--primary) 0%, #059669 100%);
+      color: white; font-size: 28px; cursor: pointer;
+      box-shadow: 0 6px 20px rgba(16,185,129,0.4);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.2s;
+    }
+    .fab-create:hover { transform: scale(1.1); }
+
+    /* 생성 모달 */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); z-index: 200;
+      align-items: flex-end; justify-content: center; padding: 0;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-sheet {
+      background: #1E293B; border-radius: 20px 20px 0 0; width: 100%; max-width: 500px;
+      max-height: 90vh; overflow-y: auto; padding: 24px; padding-bottom: 32px;
+      animation: slideUp 0.3s ease; color: #F1F5F9;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-handle { width: 40px; height: 4px; background: var(--gray-300); border-radius: 2px; margin: 0 auto 16px; }
+    .modal-sheet h3 { font-size: 18px; margin-bottom: 16px; }
+    .field-label { font-size: 13px; font-weight: 600; color: var(--gray-600); margin-bottom: 4px; }
+    .field-input {
+      width: 100%; padding: 10px 12px; border: 1.5px solid var(--gray-200); border-radius: 10px;
+      font-size: 14px; transition: border-color 0.2s; box-sizing: border-box;
+    }
+    .field-input:focus { border-color: var(--primary); outline: none; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field-group { margin-bottom: 14px; }
+
+    /* 멤버 선택 */
+    .member-select-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+    .member-select-item {
+      display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+      border-radius: 10px; cursor: pointer; transition: background 0.15s;
+    }
+    .member-select-item:hover { background: var(--gray-50); }
+    .member-select-item.selected { background: var(--primary-light); }
+    .member-select-avatar {
+      width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 13px; background: var(--primary-light); color: var(--primary); flex-shrink: 0;
+    }
+    .member-select-info { flex: 1; }
+    .member-select-name { font-size: 13px; font-weight: 600; }
+    .member-select-team { font-size: 11px; color: var(--gray-400); }
+    .member-role-select {
+      padding: 3px 8px; border: 1px solid var(--gray-200); border-radius: 8px;
+      font-size: 11px; background: rgba(30,41,59,0.85); color: #F1F5F9;
+    }
+
+    /* 상세 보기 */
+    .detail-header { margin-bottom: 20px; }
+    .detail-title { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+    .detail-desc { font-size: 14px; color: var(--gray-600); line-height: 1.6; margin-bottom: 12px; }
+    .detail-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+    .detail-stat { text-align: center; background: var(--gray-50); border-radius: 12px; padding: 12px 8px; }
+    .detail-stat-value { font-size: 18px; font-weight: 800; color: var(--primary); }
+    .detail-stat-label { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+
+    .detail-section { margin-bottom: 20px; }
+    .detail-section-title { font-size: 14px; font-weight: 700; color: var(--gray-700); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+
+    .detail-member {
+      display: flex; align-items: center; gap: 10px; padding: 10px 0;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .detail-member:last-child { border-bottom: none; }
+    .detail-member-avatar {
+      width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px; flex-shrink: 0;
+    }
+    .detail-member-info { flex: 1; }
+    .detail-member-name { font-size: 14px; font-weight: 600; }
+    .detail-member-role { font-size: 11px; color: var(--gray-400); }
+    .role-badge {
+      font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600;
+    }
+    .role-leader { background: #fef3c7; color: #d97706; }
+    .role-member { background: rgba(16,185,129,0.15); color: #10B981; }
+    .role-supporter { background: #dcfce7; color: #16a34a; }
+    .role-reviewer { background: rgba(245,158,11,0.15); color: #F59E0B; }
+
+    /* 활동 피드 */
+    .activity-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--gray-50); }
+    .activity-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; background: var(--gray-100); }
+    .activity-content { flex: 1; }
+    .activity-text { font-size: 13px; line-height: 1.4; }
+    .activity-time { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+
+    /* 성과 피드 (홈 연동) */
+    .achievement-card {
+      background: linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(245,158,11,0.1) 100%);
+      border-radius: var(--radius); padding: 14px; margin-bottom: 10px;
+      border: 1px solid rgba(16,185,129,0.15);
+    }
+    .achievement-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .achievement-emoji { font-size: 20px; }
+    .achievement-title { font-size: 13px; font-weight: 700; color: var(--gray-800); }
+    .achievement-body { font-size: 12px; color: var(--gray-600); line-height: 1.4; }
+
+    /* 빈 상태 */
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--gray-400); }
+    .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
+
+    /* 액션 버튼 그룹 */
+    .action-btns { display: flex; gap: 8px; margin-top: 16px; }
+    .action-btn {
+      flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 14px;
+      font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex;
+      align-items: center; justify-content: center; gap: 6px;
+    }
+    .action-btn-primary { background: var(--primary); color: white; }
+    .action-btn-primary:hover { background: #059669; }
+    .action-btn-success { background: #22c55e; color: white; }
+    .action-btn-success:hover { background: #16a34a; }
+    .action-btn-outline { background: rgba(30,41,59,0.85); color: #94A3B8; border: 1.5px solid rgba(148,163,184,0.12); }
+    .action-btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+    .action-btn-praise { background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; }
+
+    /* 공유 버튼 */
+    .share-btn {
+      display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px;
+      border-radius: 20px; font-size: 12px; font-weight: 600;
+      background: var(--gray-50); color: var(--gray-600); border: 1px solid var(--gray-200);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .share-btn:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+
+    /* 토스트 */
+    .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 600; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <div class="bottom-nav">
+    <a href="app.html"><span class="nav-icon">&#127968;</span> <span class="nav-label-home">홈</span></a>
+    <a href="tasks.html"><span class="nav-icon">&#9989;</span> <span class="nav-label-tasks">미션</span></a>
+    <a href="praise.html"><span class="nav-icon">&#128588;</span> <span class="nav-label-praise">부스트</span></a>
+    <a href="my-results.html"><span class="nav-icon">&#127942;</span> <span class="nav-label-results">내 결과</span></a>
+  </div>
+
+  <div class="app-container" style="padding-bottom: 100px;">
+    <!-- 헤더 -->
+    <div class="app-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+      <div>
+        <h2 id="pageTitle" style="font-size:20px; font-weight:800;">팀 테스크</h2>
+        <p id="pageSubtitle" style="font-size:13px; color:var(--gray-500); margin-top:2px;">함께 만들고, 함께 성장하세요</p>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <a href="tasks.html" style="text-decoration:none; padding:6px 12px; border-radius:10px; font-size:12px; font-weight:600; background:var(--gray-100); color:var(--gray-600);" id="linkDaily">일일 미션</a>
+        <a href="profile.html" id="userAvatarLink" style="text-decoration:none;">
+          <div id="userAvatar" style="width:32px; height:32px; border-radius:50%; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px;">?</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- 필터 탭 -->
+    <div class="filter-tabs" id="filterTabs">
+      <button class="filter-tab active" data-filter="my" onclick="setFilter('my')" id="filterMy">내 테스크</button>
+      <button class="filter-tab" data-filter="team" onclick="setFilter('team')" id="filterTeam">팀 전체</button>
+      <button class="filter-tab" data-filter="open" onclick="setFilter('open')" id="filterOpen">참여 가능</button>
+      <button class="filter-tab" data-filter="completed" onclick="setFilter('completed')" id="filterDone">완료됨</button>
+    </div>
+
+    <!-- 테스크 리스트 -->
+    <div class="task-board" id="taskBoard">
+      <div class="empty-state" id="emptyState">
+        <div class="emoji">📋</div>
+        <p id="emptyText">아직 테스크가 없어요</p>
+        <p style="font-size:13px; margin-top:8px;" id="emptySubText">+ 버튼으로 첫 테스크를 만들어보세요!</p>
+      </div>
+    </div>
+
+    <!-- 성과 피드 (완료된 테스크 알림) -->
+    <div id="achievementFeed" style="margin-top:20px; display:none;">
+      <h3 id="feedTitle" style="font-size:15px; font-weight:700; margin-bottom:10px;">🎉 최근 성과</h3>
+      <div id="feedContent"></div>
+    </div>
+  </div>
+
+  <!-- FAB 생성 버튼 -->
+  <button class="fab-create" onclick="openCreateModal()" id="fabCreate" title="새 테스크 만들기">+</button>
+
+  <!-- 생성/상세 모달 -->
+  <div class="modal-overlay" id="modalOverlay" onclick="event.target===this && closeModal()">
+    <div class="modal-sheet" id="modalSheet">
+      <div class="modal-handle"></div>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <!-- 토스트 -->
+  <div class="toast" id="toast"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script src="js/xp-system.js"></script>
+  <script src="js/xp-ui.js"></script>
+  <script>
+    // ===== i18n =====
+    const T = {
+      ko: {
+        pageTitle: '팀 테스크', subtitle: '함께 만들고, 함께 성장하세요',
+        home: '홈', tasks: '미션', praise: '부스트', results: '내 결과',
+        dailyTasks: '일일 미션',
+        filterMy: '내 테스크', filterTeam: '팀 전체', filterOpen: '참여 가능', filterDone: '완료됨',
+        emptyText: '아직 테스크가 없어요', emptySub: '+ 버튼으로 첫 테스크를 만들어보세요!',
+        createTitle: '새 테스크 만들기',
+        fieldTitle: '테스크 이름', fieldDesc: '설명 (선택)',
+        fieldDeadline: '마감일', fieldPriority: '우선순위',
+        fieldXp: 'XP 보상', fieldPoints: 'P 보상',
+        fieldMembers: '팀원 초대', fieldMaxMembers: '최대 인원',
+        priorityLow: '낮음', priorityNormal: '보통', priorityHigh: '높음', priorityUrgent: '긴급',
+        roleLeader: '리더', roleMember: '멤버', roleSupporter: '서포터', roleReviewer: '검토자',
+        roleDescLeader: 'XP 1.5배', roleDescMember: 'XP 1.0배', roleDescSupporter: 'XP 0.7배', roleDescReviewer: 'XP 0.5배',
+        btnCreate: '챌린지 생성', btnCancel: '취소', btnJoin: '참여하기', btnComplete: '완료 처리',
+        btnRequestReview: '리뷰 요청', btnApprove: '승인', btnReject: '반려',
+        btnPraise: '부스트', btnShare: '공유', btnComment: '댓글',
+        members: '참여 멤버', activities: '활동 내역', recentAchieve: '최근 성과',
+        statusOpen: '모집중', statusInProgress: '진행중', statusReview: '검토중',
+        statusCompleted: '클리어', statusCancelled: '취소됨',
+        deadline: '마감', daysLeft: (n) => `D-${n}`, overdue: '기한 초과',
+        memberCount: (n, max) => `${n}/${max}명`,
+        taskCreated: '챌린지가 생성되었습니다!', taskJoined: '챌린지에 참여했습니다!',
+        taskCompleted: '챌린지 클리어! 🎉', praiseSent: '부스트를 보냈습니다!',
+        shareMsg: (title) => `[팀 챌린지] "${title}" 함께 하실 분?`,
+        confirmComplete: '챌린지를 완료 처리하시겠습니까? 참여한 모든 멤버에게 EXP와 크레딧이 지급됩니다.',
+        noColleagues: '같은 지점에 초대할 동료가 없습니다',
+        placeholderTitle: '예: 봄 시즌 매장 디스플레이 변경',
+        placeholderDesc: '무엇을 하는 챌린지인지 설명해주세요',
+        placeholderComment: '댓글을 입력하세요...',
+        invited: '초대됨', accept: '수락', joined: '참여함',
+        fieldEstimated: '예상 소요시간 (h)', fieldPhotoBefore: '사진 (전)', fieldPhotoAfter: '사진 (후)',
+        reviewRequested: '리뷰가 요청되었습니다', taskApproved: '승인 완료!', taskRejected: '반려됨',
+        enterActualHours: '실제 소요시간 (h)', enterScore: '점수 (1-5)', enterNotes: '코멘트',
+        rejectReason: '반려 사유', timePenalty: '시간 페널티',
+        beforePhoto: '전', afterPhoto: '후',
+        confirmReview: '리뷰를 요청하시겠습니까? 매니저에게 승인 요청이 전송됩니다.',
+      },
+      en: {
+        pageTitle: 'Team Tasks', subtitle: 'Create together, grow together',
+        home: 'Home', tasks: 'Tasks', praise: 'Praise', results: 'Results',
+        dailyTasks: 'Daily Tasks',
+        filterMy: 'My Tasks', filterTeam: 'All Team', filterOpen: 'Join', filterDone: 'Done',
+        emptyText: 'No tasks yet', emptySub: 'Tap + to create your first task!',
+        createTitle: 'Create New Task',
+        fieldTitle: 'Task Name', fieldDesc: 'Description (optional)',
+        fieldDeadline: 'Deadline', fieldPriority: 'Priority',
+        fieldXp: 'XP Reward', fieldPoints: 'P Reward',
+        fieldMembers: 'Invite Members', fieldMaxMembers: 'Max Members',
+        priorityLow: 'Low', priorityNormal: 'Normal', priorityHigh: 'High', priorityUrgent: 'Urgent',
+        roleLeader: 'Leader', roleMember: 'Member', roleSupporter: 'Supporter', roleReviewer: 'Reviewer',
+        roleDescLeader: 'XP x1.5', roleDescMember: 'XP x1.0', roleDescSupporter: 'XP x0.7', roleDescReviewer: 'XP x0.5',
+        btnCreate: 'Create Challenge', btnCancel: 'Cancel', btnJoin: 'Join', btnComplete: 'Mark Complete',
+        btnRequestReview: 'Request Review', btnApprove: 'Approve', btnReject: 'Reject',
+        btnPraise: 'Boost', btnShare: 'Share', btnComment: 'Comment',
+        members: 'Members', activities: 'Activity', recentAchieve: 'Recent Achievements',
+        statusOpen: 'Open', statusInProgress: 'In Progress', statusReview: 'In Review',
+        statusCompleted: 'Cleared', statusCancelled: 'Cancelled',
+        deadline: 'Due', daysLeft: (n) => `D-${n}`, overdue: 'Overdue',
+        memberCount: (n, max) => `${n}/${max}`,
+        taskCreated: 'Challenge created!', taskJoined: 'Joined the challenge!',
+        taskCompleted: 'Challenge cleared! 🎉', praiseSent: 'Boost sent!',
+        shareMsg: (title) => `[Team Challenge] "${title}" — Want to join?`,
+        confirmComplete: 'Complete this challenge? All members will receive EXP and credits.',
+        noColleagues: 'No colleagues in your branch',
+        placeholderTitle: 'e.g., Spring season display update',
+        placeholderDesc: 'Describe what this challenge is about',
+        placeholderComment: 'Write a comment...',
+        invited: 'Invited', accept: 'Accept', joined: 'joined',
+        fieldEstimated: 'Est. hours', fieldPhotoBefore: 'Photo (Before)', fieldPhotoAfter: 'Photo (After)',
+        reviewRequested: 'Review requested', taskApproved: 'Approved!', taskRejected: 'Rejected',
+        enterActualHours: 'Actual hours', enterScore: 'Score (1-5)', enterNotes: 'Notes',
+        rejectReason: 'Reason', timePenalty: 'Time penalty',
+        beforePhoto: 'Before', afterPhoto: 'After',
+        confirmReview: 'Request review? Manager will be notified for approval.',
+      },
+      vi: {
+        pageTitle: 'Nhiệm vụ nhóm', subtitle: 'Cùng tạo, cùng phát triển',
+        home: 'Trang chủ', tasks: 'Nhiệm vụ', praise: 'Khen ngợi', results: 'Kết quả',
+        dailyTasks: 'Nhiệm vụ hàng ngày',
+        filterMy: 'Của tôi', filterTeam: 'Cả nhóm', filterOpen: 'Tham gia', filterDone: 'Hoàn thành',
+        emptyText: 'Chưa có nhiệm vụ', emptySub: 'Nhấn + để tạo nhiệm vụ đầu tiên!',
+        createTitle: 'Tạo nhiệm vụ mới',
+        fieldTitle: 'Tên nhiệm vụ', fieldDesc: 'Mô tả (tùy chọn)',
+        fieldDeadline: 'Hạn chót', fieldPriority: 'Ưu tiên',
+        fieldXp: 'XP thưởng', fieldPoints: 'P thưởng',
+        fieldMembers: 'Mời thành viên', fieldMaxMembers: 'Tối đa',
+        priorityLow: 'Thấp', priorityNormal: 'Bình thường', priorityHigh: 'Cao', priorityUrgent: 'Khẩn cấp',
+        roleLeader: 'Trưởng nhóm', roleMember: 'Thành viên', roleSupporter: 'Hỗ trợ', roleReviewer: 'Đánh giá',
+        roleDescLeader: 'XP x1.5', roleDescMember: 'XP x1.0', roleDescSupporter: 'XP x0.7', roleDescReviewer: 'XP x0.5',
+        btnCreate: 'Tạo', btnCancel: 'Hủy', btnJoin: 'Tham gia', btnComplete: 'Hoàn thành',
+        btnRequestReview: 'Yêu cầu xét duyệt', btnApprove: 'Phê duyệt', btnReject: 'Từ chối',
+        btnPraise: 'Tăng lực', btnShare: 'Chia sẻ', btnComment: 'Bình luận',
+        members: 'Thành viên', activities: 'Hoạt động', recentAchieve: 'Thành tựu gần đây',
+        statusOpen: 'Mở', statusInProgress: 'Đang làm', statusReview: 'Đang xét',
+        statusCompleted: 'Xong', statusCancelled: 'Đã hủy',
+        deadline: 'Hạn', daysLeft: (n) => `D-${n}`, overdue: 'Quá hạn',
+        memberCount: (n, max) => `${n}/${max}`,
+        taskCreated: 'Đã tạo thử thách!', taskJoined: 'Đã tham gia!',
+        taskCompleted: 'Hoàn thành! 🎉', praiseSent: 'Đã gửi tăng lực!',
+        shareMsg: (title) => `[Nhóm] "${title}" — Tham gia không?`,
+        confirmComplete: 'Hoàn thành? Tất cả thành viên sẽ nhận EXP và tín dụng.',
+        noColleagues: 'Không có đồng nghiệp trong chi nhánh',
+        placeholderTitle: 'VD: Cập nhật trưng bày mùa xuân',
+        placeholderDesc: 'Mô tả thử thách',
+        placeholderComment: 'Viết bình luận...',
+        invited: 'Đã mời', accept: 'Chấp nhận', joined: 'đã tham gia',
+        fieldEstimated: 'Giờ dự kiến', fieldPhotoBefore: 'Ảnh (Trước)', fieldPhotoAfter: 'Ảnh (Sau)',
+        reviewRequested: 'Đã yêu cầu xét duyệt', taskApproved: 'Đã phê duyệt!', taskRejected: 'Từ chối',
+        enterActualHours: 'Giờ thực tế', enterScore: 'Điểm (1-5)', enterNotes: 'Ghi chú',
+        rejectReason: 'Lý do', timePenalty: 'Phạt thời gian',
+        beforePhoto: 'Trước', afterPhoto: 'Sau',
+        confirmReview: 'Yêu cầu xét duyệt? Quản lý sẽ được thông báo.',
+      }
+    };
+    const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
+    const t = T[lang] || T.ko;
+
+    // Apply i18n
+    document.title = `SOP Training - ${t.pageTitle}`;
+    document.getElementById('pageTitle').textContent = t.pageTitle;
+    document.getElementById('pageSubtitle').textContent = t.subtitle;
+    document.getElementById('linkDaily').textContent = t.dailyTasks;
+    document.querySelector('.nav-label-home').textContent = t.home;
+    document.querySelector('.nav-label-tasks').textContent = t.tasks;
+    document.querySelector('.nav-label-praise').textContent = t.praise;
+    document.querySelector('.nav-label-results').textContent = t.results;
+    document.getElementById('filterMy').textContent = t.filterMy;
+    document.getElementById('filterTeam').textContent = t.filterTeam;
+    document.getElementById('filterOpen').textContent = t.filterOpen;
+    document.getElementById('filterDone').textContent = t.filterDone;
+    document.getElementById('emptyText').textContent = t.emptyText;
+    document.getElementById('emptySubText').textContent = t.emptySub;
+    document.getElementById('feedTitle').textContent = `🎉 ${t.recentAchieve}`;
+
+    // ===== Auth =====
+    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    const loginTime = parseInt(localStorage.getItem('sop_login_time') || '0');
+    if (Date.now() - loginTime > 24 * 60 * 60 * 1000 || !user) {
+      localStorage.removeItem('sop_user'); window.location.href = 'index.html';
+    }
+    const avatarEl = document.getElementById('userAvatar');
+    avatarEl.textContent = (user.name || '?')[0];
+
+    // ===== State =====
+    let allTasks = [];
+    let currentFilter = 'my';
+    let _resolvedEmpId = null;
+
+    async function getEmployeeId() {
+      if (_resolvedEmpId) return _resolvedEmpId;
+      if (!SupabaseMode._ready || !user?.id) return user?.id;
+      const { data: d1 } = await SupabaseMode._client
+        .from('employees').select('id').eq('id', user.id).maybeSingle();
+      if (d1) { _resolvedEmpId = d1.id; return _resolvedEmpId; }
+      if (user.email) {
+        const { data: d2 } = await SupabaseMode._client
+          .from('employees').select('id').eq('email', user.email).maybeSingle();
+        if (d2) { _resolvedEmpId = d2.id; return _resolvedEmpId; }
+      }
+      return user.id;
+    }
+
+    // ===== Toast =====
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.remove('show');
+    }
+
+    // ===== Status/Priority labels =====
+    const statusLabels = { open: t.statusOpen, in_progress: t.statusInProgress, review: t.statusReview, completed: t.statusCompleted, cancelled: t.statusCancelled };
+    const priorityEmoji = { low: '🔵', normal: '🟢', high: '🟡', urgent: '🔴' };
+    const roleLabels = { leader: t.roleLeader, member: t.roleMember, supporter: t.roleSupporter, reviewer: t.roleReviewer };
+    const roleColors = { leader: '#d97706', member: '#10B981', supporter: '#22c55e', reviewer: '#F59E0B' };
+    const roleMultipliers = { leader: 1.5, member: 1.0, supporter: 0.7, reviewer: 0.5 };
+
+    // ===== Deadline helper =====
+    function deadlineInfo(deadline) {
+      if (!deadline) return { text: '', cls: '' };
+      const now = new Date(); now.setHours(0,0,0,0);
+      const dl = new Date(deadline); dl.setHours(0,0,0,0);
+      const diff = Math.ceil((dl - now) / (1000*60*60*24));
+      if (diff < 0) return { text: t.overdue, cls: 'overdue' };
+      if (diff <= 3) return { text: t.daysLeft(diff), cls: 'soon' };
+      return { text: t.daysLeft(diff), cls: '' };
+    }
+
+    // ===== Load tasks =====
+    async function loadTasks() {
+      if (!SupabaseMode._ready) return;
+      const empId = await getEmployeeId();
+      try {
+        const { data: tasks } = await SupabaseMode._client
+          .from('team_tasks').select('*').order('created_at', { ascending: false });
+
+        const { data: members } = await SupabaseMode._client
+          .from('team_task_members').select('*');
+
+        const emps = EmployeeStore.getAll();
+        const empMap = {};
+        emps.forEach(e => { empMap[e.id] = e; });
+
+        allTasks = (tasks || []).map(task => {
+          const taskMembers = (members || []).filter(m => m.task_id === task.id);
+          return { ...task, members: taskMembers, empMap };
+        });
+
+        renderTasks();
+        renderAchievementFeed(empMap);
+      } catch (e) {
+        console.error('[TeamTasks] Load error:', e);
+      }
+    }
+
+    // ===== Filter =====
+    function setFilter(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.filter === filter);
+      });
+      renderTasks();
+    }
+
+    // ===== Render task list =====
+    async function renderTasks() {
+      const board = document.getElementById('taskBoard');
+      const empId = await getEmployeeId();
+      const myBranch = await getMyBranch();
+
+      let filtered = allTasks;
+      if (currentFilter === 'my') {
+        filtered = allTasks.filter(t => t.creator_id === empId || t.members.some(m => m.employee_id === empId));
+      } else if (currentFilter === 'team') {
+        filtered = allTasks.filter(t => t.is_public && (t.branch === '' || t.branch === myBranch));
+      } else if (currentFilter === 'open') {
+        const myEmail = user?.email;
+        filtered = allTasks.filter(task => {
+          if (task.status !== 'open' || !task.is_public) return false;
+          if (task.branch && task.branch !== myBranch) return false;
+          // 내가 만든 테스크 제외 (ID + 이메일 폴백)
+          if (task.creator_id === empId) return false;
+          if (myEmail && task.empMap[task.creator_id]?.email === myEmail) return false;
+          // 내가 이미 멤버인 테스크 제외
+          const amMember = task.members.some(m =>
+            m.employee_id === empId || (myEmail && task.empMap[m.employee_id]?.email === myEmail)
+          );
+          return !amMember;
+        });
+      } else if (currentFilter === 'completed') {
+        filtered = allTasks.filter(t => t.status === 'completed' && (
+          t.creator_id === empId || t.members.some(m => m.employee_id === empId) ||
+          (t.is_public && (t.branch === '' || t.branch === myBranch))
+        ));
+      }
+
+      if (filtered.length === 0) {
+        document.getElementById('emptyState').style.display = 'block';
+        board.innerHTML = '';
+        board.appendChild(document.getElementById('emptyState') || (() => {
+          const d = document.createElement('div'); d.id = 'emptyState'; d.className = 'empty-state';
+          d.innerHTML = `<div class="emoji">📋</div><p>${t.emptyText}</p><p style="font-size:13px;margin-top:8px;">${t.emptySub}</p>`;
+          return d;
+        })());
+        return;
+      }
+
+      let html = '';
+      filtered.forEach(task => {
+        const dl = deadlineInfo(task.deadline);
+        const acceptedMembers = task.members.filter(m => m.status === 'accepted' || m.status === 'completed');
+        const memberCount = acceptedMembers.length + (task.members.some(m => m.employee_id === task.creator_id) ? 0 : 1); // creator + accepted
+
+        // Member avatars
+        let avatarHtml = '';
+        const showMembers = acceptedMembers.slice(0, 4);
+        // Add creator first
+        const creatorEmp = task.empMap[task.creator_id];
+        avatarHtml += `<div class="member-avatar leader" title="${creatorEmp?.name || '?'}">${(creatorEmp?.name || '?')[0]}</div>`;
+        showMembers.filter(m => m.employee_id !== task.creator_id).slice(0, 3).forEach(m => {
+          const emp = task.empMap[m.employee_id];
+          avatarHtml += `<div class="member-avatar ${m.role}" title="${emp?.name || '?'}">${(emp?.name || '?')[0]}</div>`;
+        });
+        const totalShown = 1 + showMembers.filter(m => m.employee_id !== task.creator_id).slice(0, 3).length;
+        if (acceptedMembers.length > totalShown) {
+          avatarHtml += `<div class="member-avatar more">+${acceptedMembers.length - totalShown}</div>`;
+        }
+
+        html += `
+          <div class="task-card priority-${task.priority} status-${task.status}" onclick="openTaskDetail('${task.id}')">
+            <div class="task-card-header">
+              <div class="task-card-title">${task.title}</div>
+              <span class="task-card-badge badge-${task.status}">${statusLabels[task.status] || task.status}</span>
+            </div>
+            <div class="task-card-meta">
+              <span>${priorityEmoji[task.priority] || ''} ${t.memberCount(acceptedMembers.length + 1, task.max_members)}</span>
+              ${dl.text ? `<span class="task-deadline ${dl.cls}">📅 ${dl.text}</span>` : ''}
+            </div>
+            <div class="task-card-footer">
+              <div class="task-card-members">${avatarHtml}</div>
+              <div class="task-card-reward">
+                <span class="reward-tag reward-xp">+${task.xp_reward} XP</span>
+                <span class="reward-tag reward-p">+${task.point_reward} P</span>
+              </div>
+            </div>
+          </div>`;
+      });
+
+      board.innerHTML = html;
+    }
+
+    // ===== Achievement feed =====
+    function renderAchievementFeed(empMap) {
+      const completed = allTasks.filter(t => t.status === 'completed').slice(0, 5);
+      if (completed.length === 0) {
+        document.getElementById('achievementFeed').style.display = 'none';
+        return;
+      }
+      document.getElementById('achievementFeed').style.display = 'block';
+      const feedHtml = completed.map(task => {
+        const creator = empMap[task.creator_id];
+        const memberNames = task.members
+          .filter(m => (m.status === 'accepted' || m.status === 'completed') && m.employee_id !== task.creator_id)
+          .map(m => empMap[m.employee_id]?.name || '?')
+          .slice(0, 3).join(', ');
+        return `
+          <div class="achievement-card" onclick="openTaskDetail('${task.id}')">
+            <div class="achievement-card-header">
+              <span class="achievement-emoji">🏆</span>
+              <span class="achievement-title">${task.title}</span>
+            </div>
+            <div class="achievement-body">
+              ${creator?.name || '?'} ${memberNames ? '+ ' + memberNames : ''} · +${task.xp_reward} XP
+            </div>
+          </div>`;
+      }).join('');
+      document.getElementById('feedContent').innerHTML = feedHtml;
+    }
+
+    // ===== Resolve branch from real employee =====
+    async function getMyBranch() {
+      const empId = await getEmployeeId();
+      const emps = EmployeeStore.getAll();
+      const me = emps.find(e => e.id === empId);
+      return me?.branch || user.branch || '';
+    }
+
+    // ===== Create modal =====
+    async function openCreateModal() {
+      const empId = await getEmployeeId();
+      const emps = EmployeeStore.getAll();
+      const myBranch = await getMyBranch();
+      const colleagues = emps.filter(e => e.id !== empId && e.branch === myBranch && e.role !== 'admin');
+
+      let memberListHtml = '';
+      if (colleagues.length === 0) {
+        memberListHtml = `<p style="text-align:center;color:var(--gray-400);font-size:13px;padding:12px;">${t.noColleagues}</p>`;
+      } else {
+        memberListHtml = colleagues.map(emp => `
+          <div class="member-select-item" data-emp-id="${emp.id}" onclick="toggleMemberSelect(this)">
+            <div class="member-select-avatar">${(emp.name || '?')[0]}</div>
+            <div class="member-select-info">
+              <div class="member-select-name">${emp.name}</div>
+              <div class="member-select-team">${emp.team || emp.branch || ''}</div>
+            </div>
+            <select class="member-role-select" onclick="event.stopPropagation()">
+              <option value="member">${t.roleMember} (${t.roleDescMember})</option>
+              <option value="leader">${t.roleLeader} (${t.roleDescLeader})</option>
+              <option value="supporter">${t.roleSupporter} (${t.roleDescSupporter})</option>
+              <option value="reviewer">${t.roleReviewer} (${t.roleDescReviewer})</option>
+            </select>
+          </div>`).join('');
+      }
+
+      const html = `
+        <h3>${t.createTitle}</h3>
+        <div class="field-group">
+          <div class="field-label">${t.fieldTitle} *</div>
+          <input type="text" class="field-input" id="newTitle" placeholder="${t.placeholderTitle}" maxlength="80">
+        </div>
+        <div class="field-group">
+          <div class="field-label">${t.fieldDesc}</div>
+          <textarea class="field-input" id="newDesc" rows="3" placeholder="${t.placeholderDesc}" style="resize:vertical;"></textarea>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <div class="field-label">${t.fieldDeadline}</div>
+            <input type="date" class="field-input" id="newDeadline">
+          </div>
+          <div class="field-group">
+            <div class="field-label">${t.fieldPriority}</div>
+            <select class="field-input" id="newPriority">
+              <option value="normal">${t.priorityNormal}</option>
+              <option value="low">${t.priorityLow}</option>
+              <option value="high">${t.priorityHigh}</option>
+              <option value="urgent">${t.priorityUrgent}</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <div class="field-label">${t.fieldXp}</div>
+            <input type="number" class="field-input" id="newXp" value="30" min="5" max="500">
+          </div>
+          <div class="field-group">
+            <div class="field-label">${t.fieldPoints}</div>
+            <input type="number" class="field-input" id="newPoints" value="15" min="1" max="200">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <div class="field-label">${t.fieldEstimated}</div>
+            <input type="number" class="field-input" id="newEstimatedHours" placeholder="0" min="0" max="999" step="0.5">
+          </div>
+          <div class="field-group" style="display:flex;flex-direction:column;"></div>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <div class="field-label">${t.fieldPhotoBefore}</div>
+            <input type="file" accept="image/*" capture="environment" style="font-size:12px;" onchange="previewPhoto(this,'previewBefore')">
+            <div id="previewBefore" style="margin-top:6px;"></div>
+          </div>
+          <div class="field-group">
+            <div class="field-label">${t.fieldPhotoAfter}</div>
+            <input type="file" accept="image/*" capture="environment" style="font-size:12px;" onchange="previewPhoto(this,'previewAfter')">
+            <div id="previewAfter" style="margin-top:6px;"></div>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">${t.fieldMembers}</div>
+          <div class="member-select-list" id="memberSelectList">
+            ${memberListHtml}
+          </div>
+        </div>
+        <div class="action-btns">
+          <button class="action-btn action-btn-primary" onclick="createTask()">${t.btnCreate}</button>
+          <button class="action-btn action-btn-outline" onclick="closeModal()">${t.btnCancel}</button>
+        </div>`;
+
+      document.getElementById('modalContent').innerHTML = html;
+      document.getElementById('modalOverlay').classList.add('show');
+    }
+
+    function toggleMemberSelect(el) {
+      el.classList.toggle('selected');
+    }
+
+    // ===== Photo compression (300px, JPEG 40% → ~10KB) =====
+    function compressPhoto(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX = 300;
+            let w = img.width, h = img.height;
+            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+            else { w = Math.round(w * MAX / h); h = MAX; }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.4));
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function previewPhoto(input, previewId) {
+      const file = input.files[0];
+      if (!file) return;
+      compressPhoto(file).then(dataUrl => {
+        input.dataset.compressed = dataUrl;
+        const preview = document.getElementById(previewId);
+        if (preview) {
+          preview.innerHTML = `<img src="${dataUrl}" style="width:100%;border-radius:8px;">`;
+        }
+      });
+    }
+
+    // ===== Create task =====
+    async function createTask() {
+      const title = document.getElementById('newTitle').value.trim();
+      if (!title) { document.getElementById('newTitle').focus(); return; }
+      if (!SupabaseMode._ready) return;
+
+      const empId = await getEmployeeId();
+      const myBranch = await getMyBranch();
+
+      try {
+        // Collect photo data
+        const beforeInput = document.querySelector('#previewBefore')?.previousElementSibling?.previousElementSibling;
+        const afterInput = document.querySelector('#previewAfter')?.previousElementSibling?.previousElementSibling;
+        const photoBefore = beforeInput?.dataset?.compressed || '';
+        const photoAfter = afterInput?.dataset?.compressed || '';
+        const estHours = parseFloat(document.getElementById('newEstimatedHours')?.value) || null;
+
+        // 1) Insert task
+        const { data: task, error } = await SupabaseMode._client
+          .from('team_tasks')
+          .insert({
+            title,
+            description: document.getElementById('newDesc').value.trim(),
+            creator_id: empId,
+            branch: myBranch,
+            priority: document.getElementById('newPriority').value,
+            deadline: document.getElementById('newDeadline').value || null,
+            xp_reward: parseInt(document.getElementById('newXp').value) || 30,
+            point_reward: parseInt(document.getElementById('newPoints').value) || 15,
+            estimated_hours: estHours,
+            photo_before_url: photoBefore,
+            photo_after_url: photoAfter,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // 2) Add creator as leader
+        await SupabaseMode._client
+          .from('team_task_members')
+          .insert({ task_id: task.id, employee_id: empId, role: 'leader', status: 'accepted', xp_multiplier: 1.5 });
+
+        // 3) Add selected members
+        const selectedEls = document.querySelectorAll('.member-select-item.selected');
+        for (const el of selectedEls) {
+          const memberId = el.dataset.empId;
+          const role = el.querySelector('.member-role-select').value;
+          await SupabaseMode._client
+            .from('team_task_members')
+            .insert({
+              task_id: task.id,
+              employee_id: memberId,
+              role,
+              status: 'invited',
+              xp_multiplier: roleMultipliers[role] || 1.0,
+            });
+        }
+
+        // 4) Activity log
+        await SupabaseMode._client
+          .from('team_task_activities')
+          .insert({ task_id: task.id, actor_id: empId, type: 'comment', content: `🎯 ${t.taskCreated}` });
+
+        closeModal();
+        showToast(t.taskCreated);
+        await loadTasks();
+      } catch (e) {
+        console.error('[TeamTasks] Create error:', e);
+        showToast('Error: ' + (e.message || JSON.stringify(e)));
+      }
+    }
+
+    // ===== Task detail =====
+    async function openTaskDetail(taskId) {
+      const task = allTasks.find(t => t.id === taskId);
+      if (!task) return;
+      const empId = await getEmployeeId();
+      const empMap = task.empMap || {};
+      const isCreator = task.creator_id === empId;
+      const myMembership = task.members.find(m => m.employee_id === empId);
+      const isMember = isCreator || (myMembership && myMembership.status === 'accepted');
+      const canJoin = !isCreator && !myMembership && task.status === 'open';
+
+      // Load activities
+      let activities = [];
+      try {
+        const { data } = await SupabaseMode._client
+          .from('team_task_activities')
+          .select('*')
+          .eq('task_id', taskId)
+          .order('created_at', { ascending: false })
+          .limit(20);
+        activities = data || [];
+      } catch (e) {}
+
+      const creator = empMap[task.creator_id] || {};
+      const dl = deadlineInfo(task.deadline);
+      const acceptedMembers = task.members.filter(m => m.status === 'accepted' || m.status === 'completed');
+
+      // Member list HTML
+      let membersHtml = `
+        <div class="detail-member">
+          <div class="detail-member-avatar" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:white;">${(creator.name || '?')[0]}</div>
+          <div class="detail-member-info">
+            <div class="detail-member-name">${creator.name || task.creator_id.slice(0,8)} 👑</div>
+            <div class="detail-member-role">${t.roleLeader} · XP x1.5</div>
+          </div>
+          ${isMember && !isCreator ? `<button class="share-btn" onclick="event.stopPropagation();praiseInTask('${task.id}','${task.creator_id}')">${t.btnPraise}</button>` : ''}
+        </div>`;
+
+      acceptedMembers.filter(m => m.employee_id !== task.creator_id).forEach(m => {
+        const emp = empMap[m.employee_id] || {};
+        membersHtml += `
+          <div class="detail-member">
+            <div class="detail-member-avatar" style="background:${roleColors[m.role]}22;color:${roleColors[m.role]};">${(emp.name || '?')[0]}</div>
+            <div class="detail-member-info">
+              <div class="detail-member-name">${emp.name || m.employee_id.slice(0,8)}</div>
+              <div class="detail-member-role"><span class="role-badge role-${m.role}">${roleLabels[m.role]}</span> · XP x${m.xp_multiplier}</div>
+            </div>
+            ${isMember && m.employee_id !== empId ? `<button class="share-btn" onclick="event.stopPropagation();praiseInTask('${task.id}','${m.employee_id}')">${t.btnPraise}</button>` : ''}
+          </div>`;
+      });
+
+      // Invited (pending)
+      const invited = task.members.filter(m => m.status === 'invited');
+      if (invited.length > 0) {
+        invited.forEach(m => {
+          const emp = empMap[m.employee_id] || {};
+          const isMe = m.employee_id === empId;
+          membersHtml += `
+            <div class="detail-member" style="opacity:0.6;">
+              <div class="detail-member-avatar" style="background:var(--gray-100);color:var(--gray-400);">${(emp.name || '?')[0]}</div>
+              <div class="detail-member-info">
+                <div class="detail-member-name">${emp.name || '?'} <span style="font-size:11px;color:var(--gray-400);">📩</span></div>
+                <div class="detail-member-role">${roleLabels[m.role]} · ${t.invited}</div>
+              </div>
+              ${isMe ? `<button class="action-btn action-btn-primary" style="padding:4px 12px;font-size:12px;" onclick="event.stopPropagation();acceptInvite('${task.id}')">${t.accept}</button>` : ''}
+            </div>`;
+        });
+      }
+
+      // Activity feed HTML
+      const activityHtml = activities.map(a => {
+        const actor = empMap[a.actor_id] || {};
+        const timeAgo = getTimeAgo(a.created_at);
+        const iconMap = { comment: '💬', status_change: '🔄', praise: '🤝', member_join: '👋', complete: '🎉', review_request: '📋', review_approve: '✅', review_reject: '❌' };
+        return `
+          <div class="activity-item">
+            <div class="activity-icon">${iconMap[a.type] || '📝'}</div>
+            <div class="activity-content">
+              <div class="activity-text"><strong>${actor.name || '?'}</strong> ${a.content || ''}</div>
+              <div class="activity-time">${timeAgo}</div>
+            </div>
+          </div>`;
+      }).join('') || `<p style="text-align:center;color:var(--gray-400);font-size:13px;padding:12px;">-</p>`;
+
+      // Action buttons (review flow)
+      let actionHtml = '';
+      const isManager = user?.role === 'branch_manager' || user?.role === 'admin';
+      const isReviewerRole = myMembership?.role === 'reviewer';
+      if (canJoin) {
+        actionHtml = `<button class="action-btn action-btn-primary" onclick="joinTask('${task.id}')" style="width:100%;">🙋 ${t.btnJoin}</button>`;
+      } else if (isCreator && (task.status === 'open' || task.status === 'in_progress')) {
+        actionHtml = `
+          <button class="action-btn action-btn-success" onclick="requestReview('${task.id}')">${t.btnRequestReview}</button>
+          <button class="action-btn action-btn-outline" onclick="shareTask('${task.id}')">📤 ${t.btnShare}</button>`;
+      } else if (task.status === 'review' && (isManager || isReviewerRole)) {
+        actionHtml = `
+          <button class="action-btn action-btn-success" onclick="approveTask('${task.id}')">${t.btnApprove}</button>
+          <button class="action-btn action-btn-outline" style="color:#EF4444;border-color:#EF4444;" onclick="rejectTask('${task.id}')">${t.btnReject}</button>`;
+      } else if (task.status === 'review' && isCreator) {
+        actionHtml = `<div style="text-align:center;padding:12px;color:var(--text-secondary);font-size:13px;">${t.statusReview}...</div>`;
+      } else if (isMember && task.status !== 'completed' && task.status !== 'cancelled') {
+        actionHtml = `<button class="action-btn action-btn-outline" onclick="shareTask('${task.id}')" style="width:100%;">📤 ${t.btnShare}</button>`;
+      }
+      if (task.status === 'completed') {
+        actionHtml = `<button class="action-btn action-btn-outline" onclick="shareTask('${task.id}')" style="width:100%;">📤 ${t.btnShare} 🎉</button>`;
+      }
+
+      const html = `
+        <div class="detail-header">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <span class="task-card-badge badge-${task.status}" style="font-size:13px;padding:4px 12px;">${statusLabels[task.status]}</span>
+            ${dl.text ? `<span class="task-deadline ${dl.cls}" style="font-size:13px;">📅 ${dl.text}</span>` : ''}
+          </div>
+          <div class="detail-title">${task.title}</div>
+          ${task.description ? `<div class="detail-desc">${task.description}</div>` : ''}
+          <div class="detail-stats" style="grid-template-columns:repeat(${task.estimated_hours ? 4 : 3},1fr);">
+            <div class="detail-stat">
+              <div class="detail-stat-value">${acceptedMembers.length + 1}</div>
+              <div class="detail-stat-label">${t.members}</div>
+            </div>
+            <div class="detail-stat">
+              <div class="detail-stat-value">+${task.xp_reward}</div>
+              <div class="detail-stat-label">EXP</div>
+            </div>
+            <div class="detail-stat">
+              <div class="detail-stat-value">+${task.point_reward}</div>
+              <div class="detail-stat-label">CR</div>
+            </div>
+            ${task.estimated_hours ? `<div class="detail-stat">
+              <div class="detail-stat-value">${task.actual_hours ? task.actual_hours + '/' : ''}${task.estimated_hours}h</div>
+              <div class="detail-stat-label">${t.fieldEstimated}</div>
+            </div>` : ''}
+          </div>
+          ${(task.photo_before_url || task.photo_after_url) ? `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+            ${task.photo_before_url ? `<div style="text-align:center;">
+              <div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">${t.beforePhoto}</div>
+              <img src="${task.photo_before_url}" style="width:100%;border-radius:8px;border:1px solid var(--bg-card-border);">
+            </div>` : '<div></div>'}
+            ${task.photo_after_url ? `<div style="text-align:center;">
+              <div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">${t.afterPhoto}</div>
+              <img src="${task.photo_after_url}" style="width:100%;border-radius:8px;border:1px solid var(--bg-card-border);">
+            </div>` : '<div></div>'}
+          </div>` : ''}
+          ${task.review_score ? `<div style="padding:10px;border-radius:10px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);margin-bottom:16px;">
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;">${t.enterScore}: ${'⭐'.repeat(task.review_score)}${'☆'.repeat(5-task.review_score)}</div>
+            ${task.review_notes ? `<div style="font-size:13px;color:var(--text-primary);">${task.review_notes}</div>` : ''}
+          </div>` : ''}
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">👥 ${t.members}</div>
+          ${membersHtml}
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">💬 ${t.activities}</div>
+          ${isMember ? `
+          <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <input type="text" class="field-input" id="commentInput" placeholder="${t.placeholderComment}" style="flex:1;" onkeydown="if(event.key==='Enter')addComment('${task.id}')">
+            <button class="action-btn action-btn-primary" style="padding:8px 16px;" onclick="addComment('${task.id}')">${t.btnComment}</button>
+          </div>` : ''}
+          ${activityHtml}
+        </div>
+
+        <div class="action-btns">${actionHtml}</div>`;
+
+      document.getElementById('modalContent').innerHTML = html;
+      document.getElementById('modalOverlay').classList.add('show');
+    }
+
+    // ===== Join task =====
+    async function joinTask(taskId) {
+      if (!SupabaseMode._ready) return;
+      const empId = await getEmployeeId();
+      try {
+        await SupabaseMode._client
+          .from('team_task_members')
+          .insert({ task_id: taskId, employee_id: empId, role: 'member', status: 'accepted', xp_multiplier: 1.0 });
+
+        await SupabaseMode._client
+          .from('team_task_activities')
+          .insert({ task_id: taskId, actor_id: empId, type: 'member_join', content: `👋 ${user.name || '?'} ${t.joined}` });
+
+        closeModal();
+        showToast(t.taskJoined);
+        await loadTasks();
+      } catch (e) {
+        console.error('[TeamTasks] Join error:', e);
+      }
+    }
+
+    // ===== Accept invite =====
+    async function acceptInvite(taskId) {
+      if (!SupabaseMode._ready) return;
+      const empId = await getEmployeeId();
+      try {
+        await SupabaseMode._client
+          .from('team_task_members')
+          .update({ status: 'accepted' })
+          .eq('task_id', taskId)
+          .eq('employee_id', empId);
+
+        await SupabaseMode._client
+          .from('team_task_activities')
+          .insert({ task_id: taskId, actor_id: empId, type: 'member_join', content: `✅ ${user.name || '?'} ${t.accept}` });
+
+        closeModal();
+        showToast(t.taskJoined);
+        await loadTasks();
+      } catch (e) { console.error('[TeamTasks] Accept error:', e); }
+    }
+
+    // ===== Request Review (replaces direct complete) =====
+    async function requestReview(taskId) {
+      if (!confirm(t.confirmReview)) return;
+      if (!SupabaseMode._ready) return;
+      const empId = await getEmployeeId();
+      const task = allTasks.find(tk => tk.id === taskId);
+      if (!task) return;
+
+      // Prompt for actual hours if estimated was set
+      let actualHours = null;
+      if (task.estimated_hours) {
+        const input = prompt(t.enterActualHours, task.estimated_hours);
+        if (input === null) return;
+        actualHours = parseFloat(input) || null;
+      }
+
+      try {
+        const updateData = { status: 'review' };
+        if (actualHours) updateData.actual_hours = actualHours;
+
+        await SupabaseMode._client
+          .from('team_tasks').update(updateData).eq('id', taskId);
+
+        // Activity log
+        await SupabaseMode._client
+          .from('team_task_activities')
+          .insert({ task_id: taskId, actor_id: empId, type: 'review_request', content: `📋 ${t.reviewRequested}` });
+
+        closeModal();
+        showToast(t.reviewRequested);
+        await loadTasks();
+      } catch (e) {
+        console.error('[TeamTasks] Review request error:', e);
+      }
+    }
+
+    // ===== Approve Task (manager/reviewer) =====
+    async function approveTask(taskId) {
+      if (!SupabaseMode._ready) return;
+      const empId = await getEmployeeId();
+      const task = allTasks.find(tk => tk.id === taskId);
+      if (!task) return;
+
+      // Get score and notes
+      const scoreStr = prompt(t.enterScore, '5');
+      if (scoreStr === null) return;
+      const score = Math.min(5, Math.max(1, parseInt(scoreStr) || 5));
+      const notes = prompt(t.enterNotes, '') || '';
+
+      try {
+        // 1) Update task
+        await SupabaseMode._client.from('team_tasks').update({
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          reviewer_id: empId,
+          review_score: score,
+          review_notes: notes,
+          reviewed_at: new Date().toISOString(),
+        }).eq('id', taskId);
+
+        // 2) Calculate time penalty
+        let timePenalty = 1.0;
+        if (task.estimated_hours && task.actual_hours) {
+          const ratio = task.actual_hours / task.estimated_hours;
+          if (ratio > 2.0) timePenalty = 0.5;
+          else if (ratio > 1.5) timePenalty = 0.7;
+          else if (ratio > 1.2) timePenalty = 0.9;
+        }
+
+        // 3) Grant XP & Points to all accepted members
+        const members = task.members.filter(m => m.status === 'accepted');
+        const allParticipants = [
+          { employee_id: task.creator_id, xp_multiplier: 1.5, role: 'leader' },
+          ...members.filter(m => m.employee_id !== task.creator_id)
+        ];
+
+        for (const m of allParticipants) {
+          const xp = Math.round(task.xp_reward * (m.xp_multiplier || 1.0) * timePenalty);
+          const pts = Math.round(task.point_reward * (m.xp_multiplier || 1.0) * timePenalty);
+
+          await XpService.addXp(m.employee_id, xp, 'team_task', `team_task_${taskId}`, task.title);
+
+          try {
+            const { data: empData } = await SupabaseMode._client
+              .from('employees').select('quarter_points, total_points').eq('id', m.employee_id).maybeSingle();
+            if (empData) {
+              await SupabaseMode._client.from('employees').update({
+                quarter_points: (empData.quarter_points || 0) + pts,
+                total_points: (empData.total_points || 0) + pts,
+              }).eq('id', m.employee_id);
+            }
+          } catch (pe) {}
+
+          await SupabaseMode._client.from('team_task_members')
+            .update({ status: 'completed', completed_at: new Date().toISOString() })
+            .eq('task_id', taskId).eq('employee_id', m.employee_id);
+        }
+
+        // 4) Activity log with tracking info
+        const penaltyNote = timePenalty < 1 ? ` (${t.timePenalty}: ${Math.round(timePenalty*100)}%)` : '';
+        await SupabaseMode._client.from('team_task_activities').insert({
+          task_id: taskId, actor_id: empId, type: 'review_approve',
+          content: `✅ ${t.taskApproved} ⭐${score}${penaltyNote}`,
+          metadata: { score, notes, timePenalty, reviewer_id: empId }
+        });
+
+        closeModal();
+        showToast(t.taskCompleted);
+        await loadTasks();
+      } catch (e) {
+        console.error('[TeamTasks] Approve error:', e);
+      }
+    }
+
+    // ===== Reject Task (manager/reviewer) =====
+    async function rejectTask(taskId) {
+      if (!SupabaseMode._ready) return;
+      const empId = await getEmployeeId();
+
+      const reason = prompt(t.rejectReason, '');
+      if (reason === null) return;
+
+      try {
+        await SupabaseMode._client.from('team_tasks')
+          .update({ status: 'in_progress', reviewer_id: null, review_score: null, review_notes: '' })
+          .eq('id', taskId);
+
+        await SupabaseMode._client.from('team_task_activities').insert({
+          task_id: taskId, actor_id: empId, type: 'review_reject',
+          content: `❌ ${t.taskRejected}: ${reason}`,
+          metadata: { reason, reviewer_id: empId }
+        });
+
+        closeModal();
+        showToast(t.taskRejected);
+        await loadTasks();
+      } catch (e) {
+        console.error('[TeamTasks] Reject error:', e);
+      }
+    }
+
+    // ===== Praise in task =====
+    async function praiseInTask(taskId, targetId) {
+      if (!SupabaseMode._ready) return;
+      const empId = await getEmployeeId();
+      if (empId === targetId) return;
+
+      try {
+        // Use PraiseService if available, otherwise direct insert
+        if (typeof PraiseService !== 'undefined') {
+          await PraiseService.sendPraise(empId, targetId, 'teamwork', `Team task praise`);
+        }
+
+        // Activity log
+        const targetEmp = EmployeeStore.getById(targetId);
+        await SupabaseMode._client
+          .from('team_task_activities')
+          .insert({
+            task_id: taskId, actor_id: empId, type: 'praise',
+            content: `🤝 ${user.name} → ${targetEmp?.name || '?'}`,
+            target_id: targetId
+          });
+
+        showToast(t.praiseSent);
+        openTaskDetail(taskId); // refresh
+      } catch (e) {
+        console.error('[TeamTasks] Praise error:', e);
+      }
+    }
+
+    // ===== Add comment =====
+    async function addComment(taskId) {
+      const input = document.getElementById('commentInput');
+      const text = input?.value.trim();
+      if (!text || !SupabaseMode._ready) return;
+      const empId = await getEmployeeId();
+
+      try {
+        await SupabaseMode._client
+          .from('team_task_activities')
+          .insert({ task_id: taskId, actor_id: empId, type: 'comment', content: text });
+
+        input.value = '';
+        openTaskDetail(taskId); // refresh
+      } catch (e) { console.error('[TeamTasks] Comment error:', e); }
+    }
+
+    // ===== Share task =====
+    function shareTask(taskId) {
+      const task = allTasks.find(t => t.id === taskId);
+      if (!task) return;
+      const msg = t.shareMsg(task.title);
+      if (navigator.share) {
+        navigator.share({ title: t.pageTitle, text: msg, url: window.location.href + '?task=' + taskId });
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(msg + '\n' + window.location.href + '?task=' + taskId);
+        showToast('📋 Copied!');
+      }
+    }
+
+    // ===== Time ago =====
+    function getTimeAgo(dateStr) {
+      const diff = Date.now() - new Date(dateStr).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return lang === 'en' ? 'just now' : lang === 'vi' ? 'vừa xong' : '방금 전';
+      if (mins < 60) return lang === 'en' ? `${mins}m ago` : lang === 'vi' ? `${mins} phút trước` : `${mins}분 전`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return lang === 'en' ? `${hrs}h ago` : lang === 'vi' ? `${hrs} giờ trước` : `${hrs}시간 전`;
+      const days = Math.floor(hrs / 24);
+      return lang === 'en' ? `${days}d ago` : lang === 'vi' ? `${days} ngày trước` : `${days}일 전`;
+    }
+
+    // ===== Init =====
+    async function init() {
+      // Supabase 초기화
+      const connected = await SupabaseMode.init();
+      if (connected) {
+        await SupabaseMode.syncAll();
+        await loadTasks();
+      }
+
+      // Check URL param for direct task open
+      const params = new URLSearchParams(window.location.search);
+      const taskParam = params.get('task');
+      if (taskParam) {
+        setTimeout(() => openTaskDetail(taskParam), 500);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

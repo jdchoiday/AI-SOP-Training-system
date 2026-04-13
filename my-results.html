@@ -6,7 +6,7 @@
   <title>SOP Training - 내 결과</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2563eb">
+  <meta name="theme-color" content="#0F172A">
   <link rel="icon" href="assets/icon-192.svg">
   <style>
     .result-summary {
@@ -16,7 +16,7 @@
       margin-bottom: 24px;
     }
     .result-summary .mini-stat {
-      background: white;
+      background: var(--bg-card);
       border-radius: var(--radius);
       padding: 16px 12px;
       text-align: center;
@@ -26,7 +26,7 @@
     .mini-stat .label { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
 
     .chapter-result {
-      background: white; border-radius: var(--radius);
+      background: var(--bg-card); border-radius: var(--radius);
       padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow);
     }
     .chapter-result-header {
@@ -43,7 +43,7 @@
     .video-dot.pending { background: var(--gray-100); color: var(--gray-500); }
 
     .certificate {
-      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #7c3aed 100%);
+      background: linear-gradient(135deg, #1e3a5f 0%, #10B981 50%, #059669 100%);
       border-radius: 16px; padding: 40px 24px; text-align: center;
       color: white; margin: 24px 0; position: relative; overflow: hidden;
     }
@@ -68,7 +68,8 @@
 
   <div class="bottom-nav">
     <a href="app.html"><span class="nav-icon">&#127968;</span> <span class="nav-label-home">홈</span></a>
-    <a href="ai-chat.html"><span class="nav-icon">&#129302;</span> <span class="nav-label-chat">AI 질문</span></a>
+    <a href="tasks.html"><span class="nav-icon">&#9989;</span> <span class="nav-label-tasks">미션</span></a>
+    <a href="praise.html"><span class="nav-icon">&#128588;</span> <span class="nav-label-praise">부스트</span></a>
     <a href="my-results.html" class="active"><span class="nav-icon">&#127942;</span> <span class="nav-label-results">내 결과</span></a>
   </div>
 
@@ -109,7 +110,7 @@
     // ===== 다국어 텍스트 =====
     const T = {
       ko: {
-        home: '홈', aiChat: 'AI 질문', myResults: '내 결과',
+        home: '홈', tasks: '미션', myResults: '내 결과',
         pageTitle: '내 결과', overallProgress: '전체 진행률',
         passedChapters: '통과 챕터', videosCompleted: '시청 완료',
         chapterResults: '챕터별 결과',
@@ -122,7 +123,7 @@
         staff: '직원',
       },
       en: {
-        home: 'Home', aiChat: 'AI Q&A', myResults: 'Results',
+        home: 'Home', tasks: 'Tasks', myResults: 'Results',
         pageTitle: 'My Results', overallProgress: 'Overall Progress',
         passedChapters: 'Passed', videosCompleted: 'Videos Done',
         chapterResults: 'Results by Chapter',
@@ -135,7 +136,7 @@
         staff: 'Staff',
       },
       vi: {
-        home: 'Trang chủ', aiChat: 'Hỏi AI', myResults: 'Kết quả',
+        home: 'Trang chủ', tasks: 'Nhiệm vụ', myResults: 'Kết quả',
         pageTitle: 'Kết quả của tôi', overallProgress: 'Tiến độ tổng thể',
         passedChapters: 'Chương đạt', videosCompleted: 'Video xong',
         chapterResults: 'Kết quả theo chương',
@@ -154,7 +155,8 @@
 
     // Apply static labels
     document.querySelector('.nav-label-home').textContent = t.home;
-    document.querySelector('.nav-label-chat').textContent = t.aiChat;
+    document.querySelector('.nav-label-tasks').textContent = t.tasks;
+    if (document.querySelector('.nav-label-praise')) document.querySelector('.nav-label-praise').textContent = lang === 'en' ? 'Praise' : lang === 'vi' ? 'Khen ngợi' : '부스트';
     document.querySelector('.nav-label-results').textContent = t.myResults;
     document.getElementById('pageTitle').textContent = t.pageTitle;
     document.getElementById('labelProgress').textContent = t.overallProgress;
@@ -201,7 +203,7 @@
           <p style="font-size:14px;">${t.certDesc.replace(/\n/g, '<br>')}</p>
           <p class="cert-detail">${t.certDetail(chapters.length, totalVids, avg)}</p>
           <p class="cert-date">${dateStr}</p>
-          <button onclick="downloadCertificate()" style="margin-top:20px; background:white; color:#2563eb; border:none; border-radius:8px; padding:12px 32px; font-size:15px; font-weight:700; cursor:pointer;">${t.saveCert}</button>
+          <button onclick="downloadCertificate()" style="margin-top:20px; background:white; color:#059669; border:none; border-radius:8px; padding:12px 32px; font-size:15px; font-weight:700; cursor:pointer;">${t.saveCert}</button>
         </div>`;
     }
 
@@ -239,7 +241,7 @@
             const examData = JSON.parse(examRaw);
             const examScore = examData.score != null ? examData.score : (typeof examData === 'number' ? examData : null);
             if (examScore != null) {
-              const gradeColors = { S: '#b8860b', A: '#16a34a', B: '#2563eb', C: '#ca8a04', D: '#ea580c', F: '#dc2626' };
+              const gradeColors = { S: '#b8860b', A: '#16a34a', B: '#10B981', C: '#ca8a04', D: '#ea580c', F: '#dc2626' };
               let grade = 'F';
               if (examScore >= 95) grade = 'S';
               else if (examScore >= 85) grade = 'A';
@@ -276,8 +278,8 @@
       // Background gradient
       const grad = ctx.createLinearGradient(0, 0, 800, 500);
       grad.addColorStop(0, '#1e3a5f');
-      grad.addColorStop(0.5, '#2563eb');
-      grad.addColorStop(1, '#7c3aed');
+      grad.addColorStop(0.5, '#10B981');
+      grad.addColorStop(1, '#059669');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 800, 500);
 

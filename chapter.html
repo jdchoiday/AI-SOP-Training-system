@@ -6,7 +6,7 @@
   <title>SOP Training - 챕터</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2563eb">
+  <meta name="theme-color" content="#0F172A">
   <link rel="icon" href="assets/icon-192.svg">
   <style>
     .video-item {
@@ -14,7 +14,7 @@
       align-items: center;
       gap: 12px;
       padding: 16px;
-      background: white;
+      background: rgba(30,41,59,0.85);
       border-radius: var(--radius);
       margin-bottom: 10px;
       box-shadow: var(--shadow);
@@ -33,7 +33,7 @@
       font-size: 18px; font-weight: 700; flex-shrink: 0;
     }
     .video-item.completed .video-thumb {
-      background: #dcfce7; color: var(--success);
+      background: rgba(16,185,129,0.15); color: var(--success);
     }
 
     .video-info { flex: 1; }
@@ -64,7 +64,7 @@
     }
 
     .chapter-test-banner {
-      background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
       color: white; border-radius: var(--radius);
       padding: 24px; text-align: center; margin-top: 20px;
     }
@@ -99,8 +99,8 @@
       display: inline-block; padding: 3px 10px; border-radius: 12px;
       font-size: 12px; font-weight: 700; margin-bottom: 12px;
     }
-    .exam-type-badge.mc { background: #dbeafe; color: #1d4ed8; }
-    .exam-type-badge.sa { background: #fef3c7; color: #92400e; }
+    .exam-type-badge.mc { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .exam-type-badge.sa { background: rgba(245,158,11,0.2); color: #F59E0B; }
 
     .exam-question-text {
       font-size: 17px; font-weight: 600; line-height: 1.6;
@@ -110,18 +110,18 @@
     .exam-option {
       display: block; width: 100%; text-align: left;
       padding: 14px 16px; margin-bottom: 10px;
-      background: white; border: 2px solid var(--gray-200);
-      border-radius: 10px; font-size: 15px; cursor: pointer;
+      background: rgba(30,41,59,0.85); border: 2px solid rgba(148,163,184,0.12);
+      border-radius: 10px; font-size: 15px; cursor: pointer; color: #F1F5F9;
       transition: all 0.15s;
     }
     .exam-option:hover { border-color: var(--primary); background: var(--primary-light); }
     .exam-option.selected { border-color: var(--primary); background: var(--primary-light); color: var(--primary); font-weight: 600; }
 
     .exam-sa-input {
-      width: 100%; padding: 14px 16px; border: 2px solid var(--gray-200);
+      width: 100%; padding: 14px 16px; border: 2px solid rgba(148,163,184,0.12);
       border-radius: 10px; font-size: 15px; line-height: 1.6;
       resize: vertical; min-height: 100px; box-sizing: border-box;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s; background: rgba(30,41,59,0.85); color: #F1F5F9;
     }
     .exam-sa-input:focus { outline: none; border-color: var(--primary); }
 
@@ -144,7 +144,7 @@
       width: 28px; height: 28px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       font-size: 11px; font-weight: 700; cursor: pointer;
-      border: 2px solid var(--gray-200); background: white; color: var(--gray-500);
+      border: 2px solid rgba(148,163,184,0.12); background: rgba(30,41,59,0.85); color: #94A3B8;
       transition: all 0.15s;
     }
     .exam-question-dots .dot.answered { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
@@ -158,8 +158,8 @@
     }
     .grade-S { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: white; box-shadow: 0 0 30px rgba(245,158,11,0.4); }
     .grade-A { background: linear-gradient(135deg, #34d399, #059669); color: white; box-shadow: 0 0 20px rgba(5,150,105,0.3); }
-    .grade-B { background: linear-gradient(135deg, #60a5fa, #2563eb); color: white; box-shadow: 0 0 20px rgba(37,99,235,0.3); }
-    .grade-C { background: linear-gradient(135deg, #a78bfa, #7c3aed); color: white; }
+    .grade-B { background: linear-gradient(135deg, #60a5fa, #10B981); color: white; box-shadow: 0 0 20px rgba(16,185,129,0.3); }
+    .grade-C { background: linear-gradient(135deg, #a78bfa, #F59E0B); color: white; }
     .grade-D { background: linear-gradient(135deg, #fb923c, #ea580c); color: white; }
     .grade-F { background: linear-gradient(135deg, #f87171, #dc2626); color: white; }
 
@@ -178,12 +178,12 @@
     }
     .exam-wrong-item {
       padding: 14px; margin-bottom: 10px; border-radius: 10px;
-      background: #fef2f2; border-left: 4px solid #ef4444;
+      background: rgba(239,68,68,0.1); border-left: 4px solid #ef4444;
     }
-    .exam-wrong-item .q-num { font-size: 12px; color: #991b1b; font-weight: 700; margin-bottom: 4px; }
+    .exam-wrong-item .q-num { font-size: 12px; color: #fca5a5; font-weight: 700; margin-bottom: 4px; }
     .exam-wrong-item .q-text { font-size: 14px; color: var(--gray-900); margin-bottom: 6px; }
-    .exam-wrong-item .q-answer { font-size: 13px; color: #166534; }
-    .exam-wrong-item .q-yours { font-size: 13px; color: #991b1b; margin-bottom: 2px; }
+    .exam-wrong-item .q-answer { font-size: 13px; color: #86efac; }
+    .exam-wrong-item .q-yours { font-size: 13px; color: #fca5a5; margin-bottom: 2px; }
 
     .exam-grade-inline {
       display: inline-block; padding: 2px 8px; border-radius: 6px;
@@ -196,22 +196,22 @@
       padding: 12px 32px; font-size: 16px; font-weight: 700;
       cursor: pointer; margin-top: 12px;
     }
-    .mini-quiz-card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
+    .mini-quiz-card { background: rgba(30,41,59,0.85); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
     .mini-quiz-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--gray-200); }
     .mini-quiz-header .icon { font-size: 24px; }
     .mini-quiz-header h3 { font-size: 16px; font-weight: 700; flex: 1; margin: 0; }
     .mini-quiz-header .mq-progress { font-size: 13px; color: var(--gray-500); font-weight: 600; }
     .mq-question { font-size: 15px; font-weight: 600; line-height: 1.6; margin-bottom: 14px; color: var(--gray-900); }
-    .mq-option { display: block; width: 100%; text-align: left; padding: 12px 14px; margin-bottom: 8px; border: 1.5px solid var(--gray-200); border-radius: 10px; background: white; font-size: 14px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+    .mq-option { display: block; width: 100%; text-align: left; padding: 12px 14px; margin-bottom: 8px; border: 1.5px solid rgba(148,163,184,0.12); border-radius: 10px; background: rgba(30,41,59,0.85); font-size: 14px; color: #F1F5F9; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
     .mq-option:hover { border-color: var(--primary); background: var(--primary-light); }
-    .mq-option.mq-correct { border-color: var(--success); background: #dcfce7; pointer-events: none; }
-    .mq-option.mq-wrong { border-color: #ef4444; background: #fef2f2; pointer-events: none; }
+    .mq-option.mq-correct { border-color: var(--success); background: rgba(16,185,129,0.15); pointer-events: none; }
+    .mq-option.mq-wrong { border-color: #ef4444; background: rgba(239,68,68,0.15); pointer-events: none; }
     .mq-option.mq-disabled { pointer-events: none; opacity: 0.6; }
     .mq-feedback { margin-top: 10px; padding: 12px; border-radius: 10px; font-size: 14px; line-height: 1.5; }
-    .mq-feedback.correct { background: #dcfce7; color: #166534; }
-    .mq-feedback.wrong { background: #fef2f2; color: #991b1b; }
+    .mq-feedback.correct { background: rgba(16,185,129,0.15); color: #86efac; }
+    .mq-feedback.wrong { background: rgba(239,68,68,0.15); color: #fca5a5; }
     .mq-next-btn { margin-top: 14px; width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; display: none; background: var(--primary); color: white; }
-    .mq-result-card { text-align: center; padding: 30px 20px; background: white; border-radius: var(--radius); box-shadow: var(--shadow); }
+    .mq-result-card { text-align: center; padding: 30px 20px; background: rgba(30,41,59,0.85); border-radius: var(--radius); box-shadow: var(--shadow); }
     .mq-result-card .mq-score-icon { font-size: 48px; margin-bottom: 8px; }
     .mq-result-card h3 { font-size: 20px; margin-bottom: 4px; }
     .mq-result-card p { font-size: 14px; color: var(--gray-500); margin-bottom: 16px; }
@@ -240,8 +240,11 @@
     <a href="app.html">
       <span class="nav-icon">&#127968;</span> <span class="nav-label-home">홈</span>
     </a>
-    <a href="ai-chat.html">
-      <span class="nav-icon">&#129302;</span> <span class="nav-label-chat">AI 질문</span>
+    <a href="tasks.html">
+      <span class="nav-icon">&#9989;</span> <span class="nav-label-tasks">미션</span>
+    </a>
+    <a href="praise.html">
+      <span class="nav-icon">&#128588;</span> <span class="nav-label-praise">부스트</span>
     </a>
     <a href="my-results.html">
       <span class="nav-icon">&#127942;</span> <span class="nav-label-results">내 결과</span>
@@ -296,10 +299,10 @@
         </div>
         <p id="narrationText" style="font-size:16px; line-height:1.8; color:var(--gray-900);"></p>
         <div style="margin-top:10px; display:flex; gap:8px;">
-          <button id="ttsPlayBtn" onclick="playTTS()" style="display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border:1px solid var(--gray-200); border-radius:8px; background:white; cursor:pointer; font-size:13px; color:var(--primary); font-weight:600;">
+          <button id="ttsPlayBtn" onclick="playTTS()" style="display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border:1px solid rgba(148,163,184,0.12); border-radius:8px; background:rgba(30,41,59,0.85); cursor:pointer; font-size:13px; color:var(--primary); font-weight:600;">
             &#128266; 읽어주기
           </button>
-          <button id="ttsStopBtn" onclick="stopTTS()" style="display:none; align-items:center; gap:6px; padding:8px 16px; border:1px solid #ef4444; border-radius:8px; background:#fef2f2; cursor:pointer; font-size:13px; color:#ef4444; font-weight:600;">
+          <button id="ttsStopBtn" onclick="stopTTS()" style="display:none; align-items:center; gap:6px; padding:8px 16px; border:1px solid #ef4444; border-radius:8px; background:rgba(239,68,68,0.15); cursor:pointer; font-size:13px; color:#ef4444; font-weight:600;">
             &#9724; 멈추기
           </button>
         </div>
@@ -387,7 +390,7 @@
         </div>
         <div class="score-box">
           <div class="label" id="examSALabel">주관식</div>
-          <div class="value" id="examSAScore" style="color:#7c3aed;">0%</div>
+          <div class="value" id="examSAScore" style="color:#F59E0B;">0%</div>
         </div>
       </div>
 
@@ -405,12 +408,14 @@
   <script src="js/ai-provider.js"></script>
   <script src="js/sop-content-kids.js"></script>
   <script src="js/demo-data.js"></script>
+  <script src="js/xp-system.js"></script>
+  <script src="js/xp-ui.js"></script>
   <script src="js/slide-player.js"></script>
   <script>
     // ===== 다국어 텍스트 =====
     const T = {
       ko: {
-        home: '홈', aiChat: 'AI 질문', myResults: '내 결과',
+        home: '홈', tasks: '미션', myResults: '내 결과',
         backHome: '홈으로', backToList: '목록으로', chapter: '챕터',
         chapterDesc: '동영상을 순서대로 시청하고 퀴즈를 풀어주세요',
         videoProgress: '비디오 진행률', completed: '완료',
@@ -471,9 +476,12 @@
         examExistingGrade: (grade) => `종합시험 등급: ${grade}`,
         examRetakeAvailable: '재시험 가능',
         playAllSlides: '&#9654; 전체 슬라이드 재생',
+        nextChapter: '다음 과정으로 →',
+        allChaptersComplete: '🎉 모든 과정을 완료했습니다!',
+        goHome: '홈으로 돌아가기',
       },
       en: {
-        home: 'Home', aiChat: 'AI Q&A', myResults: 'Results',
+        home: 'Home', tasks: 'Tasks', myResults: 'Results',
         backHome: 'Home', backToList: 'Back to list', chapter: 'Chapter',
         chapterDesc: 'Watch the videos in order and take the quiz',
         videoProgress: 'Video progress', completed: 'completed',
@@ -534,9 +542,12 @@
         examExistingGrade: (grade) => `Exam Grade: ${grade}`,
         examRetakeAvailable: 'Retake available',
         playAllSlides: '&#9654; Play All Slides',
+        nextChapter: 'Next Chapter →',
+        allChaptersComplete: '🎉 All chapters completed!',
+        goHome: 'Back to Home',
       },
       vi: {
-        home: 'Trang chủ', aiChat: 'Hỏi AI', myResults: 'Kết quả',
+        home: 'Trang chủ', tasks: 'Nhiệm vụ', myResults: 'Kết quả',
         backHome: 'Trang chủ', backToList: 'Quay lại danh sách', chapter: 'Chương',
         chapterDesc: 'Xem video theo thứ tự và làm bài kiểm tra',
         videoProgress: 'Tiến độ video', completed: 'hoàn thành',
@@ -597,6 +608,9 @@
         examExistingGrade: (grade) => `Xếp hạng thi: ${grade}`,
         examRetakeAvailable: 'Có thể thi lại',
         playAllSlides: '&#9654; Phat tat ca slide',
+        nextChapter: 'Chương tiếp theo →',
+        allChaptersComplete: '🎉 Đã hoàn thành tất cả!',
+        goHome: 'Về trang chủ',
       }
     };
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
@@ -604,7 +618,8 @@
 
     // Apply nav labels
     document.querySelector('.nav-label-home').textContent = t.home;
-    document.querySelector('.nav-label-chat').textContent = t.aiChat;
+    if (document.querySelector('.nav-label-tasks')) document.querySelector('.nav-label-tasks').textContent = t.tasks || (lang === 'en' ? 'Tasks' : lang === 'vi' ? 'Nhiệm vụ' : '미션');
+    if (document.querySelector('.nav-label-praise')) document.querySelector('.nav-label-praise').textContent = lang === 'en' ? 'Praise' : lang === 'vi' ? 'Khen ngợi' : '부스트';
     document.querySelector('.nav-label-results').textContent = t.myResults;
     document.getElementById('backHomeBtn').innerHTML = `&#8592; ${t.backHome}`;
     document.getElementById('backToListLabel').textContent = t.backToList;
@@ -639,6 +654,38 @@
     if (!chapter) {
       alert(t.chapterNotFound);
       window.location.href = 'app.html';
+    }
+
+    // ===== 다음 챕터 찾기 =====
+    function getNextChapter() {
+      const allChapters = SopStore.getChapters();
+      const currentIdx = allChapters.findIndex(c => c.id === chapterId);
+      if (currentIdx >= 0 && currentIdx < allChapters.length - 1) {
+        return allChapters[currentIdx + 1];
+      }
+      return null; // 마지막 챕터
+    }
+
+    function renderNextChapterBtn() {
+      const next = getNextChapter();
+      if (next) {
+        return `
+          <a href="chapter.html?id=${next.id}" style="
+            display:block; width:100%; padding:14px 20px; margin-top:12px;
+            background:linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color:white; font-size:15px; font-weight:700; text-align:center;
+            border-radius:12px; text-decoration:none; cursor:pointer;
+            box-shadow: 0 4px 14px rgba(16,185,129,0.35);
+          ">${t.nextChapter}</a>
+        `;
+      } else {
+        return `
+          <div style="text-align:center; margin-top:12px; padding:16px; background:var(--primary-light); border-radius:12px;">
+            <p style="font-size:15px; font-weight:700; color:var(--primary); margin-bottom:8px;">${t.allChaptersComplete}</p>
+            <a href="app.html" class="btn btn-primary" style="text-decoration:none;">${t.goHome}</a>
+          </div>
+        `;
+      }
     }
 
     // ===== 상태 변수 =====
@@ -755,6 +802,7 @@
             <h3 style="color:var(--success); margin:8px 0 4px;">${t.chapterTestPassed}</h3>
             <p style="color:var(--gray-500);">${t.scoreLabel}: ${result?.score || 0}</p>
             ${examStatusHtml}
+            ${renderNextChapterBtn()}
           </div>
         `;
       } else if (allComplete) {
@@ -909,10 +957,22 @@
         setTimeout(() => toast.remove(), 2500);
         return;
       }
-      // Show mini quiz instead of completing directly
+      // 챕터 퀴즈가 이미 있으면 미니 퀴즈 건너뛰기 (중복 방지)
       AI.stopTTS();
       document.getElementById('videoPlayer').src = '';
-      showMiniQuiz(currentVideoId);
+      if (chapterQuizzes && chapterQuizzes.length > 0) {
+        // 챕터 끝에 퀴즈가 있으므로 비디오만 완료 처리
+        Progress.completeVideo(currentVideoId, chapterId);
+        const _u = JSON.parse(localStorage.getItem('sop_user') || 'null');
+        if (_u?.id && window.SupabaseMode?._ready) {
+          SupabaseMode.saveVideoProgress(_u.id, currentVideoId, chapterId);
+        }
+        showView('videoListView');
+        renderVideoList();
+      } else {
+        // 챕터 퀴즈 없으면 미니 퀴즈 실행
+        showMiniQuiz(currentVideoId);
+      }
     });
 
     // ===== 미니 퀴즈 (per-video) =====
@@ -1142,10 +1202,17 @@ ${narration.slice(0, 1500)}
     }
 
     // ===== 챕터 퀴즈 시작 (SOP에서 생성된 퀴즈) =====
-    function startChapterTest() {
+    async function startChapterTest() {
       if (!chapterQuizzes || chapterQuizzes.length === 0) {
         // 퀴즈가 없으면 바로 통과
         Progress.saveChapterResult(chapterId, 100, true);
+        // XP 적립: 챕터 완료 +50
+        const empId = user?.id;
+        if (empId) {
+          const xpResult = await XpService.addXp(empId, XP_CONFIG.CHAPTER_COMPLETE, 'chapter', chapterId);
+          if (xpResult) showXpToast(XP_CONFIG.CHAPTER_COMPLETE);
+          if (xpResult?.leveledUp) showLevelUpCelebration(xpResult.oldTier, xpResult.newTier, lang);
+        }
         renderVideoList();
         return;
       }
@@ -1243,7 +1310,7 @@ ${narration.slice(0, 1500)}
     });
 
     // ===== 결과 표시 =====
-    function showResult() {
+    async function showResult() {
       const score = Math.round((quizCorrect / currentQuiz.length) * 100);
       const passScore = isChapterTest ? CONFIG.CHAPTER_PASS_SCORE : CONFIG.QUIZ_PASS_SCORE;
       const passed = score >= passScore;
@@ -1254,6 +1321,31 @@ ${narration.slice(0, 1500)}
       } else {
         Progress.completeVideo(currentVideoId);
         Progress.saveQuizScore(currentVideoId, score);
+      }
+
+      // ===== XP 적립 =====
+      const empId = user?.id;
+      if (empId && passed) {
+        try {
+          if (isChapterTest) {
+            // 챕터 완료 +50 XP
+            const xpResult = await XpService.addXp(empId, XP_CONFIG.CHAPTER_COMPLETE, 'chapter', chapterId);
+            if (xpResult) showXpToast(XP_CONFIG.CHAPTER_COMPLETE);
+            if (xpResult?.leveledUp) showLevelUpCelebration(xpResult.oldTier, xpResult.newTier, lang);
+          } else {
+            // 퀴즈 정답 +10 XP × 정답 수
+            if (quizCorrect > 0) {
+              const xpResult = await XpService.addXp(empId, quizCorrect * XP_CONFIG.QUIZ_CORRECT, 'quiz', currentVideoId);
+              if (xpResult) showXpToast(quizCorrect * XP_CONFIG.QUIZ_CORRECT);
+            }
+            // 전부 정답 +30 XP 보너스
+            if (quizCorrect === currentQuiz.length) {
+              const bonusResult = await XpService.addXp(empId, XP_CONFIG.QUIZ_PERFECT_BONUS, 'quiz_perfect', currentVideoId);
+              if (bonusResult) showXpToast(XP_CONFIG.QUIZ_PERFECT_BONUS, true);
+              if (bonusResult?.leveledUp) showLevelUpCelebration(bonusResult.oldTier, bonusResult.newTier, lang);
+            }
+          }
+        } catch (e) { console.warn('[XP] 적립 오류:', e); }
       }
 
       // UI 업데이트
@@ -1287,6 +1379,20 @@ ${narration.slice(0, 1500)}
         examBtn.onclick = () => startChapterExam();
       } else {
         examBtn.style.display = 'none';
+      }
+
+      // 다음 챕터 버튼 (챕터 테스트 통과 시)
+      let nextBtnEl = document.getElementById('resultNextChapterBtn');
+      if (!nextBtnEl) {
+        nextBtnEl = document.createElement('div');
+        nextBtnEl.id = 'resultNextChapterBtn';
+        document.getElementById('resultView').appendChild(nextBtnEl);
+      }
+      if (isChapterTest && passed) {
+        nextBtnEl.innerHTML = renderNextChapterBtn();
+        nextBtnEl.style.display = 'block';
+      } else {
+        nextBtnEl.style.display = 'none';
       }
 
       showView('resultView');
@@ -1510,6 +1616,13 @@ ${narration.slice(0, 1500)}
       var rb=document.getElementById('examRetryBtn');
       if(!ep){rb.style.display='block';rb.textContent=t.examRetry;rb.onclick=function(){startChapterExam();};}
       else rb.style.display='none';
+
+      // 다음 챕터 버튼 (종합시험 뷰)
+      var enb=document.getElementById('examNextChapterBtn');
+      if(!enb){enb=document.createElement('div');enb.id='examNextChapterBtn';document.getElementById('examResultView').appendChild(enb);}
+      enb.innerHTML=renderNextChapterBtn();
+      enb.style.display='block';
+
       showView('examResultView');
     }
 

@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOP Training - 프로필</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0F172A">
+  <style>
+    .profile-container { max-width:480px; margin:0 auto; padding:16px 16px 100px; }
+    .profile-header { text-align:center; padding:30px 20px; background:linear-gradient(135deg, var(--primary) 0%, #059669 100%); border-radius:20px; color:white; margin-bottom:20px; position:relative; overflow:hidden; }
+    .profile-header::before { content:''; position:absolute; top:-50px; right:-50px; width:150px; height:150px; background:rgba(255,255,255,0.08); border-radius:50%; }
+    .profile-header::after { content:''; position:absolute; bottom:-30px; left:-30px; width:100px; height:100px; background:rgba(255,255,255,0.06); border-radius:50%; }
+
+    .avatar-wrapper { position:relative; width:100px; height:100px; margin:0 auto 16px; }
+    .avatar-img {
+      width:100px; height:100px; border-radius:50%; object-fit:cover;
+      border:4px solid rgba(255,255,255,0.6); background:rgba(255,255,255,0.2);
+      display:flex; align-items:center; justify-content:center;
+      font-size:36px; font-weight:700; color:white; cursor:pointer;
+      transition:transform 0.2s;
+    }
+    .avatar-img:hover { transform:scale(1.05); }
+    .avatar-img img { width:100%; height:100%; border-radius:50%; object-fit:cover; }
+    .avatar-edit-badge {
+      position:absolute; bottom:2px; right:2px;
+      width:30px; height:30px; border-radius:50%;
+      background:var(--bg-card); color:var(--primary);
+      display:flex; align-items:center; justify-content:center;
+      font-size:14px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.2);
+    }
+    .avatar-edit-badge:hover { background:var(--primary-light); }
+
+    .profile-name { font-size:22px; font-weight:700; margin-bottom:4px; }
+    .profile-branch { font-size:13px; opacity:0.85; }
+    .profile-tier { display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,0.2); border-radius:16px; padding:4px 14px; margin-top:10px; font-size:13px; backdrop-filter:blur(4px); }
+
+    .profile-card { background:var(--bg-card); border-radius:16px; padding:20px; margin-bottom:16px; box-shadow:var(--shadow); }
+    .profile-card h3 { font-size:15px; color:var(--gray-700); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+    .profile-card label { display:block; font-size:13px; color:var(--gray-500); margin-bottom:6px; font-weight:500; }
+    .profile-card input, .profile-card textarea, .profile-card select {
+      width:100%; padding:10px 14px; border:1.5px solid var(--gray-200);
+      border-radius:10px; font-size:14px; font-family:inherit;
+      transition:border-color 0.2s;
+      background:var(--bg-surface, #1E293B); color:var(--text-primary, #F1F5F9);
+    }
+    .profile-card input:focus, .profile-card textarea:focus { border-color:var(--primary); outline:none; }
+    .profile-card textarea { resize:vertical; min-height:80px; line-height:1.5; }
+
+    .field-group { margin-bottom:16px; }
+    .field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+    .tag-input-area { display:flex; flex-wrap:wrap; gap:6px; padding:8px 12px; border:1.5px solid var(--gray-200); border-radius:10px; min-height:42px; cursor:text; transition:border-color 0.2s; background:var(--bg-surface, #1E293B); }
+    .tag-input-area:focus-within { border-color:var(--primary); }
+    .tag-input-area input { border:none; outline:none; padding:4px 0; font-size:14px; flex:1; min-width:80px; background:transparent; color:var(--text-primary, #F1F5F9); }
+    .tag { display:inline-flex; align-items:center; gap:4px; background:var(--primary-light); color:var(--primary); padding:4px 10px; border-radius:16px; font-size:12px; font-weight:500; }
+    .tag button { background:none; border:none; color:var(--primary); cursor:pointer; font-size:14px; line-height:1; padding:0 2px; }
+
+    /* 스탯 바 (게임 캐릭터 스타일) */
+    .stat-bar-group { margin-bottom:14px; }
+    .stat-bar-label { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+    .stat-bar-name { font-size:13px; font-weight:600; color:var(--gray-700); }
+    .stat-bar-value { font-size:12px; color:var(--primary); font-weight:700; }
+    .stat-bar { height:8px; background:var(--gray-100); border-radius:4px; overflow:hidden; }
+    .stat-bar .fill { height:100%; border-radius:4px; transition:width 0.5s ease; }
+
+    .theme-colors { display:flex; gap:10px; flex-wrap:wrap; }
+    .theme-color-btn { width:36px; height:36px; border-radius:50%; border:3px solid var(--gray-200); cursor:pointer; transition:all 0.2s; }
+    .theme-color-btn:hover { transform:scale(1.15); }
+    .theme-color-btn.selected { border-color:var(--gray-900); box-shadow:0 0 0 3px rgba(0,0,0,0.1); }
+
+    .badge-grid { display:flex; flex-wrap:wrap; gap:8px; }
+    .badge-item { padding:6px 12px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; border:2px solid var(--gray-200); background:var(--bg-card); transition:all 0.2s; }
+    .badge-item:hover { border-color:var(--primary); }
+    .badge-item.selected { border-color:var(--primary); background:var(--primary-light); color:var(--primary); }
+
+    .work-style-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .work-style-option { padding:12px; border-radius:10px; border:2px solid var(--gray-200); text-align:center; cursor:pointer; transition:all 0.2s; font-size:13px; }
+    .work-style-option:hover { border-color:var(--primary); }
+    .work-style-option.selected { border-color:var(--primary); background:var(--primary-light); }
+    .work-style-option .ws-emoji { font-size:24px; display:block; margin-bottom:4px; }
+
+    .save-btn {
+      width:100%; padding:14px; background:var(--primary); color:white;
+      border:none; border-radius:12px; font-size:16px; font-weight:600;
+      cursor:pointer; transition:background 0.2s;
+    }
+    .save-btn:hover { background:var(--primary-dark); }
+    .save-btn:disabled { background:var(--gray-300); cursor:not-allowed; }
+    .save-btn.success { background:var(--success); }
+
+    .toast { position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#333; color:white; padding:10px 24px; border-radius:20px; font-size:14px; z-index:9999; animation:fadeInOut 2.5s forwards; }
+    @keyframes fadeInOut { 0%{opacity:0;transform:translateX(-50%) translateY(-10px)} 10%{opacity:1;transform:translateX(-50%) translateY(0)} 80%{opacity:1} 100%{opacity:0} }
+
+    /* 아바타 선택 모달 */
+    .avatar-modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; }
+    .avatar-modal-overlay.show { display:flex; }
+    .avatar-modal { background:var(--bg-card); border-radius:20px; padding:24px; width:90%; max-width:400px; max-height:80vh; overflow-y:auto; }
+    .avatar-modal h3 { text-align:center; margin-bottom:16px; font-size:16px; }
+    .avatar-options { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-bottom:16px; }
+    .avatar-option { width:100%; aspect-ratio:1; border-radius:50%; border:3px solid var(--gray-200); display:flex; align-items:center; justify-content:center; font-size:32px; cursor:pointer; transition:all 0.2s; background:var(--gray-50); }
+    .avatar-option:hover { border-color:var(--primary); transform:scale(1.1); }
+    .avatar-option.selected { border-color:var(--primary); background:var(--primary-light); box-shadow:0 0 0 3px rgba(16,185,129,0.2); }
+    .avatar-upload-area { text-align:center; padding:16px; border:2px dashed var(--gray-300); border-radius:12px; cursor:pointer; margin-bottom:16px; transition:border-color 0.2s; }
+    .avatar-upload-area:hover { border-color:var(--primary); }
+    .avatar-modal-btn { width:100%; padding:12px; border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; }
+  </style>
+</head>
+<body>
+
+  <div class="bottom-nav">
+    <a href="app.html"><span class="nav-icon">&#127968;</span> <span class="nav-label-home">홈</span></a>
+    <a href="tasks.html"><span class="nav-icon">&#9989;</span> <span class="nav-label-tasks">미션</span></a>
+    <a href="praise.html"><span class="nav-icon">&#128588;</span> <span class="nav-label-praise">부스트</span></a>
+    <a href="my-results.html"><span class="nav-icon">&#127942;</span> <span class="nav-label-results">내 결과</span></a>
+  </div>
+
+  <div class="profile-container">
+
+    <!-- 프로필 헤더 -->
+    <div class="profile-header">
+      <div class="avatar-wrapper">
+        <div class="avatar-img" id="avatarDisplay" onclick="openAvatarModal()"></div>
+        <div class="avatar-edit-badge" onclick="openAvatarModal()">📷</div>
+      </div>
+      <div class="profile-name" id="profileName">-</div>
+      <div class="profile-branch" id="profileBranch">-</div>
+      <div class="profile-tier" id="profileTier"></div>
+    </div>
+
+    <!-- 자기소개 -->
+    <div class="profile-card">
+      <h3>📝 <span id="lblIntro">자기소개</span></h3>
+      <div class="field-group">
+        <label id="lblIntroText">한 줄 소개</label>
+        <input type="text" id="introText" maxlength="60" placeholder="예: 커피와 아이들을 좋아하는 3년차 바리스타입니다!">
+        <div style="text-align:right; font-size:11px; color:var(--gray-500); margin-top:4px;"><span id="introCount">0</span>/60</div>
+      </div>
+      <div class="field-group">
+        <label id="lblBio">상세 소개</label>
+        <textarea id="bioText" maxlength="300" rows="3" placeholder="나를 소개해주세요..."></textarea>
+        <div style="text-align:right; font-size:11px; color:var(--gray-500); margin-top:4px;"><span id="bioCount">0</span>/300</div>
+      </div>
+    </div>
+
+    <!-- 성격 & 취미 -->
+    <div class="profile-card">
+      <h3>🎨 <span id="lblPersonality">성격 & 취미</span></h3>
+      <div class="field-group">
+        <label id="lblMbtiType">MBTI / 성격 유형</label>
+        <div class="field-row">
+          <select id="mbtiSelect">
+            <option value="">선택 안 함</option>
+            <option value="INTJ">INTJ - 전략가</option><option value="INTP">INTP - 논리술사</option>
+            <option value="ENTJ">ENTJ - 통솔자</option><option value="ENTP">ENTP - 변론가</option>
+            <option value="INFJ">INFJ - 옹호자</option><option value="INFP">INFP - 중재자</option>
+            <option value="ENFJ">ENFJ - 선도자</option><option value="ENFP">ENFP - 활동가</option>
+            <option value="ISTJ">ISTJ - 현실주의자</option><option value="ISFJ">ISFJ - 수호자</option>
+            <option value="ESTJ">ESTJ - 경영자</option><option value="ESFJ">ESFJ - 집정관</option>
+            <option value="ISTP">ISTP - 장인</option><option value="ISFP">ISFP - 모험가</option>
+            <option value="ESTP">ESTP - 사업가</option><option value="ESFP">ESFP - 연예인</option>
+          </select>
+          <input type="text" id="personalityText" placeholder="예: 밝고 활발한" maxlength="20">
+        </div>
+      </div>
+      <div class="field-group">
+        <label id="lblHobbies">취미 (Enter로 추가)</label>
+        <div class="tag-input-area" id="hobbyArea" onclick="document.getElementById('hobbyInput').focus()">
+          <input type="text" id="hobbyInput" placeholder="예: 요리, 등산, 게임...">
+        </div>
+      </div>
+      <div class="field-group">
+        <label id="lblLikes">좋아하는 것 (Enter로 추가)</label>
+        <div class="tag-input-area" id="likeArea" onclick="document.getElementById('likeInput').focus()">
+          <input type="text" id="likeInput" placeholder="예: 커피, 고양이, 여행...">
+        </div>
+      </div>
+    </div>
+
+    <!-- 기본 정보 -->
+    <div class="profile-card">
+      <h3>🎂 <span id="lblBasicInfo">기본 정보</span></h3>
+      <div class="field-row" style="margin-bottom:16px;">
+        <div class="field-group" style="margin:0;">
+          <label id="lblBirthday">생일</label>
+          <input type="date" id="birthdayInput" style="width:100%;padding:10px 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;">
+        </div>
+        <div class="field-group" style="margin:0;">
+          <label id="lblJoinDate">입사일</label>
+          <input type="date" id="joinDateInput" style="width:100%;padding:10px 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;">
+        </div>
+      </div>
+      <div class="field-group">
+        <label id="lblPhone">연락처 (선택)</label>
+        <input type="tel" id="phoneText" maxlength="20" placeholder="010-0000-0000">
+      </div>
+    </div>
+
+    <!-- 나의 능력치 (게임 스탯) -->
+    <div class="profile-card">
+      <h3>⚔️ <span id="lblStats">나의 능력치</span></h3>
+      <p style="font-size:12px; color:var(--gray-500); margin-bottom:14px;" id="lblStatsDesc">슬라이더를 움직여 자기 평가해보세요 (1~10)</p>
+      <div class="stat-bar-group">
+        <div class="stat-bar-label"><span class="stat-bar-name">🗣️ <span id="lblStatComm">소통력</span></span><span class="stat-bar-value" id="statCommVal">5</span></div>
+        <input type="range" id="statComm" min="1" max="10" value="5" oninput="updateStatBar(this)" style="width:100%;accent-color:var(--primary);">
+      </div>
+      <div class="stat-bar-group">
+        <div class="stat-bar-label"><span class="stat-bar-name">🎯 <span id="lblStatFocus">집중력</span></span><span class="stat-bar-value" id="statFocusVal">5</span></div>
+        <input type="range" id="statFocus" min="1" max="10" value="5" oninput="updateStatBar(this)" style="width:100%;accent-color:#f59e0b;">
+      </div>
+      <div class="stat-bar-group">
+        <div class="stat-bar-label"><span class="stat-bar-name">🤝 <span id="lblStatTeam">팀워크</span></span><span class="stat-bar-value" id="statTeamVal">5</span></div>
+        <input type="range" id="statTeam" min="1" max="10" value="5" oninput="updateStatBar(this)" style="width:100%;accent-color:var(--success);">
+      </div>
+      <div class="stat-bar-group">
+        <div class="stat-bar-label"><span class="stat-bar-name">💡 <span id="lblStatCreative">창의력</span></span><span class="stat-bar-value" id="statCreativeVal">5</span></div>
+        <input type="range" id="statCreative" min="1" max="10" value="5" oninput="updateStatBar(this)" style="width:100%;accent-color:#F59E0B;">
+      </div>
+      <div class="stat-bar-group">
+        <div class="stat-bar-label"><span class="stat-bar-name">⚡ <span id="lblStatSpeed">실행력</span></span><span class="stat-bar-value" id="statSpeedVal">5</span></div>
+        <input type="range" id="statSpeed" min="1" max="10" value="5" oninput="updateStatBar(this)" style="width:100%;accent-color:#dc2626;">
+      </div>
+      <div class="stat-bar-group">
+        <div class="stat-bar-label"><span class="stat-bar-name">😊 <span id="lblStatService">서비스 정신</span></span><span class="stat-bar-value" id="statServiceVal">5</span></div>
+        <input type="range" id="statService" min="1" max="10" value="5" oninput="updateStatBar(this)" style="width:100%;accent-color:#ec4899;">
+      </div>
+    </div>
+
+    <!-- 장단점 -->
+    <div class="profile-card">
+      <h3>💪 <span id="lblStrengths">장점 & 개선점</span></h3>
+      <div class="field-group">
+        <label id="lblMyStrengths">나의 장점 (Enter로 추가)</label>
+        <div class="tag-input-area" id="strengthArea" onclick="document.getElementById('strengthInput').focus()" style="border-color:#dcfce7;">
+          <input type="text" id="strengthInput" placeholder="예: 밝은 성격, 빠른 습득력, 꼼꼼함">
+        </div>
+      </div>
+      <div class="field-group">
+        <label id="lblMyWeaknesses">개선하고 싶은 점 (Enter로 추가)</label>
+        <div class="tag-input-area" id="weaknessArea" onclick="document.getElementById('weaknessInput').focus()" style="border-color:#fef3c7;">
+          <input type="text" id="weaknessInput" placeholder="예: 발표 긴장, 시간 관리">
+        </div>
+      </div>
+    </div>
+
+    <!-- 업무 스타일 -->
+    <div class="profile-card">
+      <h3>🎮 <span id="lblWorkStyle">업무 스타일</span></h3>
+      <div class="field-group">
+        <label id="lblPreferStyle">선호하는 업무 방식</label>
+        <div class="work-style-grid" id="workStyleGrid">
+          <div class="work-style-option" data-style="solo" onclick="toggleWorkStyle(this)">
+            <span class="ws-emoji">🧑‍💻</span>혼자 집중
+          </div>
+          <div class="work-style-option" data-style="team" onclick="toggleWorkStyle(this)">
+            <span class="ws-emoji">👥</span>팀 협업
+          </div>
+          <div class="work-style-option" data-style="morning" onclick="toggleWorkStyle(this)">
+            <span class="ws-emoji">🌅</span>아침형
+          </div>
+          <div class="work-style-option" data-style="night" onclick="toggleWorkStyle(this)">
+            <span class="ws-emoji">🌙</span>저녁형
+          </div>
+          <div class="work-style-option" data-style="planner" onclick="toggleWorkStyle(this)">
+            <span class="ws-emoji">📋</span>계획적
+          </div>
+          <div class="work-style-option" data-style="flexible" onclick="toggleWorkStyle(this)">
+            <span class="ws-emoji">🌊</span>유연한
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 추가 정보 -->
+    <div class="profile-card">
+      <h3>💼 <span id="lblExtra">추가 정보</span></h3>
+      <div class="field-group">
+        <label id="lblMotto">좌우명 / 한마디</label>
+        <input type="text" id="mottoText" maxlength="40" placeholder="예: 하루하루 성장하는 내가 되자!">
+      </div>
+      <div class="field-group">
+        <label id="lblSkills">특기 / 강점</label>
+        <input type="text" id="skillsText" maxlength="50" placeholder="예: 라떼아트, 아이 케어, 외국어">
+      </div>
+      <div class="field-group">
+        <label id="lblGoal">이번 분기 목표</label>
+        <input type="text" id="goalText" maxlength="60" placeholder="예: 전 챕터 완료하고 골드 티어 달성!">
+      </div>
+      <div class="field-group">
+        <label id="lblSpecialAbility">특별한 능력 / 숨겨진 재능</label>
+        <input type="text" id="specialText" maxlength="40" placeholder="예: 3개 국어 가능, 라떼아트 고수">
+      </div>
+    </div>
+
+    <!-- 테마 색상 -->
+    <div class="profile-card">
+      <h3>🎨 <span id="lblTheme">테마 색상</span></h3>
+      <p style="font-size:12px; color:var(--gray-500); margin-bottom:12px;" id="lblThemeDesc">내 프로필 카드 색상을 선택하세요</p>
+      <div class="theme-colors" id="themeColors">
+        <div class="theme-color-btn selected" data-color="#10B981" style="background:#10B981;" onclick="selectThemeColor(this)"></div>
+        <div class="theme-color-btn" data-color="#F59E0B" style="background:#F59E0B;" onclick="selectThemeColor(this)"></div>
+        <div class="theme-color-btn" data-color="#dc2626" style="background:#dc2626;" onclick="selectThemeColor(this)"></div>
+        <div class="theme-color-btn" data-color="#ea580c" style="background:#ea580c;" onclick="selectThemeColor(this)"></div>
+        <div class="theme-color-btn" data-color="#f59e0b" style="background:#f59e0b;" onclick="selectThemeColor(this)"></div>
+        <div class="theme-color-btn" data-color="#16a34a" style="background:#16a34a;" onclick="selectThemeColor(this)"></div>
+        <div class="theme-color-btn" data-color="#0891b2" style="background:#0891b2;" onclick="selectThemeColor(this)"></div>
+        <div class="theme-color-btn" data-color="#ec4899" style="background:#ec4899;" onclick="selectThemeColor(this)"></div>
+        <div class="theme-color-btn" data-color="#1e293b" style="background:#1e293b;" onclick="selectThemeColor(this)"></div>
+      </div>
+    </div>
+
+    <button class="save-btn" id="saveBtn" onclick="saveProfile()">
+      💾 저장하기
+    </button>
+  </div>
+
+  <!-- 아바타 선택 모달 -->
+  <div class="avatar-modal-overlay" id="avatarModal">
+    <div class="avatar-modal">
+      <h3 id="lblAvatarTitle">프로필 사진 선택</h3>
+
+      <!-- 사진 업로드 -->
+      <div class="avatar-upload-area" onclick="document.getElementById('avatarFileInput').click()">
+        <div style="font-size:32px; margin-bottom:6px;">📸</div>
+        <div style="font-size:14px; color:var(--gray-500);" id="lblUploadPhoto">사진 업로드</div>
+        <div style="font-size:11px; color:var(--gray-300); margin-top:4px;">JPG, PNG (최대 500KB)</div>
+      </div>
+      <input type="file" id="avatarFileInput" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)">
+
+      <!-- 이모지 아바타 -->
+      <div style="font-size:13px; color:var(--gray-500); margin-bottom:8px; text-align:center;" id="lblOrEmoji">또는 이모지 선택</div>
+      <div class="avatar-options" id="emojiAvatars"></div>
+
+      <div style="display:flex; gap:10px; margin-top:16px;">
+        <button class="avatar-modal-btn" id="btnCancel" style="background:var(--gray-100); color:var(--gray-700);" onclick="closeAvatarModal()">취소</button>
+        <button class="avatar-modal-btn" id="btnConfirm" style="background:var(--primary); color:white;" onclick="confirmAvatar()">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script src="js/xp-system.js"></script>
+  <script src="js/xp-ui.js"></script>
+  <script>
+    // ===== 로그인 확인 =====
+    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    if (!user) { window.location.href = 'index.html'; }
+    const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
+
+    // ===== i18n =====
+    const T = {
+      ko: {
+        title: '내 프로필', intro: '자기소개', introText: '한 줄 소개', bio: '상세 소개',
+        personality: '성격 & 취미', mbtiType: 'MBTI / 성격 유형', hobbies: '취미 (Enter로 추가)',
+        likes: '좋아하는 것 (Enter로 추가)', extra: '추가 정보', motto: '좌우명 / 한마디',
+        skills: '특기 / 강점', save: '💾 저장하기', saving: '저장 중...', saved: '✅ 저장 완료!',
+        avatarTitle: '프로필 사진 선택', uploadPhoto: '사진 업로드', orEmoji: '또는 이모지 선택',
+        cancel: '취소', confirm: '확인', toastSaved: '프로필이 저장되었습니다!',
+        home: '홈', tasks: '성과제', praise: '칭찬', results: '내 결과',
+        basicInfo: '기본 정보', birthday: '생일', joinDate: '입사일', phone: '연락처 (선택)',
+        stats: '나의 능력치', statsDesc: '슬라이더를 움직여 자기 평가해보세요 (1~10)',
+        statComm: '소통력', statFocus: '집중력', statTeam: '팀워크',
+        statCreative: '창의력', statSpeed: '실행력', statService: '서비스 정신',
+        strengths: '장점 & 개선점', myStrengths: '나의 장점 (Enter로 추가)',
+        myWeaknesses: '개선하고 싶은 점 (Enter로 추가)',
+        workStyle: '업무 스타일', preferStyle: '선호하는 업무 방식',
+        goal: '이번 분기 목표', specialAbility: '특별한 능력 / 숨겨진 재능',
+        theme: '테마 색상', themeDesc: '내 프로필 카드 색상을 선택하세요',
+      },
+      en: {
+        title: 'My Profile', intro: 'About Me', introText: 'One-liner', bio: 'Bio',
+        personality: 'Personality & Hobbies', mbtiType: 'MBTI / Personality', hobbies: 'Hobbies (Enter to add)',
+        likes: 'Likes (Enter to add)', extra: 'Extra Info', motto: 'Motto',
+        skills: 'Skills / Strengths', save: '💾 Save', saving: 'Saving...', saved: '✅ Saved!',
+        avatarTitle: 'Choose Profile Photo', uploadPhoto: 'Upload Photo', orEmoji: 'or choose emoji',
+        cancel: 'Cancel', confirm: 'Confirm', toastSaved: 'Profile saved!',
+        home: 'Home', tasks: 'Tasks', praise: 'Praise', results: 'Results',
+        basicInfo: 'Basic Info', birthday: 'Birthday', joinDate: 'Join Date', phone: 'Phone (optional)',
+        stats: 'My Stats', statsDesc: 'Rate yourself 1~10',
+        statComm: 'Communication', statFocus: 'Focus', statTeam: 'Teamwork',
+        statCreative: 'Creativity', statSpeed: 'Execution', statService: 'Service Spirit',
+        strengths: 'Strengths & Growth', myStrengths: 'My Strengths (Enter to add)',
+        myWeaknesses: 'Areas to Improve (Enter to add)',
+        workStyle: 'Work Style', preferStyle: 'Preferred work style',
+        goal: 'This Quarter Goal', specialAbility: 'Special Ability / Hidden Talent',
+        theme: 'Theme Color', themeDesc: 'Choose your profile card color',
+      },
+      vi: {
+        title: 'Hồ sơ', intro: 'Giới thiệu', introText: 'Mô tả ngắn', bio: 'Tiểu sử',
+        personality: 'Tính cách & Sở thích', mbtiType: 'MBTI / Tính cách', hobbies: 'Sở thích (Enter để thêm)',
+        likes: 'Yêu thích (Enter để thêm)', extra: 'Thêm', motto: 'Phương châm',
+        skills: 'Kỹ năng / Thế mạnh', save: '💾 Lưu', saving: 'Đang lưu...', saved: '✅ Đã lưu!',
+        avatarTitle: 'Chọn ảnh đại diện', uploadPhoto: 'Tải ảnh lên', orEmoji: 'hoặc chọn emoji',
+        cancel: 'Hủy', confirm: 'Xác nhận', toastSaved: 'Đã lưu hồ sơ!',
+        home: 'Trang chủ', tasks: 'Nhiệm vụ', praise: 'Khen ngợi', results: 'Kết quả',
+        basicInfo: 'Thông tin cơ bản', birthday: 'Sinh nhật', joinDate: 'Ngày vào', phone: 'SĐT (tùy chọn)',
+        stats: 'Chỉ số của tôi', statsDesc: 'Tự đánh giá 1~10',
+        statComm: 'Giao tiếp', statFocus: 'Tập trung', statTeam: 'Đồng đội',
+        statCreative: 'Sáng tạo', statSpeed: 'Hành động', statService: 'Phục vụ',
+        strengths: 'Điểm mạnh & Cải thiện', myStrengths: 'Điểm mạnh (Enter để thêm)',
+        myWeaknesses: 'Cần cải thiện (Enter để thêm)',
+        workStyle: 'Phong cách làm việc', preferStyle: 'Phong cách ưa thích',
+        goal: 'Mục tiêu quý này', specialAbility: 'Năng lực đặc biệt',
+        theme: 'Màu chủ đề', themeDesc: 'Chọn màu thẻ hồ sơ',
+      }
+    };
+    const t = T[lang] || T.ko;
+
+    // Apply i18n
+    document.title = 'SOP Training - ' + t.title;
+    document.querySelector('.nav-label-home').textContent = t.home;
+    if (document.querySelector('.nav-label-tasks')) document.querySelector('.nav-label-tasks').textContent = t.tasks;
+    document.querySelector('.nav-label-praise').textContent = t.praise;
+    document.querySelector('.nav-label-results').textContent = t.results;
+    document.getElementById('lblIntro').textContent = t.intro;
+    document.getElementById('lblIntroText').textContent = t.introText;
+    document.getElementById('lblBio').textContent = t.bio;
+    document.getElementById('lblPersonality').textContent = t.personality;
+    document.getElementById('lblMbtiType').textContent = t.mbtiType;
+    document.getElementById('lblHobbies').textContent = t.hobbies;
+    document.getElementById('lblLikes').textContent = t.likes;
+    document.getElementById('lblExtra').textContent = t.extra;
+    document.getElementById('lblMotto').textContent = t.motto;
+    document.getElementById('lblSkills').textContent = t.skills;
+    document.getElementById('saveBtn').textContent = t.save;
+    document.getElementById('lblAvatarTitle').textContent = t.avatarTitle;
+    document.getElementById('lblUploadPhoto').textContent = t.uploadPhoto;
+    document.getElementById('lblOrEmoji').textContent = t.orEmoji;
+    // New fields i18n
+    document.getElementById('lblBasicInfo').textContent = t.basicInfo;
+    document.getElementById('lblBirthday').textContent = t.birthday;
+    document.getElementById('lblJoinDate').textContent = t.joinDate;
+    document.getElementById('lblPhone').textContent = t.phone;
+    document.getElementById('lblStats').textContent = t.stats;
+    document.getElementById('lblStatsDesc').textContent = t.statsDesc;
+    document.getElementById('lblStatComm').textContent = t.statComm;
+    document.getElementById('lblStatFocus').textContent = t.statFocus;
+    document.getElementById('lblStatTeam').textContent = t.statTeam;
+    document.getElementById('lblStatCreative').textContent = t.statCreative;
+    document.getElementById('lblStatSpeed').textContent = t.statSpeed;
+    document.getElementById('lblStatService').textContent = t.statService;
+    document.getElementById('lblStrengths').textContent = t.strengths;
+    document.getElementById('lblMyStrengths').textContent = t.myStrengths;
+    document.getElementById('lblMyWeaknesses').textContent = t.myWeaknesses;
+    document.getElementById('lblWorkStyle').textContent = t.workStyle;
+    document.getElementById('lblPreferStyle').textContent = t.preferStyle;
+    document.getElementById('lblGoal').textContent = t.goal;
+    document.getElementById('lblSpecialAbility').textContent = t.specialAbility;
+    document.getElementById('lblTheme').textContent = t.theme;
+    document.getElementById('lblThemeDesc').textContent = t.themeDesc;
+
+    // MBTI 드롭다운 i18n
+    const mbtiNames = {
+      ko: { '': '선택 안 함', INTJ:'전략가', INTP:'논리술사', ENTJ:'통솔자', ENTP:'변론가', INFJ:'옹호자', INFP:'중재자', ENFJ:'선도자', ENFP:'활동가', ISTJ:'현실주의자', ISFJ:'수호자', ESTJ:'경영자', ESFJ:'집정관', ISTP:'장인', ISFP:'모험가', ESTP:'사업가', ESFP:'연예인' },
+      en: { '': 'Not selected', INTJ:'Architect', INTP:'Logician', ENTJ:'Commander', ENTP:'Debater', INFJ:'Advocate', INFP:'Mediator', ENFJ:'Protagonist', ENFP:'Campaigner', ISTJ:'Logistician', ISFJ:'Defender', ESTJ:'Executive', ESFJ:'Consul', ISTP:'Virtuoso', ISFP:'Adventurer', ESTP:'Entrepreneur', ESFP:'Entertainer' },
+      vi: { '': 'Không chọn', INTJ:'Kiến trúc sư', INTP:'Nhà logic', ENTJ:'Chỉ huy', ENTP:'Người tranh luận', INFJ:'Người ủng hộ', INFP:'Người hòa giải', ENFJ:'Người dẫn dắt', ENFP:'Người vận động', ISTJ:'Người thực tế', ISFJ:'Người bảo vệ', ESTJ:'Người quản lý', ESFJ:'Người lãnh sự', ISTP:'Nghệ nhân', ISFP:'Nhà thám hiểm', ESTP:'Doanh nhân', ESFP:'Nghệ sĩ' }
+    };
+    const mbtiMap = mbtiNames[lang] || mbtiNames.ko;
+    document.querySelectorAll('#mbtiSelect option').forEach(opt => {
+      const v = opt.value;
+      opt.textContent = v ? `${v} - ${mbtiMap[v] || v}` : mbtiMap[''];
+    });
+
+    // Work style i18n
+    const wsLabels = {
+      ko: { solo:'혼자 집중', team:'팀 협업', morning:'아침형', night:'저녁형', planner:'계획적', flexible:'유연한' },
+      en: { solo:'Solo Focus', team:'Teamwork', morning:'Morning', night:'Night Owl', planner:'Planner', flexible:'Flexible' },
+      vi: { solo:'Tập trung', team:'Nhóm', morning:'Buổi sáng', night:'Buổi tối', planner:'Lập kế hoạch', flexible:'Linh hoạt' }
+    };
+    const wsMap = wsLabels[lang] || wsLabels.ko;
+    document.querySelectorAll('.work-style-option').forEach(el => {
+      const style = el.dataset.style;
+      const emoji = el.querySelector('.ws-emoji')?.textContent || '';
+      el.innerHTML = `<span class="ws-emoji">${emoji}</span>${wsMap[style] || style}`;
+    });
+
+    // Placeholder i18n
+    const ph = {
+      ko: { personality:'예: 밝고 활발한', hobby:'예: 요리, 등산, 게임...', likes:'예: 커피, 고양이, 여행...',
+            strengths:'예: 꼼꼼함, 리더십...', weaknesses:'예: 시간관리, 발표...',
+            motto:'예: 오늘도 파이팅!', special:'예: 3개 국어 가능, 바리스타 자격증' },
+      en: { personality:'e.g., Bright and energetic', hobby:'e.g., Cooking, Hiking, Gaming...',
+            likes:'e.g., Coffee, Cats, Travel...', strengths:'e.g., Detail-oriented, Leadership...',
+            weaknesses:'e.g., Time management, Presentations...',
+            motto:'e.g., Stay positive!', special:'e.g., Trilingual, Barista certified' },
+      vi: { personality:'VD: Vui vẻ, năng động', hobby:'VD: Nấu ăn, Leo núi...',
+            likes:'VD: Cà phê, Mèo, Du lịch...', strengths:'VD: Tỉ mỉ, Lãnh đạo...',
+            weaknesses:'VD: Quản lý thời gian...',
+            motto:'VD: Hôm nay cũng cố lên!', special:'VD: 3 ngôn ngữ, Chứng chỉ barista' }
+    };
+    const p = ph[lang] || ph.ko;
+    document.getElementById('personalityText').placeholder = p.personality;
+    document.getElementById('hobbyInput').placeholder = p.hobby;
+    document.getElementById('likeInput').placeholder = p.likes;
+    if (document.getElementById('strengthInput')) document.getElementById('strengthInput').placeholder = p.strengths;
+    if (document.getElementById('weaknessInput')) document.getElementById('weaknessInput').placeholder = p.weaknesses;
+    if (document.getElementById('mottoInput')) document.getElementById('mottoInput').placeholder = p.motto;
+    if (document.getElementById('specialAbilityInput')) document.getElementById('specialAbilityInput').placeholder = p.special;
+
+    // Modal buttons i18n
+    document.getElementById('btnCancel').textContent = t.cancel;
+    document.getElementById('btnConfirm').textContent = t.confirm;
+
+    // ===== 프로필 데이터 =====
+    let profile = {
+      avatar: '', avatarType: 'initial', intro: '', bio: '', mbti: '', personality: '',
+      hobbies: [], likes: [], motto: '', skills: '',
+      birthday: '', joinDate: '', phone: '',
+      stats: { comm: 5, focus: 5, team: 5, creative: 5, speed: 5, service: 5 },
+      strengths: [], weaknesses: [], workStyles: [], goal: '', specialAbility: '', themeColor: '#10B981',
+    };
+    let selectedAvatar = null;
+    let selectedAvatarType = null;
+
+    const EMOJI_AVATARS = [
+      '😊','😎','🤗','😄','🥰','😇','🤓','😁',
+      '🐱','🐶','🐰','🐼','🦊','🐸','🦁','🐧',
+      '🌸','🌻','🍀','⭐','🌈','🎵','🎨','🔥',
+    ];
+
+    // 이모지 아바타 렌더
+    function renderEmojiAvatars() {
+      const container = document.getElementById('emojiAvatars');
+      container.innerHTML = EMOJI_AVATARS.map(e => `
+        <div class="avatar-option" data-emoji="${e}" onclick="selectEmojiAvatar(this, '${e}')">${e}</div>
+      `).join('');
+    }
+    renderEmojiAvatars();
+
+    // ===== 아바타 모달 =====
+    function openAvatarModal() {
+      document.getElementById('avatarModal').classList.add('show');
+      // 현재 선택된 아바타 표시
+      if (profile.avatarType === 'emoji') {
+        document.querySelectorAll('.avatar-option').forEach(o => {
+          o.classList.toggle('selected', o.dataset.emoji === profile.avatar);
+        });
+      }
+    }
+    function closeAvatarModal() {
+      document.getElementById('avatarModal').classList.remove('show');
+    }
+
+    function selectEmojiAvatar(el, emoji) {
+      document.querySelectorAll('.avatar-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedAvatar = emoji;
+      selectedAvatarType = 'emoji';
+    }
+
+    function handleAvatarUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (file.size > 500 * 1024) {
+        showToast('파일이 너무 큽니다 (최대 500KB)');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        // Resize to 200x200
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 200; canvas.height = 200;
+          const ctx = canvas.getContext('2d');
+          const size = Math.min(img.width, img.height);
+          const sx = (img.width - size) / 2;
+          const sy = (img.height - size) / 2;
+          ctx.drawImage(img, sx, sy, size, size, 0, 0, 200, 200);
+          selectedAvatar = canvas.toDataURL('image/jpeg', 0.8);
+          selectedAvatarType = 'photo';
+          closeAvatarModal();
+          updateAvatarDisplay(selectedAvatar, 'photo');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function confirmAvatar() {
+      if (selectedAvatar && selectedAvatarType) {
+        profile.avatar = selectedAvatar;
+        profile.avatarType = selectedAvatarType;
+        updateAvatarDisplay(selectedAvatar, selectedAvatarType);
+      }
+      closeAvatarModal();
+    }
+
+    function updateAvatarDisplay(avatar, type) {
+      const el = document.getElementById('avatarDisplay');
+      if (type === 'photo') {
+        el.innerHTML = `<img src="${avatar}" alt="avatar">`;
+      } else if (type === 'emoji') {
+        el.innerHTML = `<span style="font-size:48px;">${avatar}</span>`;
+      } else {
+        el.textContent = (user.name || '?')[0];
+      }
+    }
+
+    // ===== 태그 입력 =====
+    let hobbies = [];
+    let likes = [];
+
+    function renderTags(containerId, arr, type) {
+      const container = document.getElementById(containerId);
+      const input = container.querySelector('input');
+      // 기존 태그 제거
+      container.querySelectorAll('.tag').forEach(t => t.remove());
+      arr.forEach((item, i) => {
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.innerHTML = `${item} <button onclick="removeTag('${type}', ${i})">&times;</button>`;
+        container.insertBefore(tag, input);
+      });
+    }
+
+    function removeTag(type, index) {
+      if (type === 'hobby') { hobbies.splice(index, 1); renderTags('hobbyArea', hobbies, 'hobby'); }
+      else if (type === 'like') { likes.splice(index, 1); renderTags('likeArea', likes, 'like'); }
+      else if (type === 'strength') { strengths.splice(index, 1); renderTags('strengthArea', strengths, 'strength'); }
+      else if (type === 'weakness') { weaknesses.splice(index, 1); renderTags('weaknessArea', weaknesses, 'weakness'); }
+    }
+
+    document.getElementById('hobbyInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const val = e.target.value.trim();
+        if (val && hobbies.length < 8) { hobbies.push(val); e.target.value = ''; renderTags('hobbyArea', hobbies, 'hobby'); }
+      }
+    });
+    document.getElementById('likeInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const val = e.target.value.trim();
+        if (val && likes.length < 8) { likes.push(val); e.target.value = ''; renderTags('likeArea', likes, 'like'); }
+      }
+    });
+
+    // ===== 장점/개선점 태그 =====
+    let strengths = [];
+    let weaknesses = [];
+
+    document.getElementById('strengthInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const val = e.target.value.trim();
+        if (val && strengths.length < 6) { strengths.push(val); e.target.value = ''; renderTags('strengthArea', strengths, 'strength'); }
+      }
+    });
+    document.getElementById('weaknessInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const val = e.target.value.trim();
+        if (val && weaknesses.length < 6) { weaknesses.push(val); e.target.value = ''; renderTags('weaknessArea', weaknesses, 'weakness'); }
+      }
+    });
+
+    // ===== 스탯 바 업데이트 =====
+    function updateStatBar(el) {
+      const id = el.id;
+      const val = el.value;
+      document.getElementById(id + 'Val').textContent = val;
+    }
+
+    // ===== 업무 스타일 토글 =====
+    let selectedWorkStyles = [];
+    function toggleWorkStyle(el) {
+      const style = el.dataset.style;
+      const idx = selectedWorkStyles.indexOf(style);
+      if (idx >= 0) {
+        selectedWorkStyles.splice(idx, 1);
+        el.classList.remove('selected');
+      } else {
+        selectedWorkStyles.push(style);
+        el.classList.add('selected');
+      }
+    }
+
+    // ===== 테마 색상 선택 =====
+    let selectedThemeColor = '#10B981';
+    function selectThemeColor(el) {
+      document.querySelectorAll('.theme-color-btn').forEach(b => b.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedThemeColor = el.dataset.color;
+      // 즉시 헤더에 반영
+      document.querySelector('.profile-header').style.background = `linear-gradient(135deg, ${selectedThemeColor} 0%, ${adjustColor(selectedThemeColor, -30)} 100%)`;
+    }
+    function adjustColor(hex, amount) {
+      const num = parseInt(hex.slice(1), 16);
+      const r = Math.min(255, Math.max(0, (num >> 16) + amount));
+      const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amount));
+      const b = Math.min(255, Math.max(0, (num & 0x0000FF) + amount));
+      return '#' + (0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1);
+    }
+
+    // 글자 수 카운터
+    document.getElementById('introText').addEventListener('input', (e) => {
+      document.getElementById('introCount').textContent = e.target.value.length;
+    });
+    document.getElementById('bioText').addEventListener('input', (e) => {
+      document.getElementById('bioCount').textContent = e.target.value.length;
+    });
+
+    // ===== 저장 =====
+    async function saveProfile() {
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.textContent = t.saving;
+
+      profile.intro = document.getElementById('introText').value.trim();
+      profile.bio = document.getElementById('bioText').value.trim();
+      profile.mbti = document.getElementById('mbtiSelect').value;
+      profile.personality = document.getElementById('personalityText').value.trim();
+      profile.hobbies = hobbies;
+      profile.likes = likes;
+      profile.motto = document.getElementById('mottoText').value.trim();
+      profile.skills = document.getElementById('skillsText').value.trim();
+      profile.birthday = document.getElementById('birthdayInput').value;
+      profile.joinDate = document.getElementById('joinDateInput').value;
+      profile.phone = document.getElementById('phoneText').value.trim();
+      profile.stats = {
+        comm: parseInt(document.getElementById('statComm').value),
+        focus: parseInt(document.getElementById('statFocus').value),
+        team: parseInt(document.getElementById('statTeam').value),
+        creative: parseInt(document.getElementById('statCreative').value),
+        speed: parseInt(document.getElementById('statSpeed').value),
+        service: parseInt(document.getElementById('statService').value),
+      };
+      profile.strengths = strengths;
+      profile.weaknesses = weaknesses;
+      profile.workStyles = selectedWorkStyles;
+      profile.goal = document.getElementById('goalText').value.trim();
+      profile.specialAbility = document.getElementById('specialText').value.trim();
+      profile.themeColor = selectedThemeColor;
+
+      // localStorage 저장
+      localStorage.setItem('sop_profile_' + user.email, JSON.stringify(profile));
+
+      // 아바타를 user 객체에도 저장 (다른 페이지에서 사용)
+      user.avatarData = profile.avatar;
+      user.avatarType = profile.avatarType;
+      localStorage.setItem('sop_user', JSON.stringify(user));
+
+      // Supabase 저장
+      if (SupabaseMode._ready && SupabaseMode._client) {
+        try {
+          await SupabaseMode._client.from('employee_profiles').upsert({
+            employee_id: user.id,
+            avatar: profile.avatarType === 'photo' ? profile.avatar : '',
+            avatar_type: profile.avatarType,
+            avatar_emoji: profile.avatarType === 'emoji' ? profile.avatar : '',
+            intro: profile.intro,
+            bio: profile.bio,
+            mbti: profile.mbti,
+            personality: profile.personality,
+            hobbies: profile.hobbies,
+            likes: profile.likes,
+            motto: profile.motto,
+            skills: profile.skills,
+            birthday: profile.birthday || null,
+            join_date: profile.joinDate || null,
+            phone: profile.phone,
+            stats: profile.stats,
+            strengths: profile.strengths,
+            weaknesses: profile.weaknesses,
+            work_styles: profile.workStyles,
+            goal: profile.goal,
+            special_ability: profile.specialAbility,
+            theme_color: profile.themeColor,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'employee_id' });
+        } catch (e) {
+          console.warn('[Profile] Supabase save error:', e);
+        }
+      }
+
+      btn.textContent = t.saved;
+      btn.classList.add('success');
+      showToast(t.toastSaved);
+
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = t.save;
+        btn.classList.remove('success');
+      }, 2000);
+    }
+
+    // ===== 로드 =====
+    async function loadProfile() {
+      // localStorage에서 먼저 로드
+      const saved = JSON.parse(localStorage.getItem('sop_profile_' + user.email) || 'null');
+      if (saved) {
+        profile = { ...profile, ...saved };
+      }
+
+      // Supabase에서 로드 (최신 데이터 우선)
+      if (SupabaseMode._ready && SupabaseMode._client) {
+        try {
+          const { data } = await SupabaseMode._client
+            .from('employee_profiles')
+            .select('*')
+            .eq('employee_id', user.id)
+            .single();
+          if (data) {
+            profile.intro = data.intro || '';
+            profile.bio = data.bio || '';
+            profile.mbti = data.mbti || '';
+            profile.personality = data.personality || '';
+            profile.hobbies = data.hobbies || [];
+            profile.likes = data.likes || [];
+            profile.motto = data.motto || '';
+            profile.skills = data.skills || '';
+            profile.avatarType = data.avatar_type || 'initial';
+            if (data.avatar_type === 'photo' && data.avatar) profile.avatar = data.avatar;
+            else if (data.avatar_type === 'emoji' && data.avatar_emoji) profile.avatar = data.avatar_emoji;
+            profile.birthday = data.birthday || '';
+            profile.joinDate = data.join_date || '';
+            profile.phone = data.phone || '';
+            profile.stats = data.stats || { comm: 5, focus: 5, team: 5, creative: 5, speed: 5, service: 5 };
+            profile.strengths = data.strengths || [];
+            profile.weaknesses = data.weaknesses || [];
+            profile.workStyles = data.work_styles || [];
+            profile.goal = data.goal || '';
+            profile.specialAbility = data.special_ability || '';
+            profile.themeColor = data.theme_color || '#10B981';
+            localStorage.setItem('sop_profile_' + user.email, JSON.stringify(profile));
+          }
+        } catch (e) { /* no profile yet */ }
+      }
+
+      // UI에 반영
+      document.getElementById('introText').value = profile.intro;
+      document.getElementById('introCount').textContent = profile.intro.length;
+      document.getElementById('bioText').value = profile.bio;
+      document.getElementById('bioCount').textContent = profile.bio.length;
+      document.getElementById('mbtiSelect').value = profile.mbti;
+      document.getElementById('personalityText').value = profile.personality;
+      document.getElementById('mottoText').value = profile.motto;
+      document.getElementById('skillsText').value = profile.skills;
+      hobbies = profile.hobbies || [];
+      likes = profile.likes || [];
+      renderTags('hobbyArea', hobbies, 'hobby');
+      renderTags('likeArea', likes, 'like');
+
+      // 새 필드 UI 반영
+      document.getElementById('birthdayInput').value = profile.birthday || '';
+      document.getElementById('joinDateInput').value = profile.joinDate || '';
+      document.getElementById('phoneText').value = profile.phone || '';
+      document.getElementById('goalText').value = profile.goal || '';
+      document.getElementById('specialText').value = profile.specialAbility || '';
+
+      // 스탯
+      const stats = profile.stats || {};
+      ['comm','focus','team','creative','speed','service'].forEach(s => {
+        const val = stats[s] || 5;
+        const el = document.getElementById('stat' + s.charAt(0).toUpperCase() + s.slice(1));
+        if (el) { el.value = val; document.getElementById(el.id + 'Val').textContent = val; }
+      });
+
+      // 장단점
+      strengths = profile.strengths || [];
+      weaknesses = profile.weaknesses || [];
+      renderTags('strengthArea', strengths, 'strength');
+      renderTags('weaknessArea', weaknesses, 'weakness');
+
+      // 업무 스타일
+      selectedWorkStyles = profile.workStyles || [];
+      document.querySelectorAll('.work-style-option').forEach(el => {
+        el.classList.toggle('selected', selectedWorkStyles.includes(el.dataset.style));
+      });
+
+      // 테마 색상
+      selectedThemeColor = profile.themeColor || '#10B981';
+      document.querySelectorAll('.theme-color-btn').forEach(b => {
+        b.classList.toggle('selected', b.dataset.color === selectedThemeColor);
+      });
+      document.querySelector('.profile-header').style.background = `linear-gradient(135deg, ${selectedThemeColor} 0%, ${adjustColor(selectedThemeColor, -30)} 100%)`;
+
+      // 아바타
+      updateAvatarDisplay(profile.avatar, profile.avatarType);
+
+      // 헤더 정보
+      const emp = typeof EmployeeStore !== 'undefined' ? EmployeeStore.getCurrentEmployee() : null;
+      document.getElementById('profileName').textContent = user.name || emp?.name || '-';
+      const branch = emp?.branch || user.branch || '';
+      const team = emp?.team || '';
+      document.getElementById('profileBranch').textContent = team ? `${branch} · ${team}` : branch;
+
+      // 티어 정보
+      if (SupabaseMode._ready) {
+        try {
+          const totalXp = await XpService.getTotal(user.id);
+          const tier = calculateTier(totalXp);
+          const titleKey = lang === 'en' ? 'titleEn' : lang === 'vi' ? 'titleVn' : 'titleKo';
+          document.getElementById('profileTier').innerHTML = `${tier.emoji} ${tier[titleKey]} · ${totalXp.toLocaleString()} XP`;
+        } catch (e) {}
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2600);
+    }
+
+    // ===== 초기화 =====
+    SupabaseMode.init().then(connected => {
+      if (connected) SupabaseMode.syncAll().then(() => loadProfile());
+      else loadProfile();
+    });
+  </script>
+</body>
+</html>
