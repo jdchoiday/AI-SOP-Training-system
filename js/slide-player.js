@@ -595,19 +595,22 @@ const SlidePlayer = (() => {
       <div style="position:relative; width:100%; flex:1; min-height:0; display:flex; flex-direction:column;">
         <div class="sp-scene-visual" id="spSceneVisual" style="flex:1; min-height:0;"></div>
       </div>
-      <!-- 자막 영역 (이미지 아래 고정 영역) -->
+      <!-- 자막 영역 (넓고 잘 보이게) -->
       <div id="spSubtitleArea" style="
-        width:100%; padding:12px 16px;
-        background:rgba(0,0,0,0.7); backdrop-filter:blur(8px);
-        border-radius:12px; margin-top:8px;
-        min-height:72px; max-height:120px;
+        width:100%; padding:16px 20px;
+        background:linear-gradient(180deg, rgba(15,23,42,0.85), rgba(15,23,42,0.95));
+        backdrop-filter:blur(12px);
+        border-radius:14px; margin-top:10px;
+        min-height:88px;
         display:flex; align-items:center; justify-content:center;
+        border:1px solid rgba(255,255,255,0.08);
+        box-shadow:0 4px 20px rgba(0,0,0,0.3);
       ">
         <div id="spSubtitleText" style="
-          color:#fff; line-height:1.7;
-          text-align:center; word-break:keep-all;
-          opacity:0; transition:opacity 0.4s ease;
-          padding:0 4px;
+          color:#F8FAFC; font-weight:500; letter-spacing:0.3px;
+          line-height:1.8; text-align:center; word-break:keep-all;
+          opacity:0; transition:opacity 0.4s ease, font-size 0.3s ease;
+          padding:4px 8px; max-width:100%;
         "></div>
       </div>
     `;
@@ -980,13 +983,12 @@ const SlidePlayer = (() => {
   // =========================================
   // Audio playback
   // =========================================
-  // ===== 자막 시스템 (읽기 좋은 크기로 자동 분할) =====
+  // ===== 자막 시스템 (읽기 좋은 크기 + 공간 활용) =====
   let _subtitleTimer = null;
-  const SUBTITLE_MAX_CHARS = 45; // 한 화면에 보여줄 최대 글자 수
+  const SUBTITLE_MAX_CHARS = 40; // 한 화면에 보여줄 최대 글자
 
-  // 나레이션을 읽기 좋은 청크로 분할
+  // 나레이션을 읽기 좋은 청크로 분할 (의미 단위)
   function _splitToChunks(text) {
-    // 1. 문장 단위 분리
     const sentences = text.match(/[^.!?。]+[.!?。]?\s*/g) || [text];
     const chunks = [];
 
@@ -997,8 +999,9 @@ const SlidePlayer = (() => {
       if (s.length <= SUBTITLE_MAX_CHARS) {
         chunks.push(s);
       } else {
-        // 긴 문장은 쉼표/접속사에서 분할
-        const parts = s.split(/(?<=,\s)|(?<=\s(?:그리고|하지만|또한|특히|즉|이것은|왜냐하면|결국|따라서|그래서|그런데)\s)/);
+        // 의미 단위로 분할: 쉼표, 접속사, 조사+쉼표 기준
+        const splitPoints = /(?<=,\s)|(?<=\s(?:그리고|하지만|또한|특히|즉|이것은|왜냐하면|결국|따라서|그래서|그런데|이때|여기서|실제로)\s)|(?<=다\.\s)|(?<=니다\.\s)/;
+        const parts = s.split(splitPoints);
         let current = '';
         parts.forEach(part => {
           if ((current + part).length <= SUBTITLE_MAX_CHARS) {
@@ -1015,13 +1018,22 @@ const SlidePlayer = (() => {
     return chunks.length > 0 ? chunks : [text.slice(0, SUBTITLE_MAX_CHARS)];
   }
 
-  // 글자 수에 따른 동적 폰트 크기
+  // 글자 수 + 화면 폭에 따른 동적 폰트 크기 (공간 잘 쓰기)
   function _subtitleFontSize(text) {
     const len = text.length;
-    if (len <= 15) return '18px';
-    if (len <= 25) return '16px';
-    if (len <= 35) return '15px';
-    return '14px';
+    const isMobile = window.innerWidth <= 600;
+    if (isMobile) {
+      if (len <= 12) return '17px';
+      if (len <= 20) return '16px';
+      if (len <= 30) return '15px';
+      return '14px';
+    }
+    // PC — 더 크게
+    if (len <= 10) return '22px';
+    if (len <= 18) return '20px';
+    if (len <= 28) return '18px';
+    if (len <= 38) return '16px';
+    return '15px';
   }
 
   function _startSubtitles(narrationText, durationSec) {

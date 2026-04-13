@@ -1,11 +1,14 @@
 // ============================================
-// Edge TTS API — AI Coach Voice
+// Edge TTS — Warm AI Coach Voice
 // ============================================
-// 따뜻한 코치가 교육하듯 읽는 TTS
-// - 핵심 키워드 강조 (억양 UP)
-// - 문장별 톤 오르내림 (단조로움 방지)
-// - 전략적 쉼 (긴장감 + 집중)
-// - 마무리는 차분하게 (정리 톤)
+// 따뜻한 코칭 AI가 교육하듯 읽는 TTS
+//
+// 핵심 전략:
+// 1. 전체 맥락 파악 후 핵심 키워드 추출
+// 2. 키워드 앞에 전략적 쉼(...)으로 강조
+// 3. 문장 톤 패턴: 올림→내림→올림 (파도 리듬)
+// 4. 도입부는 밝게, 중간은 리듬감, 마무리는 차분
+// 5. 접속사/전환어에서 긴장 조성
 // ============================================
 
 const { EdgeTTS } = require('node-edge-tts');
@@ -14,14 +17,12 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 
-// Neural 음성 (가장 자연스러운 음성)
 const VOICES = {
   'ko-KR': { female: 'ko-KR-SunHiNeural', male: 'ko-KR-InJoonNeural' },
   'en-US': { female: 'en-US-AriaNeural', male: 'en-US-GuyNeural' },
   'vi-VN': { female: 'vi-VN-HoaiMyNeural', male: 'vi-VN-NamMinhNeural' },
 };
 
-// 발음 사전
 const PRONUNCIATION_DICT = {
   'AION': '아이온', 'Aion': '아이온', 'aion': '아이온',
   'Kiwooza': '키우자', 'kiwooza': '키우자', 'KIWOOZA': '키우자',
@@ -32,21 +33,6 @@ const PRONUNCIATION_DICT = {
   'MOET': '모엣', 'Reggio': '레지오', 'Emilia': '에밀리아',
 };
 
-// 강조할 키워드 패턴 (코치가 힘줘서 읽는 단어들)
-const EMPHASIS_KEYWORDS = [
-  // 핵심/중요 표현
-  '핵심', '중요', '필수', '반드시', '꼭', '바로', '특히',
-  '가장', '최고', '최선', '근본', '본질', '기초', '기반',
-  // 교육 키워드
-  '원칙', '철학', '가치', '목표', '비전', '전문성', '역량',
-  '발달', '성장', '학습', '교육', '실천', '역할', '책임',
-  // 감정/동기 키워드
-  '함께', '우리', '여러분', '기억', '믿', '신뢰', '존중',
-  // 전환 강조
-  '첫째', '둘째', '셋째', '먼저', '다음', '마지막',
-];
-
-// 발음 사전 적용
 function applyPronunciation(text) {
   let result = text;
   const sortedKeys = Object.keys(PRONUNCIATION_DICT).sort((a, b) => b.length - a.length);
@@ -58,74 +44,144 @@ function applyPronunciation(text) {
   return result;
 }
 
-// 문장 내 키워드에 강조 마킹
-function markEmphasis(sentence) {
-  let result = sentence;
-  // 키워드 앞에 쉼 + 느리게 읽기 (강조 효과)
-  for (const kw of EMPHASIS_KEYWORDS) {
-    // 키워드가 포함된 단어 찾기 (예: "핵심" → "핵심적인", "핵심은")
-    const regex = new RegExp(`(${kw}[가-힣]{0,3})`, 'g');
-    if (regex.test(result)) {
-      result = result.replace(regex, `... $1`);
-      break; // 문장당 1개만 강조 (과하면 어색)
+// ===== 1단계: 전체 맥락에서 핵심 키워드 추출 =====
+// 나레이션 전체를 읽고, 이 씬에서 가장 중요한 2~3개 단어를 찾음
+function extractStoryKeywords(text) {
+  const keywords = new Set();
+
+  // (A) 명시적 강조 표현 뒤의 핵심어 추출
+  // "핵심은 X", "중요한 것은 X", "바로 X" 패턴
+  const emphasisPatterns = [
+    /(?:핵심은|핵심이|중요한 것은|중요한 점은)\s*([가-힣]+(?:\s[가-힣]+)?)/g,
+    /(?:바로|특히|무엇보다)\s+([가-힣]{2,8})/g,
+    /(?:이것이|이것은|이것이 바로)\s+([가-힣]+(?:\s[가-힣]+)?)/g,
+  ];
+  for (const p of emphasisPatterns) {
+    let m;
+    while ((m = p.exec(text)) !== null) {
+      if (m[1] && m[1].length >= 2) keywords.add(m[1].trim());
     }
   }
-  return result;
+
+  // (B) 반복 등장하는 명사 = 이 씬의 핵심 주제
+  const nouns = text.match(/[가-힣]{2,6}(?=은|는|이|가|을|를|의|에|로|와|과|도)/g) || [];
+  const freq = {};
+  nouns.forEach(n => {
+    if (n.length >= 2) freq[n] = (freq[n] || 0) + 1;
+  });
+  // 2번 이상 등장하는 단어 = 핵심 주제
+  Object.entries(freq)
+    .filter(([_, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .forEach(([word]) => keywords.add(word));
+
+  // (C) 대비/전환 뒤의 핵심어
+  const contrastMatch = text.match(/(?:하지만|그러나|반면|한편)\s+([가-힣]{2,10})/g);
+  if (contrastMatch) {
+    contrastMatch.forEach(m => {
+      const word = m.replace(/^(하지만|그러나|반면|한편)\s+/, '');
+      if (word.length >= 2) keywords.add(word);
+    });
+  }
+
+  // (D) 첫 문장의 주어 = 이 씬의 주제
+  const firstSentence = (text.match(/^[^.!?。]+/) || [''])[0];
+  const subjectMatch = firstSentence.match(/^([가-힣A-Za-z\s]{2,15}?)(?:은|는|이|가)\s/);
+  if (subjectMatch) keywords.add(subjectMatch[1].trim());
+
+  return [...keywords].slice(0, 5); // 최대 5개
 }
 
-// ===== 코칭 톤 텍스트 생성 =====
-// 문장별로 톤을 오르내리며, 키워드는 강조
+// ===== 2단계: 코칭 리듬으로 텍스트 재구성 =====
+// 파도 패턴: ↗ 올림 → ↘ 내림 → ↗ 올림 → ↘ 내림
 function buildCoachingText(text) {
   let processed = applyPronunciation(text);
 
   // 기호 정리
   processed = processed.replace(/\s*→\s*/g, ', ');
   processed = processed.replace(/\s*\/\s*/g, ', ');
-  processed = processed.replace(/\s*—\s*/g, '... ');
-  processed = processed.replace(/\[([^\]]+)\]/g, '$1,'); // [제목] → 제목,
+  processed = processed.replace(/\s*—\s*/g, '. ');
+  processed = processed.replace(/\[([^\]]+)\]/g, '$1.');
+
+  // 맥락에서 핵심 키워드 추출
+  const storyKeywords = extractStoryKeywords(processed);
+  console.log(`[Coach] 핵심 키워드: [${storyKeywords.join(', ')}]`);
 
   // 문장 분리
   const sentences = processed.match(/[^.!?。]+[.!?。]?\s*/g) || [processed];
   const total = sentences.length;
+
+  // 파도 톤 패턴 (올렸다 내렸다)
+  // UP = 밝고 에너지 있게 → DOWN = 차분하고 깊게
+  const tonePattern = ['UP', 'UP', 'DOWN', 'UP', 'DOWN', 'DOWN', 'UP', 'DOWN'];
 
   const parts = [];
   sentences.forEach((sent, i) => {
     let s = sent.trim();
     if (!s) return;
 
-    // 핵심 키워드 강조 (쉼 삽입)
-    s = markEmphasis(s);
+    const tone = tonePattern[i % tonePattern.length];
+    const isFirst = (i === 0);
+    const isLast = (i === total - 1);
 
-    // 접속사/전환어 앞에 자연스러운 쉼
-    s = s.replace(/(하지만|그러나|그런데|반면|한편)/g, '... $1');
-    s = s.replace(/(그리고|또한|게다가|뿐만 아니라)/g, ', $1');
-    s = s.replace(/(즉|다시 말해|결국|따라서|그래서)/g, '... $1');
+    // 핵심 키워드 앞에 전략적 쉼 삽입 (문장당 최대 1개)
+    let emphasized = false;
+    for (const kw of storyKeywords) {
+      if (s.includes(kw) && !emphasized) {
+        // 키워드 앞에 "..." 쉼 → TTS가 잠시 멈추고 강조해서 읽음
+        s = s.replace(kw, `... ${kw}`);
+        emphasized = true;
+      }
+    }
 
-    // 문장 끝에 쉼 추가 (문장 간 호흡)
-    if (i === 0) {
-      // 첫 문장: 도입부 — 살짝 천천히, 뒤에 긴 쉼
-      parts.push(s + '...');
-    } else if (i === total - 1) {
-      // 마지막 문장: 마무리 — 차분하게
-      parts.push('... ' + s);
-    } else if (i % 3 === 0) {
-      // 3문장마다: 큰 쉼 (리듬감)
-      parts.push(s + '...');
+    // 접속사 처리 — 대비/역접은 긴 쉼, 순접은 짧은 쉼
+    s = s.replace(/^(하지만|그러나|그런데|반면에?|그럼에도)/,   '... $1,');  // 역접 = 긴장
+    s = s.replace(/^(그리고|또한|게다가|뿐만 아니라)/,         ', $1');      // 순접 = 부드럽게
+    s = s.replace(/^(즉|다시 말해|결국|따라서|그래서|결론적으로)/, '... $1,'); // 정리 = 강조
+
+    // 문장 중간의 전환어
+    s = s.replace(/,\s*(하지만|그러나|반면)/g, '... $1,');
+    s = s.replace(/,\s*(특히|무엇보다|가장 중요한)/g, '... $1');
+
+    // === 문장 위치별 리듬 부여 ===
+    if (isFirst) {
+      // 도입부: 에너지 있게 시작, 뒤에 호흡
+      parts.push(s);
+      parts.push('...');
+    } else if (isLast) {
+      // 마무리: 쉼 후 차분하게
+      parts.push('...');
+      parts.push(s);
+    } else if (tone === 'DOWN' && s.length > 20) {
+      // DOWN 톤: 차분하게 읽되, 끝에 짧은 쉼
+      parts.push(s + ',');
+    } else if (tone === 'UP') {
+      // UP 톤: 에너지 있게, 끝에 약간의 쉼
+      parts.push(s);
     } else {
       parts.push(s);
     }
+
+    // 3~4문장마다 큰 호흡 (리듬 리셋)
+    if (!isFirst && !isLast && i % 3 === 2) {
+      parts.push('...');
+    }
   });
 
-  // 중복 쉼 정리
   let result = parts.join(' ');
+
+  // 정리: 과도한 쉼 제거
   result = result.replace(/\.{4,}/g, '...');
+  result = result.replace(/,\s*\.\.\./g, '...');
+  result = result.replace(/\.\.\.\s*\.\.\./g, '...');
   result = result.replace(/,\s*,/g, ',');
   result = result.replace(/\s{3,}/g, ' ');
 
   return result.trim();
 }
 
-// TTS 동시 요청 제한
+// TTS 큐
 let ttsQueue = Promise.resolve();
 function enqueueTTS(fn) {
   ttsQueue = ttsQueue.then(fn).catch(err => {
@@ -152,20 +208,20 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Text too long (max 3000 chars)' });
     }
 
-    // 음성 선택
     const langVoices = VOICES[lang] || VOICES['ko-KR'];
     const voiceName = langVoices[gender] || langVoices.female;
 
-    // 코칭 톤 설정: 약간 느리게, 톤 살짝 올려서 따뜻하게
+    // 코칭 톤: 살짝 느리게 + 따뜻한 피치
     let prosodyRate = rate || '-5%';
     if (prosodyRate === 'default' || prosodyRate === '+0%') prosodyRate = '-5%';
     let prosodyPitch = pitch || '+3Hz';
     if (prosodyPitch === 'default' || prosodyPitch === '+0Hz') prosodyPitch = '+3Hz';
 
-    // 코칭 톤으로 텍스트 변환 (키워드 강조 + 억양 쉼)
     const coachText = buildCoachingText(text);
 
-    console.log(`[TTS Coach] voice=${voiceName} rate=${prosodyRate} pitch=${prosodyPitch} chars=${coachText.length}`);
+    console.log(`[TTS Coach] voice=${voiceName} rate=${prosodyRate} pitch=${prosodyPitch}`);
+    console.log(`[TTS Coach] original: ${text.slice(0, 60)}...`);
+    console.log(`[TTS Coach] coached:  ${coachText.slice(0, 80)}...`);
 
     const tmpFile = path.join(os.tmpdir(), `tts_${crypto.randomBytes(8).toString('hex')}.mp3`);
 
@@ -183,9 +239,7 @@ module.exports = async (req, res) => {
     });
 
     const audioBuffer = fs.readFileSync(tmpFile);
-
-    // 임시 파일 정리
-    try { fs.unlinkSync(tmpFile); } catch (e) { /* ignore */ }
+    try { fs.unlinkSync(tmpFile); } catch (e) {}
 
     if (audioBuffer.length < 100) {
       return res.status(500).json({ error: 'TTS generated empty audio' });
