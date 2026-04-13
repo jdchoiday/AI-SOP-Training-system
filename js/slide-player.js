@@ -591,8 +591,26 @@ const SlidePlayer = (() => {
       <div class="sp-scene-badge" style="color:${accent.secondary};background:${accent.bg}">
         ${t().slideTitle(num, total)}
       </div>
-      <div class="sp-scene-visual" id="spSceneVisual"></div>
-      <div class="sp-narration-area" id="spNarrationArea">
+      <div style="position:relative; width:100%; flex:1; min-height:0; display:flex; flex-direction:column;">
+        <div class="sp-scene-visual" id="spSceneVisual" style="flex:1; min-height:0;"></div>
+        <!-- 하단 자막 오버레이 (이미지 위 하단 20%) -->
+        <div id="spSubtitleOverlay" style="
+          position:absolute; bottom:0; left:0; right:0;
+          min-height:18%; max-height:25%;
+          background:linear-gradient(transparent, rgba(0,0,0,0.85) 30%);
+          padding:28px 16px 14px;
+          display:flex; align-items:flex-end; justify-content:center;
+          pointer-events:none; z-index:5;
+        ">
+          <div id="spSubtitleText" style="
+            color:#fff; font-size:15px; line-height:1.6;
+            text-align:center; text-shadow:0 1px 4px rgba(0,0,0,0.8);
+            max-width:90%; word-break:keep-all;
+            opacity:0; transition:opacity 0.3s;
+          "></div>
+        </div>
+      </div>
+      <div class="sp-narration-area" id="spNarrationArea" style="display:none;">
         <div class="sp-narration-label" style="color:${accent.primary};background:#1e293b;">
           ${ICONS.volume} ${t().narration}
         </div>
@@ -608,6 +626,9 @@ const SlidePlayer = (() => {
       _currentImagePromise = _loadSceneImage(scene.visual, scene.narration);
       _preloadNextImage();
     }
+
+    // 자막 즉시 표시 (오디오 재생 전에도 읽을 수 있도록)
+    _startSubtitles(scene.narration, Math.max(scene.narration.length * 0.08, 5));
 
     // Re-trigger animation
     container.style.animation = 'none';
@@ -956,6 +977,46 @@ const SlidePlayer = (() => {
   // =========================================
   // Audio playback
   // =========================================
+  // ===== 자막 시스템 =====
+  let _subtitleTimer = null;
+  function _startSubtitles(narrationText, durationSec) {
+    _stopSubtitles();
+    const subtitleEl = document.getElementById('spSubtitleText');
+    if (!subtitleEl || !narrationText) return;
+
+    // 나레이션을 문장 단위로 분리
+    const sentences = narrationText.match(/[^.!?。]+[.!?。]?\s*/g) || [narrationText];
+    const totalChars = sentences.reduce((sum, s) => sum + s.length, 0);
+    const duration = (durationSec || Math.max(narrationText.length * 0.08, 5)) * 1000; // ms
+
+    let elapsed = 0;
+    let sentIdx = 0;
+
+    function showNext() {
+      if (sentIdx >= sentences.length) {
+        subtitleEl.style.opacity = '0';
+        return;
+      }
+      const sentence = sentences[sentIdx].trim();
+      if (!sentence) { sentIdx++; showNext(); return; }
+
+      subtitleEl.textContent = sentence;
+      subtitleEl.style.opacity = '1';
+
+      // 문장 길이에 비례한 표시 시간
+      const sentDuration = (sentence.length / totalChars) * duration;
+      sentIdx++;
+      _subtitleTimer = setTimeout(showNext, Math.max(sentDuration, 800));
+    }
+    showNext();
+  }
+
+  function _stopSubtitles() {
+    if (_subtitleTimer) { clearTimeout(_subtitleTimer); _subtitleTimer = null; }
+    const el = document.getElementById('spSubtitleText');
+    if (el) { el.style.opacity = '0'; el.textContent = ''; }
+  }
+
   function _playAudioFromUrl(url) {
     return new Promise((resolve, reject) => {
       if (destroyed) return reject(new Error('destroyed'));
@@ -977,8 +1038,15 @@ const SlidePlayer = (() => {
       rafId = requestAnimationFrame(updateProgress);
       currentAudio._rafId = rafId;
 
+      // 자막 시작: 오디오 재생과 동기화
+      currentAudio.onloadedmetadata = () => {
+        const scene = scenes[currentIndex];
+        if (scene) _startSubtitles(scene.narration, currentAudio.duration / currentAudio.playbackRate);
+      };
+
       currentAudio.onended = () => {
         currentAudio = null;
+        _stopSubtitles();
         const bar = document.getElementById('spAudioProgress');
         if (bar) bar.style.width = '100%';
         resolve();
@@ -1022,8 +1090,12 @@ const SlidePlayer = (() => {
       }
       utterance.voice = SlidePlayer._fixedVoices[lang];
 
-      utterance.onend = resolve;
-      utterance.onerror = () => resolve();
+      utterance.onend = () => { _stopSubtitles(); resolve(); };
+      utterance.onerror = () => { _stopSubtitles(); resolve(); };
+
+      // Web Speech용 자막 (대략적 시간 추정: 한국어 ~4.5자/초)
+      const estimatedSec = text.length / 4.5;
+      _startSubtitles(text, estimatedSec);
 
       window.speechSynthesis.speak(utterance);
     });
@@ -1041,6 +1113,7 @@ const SlidePlayer = (() => {
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
+    _stopSubtitles();
     // 프로그레스 바 리셋
     const bar = document.getElementById('spAudioProgress');
     if (bar) bar.style.width = '0%';

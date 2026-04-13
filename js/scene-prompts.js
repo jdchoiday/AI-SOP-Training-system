@@ -516,12 +516,14 @@ Analyze the narration above and create a structured educational infographic that
 
 Your goal is NOT to decorate. Your goal is to improve comprehension.
 
-=== LAYOUT (3-zone vertical structure) ===
-TOP ZONE (15%):
-- Short bold title summarizing the core learning point
+=== LAYOUT (2-zone structure — bottom is reserved for subtitles) ===
+The image occupies only the TOP 80% of the screen. The BOTTOM 20% is reserved by the app for narration subtitles — do NOT draw anything there. Leave it blank or use a plain dark strip.
+
+TOP ZONE:
+- Short bold title (1 line) summarizing the core learning point
 - Text in ${lang}, large and readable
 
-CENTER ZONE (65%):
+CENTER ZONE (main area):
 - Main educational diagram/infographic
 - Choose the best visual type for this content:
   * concept explanation → labeled diagram with icons and arrows
@@ -535,10 +537,8 @@ CENTER ZONE (65%):
 - Use diagrams, arrows, icons, labeled boxes, comparison blocks, charts
 - Make the concept understandable within 3 seconds
 
-BOTTOM ZONE (20%):
-- Exactly 3 keyword boxes in a horizontal row
-- Each keyword = 2-4 characters in ${lang}
-- Examples: ${langExamples}
+IMPORTANT: Do NOT write any percentage numbers (15%, 65%, 20%) on the image.
+Do NOT create a bottom keyword section. The bottom area is reserved for subtitle overlay by the app.
 
 === STYLE RULES (NON-NEGOTIABLE) ===
 - Clean flat 2D infographic, modern educational publishing style
@@ -555,9 +555,9 @@ BOTTOM ZONE (20%):
 - Use only short ${lang} keywords (2-6 characters each)
 - NO full sentences on screen
 - NO paragraph text
-- Maximum 3 keyword blocks at bottom
 - Labels on diagrams must be short and readable
-- The screen supports voice narration, not duplicate it
+- The screen supports voice narration — do NOT duplicate narration text in the image
+- NEVER write percentage numbers like "15%" or "65%" on the image
 
 === MUST AVOID ===
 - Decorative clutter or ornamental backgrounds
@@ -569,6 +569,7 @@ BOTTOM ZONE (20%):
 - Fantasy elements, vague symbolism
 - Realistic photo style
 - 16:9 landscape format (MUST be 9:16 portrait)
+- Percentage labels or zone markers on the image
 
 === EDUCATIONAL PRINCIPLE ===
 - A learner should understand the main point even with audio off
