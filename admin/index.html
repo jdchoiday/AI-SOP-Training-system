@@ -3892,25 +3892,32 @@ Output ONLY the prompt, nothing else.`;
             <div style="background:#10b981; height:100%; border-radius:8px; width:${(confirmed/total*100)}%; transition:width 0.3s;"></div>
           </div>
 
-          <!-- 이미지 + 하단 자막 -->
-          <div style="position:relative; background:#1E293B; border-radius:12px; overflow:hidden; margin-bottom:16px; min-height:300px; border:3px solid ${scene.imageConfirmed ? '#10b981' : scene.imageUrl ? '#f59e0b' : '#d1d5db'};">
+          <!-- 이미지 -->
+          <div style="background:#1E293B; border-radius:12px; overflow:hidden; margin-bottom:0; min-height:300px; border:3px solid ${scene.imageConfirmed ? '#10b981' : scene.imageUrl ? '#f59e0b' : '#d1d5db'};">
             ${scene.imageUrl
-              ? `<img src="${scene.imageUrl}" style="width:100%;height:auto;max-height:60vh;object-fit:contain;display:block;" alt="씬${scene.scene}">`
+              ? `<img src="${scene.imageUrl}" style="width:100%;height:auto;max-height:55vh;object-fit:contain;display:block;margin:0 auto;" alt="씬${scene.scene}">`
               : `<div style="text-align:center;padding:60px;"><span style="font-size:64px;">🎨</span><div style="color:#94a3b8;font-size:16px;margin-top:12px;">이미지 없음</div></div>`
             }
-            <!-- 자막 오버레이 (이미지 하단) -->
-            <div style="position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent, rgba(0,0,0,0.85) 30%); padding:32px 20px 16px;">
-              <p style="color:#fff; font-size:14px; line-height:1.7; text-align:center; text-shadow:0 1px 4px rgba(0,0,0,0.9); margin:0; word-break:keep-all;">
-                ${scene.narration.length > 120 ? scene.narration.slice(0, 120) + '...' : scene.narration}
-              </p>
-            </div>
           </div>
 
-          <!-- 전체 나레이션 텍스트 (접이식) -->
+          <!-- 자막 영역 (이미지 아래 — 실제 학생이 보는 것과 동일) -->
+          <div style="background:rgba(0,0,0,0.7); backdrop-filter:blur(8px); border-radius:0 0 12px 12px; padding:14px 20px; margin-bottom:12px; min-height:60px; display:flex; align-items:center; justify-content:center;">
+            <p style="color:#fff; font-size:${scene.narration.length > 80 ? '14' : scene.narration.length > 40 ? '15' : '17'}px; line-height:1.7; text-align:center; margin:0; word-break:keep-all; max-width:95%;">
+              ${(() => {
+                const n = scene.narration;
+                if (n.length <= 50) return n;
+                // 첫 문장만 표시
+                const first = (n.match(/^[^.!?。]+[.!?。]?/) || [n.slice(0, 50)])[0].trim();
+                return first.length > 80 ? first.slice(0, 80) + '...' : first;
+              })()}
+            </p>
+          </div>
+
+          <!-- 전체 나레이션 (접이식) -->
           <details style="margin-bottom:12px;">
-            <summary style="font-size:12px; color:#94a3b8; cursor:pointer; padding:8px 0; font-weight:600;">📝 전체 나레이션 보기</summary>
+            <summary style="font-size:12px; color:#94a3b8; cursor:pointer; padding:6px 0; font-weight:600;">📝 전체 나레이션 보기 (${scene.narration.length}자)</summary>
             <div style="background:rgba(30,41,59,0.9); border-radius:10px; padding:16px; margin-top:4px; border:1px solid rgba(148,163,184,0.2);">
-              <div style="font-size:15px; line-height:1.7; color:#e2e8f0;">${scene.narration}</div>
+              <div style="font-size:14px; line-height:1.8; color:#e2e8f0;">${scene.narration}</div>
             </div>
           </details>
 

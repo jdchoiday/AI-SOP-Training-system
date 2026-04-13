@@ -594,28 +594,21 @@ const SlidePlayer = (() => {
       </div>
       <div style="position:relative; width:100%; flex:1; min-height:0; display:flex; flex-direction:column;">
         <div class="sp-scene-visual" id="spSceneVisual" style="flex:1; min-height:0;"></div>
-        <!-- 하단 자막 오버레이 (이미지 위 하단 20%) -->
-        <div id="spSubtitleOverlay" style="
-          position:absolute; bottom:0; left:0; right:0;
-          min-height:18%; max-height:25%;
-          background:linear-gradient(transparent, rgba(0,0,0,0.85) 30%);
-          padding:28px 16px 14px;
-          display:flex; align-items:flex-end; justify-content:center;
-          pointer-events:none; z-index:5;
-        ">
-          <div id="spSubtitleText" style="
-            color:#fff; font-size:15px; line-height:1.6;
-            text-align:center; text-shadow:0 1px 4px rgba(0,0,0,0.8);
-            max-width:90%; word-break:keep-all;
-            opacity:0; transition:opacity 0.3s;
-          "></div>
-        </div>
       </div>
-      <div class="sp-narration-area" id="spNarrationArea" style="display:none;">
-        <div class="sp-narration-label" style="color:${accent.primary};background:#1e293b;">
-          ${ICONS.volume} ${t().narration}
-        </div>
-        <div class="sp-narration-text" id="spNarrationText">${narrationText}</div>
+      <!-- 자막 영역 (이미지 아래 고정 영역) -->
+      <div id="spSubtitleArea" style="
+        width:100%; padding:12px 16px;
+        background:rgba(0,0,0,0.7); backdrop-filter:blur(8px);
+        border-radius:12px; margin-top:8px;
+        min-height:72px; max-height:120px;
+        display:flex; align-items:center; justify-content:center;
+      ">
+        <div id="spSubtitleText" style="
+          color:#fff; line-height:1.7;
+          text-align:center; word-break:keep-all;
+          opacity:0; transition:opacity 0.4s ease;
+          padding:0 4px;
+        "></div>
       </div>
     `;
 
@@ -628,15 +621,17 @@ const SlidePlayer = (() => {
       _preloadNextImage();
     }
 
-    // 자막 즉시 표시 — 첫 문장을 바로 보여주고, 이후 문장단위 자동 전환
+    // 자막 즉시 표시 — 첫 청크를 바로 보여주고, 이후 자동 전환
     const subtitleEl = document.getElementById('spSubtitleText');
     if (subtitleEl && scene.narration) {
-      const firstSentence = (scene.narration.match(/^[^.!?。]+[.!?。]?/) || [scene.narration.slice(0, 80)])[0].trim();
-      subtitleEl.textContent = firstSentence;
+      const chunks = _splitToChunks(scene.narration);
+      const firstChunk = chunks[0] || scene.narration.slice(0, SUBTITLE_MAX_CHARS);
+      subtitleEl.textContent = firstChunk;
+      subtitleEl.style.fontSize = _subtitleFontSize(firstChunk);
       subtitleEl.style.opacity = '1';
     }
-    // 문장 단위 자동 전환 시작 (오디오 재생 시 동기화로 대체됨)
-    _startSubtitles(scene.narration, Math.max(scene.narration.length * 0.08, 8));
+    // 청크 단위 자동 전환 (오디오 재생 시 동기화로 대체됨)
+    _startSubtitles(scene.narration, Math.max(scene.narration.length * 0.09, 8));
 
     // Re-trigger animation
     container.style.animation = 'none';
@@ -985,36 +980,80 @@ const SlidePlayer = (() => {
   // =========================================
   // Audio playback
   // =========================================
-  // ===== 자막 시스템 =====
+  // ===== 자막 시스템 (읽기 좋은 크기로 자동 분할) =====
   let _subtitleTimer = null;
+  const SUBTITLE_MAX_CHARS = 45; // 한 화면에 보여줄 최대 글자 수
+
+  // 나레이션을 읽기 좋은 청크로 분할
+  function _splitToChunks(text) {
+    // 1. 문장 단위 분리
+    const sentences = text.match(/[^.!?。]+[.!?。]?\s*/g) || [text];
+    const chunks = [];
+
+    sentences.forEach(sent => {
+      const s = sent.trim();
+      if (!s) return;
+
+      if (s.length <= SUBTITLE_MAX_CHARS) {
+        chunks.push(s);
+      } else {
+        // 긴 문장은 쉼표/접속사에서 분할
+        const parts = s.split(/(?<=,\s)|(?<=\s(?:그리고|하지만|또한|특히|즉|이것은|왜냐하면|결국|따라서|그래서|그런데)\s)/);
+        let current = '';
+        parts.forEach(part => {
+          if ((current + part).length <= SUBTITLE_MAX_CHARS) {
+            current += part;
+          } else {
+            if (current.trim()) chunks.push(current.trim());
+            current = part;
+          }
+        });
+        if (current.trim()) chunks.push(current.trim());
+      }
+    });
+
+    return chunks.length > 0 ? chunks : [text.slice(0, SUBTITLE_MAX_CHARS)];
+  }
+
+  // 글자 수에 따른 동적 폰트 크기
+  function _subtitleFontSize(text) {
+    const len = text.length;
+    if (len <= 15) return '18px';
+    if (len <= 25) return '16px';
+    if (len <= 35) return '15px';
+    return '14px';
+  }
+
   function _startSubtitles(narrationText, durationSec) {
     _stopSubtitles();
     const subtitleEl = document.getElementById('spSubtitleText');
     if (!subtitleEl || !narrationText) return;
 
-    // 나레이션을 문장 단위로 분리
-    const sentences = narrationText.match(/[^.!?。]+[.!?。]?\s*/g) || [narrationText];
-    const totalChars = sentences.reduce((sum, s) => sum + s.length, 0);
-    const duration = (durationSec || Math.max(narrationText.length * 0.08, 5)) * 1000; // ms
+    const chunks = _splitToChunks(narrationText);
+    const totalChars = chunks.reduce((sum, c) => sum + c.length, 0);
+    const duration = (durationSec || Math.max(narrationText.length * 0.08, 5)) * 1000;
 
-    let elapsed = 0;
-    let sentIdx = 0;
+    let chunkIdx = 0;
 
     function showNext() {
-      if (sentIdx >= sentences.length) {
-        subtitleEl.style.opacity = '0';
+      if (chunkIdx >= chunks.length) {
+        // 마지막 청크는 유지 (사라지지 않음)
         return;
       }
-      const sentence = sentences[sentIdx].trim();
-      if (!sentence) { sentIdx++; showNext(); return; }
+      const chunk = chunks[chunkIdx];
+      const fontSize = _subtitleFontSize(chunk);
 
-      subtitleEl.textContent = sentence;
-      subtitleEl.style.opacity = '1';
+      // 페이드 전환 효과
+      subtitleEl.style.opacity = '0';
+      setTimeout(() => {
+        subtitleEl.textContent = chunk;
+        subtitleEl.style.fontSize = fontSize;
+        subtitleEl.style.opacity = '1';
+      }, 150);
 
-      // 문장 길이에 비례한 표시 시간
-      const sentDuration = (sentence.length / totalChars) * duration;
-      sentIdx++;
-      _subtitleTimer = setTimeout(showNext, Math.max(sentDuration, 800));
+      const chunkDuration = (chunk.length / totalChars) * duration;
+      chunkIdx++;
+      _subtitleTimer = setTimeout(showNext, Math.max(chunkDuration, 1200));
     }
     showNext();
   }
@@ -1022,7 +1061,7 @@ const SlidePlayer = (() => {
   function _stopSubtitles() {
     if (_subtitleTimer) { clearTimeout(_subtitleTimer); _subtitleTimer = null; }
     const el = document.getElementById('spSubtitleText');
-    if (el) { el.style.opacity = '0'; el.textContent = ''; }
+    if (el) { el.style.opacity = '0'; }
   }
 
   function _playAudioFromUrl(url) {

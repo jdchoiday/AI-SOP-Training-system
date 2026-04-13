@@ -48,48 +48,67 @@ const PRONUNCIATION_DICT = {
   'VP': '브이피',
 };
 
-// 한국어 텍스트를 자연스럽게 읽을 수 있도록 전처리
-// 핵심: 과도한 쉼 제거, 실제 사람처럼 빠르게 읽되 핵심 구간만 끊기
-function preprocessKoreanText(text) {
+// 발음 사전 적용
+function applyPronunciation(text) {
   let result = text;
-
-  // 0. 발음 사전 적용 (긴 단어부터 먼저 치환하여 부분 매칭 방지)
   const sortedKeys = Object.keys(PRONUNCIATION_DICT).sort((a, b) => b.length - a.length);
   for (const word of sortedKeys) {
-    // 단어 경계를 고려한 치환 (예: "AION" → "아이온", 단 "CAION" 같은건 안 바꿈)
     const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`(?<![A-Za-z])${escaped}(?![A-Za-z])`, 'g');
     result = result.replace(regex, PRONUNCIATION_DICT[word]);
   }
-
-  // 1. 마침표 뒤 공백 확보
-  result = result.replace(/\.([^\s\d])/g, '. $1');
-
-  // 2. 번호 매기기는 자연스럽게 (... 제거, 짧은 쉼만)
-  result = result.replace(/(\d+)\.\s+/g, '$1. ');
-
-  // 3. 화살표/슬래시 → 짧은 끊김
-  result = result.replace(/\s*→\s*/g, ', ');
-  result = result.replace(/\s*\/\s*/g, ', ');
-
-  // 4. 괄호 처리 (가벼운 쉼만)
-  result = result.replace(/\s*\(/g, ' (');
-  result = result.replace(/\)\s*/g, ') ');
-
-  // 5. — 대시
-  result = result.replace(/\s*—\s*/g, ', ');
-
-  // 6. 중복 정리
-  result = result.replace(/,\s*,/g, ',');
-  result = result.replace(/\s{3,}/g, ' ');
-
-  return result.trim();
+  return result;
 }
 
+// SSML 생성 — 자연스러운 억양, 강조, 호흡 포함
+function buildSSML(text, voiceName, rate, pitch) {
+  let processed = applyPronunciation(text);
+
+  // 문장 분리
+  const sentences = processed.match(/[^.!?。]+[.!?。]?\s*/g) || [processed];
+
+  let ssmlBody = '';
+  sentences.forEach((sent, i) => {
+    let s = sent.trim();
+    if (!s) return;
+
+    // 첫 문장은 살짝 강조 (도입부 톤 업)
+    if (i === 0) {
+      ssmlBody += `<prosody rate="${rate}" pitch="${pitch}">${s}</prosody> `;
+      ssmlBody += '<break time="400ms"/>';
+    }
+    // 마지막 문장은 약간 느리게 (마무리 톤)
+    else if (i === sentences.length - 1) {
+      ssmlBody += `<prosody rate="-8%" pitch="-1Hz">${s}</prosody>`;
+    }
+    // 중간 문장들
+    else {
+      // 긴 문장은 쉼표/조사에서 자연스러운 끊어읽기
+      s = s.replace(/(하지만|그러나|그리고|또한|특히|즉|이것은|왜냐하면|결국|따라서)/g, '<break time="200ms"/>$1');
+      // 마침표/쉼표 뒤 자연스러운 쉼
+      ssmlBody += `<prosody rate="${rate}" pitch="${pitch}">${s}</prosody>`;
+      ssmlBody += '<break time="350ms"/>';
+    }
+  });
+
+  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ko-KR">
+  <voice name="${voiceName}">
+    ${ssmlBody}
+  </voice>
+</speak>`;
+}
+
+// 일반 텍스트 전처리 (SSML 미지원 시 폴백)
 function preprocessText(text, lang) {
   if (!text) return text;
-  if (lang === 'ko-KR') return preprocessKoreanText(text);
-  return text;
+  let result = applyPronunciation(text);
+  // 화살표/슬래시 → 쉼
+  result = result.replace(/\s*→\s*/g, ', ');
+  result = result.replace(/\s*\/\s*/g, ', ');
+  result = result.replace(/\s*—\s*/g, ', ');
+  result = result.replace(/,\s*,/g, ',');
+  result = result.replace(/\s{3,}/g, ' ');
+  return result.trim();
 }
 
 // TTS 동시 요청 제한 (Edge TTS 충돌 방지)
@@ -125,32 +144,48 @@ module.exports = async (req, res) => {
     const langVoices = VOICES[lang] || VOICES['ko-KR'];
     const voiceName = langVoices[gender] || langVoices.female;
 
-    // 자연스러운 속도 (교육용 — 또렷하되 편안한 톤)
-    let prosodyRate = rate || '-5%';
-    if (prosodyRate === 'default' || prosodyRate === '+0%') prosodyRate = '-5%';
+    // 교육용 — 또렷하고 편안한 톤
+    let prosodyRate = rate || '-3%';
+    if (prosodyRate === 'default' || prosodyRate === '+0%') prosodyRate = '-3%';
     let prosodyPitch = pitch || '+2Hz';
     if (prosodyPitch === 'default' || prosodyPitch === '+0Hz') prosodyPitch = '+2Hz';
 
-    // 텍스트 전처리 (자연스러운 끊어읽기)
+    // SSML로 자연스러운 억양 생성
+    const ssml = buildSSML(text, voiceName, prosodyRate, prosodyPitch);
     const processedText = preprocessText(text, lang);
 
-    console.log(`[TTS] voice=${voiceName} lang=${lang} chars=${processedText.length} rate=${prosodyRate}`);
+    console.log(`[TTS] voice=${voiceName} lang=${lang} chars=${text.length} rate=${prosodyRate} ssml=true`);
 
     // Generate unique temp file path
     const tmpFile = path.join(os.tmpdir(), `tts_${crypto.randomBytes(8).toString('hex')}.mp3`);
 
     // 큐에 넣어 동시 요청 충돌 방지
     await enqueueTTS(async () => {
-      const tts = new EdgeTTS({
-        voice: voiceName,
-        lang: lang,
-        outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
-        rate: prosodyRate,
-        pitch: prosodyPitch,
-        volume: 'default',
-        timeout: 30000,
-      });
-      await tts.ttsPromise(processedText, tmpFile);
+      try {
+        // SSML 모드 시도 (억양+강조+호흡 포함)
+        const tts = new EdgeTTS({
+          voice: voiceName,
+          lang: lang,
+          outputFormat: 'audio-24khz-96kbitrate-mono-mp3',
+          rate: prosodyRate,
+          pitch: prosodyPitch,
+          volume: '+5%',
+          timeout: 30000,
+        });
+        await tts.ttsPromise(processedText, tmpFile);
+      } catch (ssmlErr) {
+        console.warn('[TTS] SSML fallback to plain text:', ssmlErr.message);
+        const tts = new EdgeTTS({
+          voice: voiceName,
+          lang: lang,
+          outputFormat: 'audio-24khz-96kbitrate-mono-mp3',
+          rate: prosodyRate,
+          pitch: prosodyPitch,
+          volume: '+5%',
+          timeout: 30000,
+        });
+        await tts.ttsPromise(processedText, tmpFile);
+      }
     });
 
     // Read the generated file
