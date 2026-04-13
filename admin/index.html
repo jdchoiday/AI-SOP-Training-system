@@ -1944,9 +1944,12 @@
         const chNumMatch = ch.title.match(/(\d+)/);
         const chNum = chNumMatch ? parseInt(chNumMatch[1]) : '';
 
-        // 챕터 표시명: 짧은 제목이면 섹션들에서 의미있는 이름 생성
+        // 챕터 표시명: 제목이 코드명이면 섹션들에서 주제 요약 자동 생성
         let chDisplayTitle = ch.title;
-        const isGenericTitle = /^(Ch\d+|새 챕터|chapter\s*\d+)$/i.test(ch.title.trim());
+        const isGenericTitle = /^(Ch\s*\d+|챕터\s*\d+|새\s*챕터|chapter\s*\d+)$/i.test(ch.title.trim());
+        // 섹션 주제 미리보기 (항상 표시)
+        const topicPreview = childSections.slice(0, 4).map((s, i) => `${i + 1}. ${s.title}`).join('  ');
+        const topicExtra = childSections.length > 4 ? ` 외 ${childSections.length - 4}개` : '';
         if (isGenericTitle && childSections.length > 0) {
           chDisplayTitle = `챕터 ${chNum || '?'}: ${childSections[0].title}${childSections.length > 1 ? ' 외 ' + (childSections.length - 1) + '편' : ''}`;
         }
@@ -1968,6 +1971,10 @@
               </div>
               <span style="color:#f59e0b; font-size:22px;">›</span>
             </div>
+            <!-- 섹션 주제 미리보기 -->
+            ${childSections.length > 0 ? `<div style="background:rgba(245,158,11,0.08); border-radius:8px; padding:10px 14px; margin-bottom:10px;">
+              <p style="font-size:12px; color:#CBD5E1; margin:0; line-height:1.7;">${topicPreview}${topicExtra}</p>
+            </div>` : ''}
             <!-- 진행률 바 -->
             <div style="background:#1E293B; border-radius:6px; height:6px; overflow:hidden; margin-bottom:10px;">
               <div style="width:${progress}%; height:100%; background:${progressColor}; border-radius:6px; transition:width .3s;"></div>
