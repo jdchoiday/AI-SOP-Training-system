@@ -3279,8 +3279,8 @@ Output ONLY the prompt, nothing else.`;
           </div>
 
           ${confirmed === sop.script.length
-            ? `<div style="background:#ecfdf5;padding:12px;border-radius:8px;margin-bottom:16px;color:#059669;font-weight:600;text-align:center;">🎉 모든 씬 이미지가 확정되었습니다!</div>`
-            : `<div style="background:#fffbeb;padding:12px;border-radius:8px;margin-bottom:16px;color:#d97706;font-size:13px;text-align:center;">미확정 이미지는 노란 테두리로 표시됩니다. 각 이미지를 확인 후 확정해주세요.</div>`
+            ? `<div style="background:rgba(16,185,129,0.15);padding:12px;border-radius:8px;margin-bottom:16px;color:#10b981;font-weight:600;text-align:center;border:1px solid rgba(16,185,129,0.3);">🎉 모든 씬 이미지가 확정되었습니다!</div>`
+            : `<div style="background:rgba(245,158,11,0.15);padding:12px;border-radius:8px;margin-bottom:16px;color:#fbbf24;font-size:13px;text-align:center;border:1px solid rgba(245,158,11,0.3);">미확정 이미지는 노란 테두리로 표시됩니다. 각 이미지를 확인 후 확정해주세요.</div>`
           }
 
           <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:20px;">
@@ -3294,7 +3294,7 @@ Output ONLY the prompt, nothing else.`;
                 </div>
                 <div style="padding:16px;">
                   <div style="font-size:16px;color:#F1F5F9;font-weight:700;margin-bottom:6px;">씬 ${s.scene}</div>
-                  <div style="font-size:14px;color:#6b7280;line-height:1.5;max-height:60px;overflow:hidden;">${s.narration.slice(0, 80)}${s.narration.length > 80 ? '...' : ''}</div>
+                  <div style="font-size:14px;color:#94a3b8;line-height:1.5;max-height:60px;overflow:hidden;">${s.narration.slice(0, 80)}${s.narration.length > 80 ? '...' : ''}</div>
                   <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
                     ${s.imageConfirmed
                       ? `<span style="font-size:16px;color:#10b981;font-weight:700;padding:8px 0;">✅ 확정됨</span>
@@ -3424,9 +3424,9 @@ Output ONLY the prompt, nothing else.`;
           </div>
 
           <!-- 나레이션 텍스트 -->
-          <div style="background:#f8fafc; border-radius:10px; padding:16px; margin-bottom:12px; border:1px solid #e2e8f0;">
-            <div style="font-size:12px; color:#9ca3af; margin-bottom:4px; font-weight:600;">나레이션</div>
-            <div style="font-size:15px; line-height:1.7; color:#F1F5F9;">${scene.narration}</div>
+          <div style="background:rgba(30,41,59,0.9); border-radius:10px; padding:16px; margin-bottom:12px; border:1px solid rgba(148,163,184,0.2);">
+            <div style="font-size:12px; color:#94a3b8; margin-bottom:4px; font-weight:600;">나레이션</div>
+            <div style="font-size:15px; line-height:1.7; color:#e2e8f0;">${scene.narration}</div>
           </div>
 
           <!-- 이미지 프롬프트 -->
@@ -3584,19 +3584,19 @@ Output ONLY the prompt, nothing else.`;
           <h3 style="margin-bottom:16px;">🎨 씬 ${scene.scene} 이미지 관리</h3>
 
           <!-- 나레이션 -->
-          <div style="background:#f8fafc; padding:12px; border-radius:8px; margin-bottom:12px; font-size:13px; color:var(--gray-600); line-height:1.6; max-height:80px; overflow-y:auto;">
-            <strong style="color:#F1F5F9;">나레이션:</strong> ${scene.narration.slice(0, 200)}${scene.narration.length > 200 ? '...' : ''}
+          <div style="background:rgba(30,41,59,0.9); padding:12px; border-radius:8px; margin-bottom:12px; font-size:13px; color:#94a3b8; line-height:1.6; max-height:80px; overflow-y:auto; border:1px solid rgba(148,163,184,0.2);">
+            <strong style="color:#e2e8f0;">나레이션:</strong> ${scene.narration.slice(0, 200)}${scene.narration.length > 200 ? '...' : ''}
           </div>
 
           <!-- 🔑 이미지 프롬프트 편집 -->
           <div style="margin-bottom:16px;">
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#4338ca;margin-bottom:6px;">
-              🔑 AI 이미지 프롬프트 <span style="font-weight:400;color:#9ca3af;">(영어로 수정하면 원하는 이미지를 얻을 수 있습니다)</span>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#818cf8;margin-bottom:6px;">
+              🔑 AI 이미지 프롬프트 <span style="font-weight:400;color:#94a3b8;">(영어로 수정하면 원하는 이미지를 얻을 수 있습니다)</span>
             </label>
-            <textarea id="imgPromptEdit" rows="3" style="width:100%;border:2px solid #c7d2fe;border-radius:8px;padding:10px;font-size:13px;line-height:1.5;resize:vertical;font-family:inherit;background:rgba(99,102,241,0.1);color:#a78bfa;">${scene.visual || ''}</textarea>
+            <textarea id="imgPromptEdit" rows="3" style="width:100%;border:2px solid rgba(99,102,241,0.4);border-radius:8px;padding:10px;font-size:13px;line-height:1.5;resize:vertical;font-family:inherit;background:rgba(99,102,241,0.1);color:#c4b5fd;">${scene.visual || ''}</textarea>
             <div style="display:flex;gap:6px;margin-top:6px;">
               <button onclick="_saveVisualPrompt(${sceneIdx})" style="padding:6px 14px;background:#4338ca;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">💾 프롬프트 저장</button>
-              <button onclick="_autoGeneratePrompt(${sceneIdx})" style="padding:6px 14px;background:#e0e7ff;color:#4338ca;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">🤖 AI로 프롬프트 재생성</button>
+              <button onclick="_autoGeneratePrompt(${sceneIdx})" style="padding:6px 14px;background:rgba(99,102,241,0.2);color:#818cf8;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">🤖 AI로 프롬프트 재생성</button>
             </div>
           </div>
 
@@ -4172,14 +4172,14 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
             <button style="padding:12px 20px; font-size:15px; font-weight:700; background:linear-gradient(135deg,#f59e0b,#ef4444); color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_generateAllImages()">🎨 이미지 일괄 생성</button>
             <button style="padding:12px 20px; font-size:15px; font-weight:700; background:#10b981; color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_openImageReview()">🖼️ 이미지 리뷰</button>
           </div>
-          <div style="display:flex; gap:12px; margin-bottom:12px; padding:10px 16px; background:#f8fafc; border-radius:8px; font-size:14px; color:var(--gray-600);">
-            ✅ 확정: <strong>${sop.script.filter(x => x.imageConfirmed).length}</strong> / ${sop.script.length}
+          <div style="display:flex; gap:12px; margin-bottom:12px; padding:10px 16px; background:rgba(30,41,59,0.8); border-radius:8px; font-size:14px; color:#94a3b8; border:1px solid rgba(148,163,184,0.15);">
+            ✅ 확정: <strong style="color:#10b981;">${sop.script.filter(x => x.imageConfirmed).length}</strong> / ${sop.script.length}
             &nbsp;&nbsp;|&nbsp;&nbsp;
-            🖼️ 생성됨: <strong>${sop.script.filter(x => x.imageUrl).length}</strong> / ${sop.script.length}
+            🖼️ 생성됨: <strong style="color:#f59e0b;">${sop.script.filter(x => x.imageUrl).length}</strong> / ${sop.script.length}
           </div>
           <div class="ai-result-body" id="scriptEditor">
             ${sop.script.map((s, i) => `
-              <div class="script-scene" style="position:relative; padding:14px; margin-bottom:10px; border:1px solid #e2e8f0; border-radius:12px; background:#1E293B;" data-index="${i}">
+              <div class="script-scene" style="position:relative; padding:14px; margin-bottom:10px; border:1px solid rgba(148,163,184,0.2); border-radius:12px; background:#1E293B;" data-index="${i}">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                   <div style="font-size:16px; font-weight:700; color:#F1F5F9;">씬 ${s.scene}</div>
                   <div style="display:flex; gap:6px; align-items:center;">
@@ -4203,8 +4203,8 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
                   </div>
                   <!-- 나레이션 + 프롬프트 (오른쪽) -->
                   <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
-                    <textarea class="scene-narration" data-index="${i}" rows="3" style="flex:1;width:100%;border:2px solid #e2e8f0;border-radius:8px;padding:10px;font-size:14px;line-height:1.7;resize:vertical;font-family:inherit;" placeholder="나레이션 텍스트">${s.narration}</textarea>
-                    <textarea class="scene-visual" data-index="${i}" rows="2" style="width:100%;border:1px solid #c7d2fe;border-radius:6px;padding:8px;font-size:11px;line-height:1.4;resize:vertical;font-family:inherit;background:rgba(99,102,241,0.1);color:#a78bfa;" placeholder="🔑 이미지 프롬프트 (영어)">${s.visual || ''}</textarea>
+                    <textarea class="scene-narration" data-index="${i}" rows="3" style="flex:1;width:100%;border:2px solid rgba(148,163,184,0.25);border-radius:8px;padding:10px;font-size:14px;line-height:1.7;resize:vertical;font-family:inherit;background:rgba(15,23,42,0.6);color:#e2e8f0;" placeholder="나레이션 텍스트">${s.narration}</textarea>
+                    <textarea class="scene-visual" data-index="${i}" rows="2" style="width:100%;border:1px solid rgba(99,102,241,0.3);border-radius:6px;padding:8px;font-size:11px;line-height:1.4;resize:vertical;font-family:inherit;background:rgba(99,102,241,0.1);color:#c4b5fd;" placeholder="🔑 이미지 프롬프트 (영어)">${s.visual || ''}</textarea>
                   </div>
                 </div>
               </div>
