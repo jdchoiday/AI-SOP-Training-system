@@ -3,34 +3,274 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SOP Training - 내 결과</title>
+  <title>SOP Training - 내 프로필</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0F172A">
   <link rel="icon" href="assets/icon-192.svg">
   <style>
-    .result-summary {
+    .profile-hero {
+      position: relative;
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%);
+      border-radius: 24px;
+      padding: 32px 20px 24px;
+      margin-bottom: 20px;
+      overflow: hidden;
+      border: 1px solid rgba(16,185,129,0.15);
+    }
+    .profile-hero::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      right: -20%;
+      width: 250px;
+      height: 250px;
+      background: radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .profile-hero::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: -10%;
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(245,158,11,0.08) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .profile-hero * { position: relative; z-index: 1; }
+
+    .hero-top {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .hero-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 3px solid var(--primary);
+      background: rgba(16,185,129,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+      box-shadow: 0 0 20px rgba(16,185,129,0.3);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .hero-avatar:hover { transform: scale(1.05); }
+    .hero-avatar img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .hero-info { flex: 1; }
+    .hero-name {
+      font-size: 22px;
+      font-weight: 800;
+      color: #F1F5F9;
+      margin-bottom: 2px;
+    }
+    .hero-branch {
+      font-size: 13px;
+      color: #94A3B8;
+      margin-bottom: 8px;
+    }
+    .hero-intro {
+      font-size: 13px;
+      color: #CBD5E1;
+      font-style: italic;
+      line-height: 1.4;
+    }
+    .hero-tier-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      color: white;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(4px);
+    }
+    .hero-xp-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .hero-xp-bar {
+      flex: 1;
+      height: 8px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .hero-xp-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--primary), #34D399);
+      transition: width 0.8s ease;
+      box-shadow: 0 0 8px rgba(16,185,129,0.4);
+    }
+    .hero-xp-text {
+      font-size: 11px;
+      color: #94A3B8;
+      white-space: nowrap;
+    }
+
+    /* 스탯 레이더 (6각형 대신 바 형태) */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .stat-icon { font-size: 16px; width: 22px; text-align: center; }
+    .stat-name { font-size: 11px; color: #94A3B8; width: 44px; }
+    .stat-bar-mini {
+      flex: 1;
+      height: 6px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .stat-bar-mini .fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.6s ease;
+    }
+    .stat-val { font-size: 11px; color: #64748B; width: 18px; text-align: right; font-weight: 600; }
+
+    /* 성과 요약 3칸 */
+    .perf-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 24px;
+      gap: 10px;
+      margin-bottom: 20px;
     }
-    .result-summary .mini-stat {
+    .perf-card {
       background: var(--bg-card);
-      border-radius: var(--radius);
+      border-radius: 16px;
       padding: 16px 12px;
       text-align: center;
       box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,0.04);
     }
-    .mini-stat .num { font-size: 28px; font-weight: 700; line-height: 1; }
-    .mini-stat .label { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
+    .perf-icon { font-size: 24px; margin-bottom: 6px; }
+    .perf-num { font-size: 26px; font-weight: 800; line-height: 1; }
+    .perf-label { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
 
+    /* 세부 탭 */
+    .tab-row {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 4px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 8px;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
+      color: var(--gray-500);
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 8px rgba(16,185,129,0.3);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* 프로필 상세 카드 */
+    .info-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+    .info-card h4 {
+      font-size: 14px;
+      color: var(--gray-500);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 14px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-row .label { color: var(--gray-500); }
+    .info-row .value { color: var(--text-primary); font-weight: 600; }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag-pill {
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    .tag-pill.warn {
+      background: rgba(245,158,11,0.12);
+      color: #F59E0B;
+    }
+    .motto-text {
+      font-size: 15px;
+      color: var(--text-primary);
+      font-style: italic;
+      text-align: center;
+      padding: 12px;
+      background: rgba(16,185,129,0.06);
+      border-radius: 10px;
+      border-left: 3px solid var(--primary);
+    }
+
+    /* 학습 결과 */
     .chapter-result {
-      background: var(--bg-card); border-radius: var(--radius);
-      padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow);
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,0.04);
     }
     .chapter-result-header {
-      display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
     }
     .chapter-result-header h4 { font-size: 15px; font-weight: 600; }
     .video-dots { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
@@ -39,13 +279,14 @@
       display: flex; align-items: center; justify-content: center;
       font-size: 11px; font-weight: 600;
     }
-    .video-dot.done { background: #dcfce7; color: var(--success); }
-    .video-dot.pending { background: var(--gray-100); color: var(--gray-500); }
+    .video-dot.done { background: rgba(16,185,129,0.15); color: var(--success); }
+    .video-dot.pending { background: rgba(255,255,255,0.05); color: var(--gray-500); }
 
+    /* 수료증 */
     .certificate {
       background: linear-gradient(135deg, #1e3a5f 0%, #10B981 50%, #059669 100%);
       border-radius: 16px; padding: 40px 24px; text-align: center;
-      color: white; margin: 24px 0; position: relative; overflow: hidden;
+      color: white; margin-bottom: 16px; position: relative; overflow: hidden;
     }
     .certificate::before {
       content: ''; position: absolute; top: -50%; left: -50%;
@@ -62,6 +303,36 @@
     }
     .certificate .cert-detail { font-size: 13px; opacity: 0.8; margin-top: 12px; }
     .certificate .cert-date { font-size: 14px; margin-top: 16px; opacity: 0.9; }
+
+    .edit-profile-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 14px;
+      background: var(--bg-card);
+      color: var(--primary);
+      border: 2px solid var(--primary);
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 20px;
+    }
+    .edit-profile-btn:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    .empty-profile {
+      text-align: center;
+      padding: 24px;
+      color: var(--gray-500);
+      font-size: 14px;
+    }
+    .empty-profile .big-emoji { font-size: 40px; margin-bottom: 8px; }
   </style>
 </head>
 <body>
@@ -70,34 +341,79 @@
     <a href="app.html"><span class="nav-icon">&#127968;</span> <span class="nav-label-home">홈</span></a>
     <a href="tasks.html"><span class="nav-icon">&#9989;</span> <span class="nav-label-tasks">미션</span></a>
     <a href="praise.html"><span class="nav-icon">&#128588;</span> <span class="nav-label-praise">부스트</span></a>
-    <a href="my-results.html" class="active"><span class="nav-icon">&#127942;</span> <span class="nav-label-results">내 결과</span></a>
+    <a href="my-results.html" class="active"><span class="nav-icon">&#128100;</span> <span class="nav-label-results">내 프로필</span></a>
   </div>
 
   <div class="app-container">
-    <div class="app-header">
-      <h2 id="pageTitle">내 결과</h2>
-      <div class="user-avatar" id="userAvatar">?</div>
+
+    <!-- ===== 캐릭터 카드 (히어로) ===== -->
+    <div class="profile-hero" id="profileHero">
+      <div class="hero-top">
+        <div class="hero-avatar" id="heroAvatar" onclick="location.href='profile.html'">?</div>
+        <div class="hero-info">
+          <div class="hero-name" id="heroName">-</div>
+          <div class="hero-branch" id="heroBranch">-</div>
+          <div class="hero-intro" id="heroIntro"></div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <div class="hero-tier-badge" id="heroTier">🌱 새싹</div>
+        <div style="flex:1; min-width:120px;">
+          <div class="hero-xp-row">
+            <div class="hero-xp-bar"><div class="hero-xp-fill" id="heroXpFill" style="width:0%"></div></div>
+            <div class="hero-xp-text" id="heroXpText">0 EXP</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 능력치 미니 바 -->
+      <div class="stats-grid" id="statsGrid"></div>
     </div>
 
-    <div class="result-summary">
-      <div class="mini-stat">
-        <p class="num" style="color:var(--primary);" id="statProgress">0%</p>
-        <p class="label" id="labelProgress">전체 진행률</p>
+    <!-- ===== 성과 요약 ===== -->
+    <div class="perf-grid">
+      <div class="perf-card">
+        <div class="perf-icon">📊</div>
+        <div class="perf-num" style="color:var(--primary);" id="statProgress">0%</div>
+        <p class="perf-label" id="labelProgress">학습 진행률</p>
       </div>
-      <div class="mini-stat">
-        <p class="num" style="color:var(--success);" id="statPassed">0</p>
-        <p class="label" id="labelPassed">통과 챕터</p>
+      <div class="perf-card">
+        <div class="perf-icon">&#127942;</div>
+        <div class="perf-num" style="color:var(--success);" id="statPassed">0</div>
+        <p class="perf-label" id="labelPassed">통과 챕터</p>
       </div>
-      <div class="mini-stat">
-        <p class="num" style="color:var(--warning);" id="statVideos">0</p>
-        <p class="label" id="labelVideos">시청 완료</p>
+      <div class="perf-card">
+        <div class="perf-icon">&#127916;</div>
+        <div class="perf-num" style="color:var(--warning);" id="statVideos">0</div>
+        <p class="perf-label" id="labelVideos">시청 완료</p>
       </div>
     </div>
 
-    <div id="certificateArea"></div>
+    <!-- ===== 탭 전환 ===== -->
+    <div class="tab-row">
+      <button class="tab-btn active" onclick="switchTab('about')" id="tabAbout">프로필</button>
+      <button class="tab-btn" onclick="switchTab('results')" id="tabResults">학습 결과</button>
+      <button class="tab-btn" onclick="switchTab('cert')" id="tabCert">수료증</button>
+    </div>
 
-    <h3 style="margin-bottom:12px; font-size:16px; color:var(--gray-700);" id="chapterResultsTitle">챕터별 결과</h3>
-    <div id="chapterResults"></div>
+    <!-- 탭1: 프로필 상세 -->
+    <div class="tab-content active" id="panelAbout">
+      <div id="profileContent"></div>
+      <a href="profile.html" class="edit-profile-btn" id="editBtn">
+        &#9998; 프로필 편집하기
+      </a>
+    </div>
+
+    <!-- 탭2: 학습 결과 -->
+    <div class="tab-content" id="panelResults">
+      <div id="chapterResults"></div>
+    </div>
+
+    <!-- 탭3: 수료증 -->
+    <div class="tab-content" id="panelCert">
+      <div id="certificateArea"></div>
+    </div>
+
   </div>
 
   <script src="js/config.js"></script>
@@ -106,64 +422,100 @@
   <script src="js/ai-provider.js"></script>
   <script src="js/sop-content-kids.js"></script>
   <script src="js/demo-data.js"></script>
+  <script src="js/xp-system.js"></script>
+  <script src="js/xp-ui.js"></script>
   <script>
-    // ===== 다국어 텍스트 =====
+    // ===== i18n =====
     const T = {
       ko: {
-        home: '홈', tasks: '미션', myResults: '내 결과',
-        pageTitle: '내 결과', overallProgress: '전체 진행률',
-        passedChapters: '통과 챕터', videosCompleted: '시청 완료',
-        chapterResults: '챕터별 결과',
+        home: '홈', tasks: '미션', praise: '부스트', myProfile: '내 프로필',
+        pageTitle: '내 프로필',
+        progress: '학습 진행률', passedChapters: '통과 챕터', videosCompleted: '시청 완료',
+        tabAbout: '프로필', tabResults: '학습 결과', tabCert: '수료증',
+        editProfile: '&#9998; 프로필 편집하기',
+        noProfile: '아직 프로필을 작성하지 않았어요',
+        noProfileSub: '프로필을 등록하면 캐릭터 카드가 완성됩니다!',
+        goSetup: '프로필 만들기',
+        mbti: 'MBTI', hobbies: '취미', likes: '좋아하는 것',
+        strengths: '장점', weaknesses: '개선점', motto: '좌우명',
+        skills: '특기', goal: '이번 분기 목표', specialAbility: '숨겨진 재능',
+        workStyle: '업무 스타일', birthday: '생일', joinDate: '입사일',
         certificate: 'SOP Training 수료증', certSub: 'Certificate of Completion',
         certDesc: '위 사람은 SOP Training의 모든 과정을\n성공적으로 이수하였음을 증명합니다.',
         certDetail: (ch, vids, avg) => `총 ${ch}개 챕터 · ${vids}개 학습 · 평균 점수 ${avg}점`,
         saveCert: '📥 수료증 저장',
+        noCert: '모든 챕터를 완료하면 수료증이 발급됩니다!',
         passed: '통과', locked: '잠김', inProgress: '진행중', notStarted: '미시작',
-        logoutConfirm: '로그아웃 하시겠습니까?',
         staff: '직원',
+        statComm: '소통', statFocus: '집중', statTeam: '팀워크',
+        statCreative: '창의', statSpeed: '실행', statService: '서비스',
       },
       en: {
-        home: 'Home', tasks: 'Tasks', myResults: 'Results',
-        pageTitle: 'My Results', overallProgress: 'Overall Progress',
-        passedChapters: 'Passed', videosCompleted: 'Videos Done',
-        chapterResults: 'Results by Chapter',
+        home: 'Home', tasks: 'Tasks', praise: 'Boost', myProfile: 'Profile',
+        pageTitle: 'My Profile',
+        progress: 'Progress', passedChapters: 'Passed', videosCompleted: 'Videos Done',
+        tabAbout: 'Profile', tabResults: 'Results', tabCert: 'Certificate',
+        editProfile: '&#9998; Edit Profile',
+        noProfile: 'No profile yet',
+        noProfileSub: 'Set up your profile to complete your character card!',
+        goSetup: 'Create Profile',
+        mbti: 'MBTI', hobbies: 'Hobbies', likes: 'Likes',
+        strengths: 'Strengths', weaknesses: 'Areas to Improve', motto: 'Motto',
+        skills: 'Skills', goal: 'This Quarter Goal', specialAbility: 'Hidden Talent',
+        workStyle: 'Work Style', birthday: 'Birthday', joinDate: 'Joined',
         certificate: 'SOP Training Certificate', certSub: 'Certificate of Completion',
         certDesc: 'This certifies that the above person\nhas successfully completed all SOP Training courses.',
         certDetail: (ch, vids, avg) => `${ch} chapters · ${vids} lessons · Avg. score ${avg}`,
         saveCert: '📥 Save Certificate',
+        noCert: 'Complete all chapters to earn your certificate!',
         passed: 'Passed', locked: 'Locked', inProgress: 'In Progress', notStarted: 'Not Started',
-        logoutConfirm: 'Are you sure you want to log out?',
         staff: 'Staff',
+        statComm: 'Comm', statFocus: 'Focus', statTeam: 'Team',
+        statCreative: 'Create', statSpeed: 'Action', statService: 'Service',
       },
       vi: {
-        home: 'Trang chủ', tasks: 'Nhiệm vụ', myResults: 'Kết quả',
-        pageTitle: 'Kết quả của tôi', overallProgress: 'Tiến độ tổng thể',
-        passedChapters: 'Chương đạt', videosCompleted: 'Video xong',
-        chapterResults: 'Kết quả theo chương',
-        certificate: 'Chứng chỉ đào tạo SOP', certSub: 'Certificate of Completion',
+        home: 'Trang chủ', tasks: 'Nhiệm vụ', praise: 'Khen', myProfile: 'Hồ sơ',
+        pageTitle: 'Hồ sơ của tôi',
+        progress: 'Tiến độ', passedChapters: 'Chương đạt', videosCompleted: 'Video xong',
+        tabAbout: 'Hồ sơ', tabResults: 'Kết quả', tabCert: 'Chứng chỉ',
+        editProfile: '&#9998; Sửa hồ sơ',
+        noProfile: 'Chưa có hồ sơ',
+        noProfileSub: 'Tạo hồ sơ để hoàn thành thẻ nhân vật!',
+        goSetup: 'Tạo hồ sơ',
+        mbti: 'MBTI', hobbies: 'Sở thích', likes: 'Yêu thích',
+        strengths: 'Điểm mạnh', weaknesses: 'Cần cải thiện', motto: 'Phương châm',
+        skills: 'Kỹ năng', goal: 'Mục tiêu quý này', specialAbility: 'Tài năng ẩn',
+        workStyle: 'Phong cách', birthday: 'Sinh nhật', joinDate: 'Ngày vào',
+        certificate: 'Chứng chỉ SOP', certSub: 'Certificate of Completion',
         certDesc: 'Chứng nhận người trên đã hoàn thành\ntất cả các khóa đào tạo SOP.',
-        certDetail: (ch, vids, avg) => `${ch} chương · ${vids} bài học · Điểm TB ${avg}`,
+        certDetail: (ch, vids, avg) => `${ch} chương · ${vids} bài · Điểm TB ${avg}`,
         saveCert: '📥 Lưu chứng chỉ',
+        noCert: 'Hoàn thành tất cả chương để nhận chứng chỉ!',
         passed: 'Đạt', locked: 'Khóa', inProgress: 'Đang học', notStarted: 'Chưa bắt đầu',
-        logoutConfirm: 'Bạn có chắc muốn đăng xuất?',
         staff: 'Nhân viên',
+        statComm: 'Giao tiếp', statFocus: 'Tập trung', statTeam: 'Đồng đội',
+        statCreative: 'Sáng tạo', statSpeed: 'Hành động', statService: 'Phục vụ',
       }
     };
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
     const t = T[lang] || T.ko;
     const dateLang = lang === 'en' ? 'en-US' : lang === 'vi' ? 'vi-VN' : 'ko-KR';
 
-    // Apply static labels
+    // ===== Apply i18n =====
+    document.title = 'SOP Training - ' + t.pageTitle;
     document.querySelector('.nav-label-home').textContent = t.home;
     document.querySelector('.nav-label-tasks').textContent = t.tasks;
-    if (document.querySelector('.nav-label-praise')) document.querySelector('.nav-label-praise').textContent = lang === 'en' ? 'Praise' : lang === 'vi' ? 'Khen ngợi' : '부스트';
-    document.querySelector('.nav-label-results').textContent = t.myResults;
-    document.getElementById('pageTitle').textContent = t.pageTitle;
-    document.getElementById('labelProgress').textContent = t.overallProgress;
+    document.querySelector('.nav-label-praise').textContent = t.praise;
+    document.querySelector('.nav-label-results').textContent = t.myProfile;
+    document.getElementById('labelProgress').textContent = t.progress;
     document.getElementById('labelPassed').textContent = t.passedChapters;
     document.getElementById('labelVideos').textContent = t.videosCompleted;
-    document.getElementById('chapterResultsTitle').textContent = t.chapterResults;
+    document.getElementById('tabAbout').textContent = t.tabAbout;
+    document.getElementById('tabResults').textContent = t.tabResults;
+    document.getElementById('tabCert').textContent = t.tabCert;
+    document.getElementById('editBtn').innerHTML = t.editProfile;
 
+    // ===== Auth =====
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
     const loginTime = parseInt(localStorage.getItem('sop_login_time') || '0');
     if (Date.now() - loginTime > 24 * 60 * 60 * 1000) {
@@ -172,20 +524,269 @@
       window.location.href = 'index.html';
     }
     if (!user) { window.location.href = 'index.html'; }
-    document.getElementById('userAvatar').textContent = (user.name || '?')[0];
 
-    const chapters = SopStore.getChapters();
-    const allResults = Progress.getAllResults();
-    const totalProgress = Progress.getTotalProgress();
-    const passedChapters = chapters.filter(ch => Progress.isChapterPassed(ch.id));
-    const completedVideoCount = allResults.completedVideos.length;
+    // ===== Tab switching =====
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
+      document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+      document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+    }
 
-    document.getElementById('statProgress').textContent = totalProgress + '%';
-    document.getElementById('statPassed').textContent = passedChapters.length;
-    document.getElementById('statVideos').textContent = completedVideoCount;
+    // ===== 1. Hero Card =====
+    function renderHero() {
+      // Avatar
+      const avatarEl = document.getElementById('heroAvatar');
+      if (user.avatarType === 'photo' && user.avatarData) {
+        avatarEl.innerHTML = `<img src="${user.avatarData}" alt="avatar">`;
+      } else if (user.avatarType === 'emoji' && user.avatarData) {
+        avatarEl.textContent = user.avatarData;
+        avatarEl.style.fontSize = '36px';
+      } else {
+        avatarEl.textContent = (user.name || '?')[0];
+      }
 
-    // 수료증
-    if (totalProgress >= 100) {
+      // Name & branch
+      document.getElementById('heroName').textContent = user.name || t.staff;
+      document.getElementById('heroBranch').textContent = user.branch || '';
+
+      // Intro from profile
+      const profile = JSON.parse(localStorage.getItem('sop_profile_' + user.email) || 'null');
+      if (profile?.introText) {
+        document.getElementById('heroIntro').textContent = `"${profile.introText}"`;
+      }
+
+      // XP & Tier
+      renderTierAsync();
+
+      // Stats
+      renderStats(profile);
+    }
+
+    async function renderTierAsync() {
+      let totalXp = 0;
+      try {
+        if (typeof XpService !== 'undefined') {
+          totalXp = await XpService.getTotal(user.id || user.email) || 0;
+        }
+      } catch (e) { console.warn('[Profile] XP load error:', e); }
+
+      const tier = calculateTier(totalXp);
+      const tierTitle = getTierTitle(tier, lang);
+
+      document.getElementById('heroTier').innerHTML = `${tier.emoji} ${tierTitle} ${tier.subLabel}`;
+      document.getElementById('heroTier').style.borderColor = tier.color + '60';
+
+      document.getElementById('heroXpFill').style.width = tier.progressPct + '%';
+      const nextLabel = tier.nextTierXp ? ` / ${tier.nextTierXp.toLocaleString()}` : '';
+      document.getElementById('heroXpText').textContent = `${totalXp.toLocaleString()} EXP${nextLabel}`;
+    }
+
+    function renderStats(profile) {
+      const grid = document.getElementById('statsGrid');
+      if (!profile?.stats) {
+        grid.style.display = 'none';
+        return;
+      }
+      const stats = profile.stats;
+      const statDefs = [
+        { key: 'communication', icon: '💬', label: t.statComm, color: '#10B981' },
+        { key: 'focus', icon: '🎯', label: t.statFocus, color: '#3B82F6' },
+        { key: 'teamwork', icon: '🤝', label: t.statTeam, color: '#F59E0B' },
+        { key: 'creativity', icon: '💡', label: t.statCreative, color: '#EC4899' },
+        { key: 'execution', icon: '⚡', label: t.statSpeed, color: '#EF4444' },
+        { key: 'service', icon: '❤️', label: t.statService, color: '#8B5CF6' },
+      ];
+
+      grid.innerHTML = statDefs.map(s => {
+        const val = stats[s.key] || 0;
+        return `
+          <div class="stat-item">
+            <span class="stat-icon">${s.icon}</span>
+            <span class="stat-name">${s.label}</span>
+            <div class="stat-bar-mini"><div class="fill" style="width:${val * 10}%; background:${s.color};"></div></div>
+            <span class="stat-val">${val}</span>
+          </div>`;
+      }).join('');
+    }
+
+    // ===== 2. Profile Detail Tab =====
+    function renderProfileTab() {
+      const profile = JSON.parse(localStorage.getItem('sop_profile_' + user.email) || 'null');
+      const container = document.getElementById('profileContent');
+
+      if (!profile || (!profile.introText && !profile.mbti && !profile.motto)) {
+        container.innerHTML = `
+          <div class="empty-profile">
+            <div class="big-emoji">🎭</div>
+            <p style="font-weight:600; margin-bottom:4px;">${t.noProfile}</p>
+            <p style="font-size:12px; margin-bottom:16px;">${t.noProfileSub}</p>
+            <a href="profile.html" style="display:inline-block; padding:10px 24px; background:var(--primary); color:white; border-radius:10px; font-weight:600; text-decoration:none;">${t.goSetup}</a>
+          </div>`;
+        return;
+      }
+
+      let html = '';
+
+      // 좌우명
+      if (profile.motto) {
+        html += `<div class="info-card"><div class="motto-text">"${profile.motto}"</div></div>`;
+      }
+
+      // 자기소개
+      if (profile.bioText) {
+        html += `<div class="info-card"><h4>📝 ${t.tabAbout}</h4><p style="font-size:14px; line-height:1.6; color:var(--text-primary);">${profile.bioText}</p></div>`;
+      }
+
+      // 성격 & 취미
+      const personalInfo = [];
+      if (profile.mbti) personalInfo.push({ label: t.mbti, value: profile.mbti });
+      if (profile.birthday) personalInfo.push({ label: t.birthday, value: profile.birthday });
+      if (profile.joinDate) personalInfo.push({ label: t.joinDate, value: profile.joinDate });
+
+      if (personalInfo.length || profile.hobbies?.length || profile.likes?.length) {
+        html += `<div class="info-card"><h4>🎨 ${lang === 'en' ? 'About Me' : lang === 'vi' ? 'Về tôi' : '나에 대해'}</h4>`;
+        personalInfo.forEach(item => {
+          html += `<div class="info-row"><span class="label">${item.label}</span><span class="value">${item.value}</span></div>`;
+        });
+        if (profile.hobbies?.length) {
+          html += `<div style="margin-top:10px;"><span class="label" style="font-size:12px; color:var(--gray-500);">${t.hobbies}</span>
+            <div class="tag-list" style="margin-top:6px;">${profile.hobbies.map(h => `<span class="tag-pill">${h}</span>`).join('')}</div></div>`;
+        }
+        if (profile.likes?.length) {
+          html += `<div style="margin-top:10px;"><span class="label" style="font-size:12px; color:var(--gray-500);">${t.likes}</span>
+            <div class="tag-list" style="margin-top:6px;">${profile.likes.map(l => `<span class="tag-pill">${l}</span>`).join('')}</div></div>`;
+        }
+        html += `</div>`;
+      }
+
+      // 장점 & 개선점
+      if (profile.strengths?.length || profile.weaknesses?.length) {
+        html += `<div class="info-card"><h4>💪 ${t.strengths} & ${t.weaknesses}</h4>`;
+        if (profile.strengths?.length) {
+          html += `<div class="tag-list" style="margin-bottom:8px;">${profile.strengths.map(s => `<span class="tag-pill">${s}</span>`).join('')}</div>`;
+        }
+        if (profile.weaknesses?.length) {
+          html += `<div class="tag-list">${profile.weaknesses.map(w => `<span class="tag-pill warn">${w}</span>`).join('')}</div>`;
+        }
+        html += `</div>`;
+      }
+
+      // 업무 스타일
+      if (profile.workStyle) {
+        const wsLabels = {
+          solo: lang === 'en' ? '🧑 Solo' : lang === 'vi' ? '🧑 Một mình' : '🧑 개인 작업',
+          team: lang === 'en' ? '👥 Teamwork' : lang === 'vi' ? '👥 Nhóm' : '👥 팀 작업',
+          morning: lang === 'en' ? '🌅 Morning' : lang === 'vi' ? '🌅 Sáng' : '🌅 아침형',
+          night: lang === 'en' ? '🌙 Night' : lang === 'vi' ? '🌙 Đêm' : '🌙 저녁형',
+          planner: lang === 'en' ? '📋 Planner' : lang === 'vi' ? '📋 Kế hoạch' : '📋 계획형',
+          flexible: lang === 'en' ? '🔄 Flexible' : lang === 'vi' ? '🔄 Linh hoạt' : '🔄 유연형',
+        };
+        const activeStyles = Object.entries(profile.workStyle).filter(([k, v]) => v).map(([k]) => wsLabels[k] || k);
+        if (activeStyles.length) {
+          html += `<div class="info-card"><h4>💼 ${t.workStyle}</h4>
+            <div class="tag-list">${activeStyles.map(s => `<span class="tag-pill">${s}</span>`).join('')}</div></div>`;
+        }
+      }
+
+      // 추가 정보
+      const extras = [];
+      if (profile.skills) extras.push({ label: t.skills, value: profile.skills });
+      if (profile.goal) extras.push({ label: t.goal, value: profile.goal });
+      if (profile.specialAbility) extras.push({ label: t.specialAbility, value: profile.specialAbility });
+      if (extras.length) {
+        html += `<div class="info-card"><h4>✨ ${lang === 'en' ? 'Extra' : lang === 'vi' ? 'Thêm' : '추가 정보'}</h4>`;
+        extras.forEach(item => {
+          html += `<div class="info-row"><span class="label">${item.label}</span><span class="value">${item.value}</span></div>`;
+        });
+        html += `</div>`;
+      }
+
+      container.innerHTML = html || `<div class="empty-profile"><div class="big-emoji">🎭</div><p>${t.noProfile}</p></div>`;
+    }
+
+    // ===== 3. Results Tab =====
+    function renderResults() {
+      const chapters = SopStore.getChapters();
+      const allResults = Progress.getAllResults();
+      const totalProgress = Progress.getTotalProgress();
+      const passedChapters = chapters.filter(ch => Progress.isChapterPassed(ch.id));
+      const completedVideoCount = allResults.completedVideos.length;
+
+      document.getElementById('statProgress').textContent = totalProgress + '%';
+      document.getElementById('statPassed').textContent = passedChapters.length;
+      document.getElementById('statVideos').textContent = completedVideoCount;
+
+      // Chapter results
+      const container = document.getElementById('chapterResults');
+      container.innerHTML = '';
+      chapters.forEach((ch, index) => {
+        const videos = SopStore.getVideos(ch.id);
+        const passed = Progress.isChapterPassed(ch.id);
+        const result = allResults.chapterResults[ch.id];
+        const unlocked = Progress.isChapterUnlocked(index);
+
+        let dotsHTML = videos.map(v => {
+          const done = Progress.isVideoCompleted(v.id);
+          return `<div class="video-dot ${done ? 'done' : 'pending'}">${done ? '✓' : v.order_num}</div>`;
+        }).join('');
+
+        let badge = '';
+        if (passed) {
+          badge = `<span class="badge badge-success">${t.passed} ${result?.score || 0}</span>`;
+        } else if (!unlocked) {
+          badge = `<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--gray-500);">${t.locked}</span>`;
+        } else {
+          const pct = Progress.getChapterVideoProgress(ch.id);
+          badge = pct > 0
+            ? `<span class="badge badge-warning">${t.inProgress} ${pct}%</span>`
+            : `<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--gray-500);">${t.notStarted}</span>`;
+        }
+
+        // Exam grade
+        let gradeBadge = '';
+        if (passed && user?.email) {
+          const examRaw = localStorage.getItem('sop_exam_results_' + user.email + '_' + ch.id);
+          if (examRaw) {
+            try {
+              const examData = JSON.parse(examRaw);
+              const examScore = examData.score != null ? examData.score : (typeof examData === 'number' ? examData : null);
+              if (examScore != null) {
+                const gradeColors = { S: '#b8860b', A: '#16a34a', B: '#10B981', C: '#ca8a04', D: '#ea580c', F: '#dc2626' };
+                let grade = 'F';
+                if (examScore >= 95) grade = 'S';
+                else if (examScore >= 85) grade = 'A';
+                else if (examScore >= 75) grade = 'B';
+                else if (examScore >= 65) grade = 'C';
+                else if (examScore >= 50) grade = 'D';
+                gradeBadge = `<span style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:6px;font-size:13px;font-weight:700;color:white;background:${gradeColors[grade]};">${grade}</span>`;
+              }
+            } catch(e) {}
+          }
+        }
+
+        container.innerHTML += `
+          <div class="chapter-result" ${!unlocked ? 'style="opacity:0.5;"' : ''}>
+            <div class="chapter-result-header">
+              <h4>${index + 1}. ${getLocalizedText(ch, 'title')}</h4>
+              <div>${badge}${gradeBadge}</div>
+            </div>
+            <div class="video-dots">${dotsHTML}</div>
+          </div>`;
+      });
+
+      // Certificate
+      renderCertificate(chapters, allResults, totalProgress);
+    }
+
+    // ===== 4. Certificate =====
+    function renderCertificate(chapters, allResults, totalProgress) {
+      const area = document.getElementById('certificateArea');
+      if (totalProgress < 100) {
+        area.innerHTML = `<div class="empty-profile"><div class="big-emoji">🏆</div><p>${t.noCert}</p></div>`;
+        return;
+      }
+
       const lastDate = Object.values(allResults.chapterResults).map(r => r.date).sort().pop();
       const dateStr = lastDate
         ? new Date(lastDate).toLocaleDateString(dateLang, { year:'numeric', month:'long', day:'numeric' })
@@ -194,7 +795,7 @@
       const avg = scores.length > 0 ? Math.round(scores.reduce((a,b) => a+b, 0) / scores.length) : 0;
       const totalVids = chapters.reduce((sum, ch) => sum + SopStore.getVideos(ch.id).length, 0);
 
-      document.getElementById('certificateArea').innerHTML = `
+      area.innerHTML = `
         <div class="certificate">
           <div class="cert-icon">&#127942;</div>
           <h2>${t.certificate}</h2>
@@ -207,75 +808,12 @@
         </div>`;
     }
 
-    // 챕터별 결과
-    const container = document.getElementById('chapterResults');
-    chapters.forEach((ch, index) => {
-      const videos = SopStore.getVideos(ch.id);
-      const passed = Progress.isChapterPassed(ch.id);
-      const result = allResults.chapterResults[ch.id];
-      const unlocked = Progress.isChapterUnlocked(index);
-
-      let dotsHTML = videos.map(v => {
-        const done = Progress.isVideoCompleted(v.id);
-        return `<div class="video-dot ${done ? 'done' : 'pending'}">${done ? '✓' : v.order_num}</div>`;
-      }).join('');
-
-      let badge = '';
-      if (passed) {
-        badge = `<span class="badge badge-success">${t.passed} ${result?.score || 0}</span>`;
-      } else if (!unlocked) {
-        badge = `<span class="badge" style="background:var(--gray-100);color:var(--gray-500);">${t.locked}</span>`;
-      } else {
-        const pct = Progress.getChapterVideoProgress(ch.id);
-        badge = pct > 0
-          ? `<span class="badge badge-warning">${t.inProgress} ${pct}%</span>`
-          : `<span class="badge" style="background:var(--gray-100);color:var(--gray-500);">${t.notStarted}</span>`;
-      }
-
-      // Exam grade badge
-      let gradeBadge = '';
-      if (passed && user?.email) {
-        const examRaw = localStorage.getItem('sop_exam_results_' + user.email + '_' + ch.id);
-        if (examRaw) {
-          try {
-            const examData = JSON.parse(examRaw);
-            const examScore = examData.score != null ? examData.score : (typeof examData === 'number' ? examData : null);
-            if (examScore != null) {
-              const gradeColors = { S: '#b8860b', A: '#16a34a', B: '#10B981', C: '#ca8a04', D: '#ea580c', F: '#dc2626' };
-              let grade = 'F';
-              if (examScore >= 95) grade = 'S';
-              else if (examScore >= 85) grade = 'A';
-              else if (examScore >= 75) grade = 'B';
-              else if (examScore >= 65) grade = 'C';
-              else if (examScore >= 50) grade = 'D';
-              gradeBadge = `<span style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:6px;font-size:13px;font-weight:700;color:white;background:${gradeColors[grade]};">${grade}</span>`;
-            }
-          } catch(e) {}
-        }
-      }
-
-      container.innerHTML += `
-        <div class="chapter-result" ${!unlocked ? 'style="opacity:0.5;"' : ''}>
-          <div class="chapter-result-header">
-            <h4>${index + 1}. ${getLocalizedText(ch, 'title')}</h4>
-            <div>${badge}${gradeBadge}</div>
-          </div>
-          <div class="video-dots">${dotsHTML}</div>
-        </div>`;
-    });
-
-    // 수료증 이미지 저장
+    // ===== 수료증 다운로드 =====
     function downloadCertificate() {
-      const cert = document.querySelector('.certificate');
-      if (!cert) return;
-
-      // Create canvas from certificate
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      canvas.width = 800;
-      canvas.height = 500;
+      canvas.width = 800; canvas.height = 500;
 
-      // Background gradient
       const grad = ctx.createLinearGradient(0, 0, 800, 500);
       grad.addColorStop(0, '#1e3a5f');
       grad.addColorStop(0.5, '#10B981');
@@ -283,61 +821,48 @@
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 800, 500);
 
-      // Border
       ctx.strokeStyle = 'rgba(255,255,255,0.3)';
       ctx.lineWidth = 2;
       ctx.strokeRect(20, 20, 760, 460);
       ctx.strokeRect(30, 30, 740, 440);
 
-      // Text
       ctx.fillStyle = 'white';
       ctx.textAlign = 'center';
 
       ctx.font = '40px serif';
       ctx.fillText('🏆', 400, 80);
-
       ctx.font = 'bold 28px sans-serif';
       ctx.fillText(t.certificate, 400, 130);
-
       ctx.font = '16px sans-serif';
       ctx.globalAlpha = 0.8;
       ctx.fillText(t.certSub, 400, 160);
       ctx.globalAlpha = 1;
 
-      // Line
       ctx.strokeStyle = 'rgba(255,255,255,0.4)';
       ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(200, 200);
-      ctx.lineTo(600, 200);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(200, 200); ctx.lineTo(600, 200); ctx.stroke();
 
-      // Name
       ctx.font = 'bold 36px sans-serif';
       ctx.fillText(user.name || t.staff, 400, 250);
 
-      // Line
-      ctx.beginPath();
-      ctx.moveTo(200, 275);
-      ctx.lineTo(600, 275);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(200, 275); ctx.lineTo(600, 275); ctx.stroke();
 
-      // Description
+      const chapters = SopStore.getChapters();
+      const allResults = Progress.getAllResults();
+      const scores = Object.values(allResults.chapterResults).map(r => r.score).filter(s => s > 0);
+      const avg = scores.length > 0 ? Math.round(scores.reduce((a,b) => a+b, 0) / scores.length) : 0;
+      const totalVids = chapters.reduce((sum, ch) => sum + SopStore.getVideos(ch.id).length, 0);
+
       const certLines = t.certDesc.split('\n');
       ctx.font = '16px sans-serif';
       ctx.fillText(certLines[0] || '', 400, 315);
       ctx.fillText(certLines[1] || '', 400, 340);
 
-      // Stats
-      const scores = Object.values(allResults.chapterResults).map(r => r.score).filter(s => s > 0);
-      const avg = scores.length > 0 ? Math.round(scores.reduce((a,b) => a+b, 0) / scores.length) : 0;
-      const totalVids = chapters.reduce((sum, ch) => sum + SopStore.getVideos(ch.id).length, 0);
       ctx.font = '14px sans-serif';
       ctx.globalAlpha = 0.8;
       ctx.fillText(t.certDetail(chapters.length, totalVids, avg), 400, 385);
       ctx.globalAlpha = 1;
 
-      // Date
       const lastDate = Object.values(allResults.chapterResults).map(r => r.date).sort().pop();
       const canvasDateStr = lastDate
         ? new Date(lastDate).toLocaleDateString(dateLang, { year:'numeric', month:'long', day:'numeric' })
@@ -345,21 +870,16 @@
       ctx.font = '15px sans-serif';
       ctx.fillText(canvasDateStr, 400, 420);
 
-      // Download
       const link = document.createElement('a');
       link.download = `SOP_Certificate_${user.name || t.staff}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     }
 
-    // 로그아웃
-    document.getElementById('userAvatar').addEventListener('click', () => {
-      if (confirm(t.logoutConfirm)) {
-        localStorage.removeItem('sop_user');
-        localStorage.removeItem('sop_login_time');
-        window.location.href = 'index.html';
-      }
-    });
+    // ===== Init =====
+    renderHero();
+    renderProfileTab();
+    renderResults();
   </script>
 </body>
 </html>
