@@ -126,7 +126,10 @@
       </div>
       <div class="profile-name" id="profileName">-</div>
       <div class="profile-branch" id="profileBranch">-</div>
-      <div class="profile-tier" id="profileTier"></div>
+      <div onclick="openAvatarModal()" style="display:inline-flex; align-items:center; gap:6px; margin-top:10px; padding:6px 16px; border-radius:20px; background:rgba(255,255,255,0.15); color:white; font-size:13px; font-weight:600; cursor:pointer; backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,0.2); transition:background 0.2s;" onmouseenter="this.style.background='rgba(255,255,255,0.25)'" onmouseleave="this.style.background='rgba(255,255,255,0.15)'">
+        📷 <span id="lblChangePhoto">사진 변경</span>
+      </div>
+      <div class="profile-tier" id="profileTier" style="margin-top:8px;"></div>
     </div>
 
     <!-- 자기소개 -->
@@ -357,7 +360,7 @@
         personality: '성격 & 취미', mbtiType: 'MBTI / 성격 유형', hobbies: '취미 (Enter로 추가)',
         likes: '좋아하는 것 (Enter로 추가)', extra: '추가 정보', motto: '좌우명 / 한마디',
         skills: '특기 / 강점', save: '💾 저장하기', saving: '저장 중...', saved: '✅ 저장 완료!',
-        avatarTitle: '프로필 사진 선택', uploadPhoto: '사진 업로드', orEmoji: '또는 이모지 선택',
+        avatarTitle: '프로필 사진 선택', uploadPhoto: '사진 업로드', orEmoji: '또는 이모지 선택', changePhoto: '사진 변경',
         cancel: '취소', confirm: '확인', toastSaved: '프로필이 저장되었습니다!',
         home: '홈', tasks: '미션', praise: '부스트', results: '내 프로필',
         basicInfo: '기본 정보', birthday: '생일', joinDate: '입사일', phone: '연락처 (선택)',
@@ -375,7 +378,7 @@
         personality: 'Personality & Hobbies', mbtiType: 'MBTI / Personality', hobbies: 'Hobbies (Enter to add)',
         likes: 'Likes (Enter to add)', extra: 'Extra Info', motto: 'Motto',
         skills: 'Skills / Strengths', save: '💾 Save', saving: 'Saving...', saved: '✅ Saved!',
-        avatarTitle: 'Choose Profile Photo', uploadPhoto: 'Upload Photo', orEmoji: 'or choose emoji',
+        avatarTitle: 'Choose Profile Photo', uploadPhoto: 'Upload Photo', orEmoji: 'or choose emoji', changePhoto: 'Change Photo',
         cancel: 'Cancel', confirm: 'Confirm', toastSaved: 'Profile saved!',
         home: 'Home', tasks: 'Tasks', praise: 'Boost', results: 'Profile',
         basicInfo: 'Basic Info', birthday: 'Birthday', joinDate: 'Join Date', phone: 'Phone (optional)',
@@ -393,7 +396,7 @@
         personality: 'Tính cách & Sở thích', mbtiType: 'MBTI / Tính cách', hobbies: 'Sở thích (Enter để thêm)',
         likes: 'Yêu thích (Enter để thêm)', extra: 'Thêm', motto: 'Phương châm',
         skills: 'Kỹ năng / Thế mạnh', save: '💾 Lưu', saving: 'Đang lưu...', saved: '✅ Đã lưu!',
-        avatarTitle: 'Chọn ảnh đại diện', uploadPhoto: 'Tải ảnh lên', orEmoji: 'hoặc chọn emoji',
+        avatarTitle: 'Chọn ảnh đại diện', uploadPhoto: 'Tải ảnh lên', orEmoji: 'hoặc chọn emoji', changePhoto: 'Đổi ảnh',
         cancel: 'Hủy', confirm: 'Xác nhận', toastSaved: 'Đã lưu hồ sơ!',
         home: 'Trang chủ', tasks: 'Nhiệm vụ', praise: 'Khen', results: 'Hồ sơ',
         basicInfo: 'Thông tin cơ bản', birthday: 'Sinh nhật', joinDate: 'Ngày vào', phone: 'SĐT (tùy chọn)',
@@ -429,6 +432,7 @@
     document.getElementById('lblAvatarTitle').textContent = t.avatarTitle;
     document.getElementById('lblUploadPhoto').textContent = t.uploadPhoto;
     document.getElementById('lblOrEmoji').textContent = t.orEmoji;
+    if (document.getElementById('lblChangePhoto')) document.getElementById('lblChangePhoto').textContent = t.changePhoto;
     // New fields i18n
     document.getElementById('lblBasicInfo').textContent = t.basicInfo;
     document.getElementById('lblBirthday').textContent = t.birthday;
@@ -781,11 +785,10 @@
       btn.classList.add('success');
       showToast(t.toastSaved);
 
+      // 1.5초 후 내 프로필 페이지로 이동
       setTimeout(() => {
-        btn.disabled = false;
-        btn.textContent = t.save;
-        btn.classList.remove('success');
-      }, 2000);
+        window.location.href = 'my-results.html';
+      }, 1500);
     }
 
     // ===== 로드 =====
