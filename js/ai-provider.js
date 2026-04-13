@@ -156,7 +156,7 @@ const AI = {
       if (hasVietnamese || titleHasVie) langInstruction = '나레이션은 반드시 베트남어(tiếng Việt)로 작성';
       else if (isEnglish || titleHasEn) langInstruction = '나레이션은 반드시 영어(English)로 작성';
 
-      const prompt = `당신은 직원 교육 영상 스크립트 작성 전문가입니다.
+      const prompt = `당신은 직원 교육 영상의 시각 디렉터이자 스크립트 작성 전문가입니다.
 
 아래 SOP 문서의 모든 내용을 빠짐없이 교육 영상 스크립트로 변환하세요.
 JSON 배열로 생성하며, 각 항목은 { "scene": 번호, "narration": "나레이션 텍스트", "visual": "영어 이미지 프롬프트" } 형식입니다.
@@ -173,18 +173,34 @@ ${plainText}
 - 마지막 씬은 핵심 요약과 마무리
 - 나레이션은 자연스럽고 친근한 말투로 2~4문장
 - 각 씬은 교육 영상의 한 장면 (30초~1분 분량)
+
+★★★ visual 필드 핵심 규칙 (시각 다양성 극대화) ★★★
 - visual 필드는 반드시 영어로 된 상세한 이미지 생성 프롬프트를 작성할 것
-- visual은 나레이션의 핵심 행동/장면을 구체적으로 묘사해야 함. "Training content slide" 같은 추상적 표현은 절대 금지
-- visual의 인물은 반드시 "A young Korean woman in a light blue polo shirt and beige apron" (키즈카페 직원)으로 묘사
-- visual의 장소는 반드시 키즈카페/실내놀이터/교육실 등 아동 관련 환경
-- 절대로 의사, 간호사, 과학자, 의료인으로 묘사하지 말 것. 청진기, 흰 가운, 의료장비 절대 금지
+- ★ 매 씬마다 다른 시각 타입을 사용할 것 (연속 2씬 이상 같은 타입 금지):
+  * 실사 사진 (인물 중심): "A young Korean woman in polo shirt and apron + action + place"
+  * 인포그래픽: "Clean flat-design infographic showing 5 numbered steps for hand washing..."
+  * 비교도 (BEFORE/AFTER): "Split-screen comparison: LEFT messy, RIGHT clean..."
+  * 클로즈업: "Extreme close-up of hands/objects with shallow depth of field..."
+  * 다이어그램/플로우차트: "Professional flowchart: Step A → Step B → Step C..."
+  * 오버헤드/플랫레이: "Top-down overhead shot of items neatly arranged..."
+  * 일러스트/만화: "Cute kawaii educational illustration showing..."
+  * 시네마틱: "Cinematic wide shot with dramatic lighting..."
+- ★ 나레이션의 핵심 교육 내용을 시각화할 것 (배경 분위기가 아닌 핵심 행동/개념 포커스)
+- 절차 설명 → 인포그래픽이 효과적
+- 올바른/잘못된 비교 → 분할 비교도가 효과적
+- 도구/재료 나열 → 오버헤드 플랫레이가 효과적
+- 감정/관계 → 인물 감성 사진이 효과적
+- visual의 인물은 "A young Korean woman in a light blue polo shirt and beige apron" (키즈카페 직원)
+- visual의 장소는 키즈카페/실내놀이터/교육실 등 아동 관련 환경
+- 절대로 의사, 간호사, 과학자, 의료인으로 묘사하지 말 것
 - visual 예시들:
-  * 칭찬 장면 → "A smiling Korean woman in polo shirt and apron giving thumbs-up to a proud child showing a drawing in a bright kids cafe playroom"
-  * 손씻기 → "Close-up of hands being washed with soap under running water at a kids cafe kitchen sink"
-  * 교육 소개 → "A Korean woman in polo shirt and apron standing in front of a TV screen introducing a training topic in a cozy meeting room"
-  * 감정 교육 → "Colorful emotion cards spread on a table, Korean teacher in apron pointing at happy face card with children"
-  * 아동 발달 → "A Korean woman in polo shirt sitting on floor with toddlers, watching them stack colorful blocks in a bright playroom"
-- 각 visual은 50-80 단어로 카메라 앵글, 인물(polo shirt and apron), 행동, 장소(키즈카페), 조명을 포함할 것
+  * 절차 → "Step-by-step infographic: 6 numbered icons showing handwashing procedure — wet, soap, scrub 20sec, rinse, dry, sanitize. Clean medical-style illustration."
+  * 비교 → "Split-screen BEFORE/AFTER: left shows cluttered messy play area, right shows organized clean play area. Same camera angle, bright lighting."
+  * 감정 → "Close-up portrait of a Korean woman in polo shirt making warm eye contact with a child at eye level, genuine smile, shallow depth of field, warm golden light."
+  * 도구 → "Overhead flat-lay of first aid kit contents neatly arranged on white surface: bandages, antiseptic, gloves, scissors. Clean minimalist photography."
+  * 안전 → "Cute illustrated safety poster with 5 rules: icons and Korean text, kawaii style, bright colors."
+  * 시네마틱 → "Cinematic wide shot of colorful LED lights turning on across indoor playground. Dark-to-bright transition, morning atmosphere."
+- 각 visual은 50-80 단어로 구체적 묘사 포함
 - JSON 배열만 출력, 다른 텍스트 없이`;
 
       const result = await this._callLLM(provider, prompt);
@@ -259,7 +275,7 @@ ${plainText}
   },
 
   // --- 챗봇 답변 ---
-  async chat(question, sopDocuments) {
+  async chat(question, sopDocuments, chatHistory) {
     const provider = AI_CONFIG.chatProvider;
 
     if (provider === 'local') {
@@ -267,20 +283,67 @@ ${plainText}
     }
 
     try {
-      const sopContext = sopDocuments.map(s =>
-        `[${s.title}]\n${this._htmlToText(s.content)}`
-      ).join('\n\n---\n\n');
+      // 질문과 관련된 SOP를 우선 선별 (토큰 절약)
+      const scoredSops = sopDocuments.map(s => {
+        const qLower = question.toLowerCase();
+        const titleLower = (s.title || '').toLowerCase();
+        const contentText = this._htmlToText(s.content || '').toLowerCase();
+        let score = 0;
+        // 제목 매칭
+        const titleWords = titleLower.split(/[\s_]+/).filter(w => w.length > 1);
+        titleWords.forEach(w => { if (qLower.includes(w)) score += 3; });
+        // 내용 키워드 매칭
+        const qWords = qLower.split(/\s+/).filter(w => w.length > 1);
+        qWords.forEach(w => { if (contentText.includes(w)) score += 1; });
+        return { sop: s, score };
+      }).sort((a, b) => b.score - a.score);
 
-      const prompt = `당신은 매장 직원을 위한 SOP 도우미입니다.
-아래 SOP 문서를 기반으로 질문에 친절하게 답변하세요.
-SOP에 없는 내용은 "해당 SOP를 찾을 수 없습니다"라고 답하세요.
+      // 관련도 높은 SOP 우선, 최대 3개 (토큰 절약)
+      const relevantSops = scoredSops.slice(0, 3).map(s => s.sop);
 
-SOP 문서:
+      // SOP 본문 + 스크립트 나레이션 내용까지 포함
+      const sopContext = relevantSops.map(s => {
+        let text = `[${s.title}]\n${this._htmlToText(s.content || '')}`;
+        // 스크립트(나레이션) 내용도 추가 — 학습 내용의 핵심
+        if (s.script && Array.isArray(s.script) && s.script.length > 0) {
+          const narrations = s.script.map((sc, i) =>
+            `씬${i+1}: ${sc.narration || sc.title_full || ''}`
+          ).join('\n');
+          text += '\n\n[학습 나레이션]\n' + narrations;
+        }
+        return text;
+      }).join('\n\n===\n\n');
+
+      // 대화 히스토리 포함 (최근 6개)
+      let historyText = '';
+      if (chatHistory && chatHistory.length > 0) {
+        const recent = chatHistory.slice(-6);
+        historyText = '\n\n[이전 대화]\n' + recent.map(h =>
+          `사용자: ${h.question}\nAI: ${h.answer}`
+        ).join('\n\n');
+      }
+
+      const prompt = `당신은 직원 교육 SOP 전문 AI 도우미입니다.
+
+## 핵심 규칙
+1. 반드시 아래 [SOP 문서]에 있는 내용만 사용하여 답변하세요.
+2. 당신의 일반 지식을 사용하지 마세요. SOP 문서에 나온 내용만 인용하세요.
+3. SOP에 없는 질문이면 "현재 등록된 SOP에서 해당 내용을 찾지 못했습니다."라고 답하세요.
+4. 답변할 때 해당 내용이 어느 SOP/씬에서 나왔는지 간략히 언급하세요.
+
+## 답변 형식
+- 한국어, 존댓말
+- 핵심 먼저 → 세부 설명
+- **굵게**, 번호 목록 사용
+- 300자 이내 (필요시 확장 가능)
+
+## [SOP 문서]
 ${sopContext}
+${historyText}
 
-질문: ${question}
+## 직원 질문: ${question}
 
-답변 (마크다운 형식, 핵심만 간결하게):`;
+## 답변 (반드시 위 SOP 문서 내용만 인용하여 작성):`;
 
       return await this._callLLM(provider, prompt);
     } catch (e) {
