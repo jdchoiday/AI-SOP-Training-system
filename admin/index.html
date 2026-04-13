@@ -1164,6 +1164,7 @@
     <div class="modal" id="modalContent"></div>
   </div>
 
+  <script src="../js/image-db.js"></script>
   <script src="../js/scene-prompts.js"></script>
   <script src="../js/config.js"></script>
   <script src="../js/supabase-client.js"></script>
@@ -1367,27 +1368,35 @@
     });
 
     // ===== SOP 데이터 (localStorage + Supabase 동기화) =====
-    // 이미지는 별도 키(sop_img_{id}_{idx})에 저장. sop_documents에는 포인터만 보관.
+    // 이미지는 IndexedDB에 저장 (localStorage 5MB 제한 극복). sop_documents에는 포인터만 보관.
+    // ImageDB는 js/image-db.js에서 로드됨 (공유 모듈)
 
-    // 이미지 별도 저장소 헬퍼 (getSops보다 먼저 선언)
+    // 동기 호환 래퍼 (getSops에서 사용 — 메모리 캐시 기반)
+    const _imageCache = {};
+    async function preloadSceneImages(sopId, scriptLength) {
+      for (let i = 0; i < scriptLength; i++) {
+        const key = `sop_img_${sopId}_${i}`;
+        const img = await ImageDB.get(key);
+        if (img) _imageCache[key] = img;
+      }
+    }
     function saveSceneImage(sopId, sceneIndex, imageUrl) {
       if (!imageUrl || !imageUrl.startsWith('data:')) return;
-      try {
-        localStorage.setItem(`sop_img_${sopId}_${sceneIndex}`, imageUrl);
-      } catch(e) {
-        console.warn(`[Image] 씬 ${sceneIndex} 이미지 저장 실패 (용량):`, e.message);
-      }
+      const key = `sop_img_${sopId}_${sceneIndex}`;
+      _imageCache[key] = imageUrl;
+      ImageDB.save(key, imageUrl); // fire-and-forget
     }
     function getSceneImage(sopId, sceneIndex) {
-      return localStorage.getItem(`sop_img_${sopId}_${sceneIndex}`) || null;
+      const key = `sop_img_${sopId}_${sceneIndex}`;
+      return _imageCache[key] || null;
     }
     function deleteSceneImages(sopId) {
-      const keysToRemove = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(`sop_img_${sopId}_`)) keysToRemove.push(key);
-      }
-      keysToRemove.forEach(k => localStorage.removeItem(k));
+      // 캐시에서 제거
+      Object.keys(_imageCache).forEach(k => {
+        if (k.startsWith(`sop_img_${sopId}_`)) delete _imageCache[k];
+      });
+      // IndexedDB에서 제거
+      ImageDB.deleteByPrefix(`sop_img_${sopId}_`);
     }
 
     function getSops() {
@@ -2346,6 +2355,11 @@ ${text.slice(0, 3000)}`;
     // ===== SOP 에디터 열기 =====
     function openSopEditor(sopId) {
       currentSopId = sopId;
+      // 이미지 프리로드 (IndexedDB → 캐시)
+      const _sops = JSON.parse(localStorage.getItem('sop_documents') || '[]');
+      const _s = _sops.find(s => s.id === sopId);
+      if (_s?.script?.length) preloadSceneImages(sopId, _s.script.length);
+
       const sops = getSops();
       const sop = sops.find(s => s.id === sopId);
       if (!sop) return;

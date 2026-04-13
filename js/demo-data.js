@@ -10,15 +10,35 @@ const SopStore = {
 
   getAll() {
     const sops = JSON.parse(localStorage.getItem(this._key) || '[]');
-    // __stored__ 포인터 → 별도 저장소에서 이미지 복원
+    // __stored__ 포인터 → IndexedDB 캐시에서 이미지 복원
     sops.forEach(sop => {
       if (sop.script) sop.script.forEach((sc, idx) => {
         if (sc.imageUrl && sc.imageUrl.startsWith('__stored__:')) {
-          sc.imageUrl = localStorage.getItem(`sop_img_${sop.id}_${idx}`) || null;
+          // ImageDB 캐시에서 동기적으로 복원 (preload 완료 후)
+          if (typeof _imageCache !== 'undefined') {
+            const key = `sop_img_${sop.id}_${idx}`;
+            sc.imageUrl = _imageCache[key] || null;
+          } else {
+            sc.imageUrl = null; // 캐시 없으면 나중에 비동기 로드
+          }
         }
       });
     });
     return sops;
+  },
+
+  // 비동기: 특정 SOP의 이미지를 IndexedDB에서 프리로드
+  async preloadImages(sopId) {
+    if (typeof ImageDB === 'undefined') return;
+    const sops = JSON.parse(localStorage.getItem(this._key) || '[]');
+    const sop = sops.find(s => s.id === sopId);
+    if (!sop?.script) return;
+    if (typeof _imageCache === 'undefined') window._imageCache = {};
+    for (let i = 0; i < sop.script.length; i++) {
+      const key = `sop_img_${sopId}_${i}`;
+      const img = await ImageDB.get(key);
+      if (img) _imageCache[key] = img;
+    }
   },
 
   save(sops) {
