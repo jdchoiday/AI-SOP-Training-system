@@ -1877,26 +1877,26 @@
         published: { label: '배포됨', color: 'var(--success)', bg: '#dcfce7' },
       };
 
-      function renderSopItem(sop, indent) {
+      function renderSopItem(sop, indent, secNum) {
         const st = statusMap[sop.status] || statusMap.draft;
         const hasScript = sop.script && sop.script.length > 0;
         const hasQuiz = sop.quizzes && sop.quizzes.length > 0;
         const sceneQuizCount = sop.script ? sop.script.reduce((sum, sc) => sum + (sc.quizzes?.length || 0), 0) : 0;
         const isChecked = selectedSopIds.has(sop.id);
+        const numBadge = (indent && secNum !== undefined) ? `<div style="width:28px; height:28px; border-radius:50%; background:var(--primary); color:white; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0;">${secNum}</div>` : '';
         return `
           <div class="sop-list-item" style="position:relative; ${indent ? 'margin-left:32px; border-left:3px solid var(--primary-light);' : ''}">
             <input type="checkbox" class="sop-checkbox" data-id="${sop.id}"
               ${isChecked ? 'checked' : ''}
               onclick="toggleSopSelect('${sop.id}', event)"
               style="width:18px; height:18px; cursor:pointer; flex-shrink:0; accent-color:var(--primary);">
-            <div class="sop-icon" style="background:${st.bg}; color:${st.color};" onclick="openSopEditor('${sop.id}')">&#128221;</div>
+            ${numBadge}
             <div class="sop-info" onclick="openSopEditor('${sop.id}')" style="cursor:pointer;">
               <h4>${sop.title}</h4>
-              <p>${sop.category || ''} · ${sop.createdAt || ''}${sop.parent_id ? ' · 📘 ' + (chapters.find(c => c.id === sop.parent_id)?.title || '') : ''}</p>
+              <p>${sop.category || ''} · ${hasScript ? (sop.script.length + '씬') : '미생성'}${hasQuiz ? ' · 퀴즈 ' + sop.quizzes.length : ''}</p>
               <div class="sop-badges" style="margin-top:6px;">
                 <span class="badge" style="background:${st.bg}; color:${st.color};">${st.label}</span>
                 ${hasScript ? '<span class="badge" style="background:var(--primary-light); color:var(--primary);">스크립트 ✓</span>' : ''}
-                ${hasQuiz ? '<span class="badge" style="background:rgba(16,185,129,0.15); color:var(--success);">섹션퀴즈 ' + sop.quizzes.length + '</span>' : ''}
                 ${sceneQuizCount > 0 ? '<span class="badge" style="background:rgba(99,102,241,0.15); color:var(--primary);">씬퀴즈 ' + sceneQuizCount + '</span>' : ''}
               </div>
             </div>
@@ -1911,12 +1911,20 @@
         const childSections = sections.filter(s => s.parent_id === ch.id).sort((a, b) => (a.order_num || 0) - (b.order_num || 0));
         const examCount = ch.exam_quizzes?.length || 0;
         const st = statusMap[ch.status] || statusMap.draft;
+        const totalScenes = childSections.reduce((sum, s) => sum + (s.script?.length || 0), 0);
+        const totalQuizzes = childSections.reduce((sum, s) => sum + (s.quizzes?.length || 0), 0);
+        // 챕터 제목: "Ch01" 같은 짧은 이름이면 첫 섹션들 이름을 서브타이틀로 표시
+        const chTitle = ch.title;
+        const sectionPreview = childSections.slice(0, 3).map(s => s.title).join(', ');
+        const isShortTitle = chTitle.length <= 6; // "Ch01" 같은 짧은 제목
+
         html += `
           <div class="sop-list-item" style="background:linear-gradient(135deg,#1E293B,#1a2744); border:1px solid rgba(245,158,11,0.3); cursor:pointer;" onclick="openChapterManager('${ch.id}')">
             <div style="font-size:24px; width:48px; text-align:center;">📘</div>
             <div class="sop-info">
-              <h4 style="color:#f59e0b;">${ch.title}</h4>
-              <p>${childSections.length}개 섹션${examCount > 0 ? ' · 🎯 시험 ' + examCount + '문제' : ''}</p>
+              <h4 style="color:#f59e0b;">${chTitle}</h4>
+              ${isShortTitle && sectionPreview ? `<p style="font-size:13px; color:var(--gray-300); margin-bottom:2px;">${sectionPreview}${childSections.length > 3 ? ' ...' : ''}</p>` : ''}
+              <p style="font-size:12px; color:var(--gray-400);">${childSections.length}개 섹션 · ${totalScenes}씬${totalQuizzes > 0 ? ' · 퀴즈 ' + totalQuizzes : ''}${examCount > 0 ? ' · 🎯 시험 ' + examCount + '문제' : ''}</p>
               <div class="sop-badges" style="margin-top:6px;">
                 <span class="badge" style="background:${st.bg}; color:${st.color};">${st.label}</span>
                 <span class="badge" style="background:rgba(245,158,11,0.15); color:#f59e0b;">대챕터</span>
@@ -1924,7 +1932,7 @@
             </div>
             <span style="color:var(--gray-300);">&#8250;</span>
           </div>`;
-        childSections.forEach(s => { html += renderSopItem(s, true); });
+        childSections.forEach((s, i) => { html += renderSopItem(s, true, i + 1); });
       });
 
       // 독립 섹션 (parent 없음)
@@ -1948,6 +1956,16 @@
 
     // ===== 파일명 → 챕터/섹션 자동 파싱 =====
     // 지원 패턴: Ch02_Sec01_제목_한글_v1_202604, ch3-sec2-title, Chapter1_Section3_...
+    function _cleanTitle(raw) {
+      return raw
+        .replace(/[_\-]+/g, ' ')                         // _와 - → 공백
+        .replace(/\s+(한글|영문|영어|베트남어|korean|english|vietnamese)\s*/gi, ' ')  // 언어 태그 제거
+        .replace(/\s+v\d+(\.\d+)?\s*/gi, ' ')            // v1, v2.1 제거
+        .replace(/\s+\d{6}\s*/g, ' ')                     // 202604 같은 날짜 코드 제거
+        .replace(/\s+/g, ' ')                             // 다중 공백 정리
+        .trim();
+    }
+
     function parseChapterSection(filename) {
       const name = filename.replace(/\.[^/.]+$/, ''); // 확장자 제거
       // 패턴 1: Ch02_Sec01_제목... 또는 ch02-sec01-제목...
@@ -1955,14 +1973,14 @@
       if (m1) {
         const chNum = parseInt(m1[1]);
         const secNum = parseInt(m1[2]);
-        let secTitle = m1[3].replace(/[_\-]/g, ' ').replace(/\s+(한글|영어|베트남어|v\d+|\d{6})\s*/gi, ' ').trim();
+        let secTitle = _cleanTitle(m1[3]);
         return { chapterNum: chNum, sectionNum: secNum, sectionTitle: secTitle || `섹션 ${secNum}`, chapterKey: `ch${String(chNum).padStart(2,'0')}` };
       }
       // 패턴 2: Ch02_제목 (챕터만, 섹션 없음)
       const m2 = name.match(/[Cc]h(?:apter)?[_\-\s]*(\d+)[_\-\s]+(.*)/);
       if (m2) {
         const chNum = parseInt(m2[1]);
-        let title = m2[2].replace(/[_\-]/g, ' ').replace(/\s+(한글|영어|베트남어|v\d+|\d{6})\s*/gi, ' ').trim();
+        let title = _cleanTitle(m2[2]);
         return { chapterNum: chNum, sectionNum: 1, sectionTitle: title || `섹션 1`, chapterKey: `ch${String(chNum).padStart(2,'0')}` };
       }
       return null; // 패턴 없음
