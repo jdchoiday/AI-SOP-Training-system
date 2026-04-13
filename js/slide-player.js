@@ -627,8 +627,15 @@ const SlidePlayer = (() => {
       _preloadNextImage();
     }
 
-    // 자막 즉시 표시 (오디오 재생 전에도 읽을 수 있도록)
-    _startSubtitles(scene.narration, Math.max(scene.narration.length * 0.08, 5));
+    // 자막 즉시 표시 — 첫 문장을 바로 보여주고, 이후 문장단위 자동 전환
+    const subtitleEl = document.getElementById('spSubtitleText');
+    if (subtitleEl && scene.narration) {
+      const firstSentence = (scene.narration.match(/^[^.!?。]+[.!?。]?/) || [scene.narration.slice(0, 80)])[0].trim();
+      subtitleEl.textContent = firstSentence;
+      subtitleEl.style.opacity = '1';
+    }
+    // 문장 단위 자동 전환 시작 (오디오 재생 시 동기화로 대체됨)
+    _startSubtitles(scene.narration, Math.max(scene.narration.length * 0.08, 8));
 
     // Re-trigger animation
     container.style.animation = 'none';
