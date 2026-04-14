@@ -656,11 +656,10 @@
     if (!chapter) {
       console.warn('[Chapter] 챕터를 찾을 수 없습니다:', chapterId);
       window.location.href = 'app.html';
-      return;
     }
 
     // === 챕터 종합시험 모드 (대챕터 → 30문제 시험) ===
-    if (isExamMode && sop.doc_type === 'chapter') {
+    if (chapter && isExamMode && sop.doc_type === 'chapter') {
       const examQuizzes = SopStore.getExamQuizzes(chapterId);
       if (examQuizzes.length > 0) {
         // 종합시험 전용 UI 바로 실행
@@ -668,7 +667,6 @@
       } else {
         alert('종합시험 문제가 아직 생성되지 않았습니다.');
         window.location.href = 'app.html';
-        return;
       }
     }
 
@@ -1701,7 +1699,7 @@ ${narration.slice(0, 1500)}
     }
 
     // ===== 초기 렌더링 =====
-    if (!isExamMode) {
+    if (chapter && !isExamMode) {
       renderVideoList();
 
       // Auto-resume: scroll to last watched video
