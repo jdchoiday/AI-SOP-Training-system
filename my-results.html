@@ -707,7 +707,8 @@
 
     // ===== 3. Results Tab =====
     function renderResults() {
-      const chapters = SopStore.getChapters();
+      const _chRes = SopStore.getChapters();
+      const chapters = Array.isArray(_chRes) ? _chRes : [...(_chRes.chapters || []), ...(_chRes.orphanSections || [])];
       const allResults = Progress.getAllResults();
       const totalProgress = Progress.getTotalProgress();
       const passedChapters = chapters.filter(ch => Progress.isChapterPassed(ch.id));
@@ -847,7 +848,8 @@
 
       ctx.beginPath(); ctx.moveTo(200, 275); ctx.lineTo(600, 275); ctx.stroke();
 
-      const chapters = SopStore.getChapters();
+      const _chRes2 = SopStore.getChapters();
+      const chapters = Array.isArray(_chRes2) ? _chRes2 : [...(_chRes2.chapters || []), ...(_chRes2.orphanSections || [])];
       const allResults = Progress.getAllResults();
       const scores = Object.values(allResults.chapterResults).map(r => r.score).filter(s => s > 0);
       const avg = scores.length > 0 ? Math.round(scores.reduce((a,b) => a+b, 0) / scores.length) : 0;

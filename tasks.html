@@ -598,7 +598,10 @@
         return;
       }
 
-      const allChapters = SopStore.getChapters();
+      const _chRes = SopStore.getChapters();
+      const allChapters = Array.isArray(_chRes) ? _chRes : (_chRes.chapters || []);
+      // orphanSections도 학습 대상에 포함
+      if (_chRes.orphanSections) _chRes.orphanSections.forEach(s => allChapters.push(s));
       // 지점별 학습 경로 필터
       const emp = typeof EmployeeStore !== 'undefined' ? EmployeeStore.getCurrentEmployee() : null;
       const branch = emp?.branch || user.branch;

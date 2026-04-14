@@ -4961,7 +4961,8 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
       const prog = Progress.getEmployeeProgress(empId);
       if (!emp) return;
 
-      const chapters = SopStore.getChapters();
+      const _acr1 = SopStore.getChapters();
+      const chapters = Array.isArray(_acr1) ? _acr1 : [...(_acr1.chapters || []), ...(_acr1.orphanSections || [])];
       const badge = prog.status === 'completed' ? '<span class="badge badge-success">완료</span>'
         : prog.status === 'in_progress' ? '<span class="badge badge-warning">진행중</span>'
         : '<span class="badge badge-danger">미시작</span>';
@@ -5075,7 +5076,8 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
       }).join('');
 
       // 챕터별 통과율 (실데이터)
-      const chapters = SopStore.getChapters();
+      const _acr2 = SopStore.getChapters();
+      const chapters = Array.isArray(_acr2) ? _acr2 : [...(_acr2.chapters || []), ...(_acr2.orphanSections || [])];
       document.getElementById('chapterReport').innerHTML = chapters.length > 0
         ? chapters.map((ch, i) => {
           const passCount = emps.filter(e => Progress.getEmployeeProgress(e.id).chapterResults[ch.id]?.passed).length;
@@ -5556,7 +5558,8 @@ function saveInvitation(code) {
         return `<tr><td>${name}</td><td>${d.total}명</td><td>${d.completed}명</td><td>${avg}%</td></tr>`;
       }).join('');
 
-      const chapters = SopStore.getChapters();
+      const _acr3 = SopStore.getChapters();
+      const chapters = Array.isArray(_acr3) ? _acr3 : [...(_acr3.chapters || []), ...(_acr3.orphanSections || [])];
       let chapterRows = chapters.map((ch,i) => {
         const passCount = emps.filter(e => Progress.getEmployeeProgress(e.id).chapterResults[ch.id]?.passed).length;
         const rate = totalEmps > 0 ? Math.round((passCount/totalEmps)*100) : 0;
@@ -6312,7 +6315,8 @@ Requirements:
 
     // ===== 등급 관련 함수 =====
     function getEmployeeGrade(email) {
-      const chapters = SopStore.getChapters();
+      const _acr4 = SopStore.getChapters();
+      const chapters = Array.isArray(_acr4) ? _acr4 : [...(_acr4.chapters || []), ...(_acr4.orphanSections || [])];
       const scores = [];
       chapters.forEach(ch => {
         // Try user-scoped key format first
