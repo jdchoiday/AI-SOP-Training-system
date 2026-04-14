@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SOP Training - 칭찬</title>
+  <title>SOP Training - 부스트</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0F172A">
@@ -178,34 +178,35 @@
 
   <div class="app-container">
     <div class="app-header">
-      <h2 id="pageTitle">🤝 칭찬</h2>
-      <div id="dailyLimitBadge" class="daily-limit-badge" style="background:#dcfce7;color:var(--success);">0/2</div>
+      <h2 id="pageTitle">🙌 부스트</h2>
+      <div id="dailyLimitBadge" class="daily-limit-badge" style="background:#dcfce7;color:var(--success);">0/5</div>
     </div>
 
     <!-- 탭 -->
     <div class="praise-tabs">
-      <div class="praise-tab active" onclick="showPraiseTab('send')" id="tabSendLabel">칭찬 보내기</div>
-      <div class="praise-tab" onclick="showPraiseTab('received')" id="tabReceivedLabel">받은 칭찬</div>
+      <div class="praise-tab active" onclick="showPraiseTab('send')" id="tabSendLabel">부스트 보내기</div>
+      <div class="praise-tab" onclick="showPraiseTab('received')" id="tabReceivedLabel">받은 부스트</div>
+      <div class="praise-tab" onclick="showPraiseTab('guide')" id="tabGuideLabel">이용 가이드</div>
     </div>
 
-    <!-- ===== 탭1: 칭찬 보내기 ===== -->
+    <!-- ===== 탭1: 부스트 보내기 ===== -->
     <div id="tabSend">
-      <h3 id="whoPraiseLabel" style="font-size:15px; color:var(--gray-700); margin-bottom:12px;">누구에게 칭찬할까요?</h3>
+      <h3 id="whoPraiseLabel" style="font-size:15px; color:var(--gray-700); margin-bottom:12px;">누구에게 부스트를 보낼까요?</h3>
       <div id="empList" class="emp-select-list"></div>
 
       <div id="categoryArea" style="display:none;">
         <h3 id="whatGreatLabel" style="font-size:15px; color:var(--gray-700); margin-bottom:8px;">어떤 점이 좋았나요?</h3>
         <div id="categoryGrid" class="category-grid"></div>
         <div id="reasonArea" style="display:none; margin-top:12px;">
-          <h3 style="font-size:15px; color:var(--gray-700); margin-bottom:8px;" id="reasonLabel">칭찬 이유 <span style="font-size:12px; color:var(--gray-400); font-weight:400;" id="optionalLabel">(선택)</span></h3>
+          <h3 style="font-size:15px; color:var(--gray-700); margin-bottom:8px;" id="reasonLabel">부스트 메시지 <span style="font-size:12px; color:var(--gray-400); font-weight:400;" id="optionalLabel">(선택)</span></h3>
           <textarea id="praiseReason" rows="2" maxlength="100" placeholder="" style="width:100%; padding:12px; border:1px solid var(--gray-300); border-radius:10px; font-size:14px; resize:none; font-family:inherit; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--gray-300)'"></textarea>
           <div style="text-align:right; font-size:11px; color:var(--gray-400); margin-top:4px;"><span id="reasonCount">0</span>/100</div>
         </div>
-        <button id="sendBtn" class="send-btn" disabled onclick="doSendPraise()">칭찬 보내기</button>
+        <button id="sendBtn" class="send-btn" disabled onclick="doSendPraise()">부스트 보내기</button>
       </div>
     </div>
 
-    <!-- ===== 탭2: 받은 칭찬 ===== -->
+    <!-- ===== 탭2: 받은 부스트 ===== -->
     <div id="tabReceived" style="display:none;">
       <!-- 스택 진행 카드 -->
       <div class="praise-stack-card">
@@ -226,9 +227,79 @@
         </div>
       </div>
 
-      <!-- 받은 칭찬 리스트 -->
-      <h3 style="font-size:15px; color:var(--gray-700); margin-bottom:12px;" id="recentPraiseLabel">최근 받은 칭찬</h3>
+      <!-- 받은 부스트 리스트 -->
+      <h3 style="font-size:15px; color:var(--gray-700); margin-bottom:12px;" id="recentPraiseLabel">최근 받은 부스트</h3>
       <div id="receivedList"></div>
+    </div>
+
+    <!-- ===== 탭3: 이용 가이드 ===== -->
+    <div id="tabGuide" style="display:none;">
+      <div style="padding:4px 0;">
+
+        <!-- 부스트란? -->
+        <div class="card" style="margin-bottom:12px; border-left:3px solid var(--primary);">
+          <h3 style="font-size:15px; font-weight:700; color:var(--primary); margin-bottom:8px;" id="guideWhat">🙌 부스트란?</h3>
+          <p style="font-size:14px; color:var(--text-secondary); line-height:1.7;" id="guideWhatDesc">동료의 좋은 행동에 감사를 표현하는 기능입니다. 부스트를 받으면 EXP를 얻고, 팀 분위기가 좋아집니다!</p>
+        </div>
+
+        <!-- 사용 방법 -->
+        <div class="card" style="margin-bottom:12px;">
+          <h3 style="font-size:15px; font-weight:700; color:var(--text-primary); margin-bottom:12px;" id="guideHow">📝 사용 방법</h3>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">1</div>
+              <span style="font-size:14px; color:var(--text-secondary);" id="guideStep1">동료를 선택합니다</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">2</div>
+              <span style="font-size:14px; color:var(--text-secondary);" id="guideStep2">카테고리를 선택합니다 (도움, 리더십, 서비스 등)</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">3</div>
+              <span style="font-size:14px; color:var(--text-secondary);" id="guideStep3">메시지를 작성합니다 (선택사항)</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">4</div>
+              <span style="font-size:14px; color:var(--text-secondary);" id="guideStep4">부스트 보내기를 누릅니다</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 규칙 -->
+        <div class="card" style="margin-bottom:12px; border-left:3px solid #F59E0B;">
+          <h3 style="font-size:15px; font-weight:700; color:#F59E0B; margin-bottom:10px;" id="guideRules">📋 규칙</h3>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; align-items:flex-start; gap:8px;">
+              <span style="color:var(--primary);font-size:14px;flex-shrink:0;">&#10003;</span>
+              <span style="font-size:13.5px; color:var(--text-secondary); line-height:1.5;" id="guideRule1">하루 최대 5회까지 보낼 수 있습니다</span>
+            </div>
+            <div style="display:flex; align-items:flex-start; gap:8px;">
+              <span style="color:var(--primary);font-size:14px;flex-shrink:0;">&#10003;</span>
+              <span style="font-size:13.5px; color:var(--text-secondary); line-height:1.5;" id="guideRule2">같은 사람에게 연속 보내기 가능합니다</span>
+            </div>
+            <div style="display:flex; align-items:flex-start; gap:8px;">
+              <span style="color:var(--primary);font-size:14px;flex-shrink:0;">&#10003;</span>
+              <span style="font-size:13.5px; color:var(--text-secondary); line-height:1.5;" id="guideRule3">받은 부스트 3개 = +3 XP 자동 전환</span>
+            </div>
+            <div style="display:flex; align-items:flex-start; gap:8px;">
+              <span style="color:var(--primary);font-size:14px;flex-shrink:0;">&#10003;</span>
+              <span style="font-size:13.5px; color:var(--text-secondary); line-height:1.5;" id="guideRule4">한도는 매일 자정(KST) 초기화됩니다</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- XP 전환 -->
+        <div class="card" style="background:linear-gradient(135deg, rgba(16,185,129,0.08), rgba(59,130,246,0.08)); border:1px solid rgba(16,185,129,0.2);">
+          <h3 style="font-size:15px; font-weight:700; color:var(--primary); margin-bottom:8px;" id="guideXp">⭐ XP 전환 시스템</h3>
+          <p style="font-size:14px; color:var(--text-secondary); line-height:1.7;" id="guideXpDesc">부스트를 3개 모으면 자동으로 EXP로 전환됩니다. 많이 받을수록 성장이 빨라져요!</p>
+          <div style="display:flex; justify-content:center; gap:8px; margin-top:12px;">
+            <div style="padding:6px 12px; border-radius:8px; background:rgba(245,158,11,0.15); color:#F59E0B; font-size:13px; font-weight:600;">&#11088; x3</div>
+            <div style="display:flex; align-items:center; color:var(--gray-500);">&rarr;</div>
+            <div style="padding:6px 12px; border-radius:8px; background:rgba(16,185,129,0.15); color:var(--primary); font-size:13px; font-weight:600;">+3 XP</div>
+          </div>
+        </div>
+
+      </div>
     </div>
   </div>
 
@@ -269,84 +340,129 @@
     const T = {
       ko: {
         home: '홈', tasks: '미션', praise: '부스트', myResults: '내 프로필',
-        sendPraise: '칭찬 보내기', received: '받은 칭찬',
-        whoPraise: '누구에게 칭찬할까요?',
+        sendPraise: '부스트 보내기', received: '받은 부스트', guide: '이용 가이드',
+        whoPraise: '누구에게 부스트를 보낼까요?',
         myTeam: '우리 팀', otherTeams: '같은 지점 · 다른 팀',
         whatGreat: '어떤 점이 좋았나요?',
-        reason: '칭찬 이유', optional: '선택',
-        sendBtn: '칭찬 보내기', sending: '보내는 중...',
+        reason: '부스트 메시지', optional: '선택',
+        sendBtn: '부스트 보내기', sending: '보내는 중...',
         sent: '보냄',
         untilNextXp: '다음 XP 전환까지',
         moreForXp: (n, m) => `${n}개 더 받으면 +${m} XP!`,
         xpConvertDone: 'XP 전환 완료!',
-        monthPraise: '이번 달 받은 칭찬',
+        monthPraise: '이번 달 받은 부스트',
         convertedXp: '전환된 XP',
-        recentPraise: '최근 받은 칭찬',
-        noPraise: '아직 받은 칭찬이 없어요',
-        noColleagues: '같은 지점에 칭찬할 동료가 없습니다',
+        recentPraise: '최근 받은 부스트',
+        noPraise: '아직 받은 부스트가 없어요',
+        noColleagues: '같은 지점에 보낼 동료가 없습니다',
         justNow: '방금 전',
         minAgo: (n) => `${n}분 전`,
         hrsAgo: (n) => `${n}시간 전`,
         daysAgo: (n) => `${n}일 전`,
-        praiseSent: '칭찬을 보냈습니다!',
-        sendFail: '칭찬 보내기 실패',
-        dailyLimitReached: '오늘 칭찬 한도에 도달했습니다',
+        praiseSent: '부스트를 보냈습니다!',
+        sendFail: '부스트 보내기 실패',
+        dailyLimitReached: '오늘 부스트 한도에 도달했습니다',
         anonymous: '익명',
         placeholder: '예: 오늘 바쁜 시간에 정말 많이 도와줘서 고마워요!',
+        guideTitle: '부스트 이용 가이드',
+        guideWhat: '부스트란?',
+        guideWhatDesc: '동료의 좋은 행동에 감사를 표현하는 기능입니다. 부스트를 받으면 EXP를 얻고, 팀 분위기가 좋아집니다!',
+        guideHow: '사용 방법',
+        guideStep1: '동료를 선택합니다',
+        guideStep2: '카테고리를 선택합니다 (도움, 리더십, 서비스 등)',
+        guideStep3: '메시지를 작성합니다 (선택사항)',
+        guideStep4: '부스트 보내기를 누릅니다',
+        guideRules: '규칙',
+        guideRule1: '하루 최대 5회까지 보낼 수 있습니다',
+        guideRule2: '같은 사람에게 연속 보내기 가능합니다',
+        guideRule3: '받은 부스트 3개 = +3 XP 자동 전환',
+        guideRule4: '한도는 매일 자정(KST) 초기화됩니다',
+        guideXp: 'XP 전환 시스템',
+        guideXpDesc: '부스트를 3개 모으면 자동으로 EXP로 전환됩니다. 많이 받을수록 성장이 빨라져요!',
       },
       en: {
         home: 'Home', tasks: 'Tasks', praise: 'Boost', myResults: 'Profile',
-        sendPraise: 'Send Praise', received: 'Received',
-        whoPraise: 'Who do you want to praise?',
+        sendPraise: 'Send Boost', received: 'Received', guide: 'Guide',
+        whoPraise: 'Who do you want to boost?',
         myTeam: 'My Team', otherTeams: 'Same Branch · Other Teams',
         whatGreat: 'What was great?',
-        reason: 'Reason', optional: 'Optional',
-        sendBtn: 'Send Praise', sending: 'Sending...',
+        reason: 'Message', optional: 'Optional',
+        sendBtn: 'Send Boost', sending: 'Sending...',
         sent: 'sent',
         untilNextXp: 'Until next XP conversion',
         moreForXp: (n, m) => `${n} more for +${m} XP!`,
         xpConvertDone: 'XP conversion complete!',
-        monthPraise: "This month's praise",
+        monthPraise: "This month's boosts",
         convertedXp: 'Converted XP',
-        recentPraise: 'Recent praise received',
-        noPraise: 'No praise received yet',
+        recentPraise: 'Recent boosts received',
+        noPraise: 'No boosts received yet',
         noColleagues: 'No colleagues in your branch',
         justNow: 'just now',
         minAgo: (n) => `${n} min ago`,
         hrsAgo: (n) => `${n} hrs ago`,
         daysAgo: (n) => `${n} days ago`,
-        praiseSent: 'Praise sent!',
-        sendFail: 'Failed to send praise',
-        dailyLimitReached: 'Daily praise limit reached',
+        praiseSent: 'Boost sent!',
+        sendFail: 'Failed to send boost',
+        dailyLimitReached: 'Daily boost limit reached',
         anonymous: 'Anonymous',
         placeholder: 'e.g., Thanks for helping so much during the busy hours today!',
+        guideTitle: 'Boost Guide',
+        guideWhat: 'What is Boost?',
+        guideWhatDesc: 'A way to recognize your colleagues for great work. Boosts earn EXP and improve team morale!',
+        guideHow: 'How to Use',
+        guideStep1: 'Select a colleague',
+        guideStep2: 'Choose a category (Help, Leadership, Service, etc.)',
+        guideStep3: 'Write a message (optional)',
+        guideStep4: 'Tap "Send Boost"',
+        guideRules: 'Rules',
+        guideRule1: 'You can send up to 5 boosts per day',
+        guideRule2: 'You can boost the same person multiple times',
+        guideRule3: 'Every 3 boosts received = +3 XP auto-conversion',
+        guideRule4: 'Daily limit resets at midnight (KST)',
+        guideXp: 'XP Conversion',
+        guideXpDesc: 'Collect 3 boosts and they auto-convert to EXP. More boosts = faster growth!',
       },
       vi: {
-        home: 'Trang chủ', tasks: 'Nhiệm vụ', praise: 'Khen', myResults: 'Hồ sơ',
-        sendPraise: 'Gửi lời khen', received: 'Đã nhận',
-        whoPraise: 'Bạn muốn khen ai?',
-        myTeam: 'Đội của tôi', otherTeams: 'Cùng chi nhánh · Đội khác',
-        whatGreat: 'Điều gì tốt?',
-        reason: 'Lý do', optional: 'Tùy chọn',
-        sendBtn: 'Gửi lời khen', sending: 'Đang gửi...',
-        sent: 'đã gửi',
-        untilNextXp: 'Đến chuyển đổi XP tiếp theo',
-        moreForXp: (n, m) => `Thêm ${n} để +${m} XP!`,
-        xpConvertDone: 'Chuyển đổi XP hoàn tất!',
-        monthPraise: 'Lời khen tháng này',
-        convertedXp: 'XP đã chuyển đổi',
-        recentPraise: 'Lời khen gần đây',
-        noPraise: 'Chưa nhận được lời khen nào',
-        noColleagues: 'Không có đồng nghiệp trong chi nhánh',
-        justNow: 'vừa xong',
-        minAgo: (n) => `${n} phút trước`,
-        hrsAgo: (n) => `${n} giờ trước`,
-        daysAgo: (n) => `${n} ngày trước`,
-        praiseSent: 'Đã gửi lời khen!',
-        sendFail: 'Gửi lời khen thất bại',
-        dailyLimitReached: 'Đã đạt giới hạn khen ngợi hôm nay',
-        anonymous: 'Ẩn danh',
-        placeholder: 'VD: Cảm ơn bạn đã giúp đỡ rất nhiều trong giờ cao điểm hôm nay!',
+        home: 'Trang chu', tasks: 'Nhiem vu', praise: 'Boost', myResults: 'Ho so',
+        sendPraise: 'Gui Boost', received: 'Da nhan', guide: 'Huong dan',
+        whoPraise: 'Ban muon boost ai?',
+        myTeam: 'Doi cua toi', otherTeams: 'Cung chi nhanh · Doi khac',
+        whatGreat: 'Dieu gi tot?',
+        reason: 'Tin nhan', optional: 'Tuy chon',
+        sendBtn: 'Gui Boost', sending: 'Dang gui...',
+        sent: 'da gui',
+        untilNextXp: 'Den chuyen doi XP tiep theo',
+        moreForXp: (n, m) => `Them ${n} de +${m} XP!`,
+        xpConvertDone: 'Chuyen doi XP hoan tat!',
+        monthPraise: 'Boost thang nay',
+        convertedXp: 'XP da chuyen doi',
+        recentPraise: 'Boost gan day',
+        noPraise: 'Chua nhan duoc boost nao',
+        noColleagues: 'Khong co dong nghiep trong chi nhanh',
+        justNow: 'vua xong',
+        minAgo: (n) => `${n} phut truoc`,
+        hrsAgo: (n) => `${n} gio truoc`,
+        daysAgo: (n) => `${n} ngay truoc`,
+        praiseSent: 'Da gui boost!',
+        sendFail: 'Gui boost that bai',
+        dailyLimitReached: 'Da dat gioi han boost hom nay',
+        anonymous: 'An danh',
+        placeholder: 'VD: Cam on ban da giup do rat nhieu trong gio cao diem hom nay!',
+        guideTitle: 'Huong dan Boost',
+        guideWhat: 'Boost la gi?',
+        guideWhatDesc: 'Cach de ghi nhan dong nghiep lam viec tot. Boost giup kiem XP va cai thien tinh than nhom!',
+        guideHow: 'Cach su dung',
+        guideStep1: 'Chon dong nghiep',
+        guideStep2: 'Chon danh muc (Giup do, Lanh dao, Dich vu, v.v.)',
+        guideStep3: 'Viet tin nhan (tuy chon)',
+        guideStep4: 'Nhan "Gui Boost"',
+        guideRules: 'Quy tac',
+        guideRule1: 'Ban co the gui toi da 5 boost moi ngay',
+        guideRule2: 'Co the boost cung nguoi nhieu lan',
+        guideRule3: 'Moi 3 boost nhan duoc = +3 XP tu dong chuyen doi',
+        guideRule4: 'Gioi han hang ngay dat lai luc nua dem (KST)',
+        guideXp: 'Chuyen doi XP',
+        guideXpDesc: 'Thu thap 3 boost va chung se tu dong chuyen thanh EXP. Nhieu boost hon = tang truong nhanh hon!',
       }
     };
     const t = T[lang] || T.ko;
@@ -363,9 +479,10 @@
       document.querySelector('.nav-label-results').textContent = t.myResults;
       document.title = `SOP Training - ${t.praise}`;
 
-      document.getElementById('pageTitle').textContent = `🤝 ${t.praise}`;
+      document.getElementById('pageTitle').textContent = `🙌 ${t.praise}`;
       document.getElementById('tabSendLabel').textContent = t.sendPraise;
       document.getElementById('tabReceivedLabel').textContent = t.received;
+      document.getElementById('tabGuideLabel').textContent = t.guide;
       document.getElementById('whoPraiseLabel').textContent = t.whoPraise;
       document.getElementById('whatGreatLabel').textContent = t.whatGreat;
       document.getElementById('reasonLabel').innerHTML = `${t.reason} <span style="font-size:12px; color:var(--gray-400); font-weight:400;">(${t.optional})</span>`;
@@ -381,10 +498,30 @@
     function showPraiseTab(tab) {
       document.getElementById('tabSend').style.display = tab === 'send' ? 'block' : 'none';
       document.getElementById('tabReceived').style.display = tab === 'received' ? 'block' : 'none';
+      document.getElementById('tabGuide').style.display = tab === 'guide' ? 'block' : 'none';
       document.querySelectorAll('.praise-tab').forEach((ti, i) => {
-        ti.classList.toggle('active', (i === 0 && tab === 'send') || (i === 1 && tab === 'received'));
+        ti.classList.toggle('active', (i === 0 && tab === 'send') || (i === 1 && tab === 'received') || (i === 2 && tab === 'guide'));
       });
       if (tab === 'received') loadReceivedTab();
+      if (tab === 'guide') applyGuideI18n();
+    }
+
+    function applyGuideI18n() {
+      const els = {
+        guideWhat: t.guideWhat ? '🙌 ' + t.guideWhat : null,
+        guideWhatDesc: t.guideWhatDesc,
+        guideHow: t.guideHow ? '📝 ' + t.guideHow : null,
+        guideStep1: t.guideStep1, guideStep2: t.guideStep2,
+        guideStep3: t.guideStep3, guideStep4: t.guideStep4,
+        guideRules: t.guideRules ? '📋 ' + t.guideRules : null,
+        guideRule1: t.guideRule1, guideRule2: t.guideRule2,
+        guideRule3: t.guideRule3, guideRule4: t.guideRule4,
+        guideXp: t.guideXp ? '⭐ ' + t.guideXp : null,
+        guideXpDesc: t.guideXpDesc,
+      };
+      for (const [id, val] of Object.entries(els)) {
+        if (val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+      }
     }
 
     // ===== 직원 목록 렌더링 (같은 지점만, 우리 팀 → 다른 팀) =====
