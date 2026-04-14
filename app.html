@@ -318,12 +318,7 @@
     SupabaseMode.init().then(connected => {
       if (connected) {
         SupabaseMode.syncAll().then(() => {
-          // 데이터가 바뀌었으면 UI 갱신
-          const newChapters = SopStore.getChapters();
-          if (newChapters.length !== chapters.length) {
-            location.reload();
-          }
-          // Supabase 동기화 후 티어 카드 + 칭찬 미니 카드 + 리더보드 렌더링
+          // Supabase 동기화 후 UI 갱신 (reload 하지 않음 — 깜박임 방지)
           renderTierCard();
           renderPraiseMiniCard();
           renderTasksMiniCard();
