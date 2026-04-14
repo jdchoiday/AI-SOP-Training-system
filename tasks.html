@@ -180,6 +180,64 @@
       font-size: 11px; padding: 2px 8px; border-radius: 8px; font-weight: 600;
       white-space: nowrap;
     }
+
+    /* ===== 일일 미션 자동감지 카드 ===== */
+    .dm-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px; border-radius: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      margin-bottom: 8px;
+      transition: all 0.25s;
+    }
+    .dm-card.completed {
+      background: rgba(16,185,129,0.08);
+      border-color: rgba(16,185,129,0.2);
+    }
+    .dm-icon {
+      width: 42px; height: 42px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+      background: rgba(255,255,255,0.06);
+    }
+    .dm-card.completed .dm-icon {
+      background: rgba(16,185,129,0.15);
+    }
+    .dm-info { flex: 1; min-width: 0; }
+    .dm-title { font-weight: 600; font-size: 14px; color: var(--text-primary, #F1F5F9); }
+    .dm-desc { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+    .dm-xp {
+      display: inline-block; margin-top: 4px;
+      font-size: 11px; font-weight: 700; color: #10B981;
+      padding: 2px 8px; border-radius: 6px;
+      background: rgba(16,185,129,0.1);
+    }
+    .dm-status { flex-shrink: 0; }
+    .dm-check-btn {
+      padding: 8px 16px; border-radius: 10px;
+      background: linear-gradient(135deg, #10B981, #059669);
+      color: white; border: none;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(16,185,129,0.3);
+    }
+    .dm-check-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .dm-check-btn:active { transform: scale(0.97); }
+    .dm-done-badge {
+      display: flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: 50%;
+      background: rgba(16,185,129,0.15); color: #10B981;
+      font-size: 18px; font-weight: 700;
+    }
+    .dm-pending-badge {
+      min-width: 48px; height: 28px; border-radius: 14px;
+      border: 1.5px dashed rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gray-500); font-size: 10px; padding: 0 6px;
+      white-space: nowrap;
+    }
+    .dm-card.completed .dm-title { color: #10B981; }
+    .dm-card.completed .dm-xp { background: rgba(16,185,129,0.2); color: #34D399; }
   </style>
 </head>
 <body>
@@ -243,28 +301,7 @@
         <div class="mission-section-arrow" id="dailyArrow">&#9660;</div>
       </div>
       <div class="mission-section-body open" id="dailyMissionBody">
-        <!-- 날짜 네비게이션 -->
-        <div class="date-nav">
-          <button onclick="changeDate(-1)">&#9664;</button>
-          <div class="date-display" id="dateDisplay"></div>
-          <button onclick="changeDate(1)" id="nextDateBtn">&#9654;</button>
-        </div>
-
-        <!-- 카테고리 탭 -->
-        <div class="task-tabs" id="taskTabs">
-          <div class="task-tab active" data-cat="daily" onclick="switchTab('daily')">
-            <span id="tabDaily">매일</span>
-          </div>
-          <div class="task-tab" data-cat="weekly" onclick="switchTab('weekly')">
-            <span id="tabWeekly">주간</span>
-          </div>
-          <div class="task-tab" data-cat="monthly" onclick="switchTab('monthly')">
-            <span id="tabMonthly">월간</span>
-          </div>
-        </div>
-
-        <!-- 성과제 리스트 -->
-        <div id="taskList"></div>
+        <div id="dailyMissionList"></div>
       </div>
     </div>
 
@@ -323,19 +360,13 @@
       ko: {
         pageTitle: '미션',
         home: '홈', tasks: '미션', praise: '부스트', results: '내 프로필',
-        daily: '매일', weekly: '주간', monthly: '월간',
         quarterPoints: '이번 분기 포인트',
         totalPoints: (n) => `누적: ${n} P`,
-        todayCompleted: '오늘 완료', todayPoints: '오늘 획득',
-        complete: '완료!', alreadyDone: '이미 완료됨',
+        todayCompleted: '미션 완료', todayPoints: '오늘 XP',
+        complete: '완료!',
         xpGained: (xp) => `+${xp} XP`,
-        pointGained: (p) => `+${p} P`,
-        noTasks: '등록된 성과제가 없습니다',
-        noTasksSub: '관리자가 성과제를 등록하면 여기에 표시됩니다',
-        today: '오늘',
-        confirmComplete: (name) => `"${name}" 완료 처리하시겠습니까?`,
         teamTasks: '👥 전체 보기',
-        dailyMission: '일일 미션', dailyMissionDesc: '매일 해야 할 기본 업무',
+        dailyMission: '일일 미션', dailyMissionDesc: '자동 감지 데일리 미션',
         studyMission: '학습 미션', studyMissionDesc: 'SOP 교육 과정 학습',
         taskMission: '테스크 미션', taskMissionDesc: '팀 챌린지 & 특별 업무',
         viewAll: '전체 보기',
@@ -346,23 +377,28 @@
         studyScenes: (n) => `${n}개 영상`,
         studyReward: '+50 XP',
         studyAllDone: '모든 학습을 완료했어요! 🎉',
+        // 일일 미션 자동감지
+        dmAttendance: '출근 체크인',
+        dmAttendanceDesc: '오늘의 출근을 기록하세요',
+        dmStudy: '학습 완료',
+        dmStudyDesc: (n) => `오늘 ${n}개 이상 씬 학습`,
+        dmQuiz: '퀴즈 만점',
+        dmQuizDesc: '퀴즈에서 100점을 달성하세요',
+        dmBoost: '부스트 전송',
+        dmBoostDesc: '동료에게 부스트를 보내세요',
+        dmCheckIn: '체크인',
+        dmAutoDetect: '자동 감지',
       },
       en: {
         pageTitle: 'Missions',
         home: 'Home', tasks: 'Tasks', praise: 'Boost', results: 'Profile',
-        daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly',
         quarterPoints: 'Quarter Points',
         totalPoints: (n) => `Total: ${n} P`,
-        todayCompleted: 'Done Today', todayPoints: 'Earned Today',
-        complete: 'Done!', alreadyDone: 'Already completed',
+        todayCompleted: 'Missions', todayPoints: 'Today XP',
+        complete: 'Done!',
         xpGained: (xp) => `+${xp} XP`,
-        pointGained: (p) => `+${p} P`,
-        noTasks: 'No tasks registered',
-        noTasksSub: 'Tasks will appear once admin adds them',
-        today: 'Today',
-        confirmComplete: (name) => `Mark "${name}" as complete?`,
         teamTasks: '👥 View All',
-        dailyMission: 'Daily Missions', dailyMissionDesc: 'Basic daily tasks',
+        dailyMission: 'Daily Missions', dailyMissionDesc: 'Auto-detect daily missions',
         studyMission: 'Study Missions', studyMissionDesc: 'SOP training courses',
         taskMission: 'Task Missions', taskMissionDesc: 'Team challenges & projects',
         viewAll: 'View All',
@@ -373,23 +409,27 @@
         studyScenes: (n) => `${n} videos`,
         studyReward: '+50 XP',
         studyAllDone: 'All studies completed! 🎉',
+        dmAttendance: 'Check In',
+        dmAttendanceDesc: 'Record your attendance today',
+        dmStudy: 'Study Complete',
+        dmStudyDesc: (n) => `Complete ${n}+ scenes today`,
+        dmQuiz: 'Perfect Quiz',
+        dmQuizDesc: 'Score 100% on any quiz',
+        dmBoost: 'Send Boost',
+        dmBoostDesc: 'Send a boost to a colleague',
+        dmCheckIn: 'Check In',
+        dmAutoDetect: 'Auto',
       },
       vi: {
         pageTitle: 'Nhiệm vụ',
         home: 'Trang chủ', tasks: 'Nhiệm vụ', praise: 'Khen', results: 'Hồ sơ',
-        daily: 'Hàng ngày', weekly: 'Hàng tuần', monthly: 'Hàng tháng',
         quarterPoints: 'Điểm quý này',
         totalPoints: (n) => `Tổng: ${n} P`,
-        todayCompleted: 'Hoàn thành hôm nay', todayPoints: 'Kiếm được hôm nay',
-        complete: 'Xong!', alreadyDone: 'Đã hoàn thành',
+        todayCompleted: 'Nhiệm vụ', todayPoints: 'XP hôm nay',
+        complete: 'Xong!',
         xpGained: (xp) => `+${xp} XP`,
-        pointGained: (p) => `+${p} P`,
-        noTasks: 'Chưa có nhiệm vụ nào',
-        noTasksSub: 'Nhiệm vụ sẽ hiển thị khi quản trị viên thêm',
-        today: 'Hôm nay',
-        confirmComplete: (name) => `Đánh dấu "${name}" là hoàn thành?`,
         teamTasks: '👥 Xem tất cả',
-        dailyMission: 'Nhiệm vụ hàng ngày', dailyMissionDesc: 'Công việc cơ bản hàng ngày',
+        dailyMission: 'Nhiệm vụ hàng ngày', dailyMissionDesc: 'Tự động phát hiện hàng ngày',
         studyMission: 'Nhiệm vụ học tập', studyMissionDesc: 'Khóa đào tạo SOP',
         taskMission: 'Nhiệm vụ nhóm', taskMissionDesc: 'Thử thách nhóm & dự án',
         viewAll: 'Xem tất cả',
@@ -400,6 +440,16 @@
         studyScenes: (n) => `${n} video`,
         studyReward: '+50 XP',
         studyAllDone: 'Hoàn thành tất cả bài học! 🎉',
+        dmAttendance: 'Điểm danh',
+        dmAttendanceDesc: 'Ghi nhận đi làm hôm nay',
+        dmStudy: 'Hoàn thành học',
+        dmStudyDesc: (n) => `Học ${n}+ bài hôm nay`,
+        dmQuiz: 'Điểm tuyệt đối',
+        dmQuizDesc: 'Đạt 100 điểm bài kiểm tra',
+        dmBoost: 'Gửi khen',
+        dmBoostDesc: 'Gửi lời khen cho đồng nghiệp',
+        dmCheckIn: 'Điểm danh',
+        dmAutoDetect: 'Tự động',
       }
     };
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
@@ -426,11 +476,10 @@
     }
 
     // ===== 상태 변수 =====
-    let currentDate = new Date();
-    let currentTab = 'daily';
-    let templates = [];
-    let todayLogs = [];
-    let _resolvedEmpId = null; // employees 테이블의 실제 ID 캐시
+    let _resolvedEmpId = null;
+    let dailyMissionConfig = { attendance_xp: 3, study_xp: 5, study_required: 3, quiz_xp: 3, boost_xp: 2 };
+    let dailyMissionStatus = { attendance: false, study: false, quiz: false, boost: false };
+    let _dmChecking = false;
 
     // employees 테이블에서 실제 ID를 찾는 헬퍼
     async function getEmployeeId() {
@@ -449,7 +498,6 @@
       return user.id; // 못 찾으면 원래 ID 사용
     }
 
-    // ===== 날짜 유틸 =====
     function formatDate(d) {
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -457,110 +505,161 @@
       return `${y}-${m}-${dd}`;
     }
 
-    function isToday(d) {
-      const now = new Date();
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    // ===== 일일 미션 설정 로드 (app_config) =====
+    async function loadDailyMissionConfig() {
+      try {
+        const { data } = await SupabaseMode._client
+          .from('app_config').select('value').eq('key', 'daily_mission_config').maybeSingle();
+        if (data?.value) {
+          dailyMissionConfig = { ...dailyMissionConfig, ...data.value };
+          console.log('[DM] Config loaded:', dailyMissionConfig);
+        }
+      } catch (e) { console.warn('[DM] Config load error:', e); }
     }
 
-    function changeDate(delta) {
-      const newDate = new Date(currentDate);
-      newDate.setDate(newDate.getDate() + delta);
-      // 미래 날짜 불가
-      if (newDate > new Date()) return;
-      currentDate = newDate;
-      loadData();
-    }
+    // ===== 미션 자동 감지 + XP 보상 =====
+    async function checkDailyMissions() {
+      if (!SupabaseMode._ready || _dmChecking) return;
+      _dmChecking = true;
+      const empId = await getEmployeeId();
+      const today = formatDate(new Date());
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
 
-    // ===== UI 업데이트 =====
-    function updateDateDisplay() {
-      const display = document.getElementById('dateDisplay');
-      if (isToday(currentDate)) {
-        const dayNames = { ko: ['일','월','화','수','목','금','토'], en: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], vi: ['CN','T2','T3','T4','T5','T6','T7'] };
-        const days = dayNames[lang] || dayNames.ko;
-        display.textContent = `${t.today} (${days[currentDate.getDay()]})`;
-      } else {
-        display.textContent = formatDate(currentDate);
+      try {
+        // 1) 이미 지급된 미션 확인 (xp_transactions)
+        const { data: xpLogs } = await SupabaseMode._client
+          .from('xp_transactions').select('source_id')
+          .eq('employee_id', empId).eq('source', 'daily_mission');
+
+        const grantedIds = new Set(
+          (xpLogs || []).filter(x => x.source_id && x.source_id.endsWith('_' + today)).map(x => x.source_id)
+        );
+        dailyMissionStatus.attendance = grantedIds.has('dm_attendance_' + today);
+        dailyMissionStatus.study     = grantedIds.has('dm_study_' + today);
+        dailyMissionStatus.quiz      = grantedIds.has('dm_quiz_' + today);
+        dailyMissionStatus.boost     = grantedIds.has('dm_boost_' + today);
+
+        // 2) 미완료 미션 자동 감지
+
+        // 📺 학습: 오늘 완료 씬 수
+        if (!dailyMissionStatus.study) {
+          try {
+            const { data } = await SupabaseMode._client
+              .from('training_progress').select('id')
+              .eq('employee_id', empId).eq('completed', true)
+              .gte('completed_at', todayStart.toISOString());
+            if ((data?.length || 0) >= dailyMissionConfig.study_required) {
+              await claimMissionXp('study');
+            }
+          } catch (e) { console.warn('[DM] Study check:', e); }
+        }
+
+        // 💯 퀴즈 만점
+        if (!dailyMissionStatus.quiz) {
+          try {
+            const { data } = await SupabaseMode._client
+              .from('chapter_results').select('id')
+              .eq('employee_id', empId).eq('score', 100)
+              .gte('completed_at', todayStart.toISOString());
+            if (data?.length > 0) await claimMissionXp('quiz');
+          } catch (e) { console.warn('[DM] Quiz check:', e); }
+        }
+
+        // 🙌 부스트 전송
+        if (!dailyMissionStatus.boost) {
+          try {
+            const { data } = await SupabaseMode._client
+              .from('praise_logs').select('id')
+              .eq('from_employee_id', empId)
+              .gte('created_at', todayStart.toISOString());
+            if (data?.length > 0) await claimMissionXp('boost');
+          } catch (e) { console.warn('[DM] Boost check:', e); }
+        }
+      } catch (e) {
+        console.warn('[DM] Check error:', e);
+      } finally {
+        _dmChecking = false;
       }
-      // 미래 날짜 버튼 비활성화
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      document.getElementById('nextDateBtn').style.opacity = currentDate >= tomorrow ? '0.3' : '1';
+      renderDailyMissions();
+      updateSummary();
+      updatePointsCard();
     }
 
-    function switchTab(cat) {
-      currentTab = cat;
-      document.querySelectorAll('.task-tab').forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.cat === cat);
-      });
-      renderTasks();
-    }
+    // ===== XP 보상 지급 =====
+    async function claimMissionXp(type) {
+      const empId = await getEmployeeId();
+      const today = formatDate(new Date());
+      const sourceId = 'dm_' + type + '_' + today;
+      const xpMap = { attendance: dailyMissionConfig.attendance_xp, study: dailyMissionConfig.study_xp, quiz: dailyMissionConfig.quiz_xp, boost: dailyMissionConfig.boost_xp };
+      const reasonMap = { attendance: t.dmAttendance, study: t.dmStudy, quiz: t.dmQuiz, boost: t.dmBoost };
 
-    function getLocalizedTitle(template) {
-      if (lang === 'en' && template.title_en) return template.title_en;
-      if (lang === 'vi' && template.title_vi) return template.title_vi;
-      return template.title;
-    }
-
-    function renderTasks() {
-      const container = document.getElementById('taskList');
-      const filtered = templates.filter(t => t.category === currentTab && t.is_active !== false);
-
-      if (filtered.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <div class="emoji">📋</div>
-            <p>${t.noTasks}</p>
-            <p style="font-size:13px; margin-top:8px;">${t.noTasksSub}</p>
-          </div>`;
-        return;
+      try {
+        const result = await XpService.addXp(empId, xpMap[type], 'daily_mission', sourceId, reasonMap[type]);
+        dailyMissionStatus[type] = true;
+        console.log('[DM] ✅ ' + type + ' +' + xpMap[type] + ' XP');
+        if (result?.leveledUp) {
+          setTimeout(() => {
+            if (typeof showLevelUpCelebration === 'function') showLevelUpCelebration(result.oldTier, result.newTier, lang);
+          }, 500);
+        }
+        return true;
+      } catch (e) {
+        dailyMissionStatus[type] = true;
+        return false;
       }
+    }
 
-      const dateStr = formatDate(currentDate);
-      let html = '';
+    // ===== ☀️ 출근 체크인 =====
+    async function checkInAttendance() {
+      if (dailyMissionStatus.attendance) return;
+      if (!SupabaseMode._ready) { showToast('DB 연결 필요'); return; }
+      const btn = document.querySelector('.dm-check-btn');
+      if (btn) { btn.disabled = true; btn.textContent = '...'; }
+      const ok = await claimMissionXp('attendance');
+      if (ok) showToast(t.complete + ' ' + t.xpGained(dailyMissionConfig.attendance_xp));
+      renderDailyMissions();
+      updateSummary();
+    }
 
-      filtered.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)).forEach(tmpl => {
-        const log = todayLogs.find(l => l.template_id === tmpl.id);
-        const isDone = !!log;
-        const canCheck = isToday(currentDate) && !isDone;
-
-        html += `
-          <div class="task-item ${isDone ? 'completed' : ''}">
-            <div class="task-icon">${tmpl.icon || '📋'}</div>
-            <div class="task-info">
-              <div class="task-title">${getLocalizedTitle(tmpl)}</div>
-              <div class="task-reward">
-                <span style="color:var(--primary); font-weight:600;">+${tmpl.xp_reward} XP</span>
-                <span style="margin:0 4px;">·</span>
-                <span style="color:#f59e0b; font-weight:600;">+${tmpl.point_reward} P</span>
-              </div>
-            </div>
-            <div class="task-check ${isDone ? 'done' : ''}"
-                 ${canCheck ? `onclick="completeTask('${tmpl.id}')"` : ''}
-                 style="${!canCheck && !isDone ? 'opacity:0.3; cursor:default;' : ''}">
-              ${isDone ? '&#10003;' : ''}
-            </div>
-          </div>`;
-      });
-
-      container.innerHTML = html;
-      // 일일 미션 배지 업데이트
-      const doneCount = todayLogs.length;
-      document.getElementById('dailyMissionBadge').textContent = `${doneCount}/${filtered.length}`;
+    // ===== 일일 미션 렌더링 =====
+    function renderDailyMissions() {
+      const container = document.getElementById('dailyMissionList');
+      if (!container) return;
+      const missions = [
+        { type: 'attendance', icon: '☀️', title: t.dmAttendance, desc: t.dmAttendanceDesc, xp: dailyMissionConfig.attendance_xp, manual: true },
+        { type: 'study', icon: '📺', title: t.dmStudy, desc: t.dmStudyDesc(dailyMissionConfig.study_required), xp: dailyMissionConfig.study_xp },
+        { type: 'quiz', icon: '💯', title: t.dmQuiz, desc: t.dmQuizDesc, xp: dailyMissionConfig.quiz_xp },
+        { type: 'boost', icon: '🙌', title: t.dmBoost, desc: t.dmBoostDesc, xp: dailyMissionConfig.boost_xp },
+      ];
+      container.innerHTML = missions.map(m => {
+        const done = dailyMissionStatus[m.type];
+        let statusHtml;
+        if (done) {
+          statusHtml = '<div class="dm-done-badge">✓</div>';
+        } else if (m.manual) {
+          statusHtml = '<button class="dm-check-btn" onclick="checkInAttendance()">' + t.dmCheckIn + '</button>';
+        } else {
+          statusHtml = '<div class="dm-pending-badge"><span style="font-size:9px;">' + t.dmAutoDetect + '</span></div>';
+        }
+        return '<div class="dm-card ' + (done ? 'completed' : '') + '">'
+          + '<div class="dm-icon">' + m.icon + '</div>'
+          + '<div class="dm-info"><div class="dm-title">' + m.title + '</div>'
+          + '<div class="dm-desc">' + m.desc + '</div>'
+          + '<div class="dm-xp">+' + m.xp + ' XP</div></div>'
+          + '<div class="dm-status">' + statusHtml + '</div></div>';
+      }).join('');
+      document.getElementById('dailyMissionBadge').textContent = Object.values(dailyMissionStatus).filter(Boolean).length + '/4';
     }
 
     function updateSummary() {
-      const dateStr = formatDate(currentDate);
-      const dayLogs = todayLogs;
-      const completedCount = dayLogs.length;
-      const pointsEarned = dayLogs.reduce((sum, l) => sum + (l.points_granted || 0), 0);
-
-      document.getElementById('todayCompleted').textContent = completedCount;
-      document.getElementById('todayPoints').textContent = `+${pointsEarned} P`;
-
-      // 일일 미션 배지 업데이트
-      const totalTasks = document.querySelectorAll('#taskList .task-item').length;
-      document.getElementById('dailyMissionBadge').textContent = `${completedCount}/${totalTasks || '?'}`;
+      const doneCount = Object.values(dailyMissionStatus).filter(Boolean).length;
+      const xpEarned = (dailyMissionStatus.attendance ? dailyMissionConfig.attendance_xp : 0)
+        + (dailyMissionStatus.study ? dailyMissionConfig.study_xp : 0)
+        + (dailyMissionStatus.quiz ? dailyMissionConfig.quiz_xp : 0)
+        + (dailyMissionStatus.boost ? dailyMissionConfig.boost_xp : 0);
+      document.getElementById('todayCompleted').textContent = doneCount + '/4';
+      document.getElementById('todayPoints').textContent = '+' + xpEarned + ' XP';
     }
 
     async function updatePointsCard() {
@@ -571,172 +670,15 @@
       }
       try {
         const empId = await getEmployeeId();
-        const { data } = await SupabaseMode._client
-          .from('employees')
-          .select('quarter_points, total_points')
-          .eq('id', empId)
-          .maybeSingle();
-
+        const { data } = await SupabaseMode._client.from('employees')
+          .select('quarter_points, total_points').eq('id', empId).maybeSingle();
         const qp = data?.quarter_points || 0;
         const tp = data?.total_points || 0;
-        document.getElementById('quarterPoints').textContent = `${qp} P`;
+        document.getElementById('quarterPoints').textContent = qp + ' P';
         document.getElementById('totalPointsLabel').textContent = t.totalPoints(tp);
-      } catch (e) {
-        console.warn('[Tasks] 포인트 조회 오류:', e);
-      }
+      } catch (e) { console.warn('[Tasks] 포인트 조회 오류:', e); }
     }
 
-    // ===== 데이터 로드 =====
-    async function loadData() {
-      updateDateDisplay();
-
-      if (!SupabaseMode._ready) {
-        renderTasks();
-        updateSummary();
-        return;
-      }
-
-      try {
-        // 템플릿 로드 (캐시)
-        if (templates.length === 0) {
-          const { data: tmplData } = await SupabaseMode._client
-            .from('basic_task_templates')
-            .select('*')
-            .eq('is_active', true)
-            .order('sort_order');
-
-          // 지점 필터링
-          const emp = typeof EmployeeStore !== 'undefined' ? EmployeeStore.getCurrentEmployee() : null;
-          const branch = emp?.branch || user.branch || '';
-          templates = (tmplData || []).filter(t => !t.branch || t.branch === '' || t.branch === branch);
-        }
-
-        // 해당 날짜 로그 로드
-        const dateStr = formatDate(currentDate);
-        const resolvedId = await getEmployeeId();
-        const { data: logData } = await SupabaseMode._client
-          .from('basic_task_logs')
-          .select('*')
-          .eq('employee_id', resolvedId)
-          .eq('completed_date', dateStr);
-
-        todayLogs = logData || [];
-      } catch (e) {
-        console.warn('[Tasks] 데이터 로드 오류:', e);
-        templates = [];
-        todayLogs = [];
-      }
-
-      renderTasks();
-      updateSummary();
-      updatePointsCard();
-    }
-
-    // ===== 성과제 완료 처리 =====
-    async function completeTask(templateId) {
-      const tmpl = templates.find(t => t.id === templateId);
-      if (!tmpl) return;
-
-      if (!confirm(t.confirmComplete(getLocalizedTitle(tmpl)))) return;
-
-      if (!SupabaseMode._ready || !user?.id) {
-        showToast('DB 연결이 필요합니다');
-        return;
-      }
-
-      try {
-        const dateStr = formatDate(currentDate);
-        const resolvedId = await getEmployeeId();
-
-        // 1) 로그 삽입
-        const { error } = await SupabaseMode._client
-          .from('basic_task_logs')
-          .insert({
-            employee_id: resolvedId,
-            template_id: templateId,
-            completed_date: dateStr,
-            xp_granted: tmpl.xp_reward,
-            points_granted: tmpl.point_reward,
-          });
-
-        if (error) {
-          if (error.code === '23505') {
-            showToast(t.alreadyDone);
-            return;
-          }
-          if (error.code === '23503') {
-            // FK violation - employee not in employees table
-            console.error('[Tasks] FK 오류:', error.message, error.details);
-            showToast(lang === 'en' ? 'Employee not registered. Contact admin.' : lang === 'vi' ? 'Nhân viên chưa đăng ký.' : '직원 등록이 필요합니다. 관리자에게 문의하세요.');
-            return;
-          }
-          console.error('[Tasks] ��료 오류:', error.message || JSON.stringify(error));
-          showToast(lang === 'en' ? 'Error occurred' : lang === 'vi' ? 'Có lỗi xảy ra' : '오류가 발생했습니다');
-          return;
-        }
-
-        // 2) XP 적립
-        const xpSourceId = `basic_task_${templateId}_${dateStr}`;
-        const xpResult = await XpService.addXp(
-          resolvedId, tmpl.xp_reward, 'basic_task', xpSourceId,
-          getLocalizedTitle(tmpl)
-        );
-
-        // 3) 포인트 적립 (employees 테이블 업데이트)
-        try {
-          // point_transactions 로그
-          await SupabaseMode._client
-            .from('point_transactions')
-            .insert({
-              employee_id: resolvedId,
-              amount: tmpl.point_reward,
-              source: 'basic_task',
-              source_id: xpSourceId,
-              reason: getLocalizedTitle(tmpl),
-            });
-
-          // employees 포인트 증가
-          const empId = await getEmployeeId();
-          const { data: empData } = await SupabaseMode._client
-            .from('employees')
-            .select('quarter_points, total_points')
-            .eq('id', empId)
-            .maybeSingle();
-
-          const currentQP = empData?.quarter_points || 0;
-          const currentTP = empData?.total_points || 0;
-
-          await SupabaseMode._client
-            .from('employees')
-            .update({
-              quarter_points: currentQP + tmpl.point_reward,
-              total_points: currentTP + tmpl.point_reward,
-            })
-            .eq('id', empId);
-        } catch (pe) {
-          console.warn('[Tasks] 포인트 적립 오류:', pe);
-        }
-
-        // 4) 성공 토스트
-        showToast(`${t.complete} ${t.xpGained(tmpl.xp_reward)} / ${t.pointGained(tmpl.point_reward)}`);
-
-        // 5) 레벨업 체크
-        if (xpResult?.leveledUp) {
-          setTimeout(() => {
-            if (typeof showLevelUpCelebration === 'function') {
-              showLevelUpCelebration(xpResult.oldTier, xpResult.newTier, lang);
-            }
-          }, 500);
-        }
-
-        // 6) UI 갱신
-        await loadData();
-
-      } catch (e) {
-        console.error('[Tasks] completeTask 오류:', e);
-        showToast('오류가 발생했습니다');
-      }
-    }
 
     // ===== Toast =====
     function showToast(msg) {
@@ -915,24 +857,26 @@
     document.querySelector('.nav-label-results').textContent = t.results;
     const linkTeamEl = document.getElementById('linkTeamTasks');
     if (linkTeamEl) linkTeamEl.innerHTML = `&#128279; ${t.viewAll} &rarr;`;
-    document.getElementById('tabDaily').textContent = t.daily;
-    document.getElementById('tabWeekly').textContent = t.weekly;
-    document.getElementById('tabMonthly').textContent = t.monthly;
     document.getElementById('quarterLabel').textContent = t.quarterPoints;
     document.getElementById('todayLabel').textContent = t.todayCompleted;
     document.getElementById('todayPointsLabel').textContent = t.todayPoints;
 
     // ===== 초기화 =====
+    // 초기 렌더 (로딩 상태)
+    renderDailyMissions();
+    updateSummary();
+
     SupabaseMode.init().then(connected => {
       if (connected) {
-        SupabaseMode.syncAll().then(() => {
-          loadData();
+        SupabaseMode.syncAll().then(async () => {
+          await loadDailyMissionConfig();
+          checkDailyMissions();
           renderStudyMissions();
           updateStudyBadge();
           loadTeamTasksSummary();
         });
       } else {
-        loadData();
+        renderDailyMissions();
         renderStudyMissions();
         updateStudyBadge();
       }

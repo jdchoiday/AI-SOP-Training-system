@@ -993,10 +993,40 @@
     <!-- ========== 성과제 관리 ========== -->
     <div id="page-task-manage" style="display:none;">
       <div class="topbar">
-        <h1>&#9989; 성과제 관리</h1>
+        <h1>&#9989; 미션 관리</h1>
         <div class="topbar-actions">
           <button class="btn btn-primary" onclick="openAddTaskTemplate()">+ 성과제 추가</button>
         </div>
+      </div>
+
+      <!-- 일일 미션 XP 설정 -->
+      <h3 style="font-size:15px; color:var(--gray-700); margin-bottom:8px;">☀️ 일일 미션 XP 설정 (자동 감지)</h3>
+      <div class="card" style="padding:20px; margin-bottom:24px;">
+        <p style="font-size:12px; color:var(--gray-500); margin-bottom:14px;">직원이 매일 자동으로 감지되는 4가지 미션의 XP 보상을 설정합니다. 변경 즉시 반영됩니다.</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+          <div>
+            <label style="font-size:12px; font-weight:600; color:var(--gray-600);">☀️ 출근 체크인 XP</label>
+            <input type="number" id="dmAttendanceXp" min="0" max="100" value="3" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:8px; margin-top:4px;">
+          </div>
+          <div>
+            <label style="font-size:12px; font-weight:600; color:var(--gray-600);">📺 학습 완료 XP</label>
+            <input type="number" id="dmStudyXp" min="0" max="100" value="5" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:8px; margin-top:4px;">
+          </div>
+          <div>
+            <label style="font-size:12px; font-weight:600; color:var(--gray-600);">📺 학습 필요 씬 수</label>
+            <input type="number" id="dmStudyRequired" min="1" max="20" value="3" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:8px; margin-top:4px;">
+          </div>
+          <div>
+            <label style="font-size:12px; font-weight:600; color:var(--gray-600);">💯 퀴즈 만점 XP</label>
+            <input type="number" id="dmQuizXp" min="0" max="100" value="3" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:8px; margin-top:4px;">
+          </div>
+          <div>
+            <label style="font-size:12px; font-weight:600; color:var(--gray-600);">🙌 부스트 전송 XP</label>
+            <input type="number" id="dmBoostXp" min="0" max="100" value="2" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:8px; margin-top:4px;">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveDailyMissionConfig()" id="dmSaveBtn">💾 일일 미션 설정 저장</button>
+        <span id="dmSaveStatus" style="margin-left:12px; font-size:12px; color:var(--success); display:none;">✅ 저장됨</span>
       </div>
 
       <!-- 직원 포인트 현황 -->
@@ -1535,7 +1565,7 @@
       if (page === 'version-mgmt') renderVersionDashboard();
       if (page === 'xp-manage') renderXpManage();
       if (page === 'praise-manage') renderPraiseManage();
-      if (page === 'task-manage') renderTaskManage();
+      if (page === 'task-manage') { renderTaskManage(); loadDailyMissionConfigAdmin(); }
       if (page === 'team-task-manage') renderTeamTaskManage();
       if (page === 'branch-team') renderBranchTeamPage();
 
@@ -7234,7 +7264,51 @@ ${text.slice(0, 3000)}
       };
     }
 
-    // ===== 부스트 관리 =====
+    // ===== 일일 미션 XP 설정 =====
+    async function loadDailyMissionConfigAdmin() {
+      try {
+        const { data } = await SupabaseMode._client
+          .from('app_config').select('value').eq('key', 'daily_mission_config').maybeSingle();
+        if (data?.value) {
+          const c = data.value;
+          const el = (id) => document.getElementById(id);
+          if (el('dmAttendanceXp')) el('dmAttendanceXp').value = c.attendance_xp ?? 3;
+          if (el('dmStudyXp')) el('dmStudyXp').value = c.study_xp ?? 5;
+          if (el('dmStudyRequired')) el('dmStudyRequired').value = c.study_required ?? 3;
+          if (el('dmQuizXp')) el('dmQuizXp').value = c.quiz_xp ?? 3;
+          if (el('dmBoostXp')) el('dmBoostXp').value = c.boost_xp ?? 2;
+        }
+      } catch (e) { console.warn('[Admin] DM config load error:', e); }
+    }
+
+    async function saveDailyMissionConfig() {
+      const btn = document.getElementById('dmSaveBtn');
+      const status = document.getElementById('dmSaveStatus');
+      if (btn) btn.disabled = true;
+
+      const config = {
+        attendance_xp: parseInt(document.getElementById('dmAttendanceXp').value) || 3,
+        study_xp: parseInt(document.getElementById('dmStudyXp').value) || 5,
+        study_required: parseInt(document.getElementById('dmStudyRequired').value) || 3,
+        quiz_xp: parseInt(document.getElementById('dmQuizXp').value) || 3,
+        boost_xp: parseInt(document.getElementById('dmBoostXp').value) || 2,
+      };
+
+      try {
+        await SupabaseMode._client.from('app_config').upsert({
+          key: 'daily_mission_config',
+          value: config,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'key' });
+
+        if (status) { status.style.display = 'inline'; setTimeout(() => { status.style.display = 'none'; }, 3000); }
+      } catch (e) {
+        alert('저장 실패: ' + e.message);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
     // ===== 성과제 관리 =====
     async function renderTaskManage() {
       if (!SupabaseMode._ready) return;

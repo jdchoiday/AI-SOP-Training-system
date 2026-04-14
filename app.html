@@ -86,6 +86,21 @@
       </div>
     </div>
 
+    <!-- ===== 경쟁 랭킹 (전국 / 지점 × 월간 / 일간) ===== -->
+    <div id="competitiveSection" style="display:none; margin-top:20px;">
+      <!-- 범위: 전국 / 우리 지점 -->
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <button onclick="switchRankScope('all')" id="rankScopeAll" style="flex:1; padding:10px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; border:2px solid #F59E0B; background:rgba(245,158,11,0.15); color:#F59E0B; transition:all 0.2s;">🌍 전국 랭킹</button>
+        <button onclick="switchRankScope('branch')" id="rankScopeBranch" style="flex:1; padding:10px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; border:2px solid transparent; background:rgba(255,255,255,0.06); color:var(--gray-500); transition:all 0.2s;">🏠 우리 지점</button>
+      </div>
+      <!-- 기간: 월간 / 일간 -->
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <button onclick="switchRankPeriod('monthly')" id="rankPeriodMonthly" style="flex:1; padding:8px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; border:none; background:rgba(245,158,11,0.12); color:#F59E0B; transition:all 0.2s;">🔥 월간</button>
+        <button onclick="switchRankPeriod('daily')" id="rankPeriodDaily" style="flex:1; padding:8px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; border:none; background:rgba(255,255,255,0.04); color:var(--gray-500); transition:all 0.2s;">⚡ 일간</button>
+      </div>
+      <div id="rankContent"></div>
+    </div>
+
     <!-- ===== XP 혜택 (XP로 얻을 수 있는 보상) ===== -->
     <div id="xpRewardsCard" class="card" style="margin-top:16px; border:1px solid rgba(245,158,11,0.3); background:linear-gradient(135deg, rgba(245,158,11,0.05) 0%, rgba(16,185,129,0.05) 100%);">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
@@ -152,6 +167,12 @@
         lbRank: '순위', lbName: '이름', lbXp: 'XP', lbTier: '티어',
         lbEmpty: '아직 데이터가 없습니다',
         lbBranch: '지점',
+        rankMonthly: '🔥 월간', rankDaily: '⚡ 일간',
+        rankScopeAll: '🌍 전국 랭킹', rankScopeBranch: '🏠 우리 지점',
+        rankMonthLabel: '이번 달', rankTodayLabel: '오늘',
+        rankAllTitle: '전국', rankBranchTitle: '우리 지점',
+        rankNoData: '아직 기록이 없습니다',
+        rankXpUnit: 'XP', rankYou: '나',
         xpGuide: '💡 XP 획득 가이드',
         xpGuideItems: [
           { icon: '📺', action: '챕터 영상 학습 완료', xp: 'CHAPTER_COMPLETE' },
@@ -217,6 +238,12 @@
         lbCollapse: 'Collapse ▲', lbExpand: 'Expand ▼',
         lbRank: 'Rank', lbName: 'Name', lbXp: 'XP', lbTier: 'Tier',
         lbEmpty: 'No data yet',
+        rankMonthly: '🔥 Monthly', rankDaily: '⚡ Daily',
+        rankScopeAll: '🌍 National', rankScopeBranch: '🏠 My Branch',
+        rankMonthLabel: 'This Month', rankTodayLabel: 'Today',
+        rankAllTitle: 'National', rankBranchTitle: 'My Branch',
+        rankNoData: 'No records yet',
+        rankXpUnit: 'XP', rankYou: 'You',
         lbBranch: 'Branch',
         xpGuide: '💡 XP Guide',
         xpGuideItems: [
@@ -283,6 +310,12 @@
         lbRank: 'Hạng', lbName: 'Tên', lbXp: 'XP', lbTier: 'Cấp',
         lbEmpty: 'Chưa có dữ liệu',
         lbBranch: 'Chi nhánh',
+        rankMonthly: '🔥 Tháng', rankDaily: '⚡ Hôm nay',
+        rankScopeAll: '🌍 Toàn quốc', rankScopeBranch: '🏠 Chi nhánh',
+        rankMonthLabel: 'Tháng này', rankTodayLabel: 'Hôm nay',
+        rankAllTitle: 'Toàn quốc', rankBranchTitle: 'Chi nhánh',
+        rankNoData: 'Chưa có dữ liệu',
+        rankXpUnit: 'XP', rankYou: 'Bạn',
         xpGuide: '💡 Hướng dẫn XP',
         xpGuideItems: [
           { icon: '📺', action: 'Hoàn thành video chương', xp: 'CHAPTER_COMPLETE' },
@@ -359,6 +392,7 @@
           renderTeamTasksMiniCard();
           renderScoreCard();
           renderLeaderboard();
+          renderCompetitiveRanking();
           renderXpRewards();
         });
       }
@@ -861,20 +895,24 @@
       if (!empId) return;
 
       try {
-        // Part 1: Attendance (basic_task_logs) — max 40
+        // Part 1: Attendance (daily_mission check-ins via xp_transactions) — max 40
         let part1 = 0;
         try {
           const now = new Date();
           const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
           const daysSinceStart = Math.max(1, Math.ceil((now - quarterStart) / 86400000));
-          const { data: templates } = await SupabaseMode._client
-            .from('basic_task_templates').select('id').eq('category', 'daily').eq('is_active', true);
-          const dailyCount = templates?.length || 1;
-          const { data: logs } = await SupabaseMode._client
+          // 일일 미션 체크인 횟수 (dm_attendance_YYYY-MM-DD 패턴)
+          const { data: dmLogs } = await SupabaseMode._client
+            .from('xp_transactions').select('id')
+            .eq('employee_id', empId).eq('source', 'daily_mission')
+            .like('source_id', 'dm_attendance_%')
+            .gte('created_at', quarterStart.toISOString());
+          // 기존 basic_task_logs도 합산 (하위 호환)
+          const { data: oldLogs } = await SupabaseMode._client
             .from('basic_task_logs').select('id').eq('employee_id', empId)
             .gte('completed_date', quarterStart.toISOString().slice(0, 10));
-          const completedCount = logs?.length || 0;
-          const maxTasks = daysSinceStart * dailyCount;
+          const completedCount = (dmLogs?.length || 0) + (oldLogs?.length || 0);
+          const maxTasks = daysSinceStart; // 하루 1회 체크인
           part1 = Math.min(40, Math.round((completedCount / maxTasks) * 40));
         } catch (e) {}
 
@@ -1076,6 +1114,203 @@
         container.innerHTML = html;
       } catch (e) {
         console.warn('[Leaderboard] 오류:', e);
+      }
+    }
+
+    // ===== 경쟁 랭킹 (전국/지점 × 월간/일간) =====
+    let rankScope = 'all';   // 'all' | 'branch'
+    let rankPeriod = 'monthly'; // 'monthly' | 'daily'
+
+    function switchRankScope(scope) {
+      rankScope = scope;
+      const allBtn = document.getElementById('rankScopeAll');
+      const brBtn = document.getElementById('rankScopeBranch');
+      allBtn.style.background = scope === 'all' ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.06)';
+      allBtn.style.color = scope === 'all' ? '#F59E0B' : 'var(--gray-500)';
+      allBtn.style.borderColor = scope === 'all' ? '#F59E0B' : 'transparent';
+      brBtn.style.background = scope === 'branch' ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)';
+      brBtn.style.color = scope === 'branch' ? '#10B981' : 'var(--gray-500)';
+      brBtn.style.borderColor = scope === 'branch' ? '#10B981' : 'transparent';
+      renderCompetitiveRanking();
+    }
+
+    function switchRankPeriod(period) {
+      rankPeriod = period;
+      const mBtn = document.getElementById('rankPeriodMonthly');
+      const dBtn = document.getElementById('rankPeriodDaily');
+      mBtn.style.background = period === 'monthly' ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.04)';
+      mBtn.style.color = period === 'monthly' ? '#F59E0B' : 'var(--gray-500)';
+      dBtn.style.background = period === 'daily' ? 'rgba(59,130,246,0.12)' : 'rgba(255,255,255,0.04)';
+      dBtn.style.color = period === 'daily' ? '#3B82F6' : 'var(--gray-500)';
+      renderCompetitiveRanking();
+    }
+
+    async function renderCompetitiveRanking() {
+      if (!SupabaseMode._ready) return;
+      const section = document.getElementById('competitiveSection');
+      section.style.display = 'block';
+      const container = document.getElementById('rankContent');
+      const myId = _resolvedEmpId || user?.id;
+      const myBranch = user?.branch || '';
+
+      // 직원 매핑
+      const emps = EmployeeStore.getAll();
+      const empMap = {};
+      emps.forEach(e => { empMap[e.id] = e; empMap[e.email] = e; });
+
+      // 지점 필터용 직원 ID 세트
+      const branchEmpIds = new Set();
+      if (rankScope === 'branch' && myBranch) {
+        emps.filter(e => e.branch === myBranch).forEach(e => branchEmpIds.add(e.id));
+      }
+
+      try {
+        // 기간별 데이터 조회
+        let startDate;
+        if (rankPeriod === 'monthly') {
+          const now = new Date();
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        } else {
+          const todayStart = new Date();
+          todayStart.setHours(0, 0, 0, 0);
+          startDate = todayStart.toISOString();
+        }
+
+        const { data } = await SupabaseMode._client
+          .from('xp_transactions').select('employee_id, amount')
+          .gte('created_at', startDate);
+
+        let ranked = [];
+        if (data && data.length > 0) {
+          const aggr = {};
+          data.forEach(r => {
+            // 지점 필터
+            if (rankScope === 'branch' && branchEmpIds.size > 0 && !branchEmpIds.has(r.employee_id)) return;
+            aggr[r.employee_id] = (aggr[r.employee_id] || 0) + (r.amount || 0);
+          });
+          ranked = Object.entries(aggr)
+            .map(([id, xp]) => ({ employee_id: id, xp }))
+            .sort((a, b) => b.xp - a.xp)
+            .slice(0, 15);
+        }
+
+        if (ranked.length === 0) {
+          container.innerHTML = '<div class="card" style="text-align:center; padding:24px; color:var(--gray-500); font-size:13px;">' + t.rankNoData + '</div>';
+          return;
+        }
+
+        const isMonthly = rankPeriod === 'monthly';
+        const isBranch = rankScope === 'branch';
+        const accentColor = isMonthly ? '#F59E0B' : '#3B82F6';
+        const scopeLabel = isBranch ? (myBranch || t.rankBranchTitle) : t.rankAllTitle;
+        const periodLabel = isMonthly ? t.rankMonthLabel : t.rankTodayLabel;
+        const headerLabel = scopeLabel + ' · ' + periodLabel;
+
+        // 1등 그라디언트 색
+        const grad = isBranch
+          ? (isMonthly ? '#10B981, #34D399' : '#06b6d4, #67e8f9')
+          : (isMonthly ? '#ff6b35, #ffd700' : '#3B82F6, #06b6d4');
+        const shadowColor = isBranch
+          ? (isMonthly ? 'rgba(16,185,129,0.25)' : 'rgba(6,182,212,0.25)')
+          : (isMonthly ? 'rgba(255,107,53,0.25)' : 'rgba(59,130,246,0.25)');
+        const bgIcon = isBranch ? '🏠' : (isMonthly ? '🔥' : '⚡');
+
+        let html = '';
+
+        // 1등 카드
+        const top = ranked[0];
+        const topEmp = empMap[top.employee_id] || {};
+        const topName = topEmp.name || top.employee_id.slice(0, 8);
+        const topIsMe = top.employee_id === myId;
+        const topBranch = topEmp.branch || '';
+
+        html += `
+        <div style="
+          background: linear-gradient(135deg, ${grad});
+          border-radius:16px; padding:20px; text-align:center; margin-bottom:10px;
+          box-shadow: 0 6px 24px ${shadowColor};
+          position:relative; overflow:hidden;
+        ">
+          <div style="position:absolute; top:-15px; right:-15px; font-size:70px; opacity:0.1;">${bgIcon}</div>
+          <div style="font-size:11px; color:rgba(255,255,255,0.7); margin-bottom:8px; font-weight:600;">${headerLabel} #1</div>
+          <div style="
+            width:56px; height:56px; border-radius:50%; background:rgba(30,41,59,0.8);
+            display:flex; align-items:center; justify-content:center;
+            margin:0 auto 8px; font-size:22px; font-weight:bold;
+            color:white; border:2.5px solid rgba(255,255,255,0.6);
+          ">${topName[0] || '?'}</div>
+          <div style="font-size:13px; color:rgba(255,255,255,0.7);">👑</div>
+          <div style="font-size:18px; font-weight:800; color:white;">${topName}${topIsMe ? ' ★' : ''}</div>
+          ${topBranch ? '<div style="font-size:11px; color:rgba(255,255,255,0.7); margin-top:2px;">' + topBranch + '</div>' : ''}
+          <div style="
+            display:inline-block; margin-top:10px;
+            background:rgba(255,255,255,0.2); border-radius:16px;
+            padding:5px 14px; font-size:16px; font-weight:800; color:white;
+          ">${top.xp.toLocaleString()} ${t.rankXpUnit}</div>
+        </div>`;
+
+        // 내 순위 (TOP에 없을 때 표시)
+        const myRankIdx = ranked.findIndex(r => r.employee_id === myId);
+        if (myRankIdx < 0) {
+          // 내가 리스트에 없으면 별도 표시
+          const myXp = data ? data.filter(r => r.employee_id === myId).reduce((s, r) => s + (r.amount || 0), 0) : 0;
+          if (myXp > 0) {
+            const myEmp = empMap[myId] || {};
+            const myName = myEmp.name || user?.name || '나';
+            // 순위 계산
+            let myPos = ranked.filter(r => r.xp > myXp).length + 1;
+            html += `
+            <div class="card" style="padding:10px 16px; margin-bottom:10px; border:1.5px solid var(--primary); background:rgba(16,185,129,0.06);">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:26px; text-align:center; font-weight:800; font-size:13px; color:var(--primary);">${myPos}</div>
+                <div style="width:32px; height:32px; border-radius:50%; background:var(--primary); color:white; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:13px;">${(myName[0] || '?')}</div>
+                <div style="flex:1;">
+                  <div style="font-weight:700; font-size:13px; color:var(--primary);">${myName} (${t.rankYou})</div>
+                </div>
+                <div style="font-weight:700; font-size:14px; color:${accentColor};">${myXp.toLocaleString()}</div>
+                <div style="font-size:10px; color:var(--gray-500);">${t.rankXpUnit}</div>
+              </div>
+            </div>`;
+          }
+        }
+
+        // 2등 이하
+        if (ranked.length > 1) {
+          html += '<div class="card" style="padding:0; overflow:hidden;">';
+          for (let i = 1; i < ranked.length; i++) {
+            const r = ranked[i];
+            const emp = empMap[r.employee_id] || {};
+            const name = emp.name || r.employee_id.slice(0, 8);
+            const isMe = r.employee_id === myId;
+            const medal = i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+            const border = i < ranked.length - 1 ? 'border-bottom:1px solid rgba(255,255,255,0.06);' : '';
+            const bgMe = isMe ? 'rgba(16,185,129,0.06)' : 'transparent';
+
+            html += `
+            <div style="display:flex; align-items:center; padding:11px 16px; gap:10px; ${border} background:${bgMe};">
+              <div style="width:26px; text-align:center; font-weight:800; font-size:${medal ? '16px' : '13px'}; color:${i <= 2 ? accentColor : 'var(--gray-500)'};">${medal || (i + 1)}</div>
+              <div style="
+                width:32px; height:32px; border-radius:50%;
+                background:${isMe ? 'var(--primary)' : 'rgba(255,255,255,0.08)'};
+                color:${isMe ? 'white' : 'var(--gray-400)'};
+                display:flex; align-items:center; justify-content:center;
+                font-weight:600; font-size:13px;
+              ">${(name[0] || '?')}</div>
+              <div style="flex:1; min-width:0;">
+                <div style="font-weight:${isMe ? '700' : '500'}; font-size:13px; ${isMe ? 'color:var(--primary);' : 'color:var(--text-primary,#F1F5F9);'}">${name}${isMe ? ' (' + t.rankYou + ')' : ''}</div>
+                ${(!isBranch && emp.branch) ? '<div style="font-size:10px; color:var(--gray-500);">' + emp.branch + '</div>' : ''}
+              </div>
+              <div style="font-weight:700; font-size:14px; color:${accentColor};">${r.xp.toLocaleString()}</div>
+              <div style="font-size:10px; color:var(--gray-500);">${t.rankXpUnit}</div>
+            </div>`;
+          }
+          html += '</div>';
+        }
+
+        container.innerHTML = html;
+      } catch (e) {
+        console.warn('[Rank] Error:', e);
+        container.innerHTML = '<div class="card" style="text-align:center; padding:20px; color:var(--gray-500);">Error</div>';
       }
     }
 
@@ -1428,6 +1663,7 @@
     if (!SupabaseMode._ready) {
       try { renderTierCard(); } catch(e) { console.warn('[Init] renderTierCard:', e.message); }
       try { renderLeaderboard(); } catch(e) { console.warn('[Init] renderLeaderboard:', e.message); }
+      try { renderCompetitiveRanking(); } catch(e) { console.warn('[Init] renderCompetitiveRanking:', e.message); }
     }
 
     function updateNotifUI() {
