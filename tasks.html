@@ -84,6 +84,102 @@
       height: 100%; border-radius: 2px;
       background: linear-gradient(90deg, #3B82F6, #10B981);
     }
+
+    /* ===== 3대 미션 섹션 ===== */
+    .mission-section {
+      background: var(--bg-card, #1E293B);
+      border-radius: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+      border: 1px solid rgba(255,255,255,0.06);
+      overflow: hidden;
+    }
+    .mission-section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .mission-section-header:hover {
+      background: rgba(255,255,255,0.03);
+    }
+    .mission-section-icon {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      background: rgba(16,185,129,0.1);
+      flex-shrink: 0;
+    }
+    #dailyMissionSection .mission-section-icon { background: rgba(59,130,246,0.12); }
+    #studyMissionSection .mission-section-icon { background: rgba(168,85,247,0.12); }
+    #taskMissionSection .mission-section-icon { background: rgba(245,158,11,0.12); }
+    .mission-section-info { flex: 1; min-width: 0; }
+    .mission-section-title {
+      font-size: 15px; font-weight: 700;
+      color: var(--text-primary, #F1F5F9);
+    }
+    .mission-section-sub {
+      font-size: 12px; color: var(--gray-500);
+      margin-top: 2px;
+    }
+    .mission-section-badge {
+      padding: 4px 10px;
+      border-radius: 10px;
+      font-size: 12px; font-weight: 700;
+      background: rgba(16,185,129,0.15);
+      color: #10B981;
+      flex-shrink: 0;
+    }
+    #dailyMissionSection .mission-section-badge { background: rgba(59,130,246,0.15); color: #3B82F6; }
+    #studyMissionSection .mission-section-badge { background: rgba(168,85,247,0.15); color: #A855F7; }
+    #taskMissionSection .mission-section-badge { background: rgba(245,158,11,0.15); color: #F59E0B; }
+    .mission-section-arrow {
+      font-size: 12px; color: var(--gray-500);
+      transition: transform 0.25s;
+      flex-shrink: 0;
+    }
+    .mission-section-body {
+      display: none;
+      padding: 0 16px 16px;
+    }
+    .mission-section-body.open {
+      display: block;
+    }
+    .mission-section-header.collapsed .mission-section-arrow {
+      transform: rotate(-90deg);
+    }
+
+    /* 테스크 미션 카드 (간략) */
+    .team-task-mini {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      margin-bottom: 8px;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .team-task-mini:hover { background: rgba(255,255,255,0.07); }
+    .team-task-mini-status {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .team-task-mini-status.open { background: #3B82F6; }
+    .team-task-mini-status.in_progress { background: #10B981; }
+    .team-task-mini-status.review { background: #F59E0B; }
+    .team-task-mini-status.completed { background: #22C55E; }
+    .team-task-mini-title {
+      flex: 1; font-size: 14px; font-weight: 600;
+      color: var(--text-primary, #F1F5F9);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .team-task-mini-badge {
+      font-size: 11px; padding: 2px 8px; border-radius: 8px; font-weight: 600;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -107,9 +203,8 @@
 
     <!-- 상단 헤더 -->
     <div class="app-header">
-      <h2 id="pageTitle">기본 성과제</h2>
+      <h2 id="pageTitle">미션</h2>
       <div style="display:flex; align-items:center; gap:10px;">
-        <a href="team-tasks.html" id="linkTeamTasks" style="text-decoration:none; padding:6px 12px; border-radius:10px; font-size:12px; font-weight:600; background:linear-gradient(135deg,#10B981,#059669); color:white;">👥 팀 테스크</a>
         <a href="app.html" style="text-decoration:none; font-size:20px; line-height:1; padding:4px; cursor:pointer;">&#127968;</a>
         <a href="profile.html" class="user-avatar" id="userAvatar" title="내 프로필" style="text-decoration:none; overflow:hidden;">?</a>
       </div>
@@ -134,32 +229,83 @@
       </div>
     </div>
 
-    <!-- 날짜 네비게이션 -->
-    <div class="date-nav">
-      <button onclick="changeDate(-1)">&#9664;</button>
-      <div class="date-display" id="dateDisplay"></div>
-      <button onclick="changeDate(1)" id="nextDateBtn">&#9654;</button>
+    <!-- ======================== -->
+    <!-- 1. 일일 미션 섹션 -->
+    <!-- ======================== -->
+    <div class="mission-section" id="dailyMissionSection">
+      <div class="mission-section-header" onclick="toggleMissionSection('daily')">
+        <div class="mission-section-icon">&#9989;</div>
+        <div class="mission-section-info">
+          <div class="mission-section-title" id="dailyMissionTitle">일일 미션</div>
+          <div class="mission-section-sub" id="dailyMissionSub">매일 해야 할 기본 업무</div>
+        </div>
+        <div class="mission-section-badge" id="dailyMissionBadge">0/0</div>
+        <div class="mission-section-arrow" id="dailyArrow">&#9660;</div>
+      </div>
+      <div class="mission-section-body open" id="dailyMissionBody">
+        <!-- 날짜 네비게이션 -->
+        <div class="date-nav">
+          <button onclick="changeDate(-1)">&#9664;</button>
+          <div class="date-display" id="dateDisplay"></div>
+          <button onclick="changeDate(1)" id="nextDateBtn">&#9654;</button>
+        </div>
+
+        <!-- 카테고리 탭 -->
+        <div class="task-tabs" id="taskTabs">
+          <div class="task-tab active" data-cat="daily" onclick="switchTab('daily')">
+            <span id="tabDaily">매일</span>
+          </div>
+          <div class="task-tab" data-cat="weekly" onclick="switchTab('weekly')">
+            <span id="tabWeekly">주간</span>
+          </div>
+          <div class="task-tab" data-cat="monthly" onclick="switchTab('monthly')">
+            <span id="tabMonthly">월간</span>
+          </div>
+        </div>
+
+        <!-- 성과제 리스트 -->
+        <div id="taskList"></div>
+      </div>
     </div>
 
-    <!-- 카테고리 탭 -->
-    <div class="task-tabs" id="taskTabs">
-      <div class="task-tab active" data-cat="daily" onclick="switchTab('daily')">
-        <span id="tabDaily">매일</span>
+    <!-- ======================== -->
+    <!-- 2. 학습 미션 섹션 -->
+    <!-- ======================== -->
+    <div class="mission-section" id="studyMissionSection">
+      <div class="mission-section-header" onclick="toggleMissionSection('study')">
+        <div class="mission-section-icon">&#128218;</div>
+        <div class="mission-section-info">
+          <div class="mission-section-title" id="studySectionTitle">학습 미션</div>
+          <div class="mission-section-sub" id="studyMissionSub">SOP 교육 과정 학습</div>
+        </div>
+        <div class="mission-section-badge" id="studyMissionBadge">0/0</div>
+        <div class="mission-section-arrow" id="studyArrow">&#9660;</div>
       </div>
-      <div class="task-tab" data-cat="weekly" onclick="switchTab('weekly')">
-        <span id="tabWeekly">주간</span>
-      </div>
-      <div class="task-tab" data-cat="monthly" onclick="switchTab('monthly')">
-        <span id="tabMonthly">월간</span>
+      <div class="mission-section-body" id="studyMissionBody">
+        <div id="studyList"></div>
       </div>
     </div>
 
-    <!-- 성과제 리스트 -->
-    <div id="taskList"></div>
-
-    <!-- 학습 미션 섹션 -->
-    <div class="section-divider" id="studySectionTitle">📚 학습 미션</div>
-    <div id="studyList"></div>
+    <!-- ======================== -->
+    <!-- 3. 테스크 미션 섹션 -->
+    <!-- ======================== -->
+    <div class="mission-section" id="taskMissionSection">
+      <div class="mission-section-header" onclick="toggleMissionSection('teamTask')">
+        <div class="mission-section-icon">&#128640;</div>
+        <div class="mission-section-info">
+          <div class="mission-section-title" id="teamTaskTitle">테스크 미션</div>
+          <div class="mission-section-sub" id="teamTaskSub">팀 챌린지 & 특별 업무</div>
+        </div>
+        <div class="mission-section-badge" id="teamTaskBadge">0</div>
+        <div class="mission-section-arrow" id="teamTaskArrow">&#9660;</div>
+      </div>
+      <div class="mission-section-body" id="teamTaskBody">
+        <div id="teamTaskList"></div>
+        <a href="team-tasks.html" id="linkTeamTasks" style="display:block;text-align:center;padding:12px;margin-top:8px;border-radius:10px;font-size:13px;font-weight:600;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);color:var(--primary);text-decoration:none;">
+          &#128279; 전체 보기 &rarr;
+        </a>
+      </div>
+    </div>
 
   </div>
 
@@ -188,8 +334,11 @@
         noTasksSub: '관리자가 성과제를 등록하면 여기에 표시됩니다',
         today: '오늘',
         confirmComplete: (name) => `"${name}" 완료 처리하시겠습니까?`,
-        teamTasks: '👥 팀 테스크',
-        studyMission: '📚 학습 미션',
+        teamTasks: '👥 전체 보기',
+        dailyMission: '일일 미션', dailyMissionDesc: '매일 해야 할 기본 업무',
+        studyMission: '학습 미션', studyMissionDesc: 'SOP 교육 과정 학습',
+        taskMission: '테스크 미션', taskMissionDesc: '팀 챌린지 & 특별 업무',
+        viewAll: '전체 보기',
         studyDone: '완료',
         studyProgress: (pct) => `${pct}%`,
         studyLocked: '잠김',
@@ -212,8 +361,11 @@
         noTasksSub: 'Tasks will appear once admin adds them',
         today: 'Today',
         confirmComplete: (name) => `Mark "${name}" as complete?`,
-        teamTasks: '👥 Team Tasks',
-        studyMission: '📚 Study Missions',
+        teamTasks: '👥 View All',
+        dailyMission: 'Daily Missions', dailyMissionDesc: 'Basic daily tasks',
+        studyMission: 'Study Missions', studyMissionDesc: 'SOP training courses',
+        taskMission: 'Task Missions', taskMissionDesc: 'Team challenges & projects',
+        viewAll: 'View All',
         studyDone: 'Done',
         studyProgress: (pct) => `${pct}%`,
         studyLocked: 'Locked',
@@ -236,8 +388,11 @@
         noTasksSub: 'Nhiệm vụ sẽ hiển thị khi quản trị viên thêm',
         today: 'Hôm nay',
         confirmComplete: (name) => `Đánh dấu "${name}" là hoàn thành?`,
-        teamTasks: '👥 Nhóm',
-        studyMission: '📚 Học tập',
+        teamTasks: '👥 Xem tất cả',
+        dailyMission: 'Nhiệm vụ hàng ngày', dailyMissionDesc: 'Công việc cơ bản hàng ngày',
+        studyMission: 'Nhiệm vụ học tập', studyMissionDesc: 'Khóa đào tạo SOP',
+        taskMission: 'Nhiệm vụ nhóm', taskMissionDesc: 'Thử thách nhóm & dự án',
+        viewAll: 'Xem tất cả',
         studyDone: 'Xong',
         studyProgress: (pct) => `${pct}%`,
         studyLocked: 'Khóa',
@@ -389,6 +544,9 @@
       });
 
       container.innerHTML = html;
+      // 일일 미션 배지 업데이트
+      const doneCount = todayLogs.length;
+      document.getElementById('dailyMissionBadge').textContent = `${doneCount}/${filtered.length}`;
     }
 
     function updateSummary() {
@@ -399,6 +557,10 @@
 
       document.getElementById('todayCompleted').textContent = completedCount;
       document.getElementById('todayPoints').textContent = `+${pointsEarned} P`;
+
+      // 일일 미션 배지 업데이트
+      const totalTasks = document.querySelectorAll('#taskList .task-item').length;
+      document.getElementById('dailyMissionBadge').textContent = `${completedCount}/${totalTasks || '?'}`;
     }
 
     async function updatePointsCard() {
@@ -670,15 +832,89 @@
       container.innerHTML = html;
     }
 
+    // ===== 섹션 토글 =====
+    function toggleMissionSection(section) {
+      const bodyMap = { daily: 'dailyMissionBody', study: 'studyMissionBody', teamTask: 'teamTaskBody' };
+      const arrowMap = { daily: 'dailyArrow', study: 'studyArrow', teamTask: 'teamTaskArrow' };
+      const body = document.getElementById(bodyMap[section]);
+      const header = body?.previousElementSibling;
+      if (!body) return;
+      body.classList.toggle('open');
+      if (header) header.classList.toggle('collapsed', !body.classList.contains('open'));
+    }
+
+    // ===== 테스크 미션 (간략 목록) =====
+    const teamStatusLabels = {
+      ko: { open: '모집중', in_progress: '진행중', review: '검토중', completed: '완료' },
+      en: { open: 'Open', in_progress: 'Active', review: 'Review', completed: 'Done' },
+      vi: { open: 'Mở', in_progress: 'Đang làm', review: 'Xét duyệt', completed: 'Xong' },
+    };
+    const teamStatusColors = { open: '#3B82F6', in_progress: '#10B981', review: '#F59E0B', completed: '#22C55E' };
+
+    async function loadTeamTasksSummary() {
+      if (!SupabaseMode._ready) {
+        document.getElementById('teamTaskList').innerHTML = '<div style="text-align:center;padding:12px;color:var(--gray-500);font-size:13px;">-</div>';
+        return;
+      }
+      try {
+        const empId = user?.id || '';
+        const myBranch = user?.branch || '';
+        const { data: tasks } = await SupabaseMode._client
+          .from('team_tasks').select('id,title,status,branch,creator_id,xp_reward,deadline')
+          .order('created_at', { ascending: false }).limit(10);
+
+        const myTasks = (tasks || []).filter(tk =>
+          tk.status !== 'cancelled' && (tk.branch === myBranch || tk.branch === '' || !tk.branch)
+        );
+
+        const statusLbl = teamStatusLabels[lang] || teamStatusLabels.ko;
+        const container = document.getElementById('teamTaskList');
+
+        if (myTasks.length === 0) {
+          container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--gray-500);font-size:13px;">-</div>';
+          document.getElementById('teamTaskBadge').textContent = '0';
+          return;
+        }
+
+        const activeTasks = myTasks.filter(tk => tk.status !== 'completed');
+        document.getElementById('teamTaskBadge').textContent = activeTasks.length > 0 ? activeTasks.length : myTasks.length;
+
+        container.innerHTML = myTasks.slice(0, 5).map(tk => `
+          <a class="team-task-mini" href="team-tasks.html" style="text-decoration:none;">
+            <div class="team-task-mini-status ${tk.status}"></div>
+            <div class="team-task-mini-title">${tk.title}</div>
+            <span class="team-task-mini-badge" style="background:${teamStatusColors[tk.status]}22;color:${teamStatusColors[tk.status]};">${statusLbl[tk.status] || tk.status}</span>
+            <span style="font-size:11px;color:var(--gray-500);">+${tk.xp_reward} XP</span>
+          </a>`).join('');
+      } catch (e) {
+        console.error('[Tasks] Team task summary error:', e);
+      }
+    }
+
+    // ===== 학습 미션 배지 업데이트 =====
+    function updateStudyBadge() {
+      try {
+        const _chRes = SopStore.getChapters();
+        const chapters = Array.isArray(_chRes) ? _chRes : [...(_chRes.chapters || []), ...(_chRes.orphanSections || [])];
+        const done = chapters.filter(ch => Progress.isChapterPassed(ch.id)).length;
+        document.getElementById('studyMissionBadge').textContent = `${done}/${chapters.length}`;
+      } catch(e) {}
+    }
+
     // ===== 다국어 적용 =====
     document.getElementById('studySectionTitle').textContent = t.studyMission;
+    document.getElementById('studyMissionSub').textContent = t.studyMissionDesc;
+    document.getElementById('dailyMissionTitle').textContent = t.dailyMission;
+    document.getElementById('dailyMissionSub').textContent = t.dailyMissionDesc;
+    document.getElementById('teamTaskTitle').textContent = t.taskMission;
+    document.getElementById('teamTaskSub').textContent = t.taskMissionDesc;
     document.getElementById('pageTitle').textContent = t.pageTitle;
     document.querySelector('.nav-label-home').textContent = t.home;
     document.querySelector('.nav-label-tasks').textContent = t.tasks;
     document.querySelector('.nav-label-praise').textContent = t.praise;
     document.querySelector('.nav-label-results').textContent = t.results;
     const linkTeamEl = document.getElementById('linkTeamTasks');
-    if (linkTeamEl) linkTeamEl.textContent = t.teamTasks;
+    if (linkTeamEl) linkTeamEl.innerHTML = `&#128279; ${t.viewAll} &rarr;`;
     document.getElementById('tabDaily').textContent = t.daily;
     document.getElementById('tabWeekly').textContent = t.weekly;
     document.getElementById('tabMonthly').textContent = t.monthly;
@@ -692,10 +928,13 @@
         SupabaseMode.syncAll().then(() => {
           loadData();
           renderStudyMissions();
+          updateStudyBadge();
+          loadTeamTasksSummary();
         });
       } else {
         loadData();
         renderStudyMissions();
+        updateStudyBadge();
       }
     });
   </script>
