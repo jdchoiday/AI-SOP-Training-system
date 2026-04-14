@@ -764,10 +764,16 @@
     }
 
     // ===== Create task =====
+    let _isCreatingTask = false;
     async function createTask() {
+      if (_isCreatingTask) return; // 중복 생성 방지
       const title = document.getElementById('newTitle').value.trim();
       if (!title) { document.getElementById('newTitle').focus(); return; }
       if (!SupabaseMode._ready) return;
+      _isCreatingTask = true;
+      // 버튼 비활성화
+      const createBtn = document.querySelector('.modal-content .btn-primary, .modal-content button[onclick*="createTask"]');
+      if (createBtn) { createBtn.disabled = true; createBtn.style.opacity = '0.5'; }
 
       const empId = await getEmployeeId();
       const myBranch = await getMyBranch();
@@ -833,6 +839,9 @@
       } catch (e) {
         console.error('[TeamTasks] Create error:', e);
         showToast('Error: ' + (e.message || JSON.stringify(e)));
+      } finally {
+        _isCreatingTask = false;
+        if (createBtn) { createBtn.disabled = false; createBtn.style.opacity = '1'; }
       }
     }
 
