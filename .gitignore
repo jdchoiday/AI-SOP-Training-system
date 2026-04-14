@@ -1,7 +1,14 @@
 node_modules/
 docs/node_modules/
 .env
+.env.*
 .vercel/
+.vercel
+.claude/
 test_tts*.mp3
 
-.vercel
+# 보안: API 키/시크릿 파일
+*.pem
+*.key
+credentials.json
+service-account.json
