@@ -15,7 +15,7 @@ const XP_CONFIG = {
   PRAISE_XP_PER_STACK: 15,      // 칭찬 N개 모이면 받는 XP
   PRAISE_SEND_XP: 3,            // 칭찬 보낼 때 보내는 사람 XP
   PRAISE_STACK_COUNT: 2,        // 몇 개 모여야 XP 전환?
-  PRAISE_DAILY_LIMIT: 2,        // 하루 보내기 제한 (전체)
+  PRAISE_DAILY_LIMIT: 5,        // 하루 보내기 제한 (전체)
   PRAISE_SAME_PERSON_DAILY: 1,  // 같은 사람 하루 최대
 };
 
@@ -303,11 +303,9 @@ const PraiseService = {
     if (!SupabaseMode._ready) return { ok: false, reason: 'DB 연결 필요' };
     if (fromId === toId) return { ok: false, reason: '자기 자신에게는 불가' };
 
-    // NOTE: todayStart는 로컬 자정(KST) → UTC 변환. JS 일일 제한은 KST 기준이지만,
-    // DB 트리거의 CURRENT_DATE는 UTC 기준이라 자정 전후로 미세한 불일치 가능.
-    // JS 체크가 주 UX 게이트이므로 현재 수준에서 허용.
-    const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+    // KST 기준 오늘 자정 (UTC-9 → UTC 변환)
+    const kst = new Date(Date.now() + 9 * 3600000);
+    const todayStart = new Date(Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate()) - 9 * 3600000).toISOString();
 
     try {
       // 오늘 전체 보낸 수
@@ -431,9 +429,9 @@ const PraiseService = {
    */
   async getDailySentCount(fromId) {
     if (!SupabaseMode._ready || !fromId) return 0;
-    // NOTE: 로컬 자정 기준 (KST). DB 트리거(UTC)와 미세한 불일치 가능 — canPraise 주석 참고.
-    const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+    // KST 기준 오늘 자정
+    const kst = new Date(Date.now() + 9 * 3600000);
+    const todayStart = new Date(Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate()) - 9 * 3600000).toISOString();
     try {
       const { data } = await SupabaseMode._client
         .from('praise_logs')
