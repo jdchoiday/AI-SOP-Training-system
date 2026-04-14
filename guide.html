@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOP Training - 사용 가이드</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0F172A">
+  <link rel="icon" href="assets/icon-192.svg">
+  <style>
+    .guide-container {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 12px 16px 120px;
+    }
+    .guide-header {
+      text-align: center;
+      padding: 20px 0 16px;
+    }
+    .guide-header h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-primary, #F1F5F9);
+      margin-bottom: 6px;
+    }
+    .guide-header p {
+      font-size: 13px;
+      color: var(--gray-500);
+    }
+    .guide-section {
+      background: var(--bg-card, #1E293B);
+      border-radius: var(--radius, 12px);
+      padding: 20px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .guide-section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary, #F1F5F9);
+      margin-bottom: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .guide-section-title .icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .guide-section-title .arrow {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--gray-500);
+      transition: transform 0.2s;
+    }
+    .guide-section-title.open .arrow {
+      transform: rotate(180deg);
+    }
+    .guide-body {
+      display: none;
+    }
+    .guide-body.open {
+      display: block;
+    }
+    .guide-body p {
+      font-size: 14px;
+      color: var(--text-secondary, #94A3B8);
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+    .guide-body ul {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 10px;
+    }
+    .guide-body ul li {
+      position: relative;
+      padding: 6px 0 6px 20px;
+      font-size: 13.5px;
+      color: var(--text-secondary, #94A3B8);
+      line-height: 1.6;
+    }
+    .guide-body ul li::before {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 13px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--primary, #10B981);
+    }
+    .guide-step {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      background: rgba(16,185,129,0.06);
+      border-radius: 10px;
+      border: 1px solid rgba(16,185,129,0.12);
+    }
+    .guide-step-num {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--primary, #10B981);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .guide-step-text {
+      font-size: 13.5px;
+      color: var(--text-secondary, #94A3B8);
+      line-height: 1.6;
+    }
+    .guide-step-text strong {
+      color: var(--text-primary, #F1F5F9);
+    }
+    .guide-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px;
+      font-size: 13px;
+    }
+    .guide-table th {
+      text-align: left;
+      padding: 8px 10px;
+      background: rgba(16,185,129,0.1);
+      color: var(--primary, #10B981);
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .guide-table td {
+      padding: 7px 10px;
+      color: var(--text-secondary, #94A3B8);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .guide-table tr:last-child td { border-bottom: none; }
+    .guide-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-xp { background: rgba(245,158,11,0.15); color: #F59E0B; }
+    .badge-role { background: rgba(16,185,129,0.15); color: #10B981; }
+    .guide-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 0;
+      font-size: 14px;
+      color: var(--primary, #10B981);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .guide-back:hover { text-decoration: underline; }
+    .lang-tabs {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+    .lang-tab {
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: transparent;
+      color: var(--gray-500);
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .lang-tab.active {
+      background: var(--primary, #10B981);
+      color: #fff;
+      border-color: var(--primary, #10B981);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bottom-nav">
+    <a href="app.html">
+      <span class="nav-icon">&#127968;</span> <span class="nav-label-home">Home</span>
+    </a>
+    <a href="tasks.html">
+      <span class="nav-icon">&#9989;</span> <span class="nav-label-tasks">Mission</span>
+    </a>
+    <a href="praise.html">
+      <span class="nav-icon">&#128588;</span> <span class="nav-label-praise">Boost</span>
+    </a>
+    <a href="my-results.html">
+      <span class="nav-icon">&#128100;</span> <span class="nav-label-results">Profile</span>
+    </a>
+  </div>
+
+  <div class="guide-container">
+
+    <a href="app.html" class="guide-back">&#8592; Back</a>
+
+    <div class="guide-header">
+      <h1 id="guideTitle">SOP Training Guide</h1>
+      <p id="guideSubtitle">How to use the system and grow your career</p>
+    </div>
+
+    <div class="lang-tabs">
+      <button class="lang-tab active" onclick="setGuideLang('ko')">Korean</button>
+      <button class="lang-tab" onclick="setGuideLang('en')">English</button>
+      <button class="lang-tab" onclick="setGuideLang('vi')">Vietnamese</button>
+    </div>
+
+    <!-- ===== 1. System Overview ===== -->
+    <div class="guide-section">
+      <div class="guide-section-title open" onclick="toggleGuide(this)">
+        <span class="icon">&#127919;</span>
+        <span class="sec-label" data-ko="시스템 소개" data-en="System Overview" data-vi="Overview">시스템 소개</span>
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="guide-body open">
+        <p data-ko="SOP Training은 회사의 표준 업무 절차(SOP)를 AI 슬라이드 강의로 학습하고, 미션과 부스트를 통해 경험치(EXP)를 쌓아가는 성장 플랫폼입니다."
+           data-en="SOP Training is a growth platform where you learn company SOPs through AI-powered slide courses, earn EXP through missions and boosts, and track your career growth."
+           data-vi="SOP Training la mot nen tang phat trien noi ban hoc SOP cua cong ty qua bai giang slide AI, kiem EXP qua nhiem vu va boost.">
+          SOP Training은 회사의 표준 업무 절차(SOP)를 AI 슬라이드 강의로 학습하고, 미션과 부스트를 통해 경험치(EXP)를 쌓아가는 성장 플랫폼입니다.
+        </p>
+        <p data-ko="3가지 파트로 성과를 측정합니다:"
+           data-en="Your performance is measured in 3 parts:"
+           data-vi="Thanh tich cua ban duoc do luong qua 3 phan:">
+          3가지 파트로 성과를 측정합니다:
+        </p>
+        <table class="guide-table">
+          <tr>
+            <th data-ko="파트" data-en="Part" data-vi="Phan">파트</th>
+            <th data-ko="내용" data-en="Description" data-vi="Noi dung">내용</th>
+            <th data-ko="배점" data-en="Score" data-vi="Diem">배점</th>
+          </tr>
+          <tr>
+            <td>&#9889; <span data-ko="출석" data-en="Attendance" data-vi="Diem danh">출석</span></td>
+            <td data-ko="데일리 미션 완료율" data-en="Daily mission completion rate" data-vi="Ty le hoan thanh nhiem vu hang ngay">데일리 미션 완료율</td>
+            <td>40</td>
+          </tr>
+          <tr>
+            <td>&#127919; <span data-ko="미션" data-en="Missions" data-vi="Nhiem vu">미션</span></td>
+            <td data-ko="팀 챌린지 수행 + 리뷰 점수" data-en="Team challenge completion + review score" data-vi="Hoan thanh thu thach nhom + diem danh gia">팀 챌린지 수행 + 리뷰 점수</td>
+            <td>30</td>
+          </tr>
+          <tr>
+            <td>&#128218; <span data-ko="트레이닝" data-en="Training" data-vi="Dao tao">트레이닝</span></td>
+            <td data-ko="SOP 학습 진도 + 퀴즈 점수" data-en="SOP study progress + quiz scores" data-vi="Tien do hoc SOP + diem bai kiem tra">SOP 학습 진도 + 퀴즈 점수</td>
+            <td>30</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== 2. Training (학습) ===== -->
+    <div class="guide-section">
+      <div class="guide-section-title" onclick="toggleGuide(this)">
+        <span class="icon">&#128218;</span>
+        <span class="sec-label" data-ko="트레이닝 (SOP 학습)" data-en="Training (SOP Study)" data-vi="Dao tao (Hoc SOP)">트레이닝 (SOP 학습)</span>
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="guide-body">
+        <p data-ko="홈 화면의 챕터 카드를 눌러 SOP 학습을 시작합니다. AI가 자동으로 만든 슬라이드와 음성으로 학습할 수 있습니다."
+           data-en="Tap a chapter card on the home screen to start learning. AI-generated slides with voice narration guide you through each SOP."
+           data-vi="Nhan vao the chuong tren man hinh chinh de bat dau hoc. Slide do AI tao voi giong doc se huong dan ban.">
+          홈 화면의 챕터 카드를 눌러 SOP 학습을 시작합니다. AI가 자동으로 만든 슬라이드와 음성으로 학습할 수 있습니다.
+        </p>
+        <div class="guide-step">
+          <div class="guide-step-num">1</div>
+          <div class="guide-step-text" data-ko="<strong>챕터 선택</strong> - 홈에서 학습할 챕터를 선택합니다" data-en="<strong>Select Chapter</strong> - Choose a chapter on the home screen" data-vi="<strong>Chon Chuong</strong> - Chon mot chuong tren man hinh chinh">
+            <strong>챕터 선택</strong> - 홈에서 학습할 챕터를 선택합니다
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-step-num">2</div>
+          <div class="guide-step-text" data-ko="<strong>섹션 학습</strong> - 슬라이드를 넘기며 음성과 자막으로 학습합니다. 자동 재생도 가능합니다." data-en="<strong>Study Sections</strong> - Swipe through slides with voice narration and subtitles. Auto-play is available." data-vi="<strong>Hoc Phan</strong> - Luot qua slide voi giong doc va phu de. Co the tu dong phat.">
+            <strong>섹션 학습</strong> - 슬라이드를 넘기며 음성과 자막으로 학습합니다. 자동 재생도 가능합니다.
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-step-num">3</div>
+          <div class="guide-step-text" data-ko="<strong>퀴즈 통과</strong> - 각 섹션 끝에 퀴즈가 있습니다. 통과해야 다음으로 넘어갑니다." data-en="<strong>Pass Quizzes</strong> - Each section ends with a quiz. You must pass to proceed." data-vi="<strong>Vượt qua bai kiem tra</strong> - Moi phan co bai kiem tra cuoi. Ban can vuot qua de tiep tuc.">
+            <strong>퀴즈 통과</strong> - 각 섹션 끝에 퀴즈가 있습니다. 통과해야 다음으로 넘어갑니다.
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-step-num">4</div>
+          <div class="guide-step-text" data-ko="<strong>챕터 시험</strong> - 모든 섹션 완료 후 챕터 종합 시험(30문항)에 도전합니다." data-en="<strong>Chapter Exam</strong> - After all sections, take the chapter exam (30 questions)." data-vi="<strong>Bai thi Chuong</strong> - Sau khi hoan thanh tat ca phan, lam bai thi chuong (30 cau).">
+            <strong>챕터 시험</strong> - 모든 섹션 완료 후 챕터 종합 시험(30문항)에 도전합니다.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 3. Daily Missions ===== -->
+    <div class="guide-section">
+      <div class="guide-section-title" onclick="toggleGuide(this)">
+        <span class="icon">&#9989;</span>
+        <span class="sec-label" data-ko="데일리 미션" data-en="Daily Missions" data-vi="Nhiem vu Hang ngay">데일리 미션</span>
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="guide-body">
+        <p data-ko="매일 해야 할 기본 업무 체크리스트입니다. 근무일마다 할당되며, 모두 완료하면 출석 점수에 반영됩니다."
+           data-en="A daily checklist of basic tasks assigned each workday. Completing all items contributes to your attendance score."
+           data-vi="Danh sach kiem tra nhiem vu co ban hang ngay. Hoan thanh tat ca se duoc tinh vao diem diem danh.">
+          매일 해야 할 기본 업무 체크리스트입니다. 근무일마다 할당되며, 모두 완료하면 출석 점수에 반영됩니다.
+        </p>
+        <ul>
+          <li data-ko="미션 탭에서 오늘의 할 일을 확인합니다" data-en="Check today's tasks in the Missions tab" data-vi="Kiem tra nhiem vu hom nay trong tab Nhiem vu">미션 탭에서 오늘의 할 일을 확인합니다</li>
+          <li data-ko="각 항목을 완료하면 체크합니다" data-en="Check off each item as you complete it" data-vi="Danh dau moi muc khi hoan thanh">각 항목을 완료하면 체크합니다</li>
+          <li data-ko="마감 시간 전에 100% 완료를 목표로 합니다" data-en="Aim for 100% completion before the deadline" data-vi="Dat muc tieu 100% truoc han chot">마감 시간 전에 100% 완료를 목표로 합니다</li>
+          <li data-ko="완료율이 출석 파트(40점) 점수에 반영됩니다" data-en="Completion rate counts toward your Attendance score (40 points)" data-vi="Ty le hoan thanh duoc tinh vao diem Diem danh (40 diem)">완료율이 출석 파트(40점) 점수에 반영됩니다</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ===== 4. Team Challenges ===== -->
+    <div class="guide-section">
+      <div class="guide-section-title" onclick="toggleGuide(this)">
+        <span class="icon">&#128640;</span>
+        <span class="sec-label" data-ko="팀 챌린지" data-en="Team Challenges" data-vi="Thu thach Nhom">팀 챌린지</span>
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="guide-body">
+        <p data-ko="특별 업무나 프로젝트를 팀원과 함께 수행합니다. 매니저가 생성하거나, 직원이 자발적으로 참여할 수 있습니다."
+           data-en="Complete special tasks or projects with your team. Managers can create them, or you can voluntarily join."
+           data-vi="Hoan thanh nhiem vu dac biet hoac du an voi nhom. Quan ly co the tao hoac ban co the tu nguyen tham gia.">
+          특별 업무나 프로젝트를 팀원과 함께 수행합니다. 매니저가 생성하거나, 직원이 자발적으로 참여할 수 있습니다.
+        </p>
+        <div class="guide-step">
+          <div class="guide-step-num">1</div>
+          <div class="guide-step-text" data-ko="<strong>챌린지 확인</strong> - '참여 가능' 탭에서 새 챌린지를 확인합니다" data-en="<strong>Find Challenges</strong> - Check the 'Available' tab for new challenges" data-vi="<strong>Tim Thu thach</strong> - Kiem tra tab 'Co san' de tim thu thach moi">
+            <strong>챌린지 확인</strong> - '참여 가능' 탭에서 새 챌린지를 확인합니다
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-step-num">2</div>
+          <div class="guide-step-text" data-ko="<strong>참여 & 수행</strong> - 참여 후 작업을 진행합니다. 전/후 사진 첨부가 가능합니다." data-en="<strong>Join & Work</strong> - Join and work on the task. You can attach before/after photos." data-vi="<strong>Tham gia & Thuc hien</strong> - Tham gia va lam nhiem vu. Co the dinh kem anh truoc/sau.">
+            <strong>참여 & 수행</strong> - 참여 후 작업을 진행합니다. 전/후 사진 첨부가 가능합니다.
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-step-num">3</div>
+          <div class="guide-step-text" data-ko="<strong>리뷰 요청</strong> - 완료 후 실제 소요시간과 함께 매니저에게 리뷰를 요청합니다" data-en="<strong>Request Review</strong> - Submit for review with your actual hours spent" data-vi="<strong>Yeu cau Danh gia</strong> - Nop de danh gia voi so gio thuc te">
+            <strong>리뷰 요청</strong> - 완료 후 실제 소요시간과 함께 매니저에게 리뷰를 요청합니다
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-step-num">4</div>
+          <div class="guide-step-text" data-ko="<strong>승인 & EXP</strong> - 매니저 승인 시 EXP를 획득합니다. 예상 시간 내 완료하면 보너스!" data-en="<strong>Approval & EXP</strong> - Earn EXP on manager approval. Finish within estimated time for a bonus!" data-vi="<strong>Phe duyet & EXP</strong> - Nhan EXP khi quan ly phe duyet. Hoan thanh dung gio du kien de nhan thuong!">
+            <strong>승인 & EXP</strong> - 매니저 승인 시 EXP를 획득합니다. 예상 시간 내 완료하면 보너스!
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 5. Boost (칭찬) ===== -->
+    <div class="guide-section">
+      <div class="guide-section-title" onclick="toggleGuide(this)">
+        <span class="icon">&#128588;</span>
+        <span class="sec-label" data-ko="부스트 (동료 칭찬)" data-en="Boost (Peer Praise)" data-vi="Boost (Khen ngoi Dong nghiep)">부스트 (동료 칭찬)</span>
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="guide-body">
+        <p data-ko="동료의 좋은 행동을 칭찬하여 서로 EXP를 선물합니다. 하루 최대 5회까지 보낼 수 있습니다."
+           data-en="Praise colleagues for great work and gift them EXP. You can send up to 5 boosts per day."
+           data-vi="Khen ngoi dong nghiep ve cong viec tot va tang ho EXP. Ban co the gui toi da 5 boost moi ngay.">
+          동료의 좋은 행동을 칭찬하여 서로 EXP를 선물합니다. 하루 최대 5회까지 보낼 수 있습니다.
+        </p>
+        <ul>
+          <li data-ko="부스트 탭에서 동료를 선택합니다" data-en="Select a colleague in the Boost tab" data-vi="Chon dong nghiep trong tab Boost">부스트 탭에서 동료를 선택합니다</li>
+          <li data-ko="칭찬 카테고리와 메시지를 작성합니다" data-en="Choose a category and write a message" data-vi="Chon danh muc va viet loi nhan">칭찬 카테고리와 메시지를 작성합니다</li>
+          <li data-ko="받는 사람에게 EXP가 지급됩니다" data-en="The recipient earns EXP" data-vi="Nguoi nhan se duoc EXP">받는 사람에게 EXP가 지급됩니다</li>
+          <li data-ko="매일 자정(한국시간) 기준으로 횟수가 리셋됩니다" data-en="Daily limit resets at midnight (KST)" data-vi="Gioi han hang ngay duoc dat lai luc nua dem (KST)">매일 자정(한국시간) 기준으로 횟수가 리셋됩니다</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ===== 6. EXP & Leaderboard ===== -->
+    <div class="guide-section">
+      <div class="guide-section-title" onclick="toggleGuide(this)">
+        <span class="icon">&#11088;</span>
+        <span class="sec-label" data-ko="EXP & 리더보드" data-en="EXP & Leaderboard" data-vi="EXP & Bang xep hang">EXP & 리더보드</span>
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="guide-body">
+        <p data-ko="다양한 활동으로 경험치(EXP)를 쌓아 리더보드 순위를 올려보세요!"
+           data-en="Earn EXP through various activities and climb the leaderboard!"
+           data-vi="Kiem EXP qua cac hoat dong khac nhau va leo len bang xep hang!">
+          다양한 활동으로 경험치(EXP)를 쌓아 리더보드 순위를 올려보세요!
+        </p>
+        <table class="guide-table">
+          <tr>
+            <th data-ko="활동" data-en="Activity" data-vi="Hoat dong">활동</th>
+            <th>EXP</th>
+          </tr>
+          <tr>
+            <td data-ko="섹션 학습 완료" data-en="Complete a section" data-vi="Hoan thanh mot phan">섹션 학습 완료</td>
+            <td><span class="guide-badge badge-xp">+10 EXP</span></td>
+          </tr>
+          <tr>
+            <td data-ko="섹션 퀴즈 통과" data-en="Pass section quiz" data-vi="Vuot qua bai kiem tra phan">섹션 퀴즈 통과</td>
+            <td><span class="guide-badge badge-xp">+15 EXP</span></td>
+          </tr>
+          <tr>
+            <td data-ko="챕터 시험 통과" data-en="Pass chapter exam" data-vi="Vuot qua bai thi chuong">챕터 시험 통과</td>
+            <td><span class="guide-badge badge-xp">+50 EXP</span></td>
+          </tr>
+          <tr>
+            <td data-ko="데일리 미션 100%" data-en="Daily mission 100%" data-vi="Nhiem vu hang ngay 100%">데일리 미션 100%</td>
+            <td><span class="guide-badge badge-xp">+5 EXP</span></td>
+          </tr>
+          <tr>
+            <td data-ko="팀 챌린지 완료" data-en="Team challenge done" data-vi="Hoan thanh thu thach nhom">팀 챌린지 완료</td>
+            <td><span class="guide-badge badge-xp">+20~50 EXP</span></td>
+          </tr>
+          <tr>
+            <td data-ko="부스트 받기" data-en="Receive a boost" data-vi="Nhan boost">부스트 받기</td>
+            <td><span class="guide-badge badge-xp">+3 EXP</span></td>
+          </tr>
+        </table>
+        <p data-ko="홈 화면 하단의 리더보드에서 전체 순위를 확인할 수 있습니다."
+           data-en="Check the leaderboard at the bottom of the home screen for overall rankings."
+           data-vi="Kiem tra bang xep hang o cuoi man hinh chinh de xem xep hang tong the.">
+          홈 화면 하단의 리더보드에서 전체 순위를 확인할 수 있습니다.
+        </p>
+      </div>
+    </div>
+
+    <!-- ===== 7. Roles ===== -->
+    <div class="guide-section">
+      <div class="guide-section-title" onclick="toggleGuide(this)">
+        <span class="icon">&#128101;</span>
+        <span class="sec-label" data-ko="역할별 기능" data-en="Role Permissions" data-vi="Quyen theo Vai tro">역할별 기능</span>
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="guide-body">
+        <table class="guide-table">
+          <tr>
+            <th data-ko="역할" data-en="Role" data-vi="Vai tro">역할</th>
+            <th data-ko="할 수 있는 것" data-en="Can do" data-vi="Co the lam">할 수 있는 것</th>
+          </tr>
+          <tr>
+            <td><span class="guide-badge badge-role">Staff</span></td>
+            <td data-ko="학습, 미션 수행, 부스트 보내기/받기" data-en="Study, do missions, send/receive boosts" data-vi="Hoc, lam nhiem vu, gui/nhan boost">학습, 미션 수행, 부스트 보내기/받기</td>
+          </tr>
+          <tr>
+            <td><span class="guide-badge badge-role">Manager</span></td>
+            <td data-ko="+ 팀 챌린지 생성, 리뷰 승인/반려" data-en="+ Create challenges, approve/reject reviews" data-vi="+ Tao thu thach, phe duyet/tu choi danh gia">+ 팀 챌린지 생성, 리뷰 승인/반려</td>
+          </tr>
+          <tr>
+            <td><span class="guide-badge badge-role">Admin</span></td>
+            <td data-ko="+ SOP 관리, 슬라이드/퀴즈 생성, 전체 데이터 관리" data-en="+ SOP management, create slides/quizzes, manage all data" data-vi="+ Quan ly SOP, tao slide/bai kiem tra, quan ly tat ca du lieu">+ SOP 관리, 슬라이드/퀴즈 생성, 전체 데이터 관리</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== 8. Tips ===== -->
+    <div class="guide-section">
+      <div class="guide-section-title" onclick="toggleGuide(this)">
+        <span class="icon">&#128161;</span>
+        <span class="sec-label" data-ko="꿀팁" data-en="Pro Tips" data-vi="Meo hay">꿀팁</span>
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="guide-body">
+        <ul>
+          <li data-ko="매일 데일리 미션을 빠짐없이 완료하면 출석 점수 만점!" data-en="Complete daily missions every day for a perfect attendance score!" data-vi="Hoan thanh nhiem vu hang ngay moi ngay de dat diem diem danh toi da!">매일 데일리 미션을 빠짐없이 완료하면 출석 점수 만점!</li>
+          <li data-ko="팀 챌린지는 예상 시간 내 완료하면 EXP 100% 획득" data-en="Finish team challenges within estimated time for full EXP" data-vi="Hoan thanh thu thach nhom trong thoi gian du kien de nhan 100% EXP">팀 챌린지는 예상 시간 내 완료하면 EXP 100% 획득</li>
+          <li data-ko="동료에게 매일 부스트를 보내면 팀 분위기도 UP!" data-en="Send daily boosts to colleagues to improve team morale!" data-vi="Gui boost cho dong nghiep moi ngay de nang cao tinh than dong doi!">동료에게 매일 부스트를 보내면 팀 분위기도 UP!</li>
+          <li data-ko="슬라이드 학습 시 자동 재생으로 편하게 들을 수 있습니다" data-en="Use auto-play during slide study for a hands-free experience" data-vi="Su dung tu dong phat khi hoc slide de trai nghiem khong can tay">슬라이드 학습 시 자동 재생으로 편하게 들을 수 있습니다</li>
+          <li data-ko="리더보드 1위를 목표로 꾸준히 성장해 보세요!" data-en="Aim for #1 on the leaderboard and keep growing!" data-vi="Dat muc tieu so 1 tren bang xep hang va tiep tuc phat trien!">리더보드 1위를 목표로 꾸준히 성장해 보세요!</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ===== 9. FAQ ===== -->
+    <div class="guide-section">
+      <div class="guide-section-title" onclick="toggleGuide(this)">
+        <span class="icon">&#10067;</span>
+        <span class="sec-label" data-ko="자주 묻는 질문 (FAQ)" data-en="FAQ" data-vi="Cau hoi Thuong gap (FAQ)">자주 묻는 질문 (FAQ)</span>
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="guide-body">
+        <div class="guide-step">
+          <div class="guide-step-num">Q</div>
+          <div class="guide-step-text">
+            <strong data-ko="슬라이드 소리가 안 나요" data-en="No sound on slides" data-vi="Khong co am thanh tren slide">슬라이드 소리가 안 나요</strong><br>
+            <span data-ko="기기 볼륨을 확인하고, 무음 모드를 해제하세요. 처음 재생 시 화면을 한 번 터치해야 브라우저가 소리를 허용합니다." data-en="Check your device volume and unmute. Tap the screen once on first play so the browser allows audio." data-vi="Kiem tra am luong thiet bi va bo tieng. Cham vao man hinh mot lan khi phat lan dau de trinh duyet cho phep am thanh.">
+              기기 볼륨을 확인하고, 무음 모드를 해제하세요. 처음 재생 시 화면을 한 번 터치해야 브라우저가 소리를 허용합니다.
+            </span>
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-step-num">Q</div>
+          <div class="guide-step-text">
+            <strong data-ko="비밀번호를 잊어버렸어요" data-en="I forgot my password" data-vi="Toi quen mat khau">비밀번호를 잊어버렸어요</strong><br>
+            <span data-ko="관리자에게 문의하여 비밀번호 초기화를 요청하세요." data-en="Contact your administrator to request a password reset." data-vi="Lien he quan tri vien de yeu cau dat lai mat khau.">
+              관리자에게 문의하여 비밀번호 초기화를 요청하세요.
+            </span>
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-step-num">Q</div>
+          <div class="guide-step-text">
+            <strong data-ko="부스트 한도가 남아있는데 못 보내요" data-en="I can't send boosts even though I have remaining quota" data-vi="Toi khong the gui boost mac du con han muc">부스트 한도가 남아있는데 못 보내요</strong><br>
+            <span data-ko="한도는 한국시간(KST) 자정에 리셋됩니다. 시간대가 다른 지역이면 현지 자정과 차이가 있을 수 있습니다." data-en="The daily limit resets at midnight KST. If you're in a different timezone, it may differ from your local midnight." data-vi="Gioi han hang ngay duoc dat lai luc nua dem KST. Neu ban o mui gio khac, no co the khac voi nua dem dia phuong.">
+              한도는 한국시간(KST) 자정에 리셋됩니다. 시간대가 다른 지역이면 현지 자정과 차이가 있을 수 있습니다.
+            </span>
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-step-num">Q</div>
+          <div class="guide-step-text">
+            <strong data-ko="학습 진도가 저장이 안 돼요" data-en="My study progress isn't being saved" data-vi="Tien do hoc tap khong duoc luu">학습 진도가 저장이 안 돼요</strong><br>
+            <span data-ko="인터넷 연결을 확인하세요. 오프라인 상태에서는 진도가 동기화되지 않습니다. 재접속 후 자동 동기화됩니다." data-en="Check your internet connection. Progress won't sync offline. It will auto-sync when you reconnect." data-vi="Kiem tra ket noi internet. Tien do se khong dong bo ngoai tuyen. No se tu dong dong bo khi ban ket noi lai.">
+              인터넷 연결을 확인하세요. 오프라인 상태에서는 진도가 동기화되지 않습니다. 재접속 후 자동 동기화됩니다.
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center; padding:20px 0; color:var(--gray-500); font-size:12px;">
+      <span data-ko="SOP Training System v7.0" data-en="SOP Training System v7.0" data-vi="SOP Training System v7.0">SOP Training System v7.0</span>
+    </div>
+
+  </div>
+
+<script>
+// ===== Accordion toggle =====
+function toggleGuide(el) {
+  el.classList.toggle('open');
+  const body = el.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+// ===== Multi-language =====
+let currentLang = 'ko';
+
+function setGuideLang(lang) {
+  currentLang = lang;
+  // Update tab active state
+  document.querySelectorAll('.lang-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.lang-tab').forEach(t => {
+    if ((lang === 'ko' && t.textContent === 'Korean') ||
+        (lang === 'en' && t.textContent === 'English') ||
+        (lang === 'vi' && t.textContent === 'Vietnamese')) {
+      t.classList.add('active');
+    }
+  });
+
+  // Update all translatable elements
+  document.querySelectorAll('[data-' + lang + ']').forEach(el => {
+    const val = el.getAttribute('data-' + lang);
+    if (val) el.innerHTML = val;
+  });
+
+  // Header
+  const titles = { ko: 'SOP Training 사용 가이드', en: 'SOP Training Guide', vi: 'Huong dan SOP Training' };
+  const subs = { ko: '시스템 사용법과 성장 전략', en: 'How to use the system and grow your career', vi: 'Cach su dung he thong va phat trien su nghiep' };
+  document.getElementById('guideTitle').textContent = titles[lang] || titles.ko;
+  document.getElementById('guideSubtitle').textContent = subs[lang] || subs.ko;
+
+  // Back button
+  const backs = { ko: '\u2190 돌아가기', en: '\u2190 Back', vi: '\u2190 Quay lai' };
+  document.querySelector('.guide-back').textContent = backs[lang] || backs.ko;
+
+  // Nav labels
+  const navLabels = {
+    ko: { home: '홈', tasks: '미션', praise: '부스트', results: '내 프로필' },
+    en: { home: 'Home', tasks: 'Missions', praise: 'Boost', results: 'Profile' },
+    vi: { home: 'Home', tasks: 'Nhiem vu', praise: 'Boost', results: 'Ho so' }
+  };
+  const nl = navLabels[lang] || navLabels.ko;
+  const navLabelEls = document.querySelectorAll('.bottom-nav a span:last-child');
+  if (navLabelEls[0]) navLabelEls[0].textContent = nl.home;
+  if (navLabelEls[1]) navLabelEls[1].textContent = nl.tasks;
+  if (navLabelEls[2]) navLabelEls[2].textContent = nl.praise;
+  if (navLabelEls[3]) navLabelEls[3].textContent = nl.results;
+}
+
+// Auto-detect language from localStorage
+try {
+  const stored = localStorage.getItem('sopLang');
+  if (stored && ['ko','en','vi'].includes(stored)) {
+    setGuideLang(stored);
+  }
+} catch(e) {}
+</script>
+
+</body>
+</html>

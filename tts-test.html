@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TTS Voice Test</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 20px; }
+
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 28px; margin-bottom: 8px; background: linear-gradient(135deg, #6366f1, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { color: #94a3b8; margin-bottom: 30px; font-size: 14px; }
+
+    .card { background: #1e293b; border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid #334155; }
+    .card h3 { font-size: 16px; color: #a78bfa; margin-bottom: 16px; }
+
+    label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; font-weight: 600; }
+
+    textarea { width: 100%; padding: 14px; border-radius: 10px; border: 2px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 15px; line-height: 1.7; resize: vertical; font-family: inherit; outline: none; transition: border-color 0.2s; }
+    textarea:focus { border-color: #6366f1; }
+
+    .controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-bottom: 16px; }
+    .control-group { flex: 1; min-width: 120px; }
+    select, input[type=range] { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 14px; outline: none; }
+    select { cursor: pointer; }
+
+    .range-row { display: flex; align-items: center; gap: 10px; }
+    .range-row input[type=range] { flex: 1; }
+    .range-val { font-size: 13px; color: #a78bfa; font-weight: 700; min-width: 50px; text-align: right; }
+
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    .btn { padding: 12px 24px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-play { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; }
+    .btn-stop { background: #ef4444; color: white; }
+    .btn-preset { background: #334155; color: #e2e8f0; font-size: 13px; padding: 10px 16px; }
+    .btn-preset.active { background: #6366f1; color: white; }
+    .btn-compare { background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; }
+
+    .status { margin-top: 12px; padding: 12px 16px; border-radius: 10px; font-size: 13px; display: none; }
+    .status.loading { display: block; background: #1e3a5f; color: #60a5fa; }
+    .status.success { display: block; background: #14532d; color: #4ade80; }
+    .status.error { display: block; background: #450a0a; color: #f87171; }
+
+    .presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+
+    .compare-section { margin-top: 16px; }
+    .compare-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #0f172a; border-radius: 10px; margin-bottom: 8px; }
+    .compare-label { font-size: 14px; font-weight: 600; min-width: 140px; }
+    .compare-play { padding: 8px 16px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: #6366f1; color: white; }
+    .compare-play:disabled { opacity: 0.5; }
+    .compare-status { font-size: 12px; color: #94a3b8; }
+
+    .wave { display: inline-flex; gap: 3px; align-items: end; height: 20px; }
+    .wave-bar { width: 3px; background: #a78bfa; border-radius: 2px; animation: wave 0.6s ease-in-out infinite alternate; }
+    .wave-bar:nth-child(1) { height: 8px; animation-delay: 0s; }
+    .wave-bar:nth-child(2) { height: 16px; animation-delay: 0.1s; }
+    .wave-bar:nth-child(3) { height: 12px; animation-delay: 0.2s; }
+    .wave-bar:nth-child(4) { height: 18px; animation-delay: 0.3s; }
+    .wave-bar:nth-child(5) { height: 10px; animation-delay: 0.4s; }
+    @keyframes wave { to { height: 4px; } }
+
+    .sample-texts { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .sample-btn { padding: 6px 12px; background: #334155; color: #94a3b8; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; }
+    .sample-btn:hover { background: #475569; color: #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>TTS Voice Test</h1>
+    <p class="subtitle">한국어 음성 자연스러움을 테스트하고 최적 설정을 찾으세요</p>
+
+    <!-- 샘플 텍스트 -->
+    <div class="card">
+      <h3>테스트 텍스트</h3>
+      <div class="sample-texts">
+        <button class="sample-btn" onclick="setSample('greeting')">인사/소개</button>
+        <button class="sample-btn" onclick="setSample('instruction')">업무 지시</button>
+        <button class="sample-btn" onclick="setSample('safety')">안전 수칙</button>
+        <button class="sample-btn" onclick="setSample('script')">AI 스크립트</button>
+      </div>
+      <textarea id="testText" rows="5">출근하셨나요? 먼저 직원 전용 출입문으로 들어갑니다. 들어가자마자 보안 알람을 해제해주세요. 비밀번호는 매장마다 다르니 매니저에게 확인하세요.</textarea>
+    </div>
+
+    <!-- 음성 설정 -->
+    <div class="card">
+      <h3>음성 설정</h3>
+      <div class="controls">
+        <div class="control-group">
+          <label>언어</label>
+          <select id="lang">
+            <option value="ko-KR" selected>한국어</option>
+            <option value="en-US">English</option>
+            <option value="vi-VN">Tieng Viet</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>성별</label>
+          <select id="gender">
+            <option value="female" selected>여성 (SunHi)</option>
+            <option value="male">남성 (InJoon)</option>
+          </select>
+        </div>
+      </div>
+
+      <label>속도 (Rate)</label>
+      <div class="range-row" style="margin-bottom: 12px;">
+        <input type="range" id="rate" min="-30" max="30" value="5" step="5">
+        <span class="range-val" id="rateVal">+5%</span>
+      </div>
+
+      <label>피치 (Pitch)</label>
+      <div class="range-row" style="margin-bottom: 12px;">
+        <input type="range" id="pitch" min="-20" max="20" value="0" step="5">
+        <span class="range-val" id="pitchVal">+0Hz</span>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-play" id="playBtn" onclick="playTTS()">
+          <span>&#9654;</span> 재생
+        </button>
+        <button class="btn btn-stop" onclick="stopAll()" style="display:none;" id="stopBtn">
+          <span>&#9632;</span> 정지
+        </button>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+
+    <!-- 프리셋 비교 -->
+    <div class="card">
+      <h3>프리셋 비교 (한번에 비교)</h3>
+      <p style="font-size:13px; color:#94a3b8; margin-bottom:16px;">같은 텍스트를 다른 설정으로 들어보세요. 위 텍스트 박스의 내용이 사용됩니다.</p>
+
+      <div class="compare-section" id="compareSection">
+        <div class="compare-item" data-preset="current">
+          <div class="compare-label">현재 설정<br><span style="font-size:11px; color:#64748b;">Rate +5%, Pitch +0Hz</span></div>
+          <button class="compare-play" onclick="playPreset('current')">재생</button>
+          <span class="compare-status" id="status-current"></span>
+        </div>
+        <div class="compare-item" data-preset="natural">
+          <div class="compare-label">자연스러운<br><span style="font-size:11px; color:#64748b;">Rate -5%, Pitch +5Hz</span></div>
+          <button class="compare-play" onclick="playPreset('natural')">재생</button>
+          <span class="compare-status" id="status-natural"></span>
+        </div>
+        <div class="compare-item" data-preset="warm">
+          <div class="compare-label">따뜻한 톤<br><span style="font-size:11px; color:#64748b;">Rate -10%, Pitch -5Hz</span></div>
+          <button class="compare-play" onclick="playPreset('warm')">재생</button>
+          <span class="compare-status" id="status-warm"></span>
+        </div>
+        <div class="compare-item" data-preset="bright">
+          <div class="compare-label">밝은 톤<br><span style="font-size:11px; color:#64748b;">Rate +0%, Pitch +10Hz</span></div>
+          <button class="compare-play" onclick="playPreset('bright')">재생</button>
+          <span class="compare-status" id="status-bright"></span>
+        </div>
+        <div class="compare-item" data-preset="slow">
+          <div class="compare-label">천천히<br><span style="font-size:11px; color:#64748b;">Rate -20%, Pitch +0Hz</span></div>
+          <button class="compare-play" onclick="playPreset('slow')">재생</button>
+          <span class="compare-status" id="status-slow"></span>
+        </div>
+        <div class="compare-item" data-preset="male">
+          <div class="compare-label">남성 (InJoon)<br><span style="font-size:11px; color:#64748b;">Rate +0%, Pitch +0Hz</span></div>
+          <button class="compare-play" onclick="playPreset('male')">재생</button>
+          <span class="compare-status" id="status-male"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 적용 -->
+    <div class="card" style="border-color: #6366f1;">
+      <h3>설정 적용</h3>
+      <p style="font-size:14px; color:#94a3b8; margin-bottom:12px;">마음에 드는 설정을 찾으셨나요? 아래 버튼을 누르면 선택한 설정이 시스템에 저장됩니다.</p>
+      <div id="selectedPresetInfo" style="padding:12px; background:#0f172a; border-radius:8px; margin-bottom:12px; font-size:14px;">
+        현재: Rate <strong id="applyRate">+5%</strong>, Pitch <strong id="applyPitch">+0Hz</strong>, 성별 <strong id="applyGender">female</strong>
+      </div>
+      <button class="btn btn-play" onclick="applySettings()" style="width:100%; justify-content:center;">
+        이 설정을 시스템에 적용
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let currentAudio = null;
+
+    const SAMPLES = {
+      greeting: '안녕하세요, 오늘도 함께해주셔서 감사합니다. 이번 교육에서는 매장 오픈 절차에 대해 알아보겠습니다. 처음이라 긴장되시죠? 하나씩 천천히 따라오시면 됩니다.',
+      instruction: '출근하셨나요? 먼저 직원 전용 출입문으로 들어갑니다. 들어가자마자 보안 알람을 해제해주세요. 비밀번호는 매장마다 다르니 매니저에게 확인하세요.',
+      safety: '아이들의 안전은 우리의 최우선 가치입니다. 놀이기구를 사용하기 전에 반드시 안전 점검표를 확인하세요. 볼트가 느슨하거나 균열이 발견되면 즉시 사용을 중단하고 매니저에게 보고합니다.',
+      script: 'POS를 부팅하고, 시재금이 30만원인지 꼭 확인하세요. 금액이 다르면 전날 마감자에게 바로 연락합니다. 시재금 차이가 나면 절대 혼자 처리하지 마세요. 반드시 매니저에게 보고하는 것, 잊지 마세요.'
+    };
+
+    const PRESETS = {
+      current:  { rate: '+5%',   pitch: '+0Hz',  gender: 'female' },
+      natural:  { rate: '-5%',   pitch: '+5Hz',  gender: 'female' },
+      warm:     { rate: '-10%',  pitch: '-5Hz',  gender: 'female' },
+      bright:   { rate: '+0%',   pitch: '+10Hz', gender: 'female' },
+      slow:     { rate: '-20%',  pitch: '+0Hz',  gender: 'female' },
+      male:     { rate: '+0%',   pitch: '+0Hz',  gender: 'male' },
+    };
+
+    function setSample(key) {
+      document.getElementById('testText').value = SAMPLES[key] || '';
+    }
+
+    // Range 슬라이더 업데이트
+    document.getElementById('rate').addEventListener('input', function() {
+      const v = parseInt(this.value);
+      document.getElementById('rateVal').textContent = (v >= 0 ? '+' : '') + v + '%';
+      updateApplyInfo();
+    });
+    document.getElementById('pitch').addEventListener('input', function() {
+      const v = parseInt(this.value);
+      document.getElementById('pitchVal').textContent = (v >= 0 ? '+' : '') + v + 'Hz';
+      updateApplyInfo();
+    });
+    document.getElementById('gender').addEventListener('change', updateApplyInfo);
+
+    function updateApplyInfo() {
+      document.getElementById('applyRate').textContent = document.getElementById('rateVal').textContent;
+      document.getElementById('applyPitch').textContent = document.getElementById('pitchVal').textContent;
+      document.getElementById('applyGender').textContent = document.getElementById('gender').value;
+    }
+
+    function stopAll() {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.src = '';
+        currentAudio = null;
+      }
+      document.getElementById('stopBtn').style.display = 'none';
+      document.getElementById('playBtn').disabled = false;
+      // 모든 compare status 초기화
+      document.querySelectorAll('.compare-status').forEach(el => el.innerHTML = '');
+      document.querySelectorAll('.compare-play').forEach(btn => btn.disabled = false);
+    }
+
+    async function fetchTTS(text, lang, gender, rate, pitch) {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, lang, gender, rate, pitch })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || 'TTS failed');
+      }
+      return await res.blob();
+    }
+
+    async function playTTS() {
+      const text = document.getElementById('testText').value.trim();
+      if (!text) return alert('텍스트를 입력하세요');
+
+      const lang = document.getElementById('lang').value;
+      const gender = document.getElementById('gender').value;
+      const rateVal = parseInt(document.getElementById('rate').value);
+      const pitchVal = parseInt(document.getElementById('pitch').value);
+      const rate = (rateVal >= 0 ? '+' : '') + rateVal + '%';
+      const pitch = (pitchVal >= 0 ? '+' : '') + pitchVal + 'Hz';
+
+      stopAll();
+      const status = document.getElementById('status');
+      const playBtn = document.getElementById('playBtn');
+
+      status.className = 'status loading';
+      status.innerHTML = '<div class="wave"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div> 음성 생성 중...';
+      playBtn.disabled = true;
+
+      try {
+        const blob = await fetchTTS(text, lang, gender, rate, pitch);
+        const url = URL.createObjectURL(blob);
+
+        currentAudio = new Audio(url);
+        currentAudio.onended = () => {
+          status.className = 'status success';
+          status.textContent = '재생 완료 (' + (blob.size / 1024).toFixed(1) + 'KB)';
+          document.getElementById('stopBtn').style.display = 'none';
+          playBtn.disabled = false;
+        };
+
+        status.className = 'status success';
+        status.innerHTML = '<div class="wave"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div> 재생 중... (' + (blob.size / 1024).toFixed(1) + 'KB)';
+        document.getElementById('stopBtn').style.display = '';
+
+        await currentAudio.play();
+      } catch (e) {
+        status.className = 'status error';
+        status.textContent = '오류: ' + e.message;
+        playBtn.disabled = false;
+      }
+    }
+
+    async function playPreset(presetKey) {
+      const text = document.getElementById('testText').value.trim();
+      if (!text) return alert('텍스트를 입력하세요');
+
+      const preset = PRESETS[presetKey];
+      const lang = document.getElementById('lang').value;
+      const statusEl = document.getElementById('status-' + presetKey);
+      const btn = statusEl.previousElementSibling;
+
+      stopAll();
+
+      statusEl.innerHTML = '<div class="wave"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div>';
+      btn.disabled = true;
+
+      try {
+        const blob = await fetchTTS(text, lang, preset.gender, preset.rate, preset.pitch);
+        const url = URL.createObjectURL(blob);
+
+        currentAudio = new Audio(url);
+        currentAudio.onended = () => {
+          statusEl.textContent = '완료';
+          btn.disabled = false;
+        };
+
+        statusEl.innerHTML = '<div class="wave"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div> 재생 중';
+
+        await currentAudio.play();
+      } catch (e) {
+        statusEl.textContent = '오류: ' + e.message;
+        btn.disabled = false;
+      }
+    }
+
+    function applySettings() {
+      const rate = document.getElementById('rateVal').textContent;
+      const pitch = document.getElementById('pitchVal').textContent;
+      const gender = document.getElementById('gender').value;
+
+      const settings = { ttsRate: rate, ttsPitch: pitch, ttsGender: gender };
+      localStorage.setItem('sop_tts_settings', JSON.stringify(settings));
+
+      alert('TTS 설정이 저장되었습니다!\n\nRate: ' + rate + '\nPitch: ' + pitch + '\nGender: ' + gender + '\n\n슬라이드 재생 시 이 설정이 적용됩니다.');
+    }
+
+    updateApplyInfo();
+  </script>
+</body>
+</html>

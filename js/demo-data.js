@@ -451,8 +451,8 @@ const Progress = {
 
   isChapterUnlocked(chapterIndex) {
     if (chapterIndex === 0) return true;
-    const chapters = SopStore.getChapters();
-    if (chapterIndex >= chapters.length) return false;
+    const chapters = (SopStore.getChapters().chapters || SopStore.getChapters());
+    if (!Array.isArray(chapters) || chapterIndex >= chapters.length) return false;
     return this.isChapterPassed(chapters[chapterIndex - 1].id);
   },
 
@@ -469,7 +469,8 @@ const Progress = {
   },
 
   getTotalProgress() {
-    const chapters = SopStore.getChapters();
+    const _res = SopStore.getChapters();
+    const chapters = Array.isArray(_res) ? _res : (_res.chapters || []);
     if (chapters.length === 0) return 0;
     // 각 챕터별로: 영상 시청 50% + 퀴즈 통과 50%
     let totalScore = 0;
@@ -491,7 +492,8 @@ const Progress = {
   // --- 관리자용: 특정 직원의 진행률 ---
   getEmployeeProgress(empId) {
     const d = this._getEmpData(empId);
-    const chapters = SopStore.getChapters();
+    const _res2 = SopStore.getChapters();
+    const chapters = Array.isArray(_res2) ? _res2 : (_res2.chapters || []);
     const totalChapters = chapters.length;
     const passedChapters = chapters.filter(ch => d.chapterResults[ch.id]?.passed === true).length;
     const totalVideos = chapters.reduce((sum, ch) => sum + SopStore.getVideos(ch.id).length, 0);
@@ -536,7 +538,8 @@ const Progress = {
     // 이미 데이터 있으면 스킵
     if (Object.keys(all).length > 1) return;
 
-    const chapters = SopStore.getChapters();
+    const _res3 = SopStore.getChapters();
+    const chapters = Array.isArray(_res3) ? _res3 : (_res3.chapters || []);
     if (chapters.length === 0) return;
 
     // 김민수: 100% 완료

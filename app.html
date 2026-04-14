@@ -37,6 +37,7 @@
           style="background:none; border:none; font-size:20px; cursor:pointer; position:relative; padding:4px;">
           &#128276;<span id="notifDot" style="display:none; position:absolute; top:2px; right:2px; width:8px; height:8px; background:var(--danger); border-radius:50%;"></span>
         </button>
+        <a href="guide.html" title="사용 가이드" style="text-decoration:none; font-size:18px; line-height:1; padding:4px; cursor:pointer;">&#10068;</a>
         <a href="change-password.html" title="설정" style="text-decoration:none; font-size:20px; line-height:1; padding:4px; cursor:pointer;">&#9881;</a>
         <a href="profile.html" class="user-avatar" id="userAvatar" title="내 프로필" style="text-decoration:none; overflow:hidden;">?</a>
       </div>
@@ -1283,24 +1284,24 @@
       document.getElementById('xpGuideBody').innerHTML = html;
     }
 
-    // ===== 초기화 =====
-    updateProgress();
-    updateNextAction();
-    renderChapters();
-    renderMbtiCard();
-    renderRookieQuest();
-    renderXpGuide();
-    // 아래 카드들은 Supabase 동기화 완료 후 1회만 렌더링 (깜박임 방지)
-    // Supabase 연결 안 되면 여기서 렌더
-    if (!SupabaseMode._ready) {
-      renderTierCard();
-      renderLeaderboard();
-    }
-
-    // ===== 알림 시스템 =====
+    // ===== 알림 시스템 (변수 선언을 먼저 — onclick 핸들러가 접근 가능하도록) =====
     const notifKey = 'sop_notif_enabled_' + (user?.email || '');
     let notifEnabled = localStorage.getItem(notifKey) === 'true';
     let notifInterval = null;
+
+    // ===== 초기화 =====
+    try { updateProgress(); } catch(e) { console.warn('[Init] updateProgress:', e.message); }
+    try { updateNextAction(); } catch(e) { console.warn('[Init] updateNextAction:', e.message); }
+    try { renderChapters(); } catch(e) { console.warn('[Init] renderChapters:', e.message); }
+    try { renderMbtiCard(); } catch(e) { console.warn('[Init] renderMbtiCard:', e.message); }
+    try { renderRookieQuest(); } catch(e) { console.warn('[Init] renderRookieQuest:', e.message); }
+    try { renderXpGuide(); } catch(e) { console.warn('[Init] renderXpGuide:', e.message); }
+    // 아래 카드들은 Supabase 동기화 완료 후 1회만 렌더링 (깜박임 방지)
+    // Supabase 연결 안 되면 여기서 렌더
+    if (!SupabaseMode._ready) {
+      try { renderTierCard(); } catch(e) { console.warn('[Init] renderTierCard:', e.message); }
+      try { renderLeaderboard(); } catch(e) { console.warn('[Init] renderLeaderboard:', e.message); }
+    }
 
     function updateNotifUI() {
       const bell = document.getElementById('notifBell');
