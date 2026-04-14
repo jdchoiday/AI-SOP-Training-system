@@ -647,6 +647,10 @@
           : (lang === 'en' ? '🎉 XP conversion complete!' : lang === 'vi' ? '🎉 Đã chuyển đổi XP!' : '🎉 XP 전환 완료!');
 
         const praiseLabel = lang === 'en' ? 'Received Boosts' : lang === 'vi' ? 'Boost nhận được' : '받은 부스트';
+        // 기존 카드 제거 후 재삽입 (중복 방지)
+        const existingPraise = document.getElementById('praise-mini-card');
+        if (existingPraise) existingPraise.remove();
+
         const card = document.createElement('a');
         card.href = 'praise.html';
         card.className = 'chapter-item';
@@ -717,6 +721,10 @@
         const subText = `${done}/${total} ${lang === 'en' ? 'completed' : lang === 'vi' ? 'hoàn thành' : '완료'} · ${qp} P`;
 
         const container = document.getElementById('chapterList');
+        // 기존 카드 제거 후 재삽입 (중복 방지)
+        const existingTask = document.getElementById('tasks-mini-card');
+        if (existingTask) existingTask.remove();
+
         const card = document.createElement('a');
         card.href = 'tasks.html';
         card.className = 'chapter-item';
@@ -1285,13 +1293,14 @@
     updateNextAction();
     renderChapters();
     renderMbtiCard();
-    renderTierCard();
-    renderPraiseMiniCard();
-    renderTasksMiniCard();
-    renderTeamTasksMiniCard();
     renderRookieQuest();
     renderXpGuide();
-    renderLeaderboard();
+    // 아래 카드들은 Supabase 동기화 완료 후 1회만 렌더링 (깜박임 방지)
+    // Supabase 연결 안 되면 여기서 렌더
+    if (!SupabaseMode._ready) {
+      renderTierCard();
+      renderLeaderboard();
+    }
 
     // ===== 알림 시스템 =====
     const notifKey = 'sop_notif_enabled_' + (user?.email || '');
