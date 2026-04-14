@@ -307,7 +307,8 @@
 
       <div class="sidebar-section">게이미피케이션</div>
       <a href="#" onclick="showPage('xp-manage', event)" data-page="xp-manage"><span class="ic">&#127942;</span> XP 관리</a>
-      <a href="#" onclick="showPage('praise-manage', event)" data-page="praise-manage"><span class="ic">&#128588;</span> 칭찬 관리</a>
+      <a href="#" onclick="showPage('praise-manage', event)" data-page="praise-manage"><span class="ic">&#128588;</span> 부스트 관리</a>
+      <a href="#" onclick="showPage('xp-rewards', event)" data-page="xp-rewards"><span class="ic">&#127873;</span> XP 혜택 관리</a>
       <a href="#" onclick="showPage('task-manage', event)" data-page="task-manage"><span class="ic">&#9989;</span> 성과제 관리</a>
       <a href="#" onclick="showPage('team-task-manage', event)" data-page="team-task-manage"><span class="ic">&#128101;</span> 팀 테스크 관리</a>
 
@@ -967,6 +968,25 @@
           </thead>
           <tbody id="praiseLogBody"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- ========== XP 혜택 관리 ========== -->
+    <div id="page-xp-rewards" style="display:none;">
+      <div class="topbar">
+        <h1>&#127873; XP 혜택 관리</h1>
+        <p>직원이 XP를 모아 받을 수 있는 혜택을 설정합니다</p>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <h3 style="font-size:16px;">혜택 목록</h3>
+          <button class="btn btn-primary" onclick="addXpReward()" style="font-size:13px;padding:8px 16px;">+ 혜택 추가</button>
+        </div>
+        <div id="xpRewardsList"></div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <h3 style="font-size:16px; margin-bottom:12px;">미리보기</h3>
+        <div id="xpRewardsPreview" style="max-width:400px;"></div>
       </div>
     </div>
 
@@ -7080,7 +7100,141 @@ ${text.slice(0, 3000)}
       openVersionDetail(sopId);
     }
 
-    // ===== 칭찬 관리 =====
+    // ===== XP 혜택 관리 =====
+    let xpRewardsList = [];
+
+    async function loadXpRewards() {
+      // Supabase app_config에서 로드
+      try {
+        if (SupabaseMode._ready) {
+          const { data } = await SupabaseMode._client
+            .from('app_config').select('value').eq('key', 'xp_rewards').maybeSingle();
+          if (data?.value) {
+            xpRewardsList = JSON.parse(data.value);
+            renderXpRewardsAdmin();
+            return;
+          }
+        }
+      } catch(e) {}
+      // localStorage 폴백
+      try { xpRewardsList = JSON.parse(localStorage.getItem('sop_xp_rewards') || '[]'); } catch(e) { xpRewardsList = []; }
+      renderXpRewardsAdmin();
+    }
+
+    async function saveXpRewards() {
+      localStorage.setItem('sop_xp_rewards', JSON.stringify(xpRewardsList));
+      try {
+        if (SupabaseMode._ready) {
+          // upsert into app_config
+          await SupabaseMode._client.from('app_config').upsert({
+            key: 'xp_rewards',
+            value: JSON.stringify(xpRewardsList),
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'key' });
+        }
+      } catch(e) { console.error('[XpRewards] Save error:', e); }
+      renderXpRewardsAdmin();
+    }
+
+    function addXpReward() {
+      xpRewardsList.push({
+        id: Date.now().toString(36),
+        icon: '🎁',
+        name: '',
+        description: '',
+        required_xp: 100,
+        active: true,
+      });
+      renderXpRewardsAdmin();
+    }
+
+    function removeXpReward(idx) {
+      if (!confirm('이 혜택을 삭제하시겠습니까?')) return;
+      xpRewardsList.splice(idx, 1);
+      saveXpRewards();
+    }
+
+    function renderXpRewardsAdmin() {
+      const container = document.getElementById('xpRewardsList');
+      if (!container) return;
+
+      if (xpRewardsList.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--gray-500);">등록된 혜택이 없습니다. 위의 "혜택 추가" 버튼으로 추가하세요.</div>';
+        renderXpRewardsPreview();
+        return;
+      }
+
+      let html = '';
+      xpRewardsList.forEach((reward, idx) => {
+        html += `
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:16px;margin-bottom:10px;border-radius:12px;background:var(--bg-surface);border:1px solid var(--gray-200);${reward.active === false ? 'opacity:0.5;' : ''}">
+          <div style="flex-shrink:0;">
+            <input type="text" value="${reward.icon || '🎁'}" maxlength="4"
+              style="width:44px;height:44px;text-align:center;font-size:24px;border:1px solid var(--gray-300);border-radius:10px;background:var(--bg-card);"
+              onchange="xpRewardsList[${idx}].icon=this.value;saveXpRewards();">
+          </div>
+          <div style="flex:1;min-width:0;">
+            <input type="text" value="${reward.name}" placeholder="혜택 이름 (예: 음료 쿠폰)"
+              style="width:100%;padding:8px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;font-weight:600;margin-bottom:6px;background:var(--bg-card);color:var(--text-primary);box-sizing:border-box;"
+              onchange="xpRewardsList[${idx}].name=this.value;saveXpRewards();">
+            <input type="text" value="${reward.description || ''}" placeholder="설명 (예: 스타벅스 아메리카노 1잔)"
+              style="width:100%;padding:8px;border:1px solid var(--gray-300);border-radius:8px;font-size:13px;margin-bottom:6px;background:var(--bg-card);color:var(--text-secondary);box-sizing:border-box;"
+              onchange="xpRewardsList[${idx}].description=this.value;saveXpRewards();">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label style="font-size:12px;color:var(--gray-500);white-space:nowrap;">필요 XP:</label>
+              <input type="number" value="${reward.required_xp}" min="1"
+                style="width:100px;padding:6px 8px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;font-weight:600;background:var(--bg-card);color:#F59E0B;"
+                onchange="xpRewardsList[${idx}].required_xp=parseInt(this.value)||100;saveXpRewards();">
+              <label style="font-size:12px;color:var(--gray-500);display:flex;align-items:center;gap:4px;cursor:pointer;">
+                <input type="checkbox" ${reward.active !== false ? 'checked' : ''}
+                  onchange="xpRewardsList[${idx}].active=this.checked;saveXpRewards();">
+                활성
+              </label>
+              <button onclick="removeXpReward(${idx})" style="margin-left:auto;background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;" title="삭제">&#128465;</button>
+            </div>
+          </div>
+        </div>`;
+      });
+
+      container.innerHTML = html;
+      renderXpRewardsPreview();
+    }
+
+    function renderXpRewardsPreview() {
+      const preview = document.getElementById('xpRewardsPreview');
+      if (!preview) return;
+      const active = xpRewardsList.filter(r => r.active !== false && r.name);
+      if (active.length === 0) {
+        preview.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray-500);font-size:13px;">활성 혜택이 없습니다</div>';
+        return;
+      }
+      active.sort((a, b) => a.required_xp - b.required_xp);
+      let html = '';
+      active.forEach(r => {
+        html += `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:6px;border-radius:10px;background:var(--bg-card);border:1px solid var(--gray-200);">
+          <span style="font-size:20px;">${r.icon}</span>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${r.name}</div>
+            <div style="font-size:11px;color:var(--text-secondary);">${r.description || ''}</div>
+          </div>
+          <span style="font-size:12px;font-weight:700;color:#F59E0B;">${r.required_xp.toLocaleString()} XP</span>
+        </div>`;
+      });
+      preview.innerHTML = html;
+    }
+
+    // 페이지 전환 시 로드
+    const _origShowPage = typeof showPage === 'function' ? showPage : null;
+    if (_origShowPage) {
+      const _realShowPage = showPage;
+      showPage = function(pageId, event) {
+        _realShowPage(pageId, event);
+        if (pageId === 'xp-rewards') loadXpRewards();
+      };
+    }
+
+    // ===== 부스트 관리 =====
     // ===== 성과제 관리 =====
     async function renderTaskManage() {
       if (!SupabaseMode._ready) return;

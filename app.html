@@ -86,6 +86,17 @@
       </div>
     </div>
 
+    <!-- ===== XP 혜택 (XP로 얻을 수 있는 보상) ===== -->
+    <div id="xpRewardsCard" class="card" style="margin-top:16px; border:1px solid rgba(245,158,11,0.3); background:linear-gradient(135deg, rgba(245,158,11,0.05) 0%, rgba(16,185,129,0.05) 100%);">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <h3 style="font-size:15px; color:var(--gray-700);" id="xpRewardsTitle">🎁 XP 혜택</h3>
+        <button onclick="toggleXpRewards()" id="xpRewardsToggle" style="background:none; border:none; font-size:13px; color:#F59E0B; cursor:pointer; font-weight:600;">접기 ▲</button>
+      </div>
+      <div id="xpRewardsBody">
+        <!-- JS 동적 생성 -->
+      </div>
+    </div>
+
     <!-- ===== XP 가이드 (어떤 액션이 얼마의 XP?) ===== -->
     <div id="xpGuideCard" class="card" style="margin-top:16px; display:none; border:1px solid var(--primary-light); background:linear-gradient(135deg, #f0f7ff 0%, #fef9ef 100%);">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
@@ -151,6 +162,14 @@
           { icon: '⭐', action: (n) => `부스트 ${n}개 모으기`, xp: 'PRAISE_XP_PER_STACK' },
         ],
         xpPerAction: 'XP',
+        // XP 혜택
+        xpRewards: '🎁 XP 혜택',
+        xpRewardsSub: 'XP를 모아 특별한 혜택을 받으세요!',
+        xpRewardsEmpty: '준비중인 혜택이 없습니다',
+        xpRewardsMyXp: '내 XP',
+        xpRewardsNeeded: (n) => `${n} XP 더 필요`,
+        xpRewardsUnlocked: '달성!',
+        xpRewardsProgress: (pct) => `${pct}%`,
         // 퀘스트
         questTitle: '🎮 신입 모험가 퀘스트',
         questSubtitle: '미션을 클리어하고 EXP를 획득하세요!',
@@ -209,6 +228,13 @@
           { icon: '⭐', action: (n) => `Collect ${n} boosts`, xp: 'PRAISE_XP_PER_STACK' },
         ],
         xpPerAction: 'XP',
+        xpRewards: '🎁 XP Rewards',
+        xpRewardsSub: 'Collect XP and unlock special rewards!',
+        xpRewardsEmpty: 'No rewards available yet',
+        xpRewardsMyXp: 'My XP',
+        xpRewardsNeeded: (n) => `${n} more XP needed`,
+        xpRewardsUnlocked: 'Unlocked!',
+        xpRewardsProgress: (pct) => `${pct}%`,
         // Quests
         questTitle: '🎮 Rookie Adventure Quest',
         questSubtitle: 'Complete missions and earn EXP!',
@@ -267,6 +293,13 @@
           { icon: '⭐', action: (n) => `Thu thập ${n} boost`, xp: 'PRAISE_XP_PER_STACK' },
         ],
         xpPerAction: 'XP',
+        xpRewards: '🎁 Phần thưởng XP',
+        xpRewardsSub: 'Tích lũy XP và mở khóa phần thưởng đặc biệt!',
+        xpRewardsEmpty: 'Chưa có phần thưởng nào',
+        xpRewardsMyXp: 'XP của tôi',
+        xpRewardsNeeded: (n) => `Cần thêm ${n} XP`,
+        xpRewardsUnlocked: 'Đã mở!',
+        xpRewardsProgress: (pct) => `${pct}%`,
         // Quests
         questTitle: '🎮 Nhiệm vụ Tân binh',
         questSubtitle: 'Hoàn thành nhiệm vụ và nhận EXP!',
@@ -326,6 +359,7 @@
           renderTeamTasksMiniCard();
           renderScoreCard();
           renderLeaderboard();
+          renderXpRewards();
         });
       }
     });
@@ -1284,6 +1318,98 @@
       document.getElementById('xpGuideBody').innerHTML = html;
     }
 
+    // ===== XP 혜택 시스템 =====
+    let xpRewardsOpen = true;
+    function toggleXpRewards() {
+      xpRewardsOpen = !xpRewardsOpen;
+      document.getElementById('xpRewardsBody').style.display = xpRewardsOpen ? 'block' : 'none';
+      document.getElementById('xpRewardsToggle').textContent = xpRewardsOpen ? (t.lbCollapse || '접기 ▲') : (t.lbExpand || '펼치기 ▼');
+    }
+
+    async function renderXpRewards() {
+      const card = document.getElementById('xpRewardsCard');
+      const body = document.getElementById('xpRewardsBody');
+      document.getElementById('xpRewardsTitle').textContent = t.xpRewards || '🎁 XP 혜택';
+
+      // 1) 혜택 데이터 로드 (Supabase app_config → localStorage 폴백)
+      let rewards = [];
+      try {
+        if (SupabaseMode._ready) {
+          const { data } = await SupabaseMode._client
+            .from('app_config').select('value').eq('key', 'xp_rewards').maybeSingle();
+          if (data?.value) rewards = JSON.parse(data.value);
+        }
+      } catch(e) { console.warn('[XpRewards] Supabase load:', e.message); }
+      if (rewards.length === 0) {
+        try { rewards = JSON.parse(localStorage.getItem('sop_xp_rewards') || '[]'); } catch(e) {}
+      }
+      // 활성화된 혜택만
+      rewards = rewards.filter(r => r.active !== false);
+
+      if (rewards.length === 0) {
+        card.style.display = 'none';
+        return;
+      }
+
+      // localStorage에 캐시
+      try { localStorage.setItem('sop_xp_rewards', JSON.stringify(rewards)); } catch(e) {}
+
+      card.style.display = 'block';
+
+      // 2) 내 XP 가져오기
+      let myXp = 0;
+      try {
+        if (SupabaseMode._ready && user?.id) {
+          const empId = typeof getEmployeeId === 'function' ? await getEmployeeId() : user.id;
+          const { data } = await SupabaseMode._client
+            .from('user_gamification').select('total_xp').eq('employee_id', empId).maybeSingle();
+          if (data) myXp = data.total_xp || 0;
+        }
+        if (myXp === 0 && typeof XpService !== 'undefined') {
+          myXp = XpService.getXp?.() || 0;
+        }
+      } catch(e) {}
+
+      // 3) 렌더링
+      let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:8px 12px;border-radius:10px;background:rgba(245,158,11,0.08);">
+        <span style="font-size:13px;color:var(--text-secondary);">${t.xpRewardsMyXp || '내 XP'}</span>
+        <span style="font-size:18px;font-weight:800;color:#F59E0B;">${myXp.toLocaleString()} XP</span>
+      </div>`;
+
+      rewards.sort((a, b) => a.required_xp - b.required_xp);
+
+      rewards.forEach(reward => {
+        const pct = Math.min(100, Math.round((myXp / reward.required_xp) * 100));
+        const unlocked = myXp >= reward.required_xp;
+        const needed = reward.required_xp - myXp;
+
+        html += `
+        <div style="padding:12px;border-radius:12px;margin-bottom:8px;
+          background:${unlocked ? 'rgba(16,185,129,0.08)' : 'var(--bg-card)'};
+          border:1px solid ${unlocked ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.06)'};
+          ${unlocked ? 'box-shadow:0 0 12px rgba(16,185,129,0.1);' : ''}">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+            <span style="font-size:24px;">${reward.icon || '🎁'}</span>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:700;color:var(--text-primary);">${reward.name}</div>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:1px;">${reward.description || ''}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              <div style="font-size:13px;font-weight:700;color:${unlocked ? 'var(--primary)' : '#F59E0B'};">
+                ${unlocked ? (t.xpRewardsUnlocked || '달성!') : reward.required_xp.toLocaleString() + ' XP'}
+              </div>
+              ${!unlocked ? `<div style="font-size:11px;color:var(--gray-500);">${t.xpRewardsNeeded ? t.xpRewardsNeeded(needed.toLocaleString()) : needed + ' XP 더 필요'}</div>` : ''}
+            </div>
+          </div>
+          <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;border-radius:3px;background:${unlocked ? 'linear-gradient(90deg,#10B981,#059669)' : 'linear-gradient(90deg,#F59E0B,#EAB308)'};transition:width 0.5s;"></div>
+          </div>
+        </div>`;
+      });
+
+      body.innerHTML = html;
+    }
+
     // ===== 알림 시스템 (변수 선언을 먼저 — onclick 핸들러가 접근 가능하도록) =====
     const notifKey = 'sop_notif_enabled_' + (user?.email || '');
     let notifEnabled = localStorage.getItem(notifKey) === 'true';
@@ -1296,6 +1422,7 @@
     try { renderMbtiCard(); } catch(e) { console.warn('[Init] renderMbtiCard:', e.message); }
     try { renderRookieQuest(); } catch(e) { console.warn('[Init] renderRookieQuest:', e.message); }
     try { renderXpGuide(); } catch(e) { console.warn('[Init] renderXpGuide:', e.message); }
+    try { renderXpRewards(); } catch(e) { console.warn('[Init] renderXpRewards:', e.message); }
     // 아래 카드들은 Supabase 동기화 완료 후 1회만 렌더링 (깜박임 방지)
     // Supabase 연결 안 되면 여기서 렌더
     if (!SupabaseMode._ready) {
