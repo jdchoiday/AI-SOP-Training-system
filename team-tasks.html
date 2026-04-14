@@ -312,6 +312,7 @@
         reviewRequested: '리뷰가 요청되었습니다', taskApproved: '승인 완료!', taskRejected: '반려됨',
         enterActualHours: '실제 소요시간 (h)', enterScore: '점수 (1-5)', enterNotes: '코멘트',
         rejectReason: '반려 사유', timePenalty: '시간 페널티',
+        reviewerLabel: '검토 담당', reviewWaiting: '검토 대기중', reviewedBy: '검토자', noManager: '지점 매니저 미지정',
         beforePhoto: '전', afterPhoto: '후',
         confirmReview: '리뷰를 요청하시겠습니까? 매니저에게 승인 요청이 전송됩니다.',
       },
@@ -350,6 +351,7 @@
         reviewRequested: 'Review requested', taskApproved: 'Approved!', taskRejected: 'Rejected',
         enterActualHours: 'Actual hours', enterScore: 'Score (1-5)', enterNotes: 'Notes',
         rejectReason: 'Reason', timePenalty: 'Time penalty',
+        reviewerLabel: 'Reviewer', reviewWaiting: 'Awaiting review', reviewedBy: 'Reviewed by', noManager: 'No branch manager assigned',
         beforePhoto: 'Before', afterPhoto: 'After',
         confirmReview: 'Request review? Manager will be notified for approval.',
       },
@@ -388,6 +390,7 @@
         reviewRequested: 'Đã yêu cầu xét duyệt', taskApproved: 'Đã phê duyệt!', taskRejected: 'Từ chối',
         enterActualHours: 'Giờ thực tế', enterScore: 'Điểm (1-5)', enterNotes: 'Ghi chú',
         rejectReason: 'Lý do', timePenalty: 'Phạt thời gian',
+        reviewerLabel: 'Người xét duyệt', reviewWaiting: 'Đang chờ xét duyệt', reviewedBy: 'Xét duyệt bởi', noManager: 'Chưa có quản lý chi nhánh',
         beforePhoto: 'Trước', afterPhoto: 'Sau',
         confirmReview: 'Yêu cầu xét duyệt? Quản lý sẽ được thông báo.',
       }
@@ -944,7 +947,25 @@
           <button class="action-btn action-btn-success" onclick="approveTask('${task.id}')">${t.btnApprove}</button>
           <button class="action-btn action-btn-outline" style="color:#EF4444;border-color:#EF4444;" onclick="rejectTask('${task.id}')">${t.btnReject}</button>`;
       } else if (task.status === 'review' && isCreator) {
-        actionHtml = `<div style="text-align:center;padding:12px;color:var(--text-secondary);font-size:13px;">${t.statusReview}...</div>`;
+        // 리뷰 대기중 — 매니저/리뷰어 정보 표시
+        const reviewerMembers = task.members.filter(m => m.role === 'reviewer');
+        const branchManagers = EmployeeStore.getAll().filter(e =>
+          (e.role === 'branch_manager' || e.role === 'admin') && e.branch === task.branch
+        );
+        let reviewerInfo = '';
+        if (reviewerMembers.length > 0) {
+          const names = reviewerMembers.map(m => empMap[m.employee_id]?.name || '?').join(', ');
+          reviewerInfo = `<div style="font-weight:600;color:var(--primary);">🔍 ${t.reviewerLabel}: ${names}</div>`;
+        } else if (branchManagers.length > 0) {
+          const names = branchManagers.map(m => m.name).join(', ');
+          reviewerInfo = `<div style="font-weight:600;color:var(--primary);">🔍 ${t.reviewerLabel}: ${names}</div>`;
+        } else {
+          reviewerInfo = `<div style="color:var(--gray-500);">${t.noManager}</div>`;
+        }
+        actionHtml = `<div style="text-align:center;padding:16px;border-radius:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);">
+          <div style="font-size:14px;color:#F59E0B;margin-bottom:6px;">⏳ ${t.reviewWaiting}</div>
+          ${reviewerInfo}
+        </div>`;
       } else if (isMember && task.status !== 'completed' && task.status !== 'cancelled') {
         actionHtml = `<button class="action-btn action-btn-outline" onclick="shareTask('${task.id}')" style="width:100%;">📤 ${t.btnShare}</button>`;
       }
@@ -989,8 +1010,11 @@
               <img src="${task.photo_after_url}" style="width:100%;border-radius:8px;border:1px solid var(--bg-card-border);">
             </div>` : '<div></div>'}
           </div>` : ''}
-          ${task.review_score ? `<div style="padding:10px;border-radius:10px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);margin-bottom:16px;">
-            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;">${t.enterScore}: ${'⭐'.repeat(task.review_score)}${'☆'.repeat(5-task.review_score)}</div>
+          ${task.review_score ? `<div style="padding:12px;border-radius:10px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);margin-bottom:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <div style="font-size:12px;color:var(--text-secondary);">${t.enterScore}: ${'⭐'.repeat(task.review_score)}${'☆'.repeat(5-task.review_score)}</div>
+              ${task.reviewer_id && empMap[task.reviewer_id] ? `<div style="font-size:11px;color:var(--primary);font-weight:600;">✅ ${t.reviewedBy}: ${empMap[task.reviewer_id].name}</div>` : ''}
+            </div>
             ${task.review_notes ? `<div style="font-size:13px;color:var(--text-primary);">${task.review_notes}</div>` : ''}
           </div>` : ''}
         </div>
