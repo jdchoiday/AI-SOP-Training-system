@@ -123,6 +123,17 @@
       </div>
     </div>
 
+    <!-- ===== 부스트 사용 가이드 ===== -->
+    <div id="boostGuideCard" class="card" style="margin-top:16px; display:none; border:1px solid rgba(59,130,246,0.2); background:linear-gradient(135deg, rgba(59,130,246,0.04) 0%, rgba(16,185,129,0.04) 100%);">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <h3 style="font-size:15px; color:var(--gray-700);" id="boostGuideTitle">🙌 부스트 가이드</h3>
+        <button onclick="toggleBoostGuide()" id="boostGuideToggle" style="background:none; border:none; font-size:13px; color:var(--primary); cursor:pointer; font-weight:600;">접기 ▲</button>
+      </div>
+      <div id="boostGuideBody">
+        <!-- JS 동적 생성 -->
+      </div>
+    </div>
+
     <!-- 모바일 하단 네비 중복은 CSS가 처리 -->
 
   </div>
@@ -183,6 +194,14 @@
           { icon: '⭐', action: (n) => `부스트 ${n}개 모으기`, xp: 'PRAISE_XP_PER_STACK' },
         ],
         xpPerAction: 'XP',
+        // 부스트 가이드
+        boostGuide: '🙌 부스트 가이드',
+        boostWhat: '부스트란?',
+        boostWhatDesc: '동료의 좋은 행동에 감사를 표현하는 기능입니다. 부스트를 받으면 EXP를 얻고, 팀 분위기가 좋아집니다!',
+        boostSteps: ['동료를 선택합니다', '카테고리를 선택합니다 (도움, 리더십, 서비스 등)', '메시지를 작성합니다 (선택사항)', '부스트 보내기를 누릅니다'],
+        boostRules: ['하루 최대 5회까지 보낼 수 있습니다', '같은 사람에게 연속 보내기 가능합니다', '받은 부스트 3개 = +3 XP 자동 전환', '한도는 매일 자정(KST) 초기화됩니다'],
+        boostXpTitle: 'XP 전환 시스템',
+        boostXpDesc: '부스트를 3개 모으면 자동으로 EXP로 전환됩니다. 많이 받을수록 성장이 빨라져요!',
         // XP 혜택
         xpRewards: '🎁 XP 혜택',
         xpRewardsSub: 'XP를 모아 특별한 혜택을 받으세요!',
@@ -255,6 +274,13 @@
           { icon: '⭐', action: (n) => `Collect ${n} boosts`, xp: 'PRAISE_XP_PER_STACK' },
         ],
         xpPerAction: 'XP',
+        boostGuide: '🙌 Boost Guide',
+        boostWhat: 'What is Boost?',
+        boostWhatDesc: 'A way to recognize colleagues for great work. Boosts earn EXP and improve team morale!',
+        boostSteps: ['Select a colleague', 'Choose a category (Help, Leadership, Service, etc.)', 'Write a message (optional)', 'Tap "Send Boost"'],
+        boostRules: ['You can send up to 5 boosts per day', 'You can boost the same person multiple times', 'Every 3 boosts received = +3 XP auto-conversion', 'Daily limit resets at midnight (KST)'],
+        boostXpTitle: 'XP Conversion',
+        boostXpDesc: 'Collect 3 boosts and they auto-convert to EXP. More boosts = faster growth!',
         xpRewards: '🎁 XP Rewards',
         xpRewardsSub: 'Collect XP and unlock special rewards!',
         xpRewardsEmpty: 'No rewards available yet',
@@ -326,6 +352,13 @@
           { icon: '⭐', action: (n) => `Thu thập ${n} boost`, xp: 'PRAISE_XP_PER_STACK' },
         ],
         xpPerAction: 'XP',
+        boostGuide: '🙌 Hướng dẫn Boost',
+        boostWhat: 'Boost là gì?',
+        boostWhatDesc: 'Cách để ghi nhận đồng nghiệp làm việc tốt. Boost giúp kiếm XP và cải thiện tinh thần nhóm!',
+        boostSteps: ['Chọn đồng nghiệp', 'Chọn danh mục (Giúp đỡ, Lãnh đạo, Dịch vụ, v.v.)', 'Viết tin nhắn (tùy chọn)', 'Nhấn "Gửi Boost"'],
+        boostRules: ['Bạn có thể gửi tối đa 5 boost mỗi ngày', 'Có thể boost cùng người nhiều lần', 'Mỗi 3 boost nhận được = +3 XP tự động chuyển đổi', 'Giới hạn hàng ngày đặt lại lúc nửa đêm (KST)'],
+        boostXpTitle: 'Chuyển đổi XP',
+        boostXpDesc: 'Thu thập 3 boost và chúng sẽ tự động chuyển thành EXP. Nhiều boost hơn = tăng trưởng nhanh hơn!',
         xpRewards: '🎁 Phần thưởng XP',
         xpRewardsSub: 'Tích lũy XP và mở khóa phần thưởng đặc biệt!',
         xpRewardsEmpty: 'Chưa có phần thưởng nào',
@@ -1650,6 +1683,66 @@
       document.getElementById('xpGuideBody').innerHTML = html;
     }
 
+    // ===== 부스트 가이드 렌더링 =====
+    let boostGuideOpen = false;
+    function toggleBoostGuide() {
+      boostGuideOpen = !boostGuideOpen;
+      document.getElementById('boostGuideBody').style.display = boostGuideOpen ? 'block' : 'none';
+      document.getElementById('boostGuideToggle').textContent = boostGuideOpen ? (t.lbCollapse || '접기 ▲') : (t.lbExpand || '펼치기 ▼');
+    }
+
+    function renderBoostGuide() {
+      const card = document.getElementById('boostGuideCard');
+      card.style.display = 'block';
+      document.getElementById('boostGuideTitle').textContent = t.boostGuide || '🙌 부스트 가이드';
+      document.getElementById('boostGuideToggle').textContent = boostGuideOpen ? (t.lbCollapse || '접기 ▲') : (t.lbExpand || '펼치기 ▼');
+      document.getElementById('boostGuideBody').style.display = boostGuideOpen ? 'block' : 'none';
+
+      const steps = t.boostSteps || [];
+      const rules = t.boostRules || [];
+
+      let html = '';
+      // 부스트란?
+      html += `<div style="padding:12px;background:rgba(59,130,246,0.06);border-radius:10px;margin-bottom:10px;border-left:3px solid var(--primary);">
+        <div style="font-weight:700;font-size:14px;color:var(--primary);margin-bottom:4px;">🙌 ${t.boostWhat || '부스트란?'}</div>
+        <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;">${t.boostWhatDesc || ''}</div>
+      </div>`;
+      // 사용 방법
+      html += `<div style="padding:12px;background:var(--bg-card);border-radius:10px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+        <div style="font-weight:700;font-size:14px;color:var(--gray-700);margin-bottom:10px;">📝 ${t.boostSteps ? (lang === 'en' ? 'How to Use' : lang === 'vi' ? 'Cách sử dụng' : '사용 방법') : '사용 방법'}</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">`;
+      steps.forEach((s, i) => {
+        html += `<div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:24px;height:24px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${i+1}</div>
+          <span style="font-size:13px;color:var(--text-secondary);">${s}</span>
+        </div>`;
+      });
+      html += '</div></div>';
+      // 규칙
+      html += `<div style="padding:12px;background:var(--bg-card);border-radius:10px;margin-bottom:10px;border-left:3px solid #F59E0B;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+        <div style="font-weight:700;font-size:14px;color:#F59E0B;margin-bottom:8px;">📋 ${lang === 'en' ? 'Rules' : lang === 'vi' ? 'Quy tắc' : '규칙'}</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">`;
+      rules.forEach(r => {
+        html += `<div style="display:flex;align-items:flex-start;gap:8px;">
+          <span style="color:var(--primary);font-size:13px;flex-shrink:0;">✓</span>
+          <span style="font-size:13px;color:var(--text-secondary);line-height:1.5;">${r}</span>
+        </div>`;
+      });
+      html += '</div></div>';
+      // XP 전환
+      html += `<div style="padding:12px;background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(59,130,246,0.08));border-radius:10px;border:1px solid rgba(16,185,129,0.2);">
+        <div style="font-weight:700;font-size:14px;color:var(--primary);margin-bottom:4px;">⭐ ${t.boostXpTitle || 'XP 전환 시스템'}</div>
+        <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;">${t.boostXpDesc || ''}</div>
+        <div style="display:flex;justify-content:center;gap:8px;margin-top:10px;">
+          <div style="padding:5px 10px;border-radius:8px;background:rgba(245,158,11,0.15);color:#F59E0B;font-size:12px;font-weight:600;">⭐ x3</div>
+          <div style="display:flex;align-items:center;color:var(--gray-400);">→</div>
+          <div style="padding:5px 10px;border-radius:8px;background:rgba(16,185,129,0.15);color:var(--primary);font-size:12px;font-weight:600;">+3 XP</div>
+        </div>
+      </div>`;
+
+      document.getElementById('boostGuideBody').innerHTML = html;
+    }
+
     // ===== XP 혜택 시스템 =====
     let xpRewardsOpen = true;
     function toggleXpRewards() {
@@ -1754,6 +1847,7 @@
     try { renderMbtiCard(); } catch(e) { console.warn('[Init] renderMbtiCard:', e.message); }
     try { loadAndRenderQuests(); } catch(e) { console.warn('[Init] loadAndRenderQuests:', e.message); }
     try { renderXpGuide(); } catch(e) { console.warn('[Init] renderXpGuide:', e.message); }
+    try { renderBoostGuide(); } catch(e) { console.warn('[Init] renderBoostGuide:', e.message); }
     try { renderXpRewards(); } catch(e) { console.warn('[Init] renderXpRewards:', e.message); }
     // 아래 카드들은 Supabase 동기화 완료 후 1회만 렌더링 (깜박임 방지)
     // Supabase 연결 안 되면 여기서 렌더
