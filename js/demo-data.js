@@ -450,10 +450,8 @@ const Progress = {
   },
 
   isChapterUnlocked(chapterIndex) {
-    if (chapterIndex === 0) return true;
-    const chapters = (SopStore.getChapters().chapters || SopStore.getChapters());
-    if (!Array.isArray(chapters) || chapterIndex >= chapters.length) return false;
-    return this.isChapterPassed(chapters[chapterIndex - 1].id);
+    // 모든 챕터 자유 접근 허용 (순차 잠금 해제)
+    return true;
   },
 
   isChapterAllVideosComplete(chapterId) {
