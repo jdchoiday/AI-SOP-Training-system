@@ -355,7 +355,7 @@
           </div>
           <div style="display:flex; gap:8px;">
             <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkGenerateImages()">🎨 선택 SOP 이미지 생성</button>
-            <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkFixTitles()">🌐 제목 번역 수정</button>
+            <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkFixTitles()">🔤 띄어쓰기 교정</button>
             <button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="sopExportSelected()">&#128229; 내보내기</button>
             <button class="btn" style="padding:6px 14px; font-size:13px; background:#dc2626; color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopDeleteSelected()">&#128465; 선택 삭제</button>
           </div>
@@ -1923,17 +1923,17 @@
       if (targets.length === 0) return;
 
       const mode = confirm(
-        `${targets.length}개 SOP의 제목을 수정합니다.\n\n` +
-        `[확인] 한국어 띄어쓰기 수정 + 영어/베트남어 번역\n` +
-        `[취소] 취소`
+        `${targets.length}개 SOP의 띄어쓰기를 교정합니다.\n\n` +
+        `한국어/영어/베트남어 제목의 붙어있는 단어를 분리합니다.\n` +
+        `(내용은 변경하지 않습니다)\n\n진행할까요?`
       );
       if (!mode) return;
 
       // 나레이션도 포함할지
       const fixNarration = confirm(
-        '씬 나레이션(본문)도 함께 번역할까요?\n\n' +
-        '[확인] 제목 + 나레이션 모두 번역\n' +
-        '[취소] 제목만 번역'
+        '씬 나레이션(본문)도 함께 교정할까요?\n\n' +
+        '[확인] 제목 + 나레이션 모두 교정\n' +
+        '[취소] 제목만 교정'
       );
 
       const overlay = document.createElement('div');
@@ -1941,7 +1941,7 @@
       overlay.className = 'modal-overlay show';
       overlay.innerHTML = `
         <div class="modal" style="max-width:500px; text-align:center;">
-          <h3>🌐 제목 번역 수정 중</h3>
+          <h3>🔤 띄어쓰기 교정 중</h3>
           <div style="background:rgba(148,163,184,0.2); border-radius:8px; height:10px; overflow:hidden; margin:16px 0;">
             <div id="translateBar" style="background:linear-gradient(90deg,#10b981,#059669); height:100%; width:0%; transition:width 0.3s;"></div>
           </div>
@@ -1976,35 +1976,39 @@
           const sopIdx = sops.findIndex(s => s.id === sop.id);
           document.getElementById('translateName').textContent = `📋 ${sop.title}`;
 
-          // 나레이션 목록 준비
+          // 모든 필드 수집 (띄어쓰기가 필요한 것들)
+          const fields = {};
+          fields.title = sop.title || '';
+          if (sop.title_en) fields.title_en = sop.title_en;
+          if (sop.title_vn) fields.title_vn = sop.title_vn;
+
+          // 나레이션도 포함
           const scenes = (fixNarration && sop.script && sop.script.length > 0) ? sop.script : [];
-          const narrationList = scenes.map((s, i) => `[씬${i+1}] ${s.narration || ''}`).filter(n => n.length > 10);
+          const narrationFields = [];
+          scenes.forEach((s, i) => {
+            const items = {};
+            if (s.narration) items.narration = s.narration;
+            if (s.narration_en) items.narration_en = s.narration_en;
+            if (s.narration_vn) items.narration_vn = s.narration_vn;
+            if (Object.keys(items).length > 0) narrationFields.push({ idx: i, ...items });
+          });
 
-          const prompt = `다음 한국어 SOP 정보를 수정하고 번역해주세요.
+          const prompt = `아래 텍스트들의 띄어쓰기만 교정하세요. 번역하지 마세요. 내용을 바꾸지 마세요.
 
-## 제목: "${sop.title}"
+## 규칙:
+- 붙어있는 단어 사이에 띄어쓰기를 넣으세요
+- 한국어 예: "누리과정의이해와적용" → "누리과정의 이해와 적용"
+- 베트남어 예: "LýthuyếtpháttriểncủaPiaget" → "Lý thuyết phát triển của Piaget"
+- 영어 예: "UnderstandingChildDevelopment" → "Understanding Child Development"
+- 이미 띄어쓰기가 정상인 텍스트는 그대로 유지
+- 언어를 바꾸지 마세요 (한국어는 한국어로, 베트남어는 베트남어로 유지)
+- 베트남어 성조 부호를 정확히 유지하세요
 
-${narrationList.length > 0 ? `## 씬 나레이션:\n${narrationList.join('\n')}\n` : ''}
+## 입력:
+${JSON.stringify({ fields, scenes: narrationFields }, null, 2)}
 
-## 작업:
-1. 한국어 제목 띄어쓰기 교정 (붙어있는 단어 분리)
-2. 영어 번역
-3. 베트남어 번역 (성조 부호 정확히, 단어 사이에 반드시 띄어쓰기)
-${narrationList.length > 0 ? `4. 각 씬 나레이션도 동일하게 (한국어 교정 + 영어 + 베트남어)` : ''}
-
-## 중요: 베트남어는 반드시 단어 사이에 띄어쓰기를 넣으세요!
-- 잘못된 예: "LýthuyếtpháttriểncủaPiaget"
-- 올바른 예: "Lý thuyết phát triển của Piaget"
-
-## 출력 (순수 JSON만, 설명이나 markdown 없이):
-{
-  "title": "교정된 한국어 제목",
-  "title_en": "English title",
-  "title_vn": "Tiêu đề tiếng Việt"${narrationList.length > 0 ? `,
-  "scenes": [
-    { "narration": "교정된 한국어", "narration_en": "English", "narration_vn": "Tiếng Việt" }
-  ]` : ''}
-}`;
+## 출력 (순수 JSON만, 설명 없이):
+${JSON.stringify({ fields: { title: "교정된 제목", title_en: "fixed title", title_vn: "tiêu đề đã sửa" }, scenes: [{ idx: 0, narration: "교정된 나레이션", narration_vn: "nội dung đã sửa" }] })}`;
 
           try {
             const result = await callWithRetry(prompt, MAX_RETRIES);
@@ -2013,26 +2017,28 @@ ${narrationList.length > 0 ? `4. 각 씬 나레이션도 동일하게 (한국어
 
             const parsed = JSON.parse(jsonMatch[0]);
 
-            // 제목 적용
-            if (parsed.title) sops[sopIdx].title = parsed.title;
-            if (parsed.title_en) sops[sopIdx].title_en = parsed.title_en;
-            if (parsed.title_vn) sops[sopIdx].title_vn = parsed.title_vn;
+            // 제목 적용 (띄어쓰기 교정만)
+            if (parsed.fields) {
+              if (parsed.fields.title) sops[sopIdx].title = parsed.fields.title;
+              if (parsed.fields.title_en) sops[sopIdx].title_en = parsed.fields.title_en;
+              if (parsed.fields.title_vn) sops[sopIdx].title_vn = parsed.fields.title_vn;
+            }
 
             // 나레이션 적용
             if (parsed.scenes && Array.isArray(parsed.scenes) && sops[sopIdx].script) {
-              parsed.scenes.forEach((tr, i) => {
-                if (sops[sopIdx].script[i]) {
-                  if (tr.narration) sops[sopIdx].script[i].narration = tr.narration;
-                  if (tr.narration_en) sops[sopIdx].script[i].narration_en = tr.narration_en;
-                  if (tr.narration_vn) sops[sopIdx].script[i].narration_vn = tr.narration_vn;
-                }
+              parsed.scenes.forEach(tr => {
+                const scene = sops[sopIdx].script[tr.idx];
+                if (!scene) return;
+                if (tr.narration) scene.narration = tr.narration;
+                if (tr.narration_en) scene.narration_en = tr.narration_en;
+                if (tr.narration_vn) scene.narration_vn = tr.narration_vn;
               });
             }
 
-            console.log(`[번역] ✅ ${sop.title} → ${parsed.title_vn || 'done'}`);
+            console.log(`[띄어쓰기] ✅ ${fields.title} → ${parsed.fields?.title || 'done'}`);
           } catch (e) {
             failed++;
-            console.warn(`[번역] ❌ ${sop.title}:`, e.message);
+            console.warn(`[띄어쓰기] ❌ ${sop.title}:`, e.message);
           }
 
           done++;
@@ -2044,9 +2050,9 @@ ${narrationList.length > 0 ? `4. 각 씬 나레이션도 동일하게 (한국어
           if (done < targets.length) await new Promise(r => setTimeout(r, 3000));
         }
 
-        alert(`✅ 번역 완료! ${done - failed}개 성공${failed > 0 ? `, ${failed}개 실패` : ''}`);
+        alert(`✅ 띄어쓰기 교정 완료! ${done - failed}개 성공${failed > 0 ? `, ${failed}개 실패` : ''}`);
       } catch (e) {
-        console.error('번역 오류:', e);
+        console.error('띄어쓰기 교정 오류:', e);
         alert(`오류: ${e.message}`);
       } finally {
         saveSops(sops);
