@@ -3873,21 +3873,30 @@ Output ONLY the prompt, nothing else.`;
       const total = needGen.length;
       if (!confirm(`${total}개 씬의 이미지를 생성합니다.\n예상 비용: ~$${(total * 0.02).toFixed(2)}\n예상 시간: ~${Math.ceil(total * 8)}초 (1개씩 순차 + 재시도)\n\n진행하시겠습니까?`)) return;
 
-      // 프로그레스 바 표시
+      // 프로그레스 바 표시 (화면 상단 고정)
       const progressId = 'imgGenProgress';
-      const area = document.getElementById('aiResultArea');
-      area.insertAdjacentHTML('afterbegin', `
-        <div id="${progressId}" class="card" style="margin-bottom:16px; padding:16px;">
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-            <strong>🎨 이미지 생성 중...</strong>
-            <span id="imgGenCount">0 / ${total}</span>
+      const existingProgress = document.getElementById(progressId);
+      if (existingProgress) existingProgress.remove();
+
+      const progressOverlay = document.createElement('div');
+      progressOverlay.id = progressId;
+      progressOverlay.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:9999; background:linear-gradient(135deg,#0F172A,#1E293B); border-bottom:2px solid #6366f1; padding:16px 24px; box-shadow:0 4px 20px rgba(0,0,0,0.5);';
+      progressOverlay.innerHTML = `
+        <div style="max-width:600px; margin:0 auto;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong style="color:#E2E8F0; font-size:15px;">🎨 이미지 생성 중</strong>
+            <span id="imgGenCount" style="color:#94A3B8; font-size:14px; font-weight:600;">0 / ${total}</span>
           </div>
-          <div style="background:rgba(148,163,184,0.2); border-radius:8px; height:8px; overflow:hidden;">
-            <div id="imgGenBar" style="background:linear-gradient(90deg,#6366f1,#8b5cf6); height:100%; width:0%; transition:width 0.3s;"></div>
+          <div style="background:rgba(148,163,184,0.2); border-radius:8px; height:10px; overflow:hidden;">
+            <div id="imgGenBar" style="background:linear-gradient(90deg,#6366f1,#8b5cf6); height:100%; width:0%; transition:width 0.3s; border-radius:8px;"></div>
           </div>
-          <div id="imgGenStatus" style="font-size:12px; color:var(--gray-500); margin-top:6px;">이미지 병렬 생성 중...</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+            <div id="imgGenStatus" style="font-size:12px; color:#94A3B8;">씬 이미지 생성 준비 중...</div>
+            <div id="imgGenTime" style="font-size:12px; color:#64748B;">예상 ~${Math.ceil(total * 10)}초</div>
+          </div>
         </div>
-      `);
+      `;
+      document.body.appendChild(progressOverlay);
 
       // 씬 인덱스 목록 (확정 안 된 것 + Word 이미지 없는 것만)
       const sceneJobs = [];
@@ -3898,6 +3907,14 @@ Output ONLY the prompt, nothing else.`;
       let done = 0;
       let failed = 0;
       const BATCH_SIZE = 1; // 1개씩 순차 (Gemini 안정성 최우선)
+      const _genStartTime = Date.now();
+      const _genTimer = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - _genStartTime) / 1000);
+        const min = Math.floor(elapsed / 60);
+        const sec = elapsed % 60;
+        const timeEl = document.getElementById('imgGenTime');
+        if (timeEl) timeEl.textContent = `경과: ${min > 0 ? min + '분 ' : ''}${sec}초`;
+      }, 1000);
       const FETCH_TIMEOUT = 55000; // 55초 (Vercel 60초 제한보다 약간 짧게)
       const RETRY_MAX = 2; // 실패 시 2회 재시도
 
@@ -4050,7 +4067,8 @@ Output ONLY the prompt, nothing else.`;
       // 최종 저장
       try { saveSops(sops); } catch(e) { console.warn('[Save] 최종 저장 실패:', e.message); }
 
-      // 프로그레스 제거 후 리뷰 패널 열기
+      // 타이머 정리 + 프로그레스 제거 후 리뷰 패널 열기
+      clearInterval(_genTimer);
       const progressEl = document.getElementById(progressId);
       if (progressEl) progressEl.remove();
 
