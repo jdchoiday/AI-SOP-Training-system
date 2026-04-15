@@ -6,12 +6,16 @@
     { "source": "/api/auth", "destination": "/api/auth" },
     { "source": "/api/gemini", "destination": "/api/gemini" },
     { "source": "/api/image", "destination": "/api/image" },
+    { "source": "/api/quiz", "destination": "/api/quiz" },
     { "source": "/api/siliconflow", "destination": "/api/siliconflow" },
     { "source": "/api/tts", "destination": "/api/tts" }
   ],
   "functions": {
     "api/image.js": {
       "maxDuration": 60
+    },
+    "api/quiz.js": {
+      "maxDuration": 30
     },
     "api/tts.js": {
       "maxDuration": 25
