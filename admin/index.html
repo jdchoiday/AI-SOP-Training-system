@@ -1947,10 +1947,29 @@
           </div>
           <div id="translateCount" style="font-size:14px; color:var(--gray-600);">0 / ${targets.length}</div>
           <div id="translateName" style="font-size:13px; color:var(--gray-400); margin-top:8px;"></div>
+          <div id="translateRetry" style="font-size:12px; color:var(--gray-500); margin-top:4px;"></div>
         </div>`;
       document.body.appendChild(overlay);
 
       let done = 0, failed = 0;
+      const MAX_RETRIES = 3;
+
+      // Gemini 호출 + 자동 재시도
+      async function callWithRetry(prompt, retries) {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+          try {
+            const retryEl = document.getElementById('translateRetry');
+            if (attempt > 1 && retryEl) retryEl.textContent = `재시도 ${attempt}/${retries}...`;
+            const result = await callGemini(prompt, { temperature: 0.3, maxOutputTokens: 8192 });
+            if (retryEl) retryEl.textContent = '';
+            return result;
+          } catch (e) {
+            console.warn(`[번역] 시도 ${attempt} 실패:`, e.message);
+            if (attempt < retries) await new Promise(r => setTimeout(r, 3000 * attempt));
+            else throw e;
+          }
+        }
+      }
 
       try {
         for (const sop of targets) {
@@ -1970,10 +1989,14 @@ ${narrationList.length > 0 ? `## 씬 나레이션:\n${narrationList.join('\n')}\
 ## 작업:
 1. 한국어 제목 띄어쓰기 교정 (붙어있는 단어 분리)
 2. 영어 번역
-3. 베트남어 번역 (성조 부호 정확히)
+3. 베트남어 번역 (성조 부호 정확히, 단어 사이에 반드시 띄어쓰기)
 ${narrationList.length > 0 ? `4. 각 씬 나레이션도 동일하게 (한국어 교정 + 영어 + 베트남어)` : ''}
 
-## 출력 (JSON만, 설명 없이):
+## 중요: 베트남어는 반드시 단어 사이에 띄어쓰기를 넣으세요!
+- 잘못된 예: "LýthuyếtpháttriểncủaPiaget"
+- 올바른 예: "Lý thuyết phát triển của Piaget"
+
+## 출력 (순수 JSON만, 설명이나 markdown 없이):
 {
   "title": "교정된 한국어 제목",
   "title_en": "English title",
@@ -1984,7 +2007,7 @@ ${narrationList.length > 0 ? `4. 각 씬 나레이션도 동일하게 (한국어
 }`;
 
           try {
-            const result = await callGemini(prompt, { temperature: 0.3, maxOutputTokens: 8192 });
+            const result = await callWithRetry(prompt, MAX_RETRIES);
             const jsonMatch = result.match(/\{[\s\S]*\}/);
             if (!jsonMatch) throw new Error('JSON 파싱 실패');
 
@@ -2017,7 +2040,8 @@ ${narrationList.length > 0 ? `4. 각 씬 나레이션도 동일하게 (한국어
           document.getElementById('translateBar').style.width = (done / targets.length * 100) + '%';
 
           saveSops(sops);
-          if (done < targets.length) await new Promise(r => setTimeout(r, 1500));
+          // API 속도 제한 방지: 3초 대기
+          if (done < targets.length) await new Promise(r => setTimeout(r, 3000));
         }
 
         alert(`✅ 번역 완료! ${done - failed}개 성공${failed > 0 ? `, ${failed}개 실패` : ''}`);
