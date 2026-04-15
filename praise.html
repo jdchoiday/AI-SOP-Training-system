@@ -653,9 +653,11 @@
 
       if (result?.success) {
         showXpToast(XP_CONFIG.PRAISE_SEND_XP);
+        showConfetti();
 
         if (result.stackConverted) {
-          // 받는 사람 XP 전환 알림은 받는 사람이 볼 때 표시
+          // 스택 전환 시 더 화려한 축하
+          showConfetti(3000, 60);
         }
 
         // 리셋

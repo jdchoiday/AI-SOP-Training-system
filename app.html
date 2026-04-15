@@ -1450,7 +1450,7 @@
       try {
         const result = await XpService.addXp(empId, xpAmount, 'quest', 'quest_' + questId, t.questTitle);
         if (result) {
-          showXpToast(xpAmount);
+          showXpToast(xpAmount); showConfetti();
           if (result.leveledUp) showLevelUpCelebration(result.oldTier, result.newTier, lang);
         }
         await SupabaseMode._client.from('quest_completions')
@@ -1469,7 +1469,7 @@
       try {
         const result = await XpService.addXp(empId, _myTierBonusXp, 'quest', bonusKey, t.questTitle + ' 클리어 보너스');
         if (result) {
-          showXpToast(_myTierBonusXp, true);
+          showXpToast(_myTierBonusXp, true); showConfetti(3000, 50);
           if (result.leveledUp) showLevelUpCelebration(result.oldTier, result.newTier, lang);
         }
         // 보너스 수령 기록을 localStorage에 저장 (간단한 중복 방지)
@@ -1607,7 +1607,7 @@
       if (empId && SupabaseMode._ready) {
         try {
           const result = await XpService.addXp(empId, xpAmount, 'quest', 'rookie_' + questId, t.questTitle);
-          if (result) { showXpToast(xpAmount); if (result.leveledUp) showLevelUpCelebration(result.oldTier, result.newTier, lang); }
+          if (result) { showXpToast(xpAmount); showConfetti(); if (result.leveledUp) showLevelUpCelebration(result.oldTier, result.newTier, lang); }
         } catch {}
       }
       state['claimed_' + questId] = true;

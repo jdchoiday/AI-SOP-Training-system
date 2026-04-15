@@ -1260,7 +1260,7 @@ ${narration.slice(0, 1500)}
         const empId = user?.id;
         if (empId) {
           const xpResult = await XpService.addXp(empId, XP_CONFIG.CHAPTER_COMPLETE, 'chapter', chapterId);
-          if (xpResult) showXpToast(XP_CONFIG.CHAPTER_COMPLETE);
+          if (xpResult) { showXpToast(XP_CONFIG.CHAPTER_COMPLETE); showConfetti(); }
           if (xpResult?.leveledUp) showLevelUpCelebration(xpResult.oldTier, xpResult.newTier, lang);
         }
         renderVideoList();
@@ -1380,7 +1380,7 @@ ${narration.slice(0, 1500)}
           if (isChapterTest) {
             // 챕터 완료 +50 XP
             const xpResult = await XpService.addXp(empId, XP_CONFIG.CHAPTER_COMPLETE, 'chapter', chapterId);
-            if (xpResult) showXpToast(XP_CONFIG.CHAPTER_COMPLETE);
+            if (xpResult) { showXpToast(XP_CONFIG.CHAPTER_COMPLETE); showConfetti(); }
             if (xpResult?.leveledUp) showLevelUpCelebration(xpResult.oldTier, xpResult.newTier, lang);
           } else {
             // 퀴즈 정답 +10 XP × 정답 수
@@ -1391,7 +1391,7 @@ ${narration.slice(0, 1500)}
             // 전부 정답 +30 XP 보너스
             if (quizCorrect === currentQuiz.length) {
               const bonusResult = await XpService.addXp(empId, XP_CONFIG.QUIZ_PERFECT_BONUS, 'quiz_perfect', currentVideoId);
-              if (bonusResult) showXpToast(XP_CONFIG.QUIZ_PERFECT_BONUS, true);
+              if (bonusResult) { showXpToast(XP_CONFIG.QUIZ_PERFECT_BONUS, true); showConfetti(3000, 50); }
               if (bonusResult?.leveledUp) showLevelUpCelebration(bonusResult.oldTier, bonusResult.newTier, lang);
             }
           }

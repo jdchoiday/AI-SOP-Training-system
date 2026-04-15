@@ -29,6 +29,33 @@ function showXpToast(amount, isBonus = false) {
 }
 
 /**
+ * 범용 Confetti 효과 — 보상/완료 시 화면에 폭죽 투사
+ * @param {number} duration - 표시 시간 (ms), 기본 2500
+ * @param {number} count - 파티클 수, 기본 40
+ */
+function showConfetti(duration = 2500, count = 40) {
+  const existing = document.getElementById('confetti-burst');
+  if (existing) existing.remove();
+
+  const wrap = document.createElement('div');
+  wrap.id = 'confetti-burst';
+  wrap.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:99999;overflow:hidden;';
+
+  const colors = ['#FFD700', '#FF6B35', '#00CED1', '#9B59B6', '#E74C3C', '#16a34a', '#10B981', '#3B82F6', '#F472B6'];
+  for (let i = 0; i < count; i++) {
+    const x = Math.random() * 100;
+    const delay = Math.random() * 0.6;
+    const size = 5 + Math.random() * 7;
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const shape = Math.random() > 0.5 ? 'border-radius:50%;' : Math.random() > 0.5 ? 'border-radius:2px;' : 'border-radius:50%;width:' + size*0.6 + 'px;';
+    wrap.innerHTML += `<div class="confetti-particle" style="left:${x}%;animation-delay:${delay}s;width:${size}px;height:${size}px;background:${color};${shape}"></div>`;
+  }
+
+  document.body.appendChild(wrap);
+  setTimeout(() => { if (wrap.parentNode) wrap.remove(); }, duration);
+}
+
+/**
  * 레벨업 축하 풀스크린 오버레이
  */
 function showLevelUpCelebration(oldTier, newTier, lang = 'ko') {
@@ -41,7 +68,10 @@ function showLevelUpCelebration(oldTier, newTier, lang = 'ko') {
   overlay.id = 'levelup-overlay';
   overlay.className = 'levelup-overlay';
 
-  // 폭죽 파티클 생성
+  // confetti 효과도 함께 실행
+  showConfetti(4000, 50);
+
+  // 폭죽 파티클 생성 (오버레이 내부용)
   let particles = '';
   for (let i = 0; i < 30; i++) {
     const x = Math.random() * 100;

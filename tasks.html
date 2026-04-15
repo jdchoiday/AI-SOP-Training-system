@@ -365,6 +365,7 @@
   <script src="js/sop-content-kids.js"></script>
   <script src="js/demo-data.js"></script>
   <script src="js/xp-system.js"></script>
+  <script src="js/xp-ui.js"></script>
   <script>
     // ===== 다국어 =====
     const T = {
@@ -707,6 +708,8 @@
         const result = await XpService.addXp(empId, xpMap[type], 'daily_mission', sourceId, reasonMap[type]);
         dailyMissionStatus[type] = true;
         console.log('[DM] ✅ ' + type + ' +' + xpMap[type] + ' XP');
+        if (typeof showXpToast === 'function') showXpToast(xpMap[type]);
+        if (typeof showConfetti === 'function') showConfetti();
         if (result?.leveledUp) {
           setTimeout(() => {
             if (typeof showLevelUpCelebration === 'function') showLevelUpCelebration(result.oldTier, result.newTier, lang);
