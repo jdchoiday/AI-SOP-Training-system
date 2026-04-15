@@ -355,6 +355,7 @@
           </div>
           <div style="display:flex; gap:8px;">
             <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkGenerateImages()">🎨 선택 SOP 이미지 생성</button>
+            <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkFixTitles()">🌐 제목 번역 수정</button>
             <button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="sopExportSelected()">&#128229; 내보내기</button>
             <button class="btn" style="padding:6px 14px; font-size:13px; background:#dc2626; color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopDeleteSelected()">&#128465; 선택 삭제</button>
           </div>
@@ -1911,6 +1912,126 @@
         const modal = document.getElementById('bulkImageModal');
         if (modal) modal.remove();
         renderSopList();
+      }
+    }
+
+    // ===== 선택 SOP 제목 번역 일괄 수정 (띄어쓰기 + 영어/베트남어 번역) =====
+    async function sopBulkFixTitles() {
+      if (selectedSopIds.size === 0) { alert('SOP를 먼저 선택하세요.'); return; }
+      const sops = getSops();
+      const targets = sops.filter(s => selectedSopIds.has(s.id));
+      if (targets.length === 0) return;
+
+      const mode = confirm(
+        `${targets.length}개 SOP의 제목을 수정합니다.\n\n` +
+        `[확인] 한국어 띄어쓰기 수정 + 영어/베트남어 번역\n` +
+        `[취소] 취소`
+      );
+      if (!mode) return;
+
+      // 나레이션도 포함할지
+      const fixNarration = confirm(
+        '씬 나레이션(본문)도 함께 번역할까요?\n\n' +
+        '[확인] 제목 + 나레이션 모두 번역\n' +
+        '[취소] 제목만 번역'
+      );
+
+      const overlay = document.createElement('div');
+      overlay.id = 'bulkTranslateModal';
+      overlay.className = 'modal-overlay show';
+      overlay.innerHTML = `
+        <div class="modal" style="max-width:500px; text-align:center;">
+          <h3>🌐 제목 번역 수정 중</h3>
+          <div style="background:rgba(148,163,184,0.2); border-radius:8px; height:10px; overflow:hidden; margin:16px 0;">
+            <div id="translateBar" style="background:linear-gradient(90deg,#10b981,#059669); height:100%; width:0%; transition:width 0.3s;"></div>
+          </div>
+          <div id="translateCount" style="font-size:14px; color:var(--gray-600);">0 / ${targets.length}</div>
+          <div id="translateName" style="font-size:13px; color:var(--gray-400); margin-top:8px;"></div>
+        </div>`;
+      document.body.appendChild(overlay);
+
+      let done = 0, failed = 0;
+
+      try {
+        for (const sop of targets) {
+          const sopIdx = sops.findIndex(s => s.id === sop.id);
+          document.getElementById('translateName').textContent = `📋 ${sop.title}`;
+
+          // 나레이션 목록 준비
+          const scenes = (fixNarration && sop.script && sop.script.length > 0) ? sop.script : [];
+          const narrationList = scenes.map((s, i) => `[씬${i+1}] ${s.narration || ''}`).filter(n => n.length > 10);
+
+          const prompt = `다음 한국어 SOP 정보를 수정하고 번역해주세요.
+
+## 제목: "${sop.title}"
+
+${narrationList.length > 0 ? `## 씬 나레이션:\n${narrationList.join('\n')}\n` : ''}
+
+## 작업:
+1. 한국어 제목 띄어쓰기 교정 (붙어있는 단어 분리)
+2. 영어 번역
+3. 베트남어 번역 (성조 부호 정확히)
+${narrationList.length > 0 ? `4. 각 씬 나레이션도 동일하게 (한국어 교정 + 영어 + 베트남어)` : ''}
+
+## 출력 (JSON만, 설명 없이):
+{
+  "title": "교정된 한국어 제목",
+  "title_en": "English title",
+  "title_vn": "Tiêu đề tiếng Việt"${narrationList.length > 0 ? `,
+  "scenes": [
+    { "narration": "교정된 한국어", "narration_en": "English", "narration_vn": "Tiếng Việt" }
+  ]` : ''}
+}`;
+
+          try {
+            const result = await callGemini(prompt, { temperature: 0.3, maxOutputTokens: 8192 });
+            const jsonMatch = result.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error('JSON 파싱 실패');
+
+            const parsed = JSON.parse(jsonMatch[0]);
+
+            // 제목 적용
+            if (parsed.title) sops[sopIdx].title = parsed.title;
+            if (parsed.title_en) sops[sopIdx].title_en = parsed.title_en;
+            if (parsed.title_vn) sops[sopIdx].title_vn = parsed.title_vn;
+
+            // 나레이션 적용
+            if (parsed.scenes && Array.isArray(parsed.scenes) && sops[sopIdx].script) {
+              parsed.scenes.forEach((tr, i) => {
+                if (sops[sopIdx].script[i]) {
+                  if (tr.narration) sops[sopIdx].script[i].narration = tr.narration;
+                  if (tr.narration_en) sops[sopIdx].script[i].narration_en = tr.narration_en;
+                  if (tr.narration_vn) sops[sopIdx].script[i].narration_vn = tr.narration_vn;
+                }
+              });
+            }
+
+            console.log(`[번역] ✅ ${sop.title} → ${parsed.title_vn || 'done'}`);
+          } catch (e) {
+            failed++;
+            console.warn(`[번역] ❌ ${sop.title}:`, e.message);
+          }
+
+          done++;
+          document.getElementById('translateCount').textContent = `${done} / ${targets.length}${failed > 0 ? ` (실패: ${failed})` : ''}`;
+          document.getElementById('translateBar').style.width = (done / targets.length * 100) + '%';
+
+          saveSops(sops);
+          if (done < targets.length) await new Promise(r => setTimeout(r, 1500));
+        }
+
+        alert(`✅ 번역 완료! ${done - failed}개 성공${failed > 0 ? `, ${failed}개 실패` : ''}`);
+      } catch (e) {
+        console.error('번역 오류:', e);
+        alert(`오류: ${e.message}`);
+      } finally {
+        saveSops(sops);
+        document.getElementById('bulkTranslateModal')?.remove();
+        renderSopList();
+        // Supabase 동기화
+        if (typeof SupabaseMode !== 'undefined' && SupabaseMode._ready) {
+          SupabaseMode.syncAll().catch(() => {});
+        }
       }
     }
 
