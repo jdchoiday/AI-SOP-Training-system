@@ -621,7 +621,7 @@ const SlidePlayer = (() => {
     // 사전 생성된 이미지가 있으면 즉시 표시, 없으면 API 호출
     if (scene.imageUrl) {
       const vis = document.getElementById('spSceneVisual');
-      if (vis) vis.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:auto;max-height:75vh;object-fit:cover;display:block;margin:0 auto;border-radius:8px;" alt="scene">`;
+      if (vis) vis.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:auto;max-height:80vh;object-fit:contain;display:block;margin:0 auto;border-radius:8px;" alt="scene">`;
     } else {
       _currentImagePromise = _loadSceneImage(scene.visual, scene.narration);
       _preloadNextImage();
@@ -967,7 +967,7 @@ const SlidePlayer = (() => {
     // 1순위: 씬에 사전 저장된 이미지 (관리자가 확정한 이미지)
     const scene = scenes?.[currentIndex];
     if (scene?.imageUrl) {
-      container.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;" alt="scene" onerror="this.parentNode.innerHTML='<div style=\\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:12px;color:white;font-size:48px;\\'>📚</div>'">`;
+      container.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:100%;object-fit:contain;border-radius:12px;" alt="scene" onerror="this.parentNode.innerHTML='<div style=\\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:12px;color:white;font-size:48px;\\'>📚</div>'">`;
       _preloadNextImage();
       return;
     }
