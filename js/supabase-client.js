@@ -190,6 +190,43 @@ const SupabaseMode = {
     return text.replace(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/g, '');
   },
 
+  // base64 이미지를 Supabase Storage에 업로드하고 공개 URL 반환
+  async uploadSceneImage(sopId, sceneIndex, base64DataUrl) {
+    if (!this._ready) return null;
+    try {
+      // base64 → Blob 변환
+      const match = base64DataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (!match) return null;
+      const mimeType = match[1];
+      const ext = mimeType.split('/')[1] || 'png';
+      const byteString = atob(match[2]);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+      const blob = new Blob([ab], { type: mimeType });
+
+      const filePath = `scenes/${sopId}/scene-${sceneIndex}.${ext}`;
+
+      // 기존 파일 덮어쓰기 (upsert)
+      const { error } = await this._client.storage
+        .from('sop-images')
+        .upload(filePath, blob, { contentType: mimeType, upsert: true });
+
+      if (error) {
+        console.warn(`[Storage] 업로드 실패 (${filePath}):`, error.message);
+        return null;
+      }
+
+      // 공개 URL 반환
+      const { data } = this._client.storage.from('sop-images').getPublicUrl(filePath);
+      console.log(`[Storage] ✅ ${filePath} 업로드 완료`);
+      return data?.publicUrl || null;
+    } catch (e) {
+      console.warn('[Storage] 이미지 업로드 오류:', e.message);
+      return null;
+    }
+  },
+
   async saveSop(sop) {
     if (!this._ready) return;
     try {
@@ -198,18 +235,28 @@ const SupabaseMode = {
       let status = sop.status || 'draft';
       if (!validStatuses.includes(status)) status = 'draft';
 
-      // script에서 base64 이미지 및 __stored__ 포인터 제거
+      // script에서 base64 이미지를 Storage에 업로드 후 URL로 교체
       let scriptClean = sop.script;
       if (scriptClean && Array.isArray(scriptClean)) {
-        scriptClean = scriptClean.map(sc => {
+        scriptClean = await Promise.all(scriptClean.map(async (sc, i) => {
           const copy = { ...sc };
-          if (copy.imageUrl && (copy.imageUrl.startsWith('data:') || copy.imageUrl.startsWith('__stored__'))) {
-            copy.imageUrl = ''; // base64/포인터는 Supabase에 저장하지 않음
+          // base64 이미지 → Storage 업로드 → 공개 URL로 교체
+          if (copy.imageUrl && copy.imageUrl.startsWith('data:')) {
+            const publicUrl = await this.uploadSceneImage(sop.id, i, copy.imageUrl);
+            if (publicUrl) {
+              copy.imageUrl = publicUrl;
+              // localStorage의 원본도 URL로 업데이트 (다음 저장 시 재업로드 방지)
+              if (sop.script[i]) sop.script[i].imageUrl = publicUrl;
+            } else {
+              copy.imageUrl = ''; // 업로드 실패 시 제거
+            }
+          } else if (copy.imageUrl && copy.imageUrl.startsWith('__stored__')) {
+            copy.imageUrl = ''; // IndexedDB 포인터는 제거
           }
           // narration, visual 등에 혹시 base64가 섞여있으면 제거
           if (copy.narration) copy.narration = this._stripLargeData(copy.narration);
           return copy;
-        });
+        }));
       }
 
       // content 필드에서도 base64 이미지 제거
