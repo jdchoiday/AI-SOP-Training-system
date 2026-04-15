@@ -248,13 +248,13 @@ const SlidePlayer = (() => {
           min-height: 200px;
         }
         .sp-scene-visual img {
-          width: 100%; height: auto; max-height: 55vh;
-          object-fit: contain; display: block; margin: 0 auto;
+          width: 100%; height: auto; max-height: 70vh;
+          object-fit: cover; display: block; margin: 0 auto;
           animation: sp-imgReveal 0.6s ease;
         }
         @media (max-width: 600px) {
-          .sp-scene-visual { border-radius: 12px; }
-          .sp-scene-visual img { max-height: 50vh; }
+          .sp-scene-visual { border-radius: 8px; }
+          .sp-scene-visual img { max-height: 75vh; object-fit: cover; }
         }
         .sp-scene-visual .sp-img-skeleton {
           position: absolute; inset: 0;
@@ -307,6 +307,9 @@ const SlidePlayer = (() => {
         .sp-slide-container {
           width: 100%; max-width: 600px;
           animation: sp-slideUp 0.45s ease;
+        }
+        @media (max-width: 600px) {
+          .sp-slide-container { max-width: 100%; padding: 0 4px; }
         }
 
         /* Scene badge */
@@ -592,29 +595,33 @@ const SlidePlayer = (() => {
       <div class="sp-scene-badge" style="color:${accent.secondary};background:${accent.bg}">
         ${t().slideTitle(num, total)}
       </div>
-      <div class="sp-scene-visual" id="spSceneVisual"></div>
-      <div id="spSubtitleArea" style="
-        width:100%; padding:18px 24px; margin-top:12px;
-        background:linear-gradient(180deg, rgba(15,23,42,0.9), rgba(15,23,42,0.97));
-        backdrop-filter:blur(12px);
-        border-radius:14px; min-height:80px;
-        display:flex; align-items:center; justify-content:center;
-        border:1px solid rgba(255,255,255,0.1);
-        box-shadow:0 4px 24px rgba(0,0,0,0.4);
-      ">
-        <div id="spSubtitleText" style="
-          color:#F8FAFC; font-weight:500; letter-spacing:0.3px;
-          line-height:1.8; text-align:center; word-break:keep-all;
-          opacity:0; transition:opacity 0.4s ease;
-          padding:4px 12px;
-        "></div>
+      <div style="position:relative; width:100%;">
+        <div class="sp-scene-visual" id="spSceneVisual"></div>
+        <div id="spSubtitleArea" style="
+          position:absolute; bottom:0; left:0; right:0;
+          padding:14px 18px;
+          background:linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 60%, transparent 100%);
+          border-radius:0 0 12px 12px;
+          min-height:48px;
+          display:flex; align-items:flex-end; justify-content:center;
+          pointer-events:none;
+        ">
+          <div id="spSubtitleText" style="
+            color:#F8FAFC; font-weight:500; letter-spacing:0.3px;
+            line-height:1.6; text-align:center; word-break:keep-all;
+            opacity:0; transition:opacity 0.4s ease;
+            padding:4px 8px;
+            font-size:14px;
+            text-shadow:0 1px 4px rgba(0,0,0,0.8);
+          "></div>
+        </div>
       </div>
     `;
 
     // 사전 생성된 이미지가 있으면 즉시 표시, 없으면 API 호출
     if (scene.imageUrl) {
       const vis = document.getElementById('spSceneVisual');
-      if (vis) vis.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:auto;max-height:55vh;object-fit:contain;display:block;margin:0 auto;border-radius:12px;" alt="scene">`;
+      if (vis) vis.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:auto;max-height:75vh;object-fit:cover;display:block;margin:0 auto;border-radius:8px;" alt="scene">`;
     } else {
       _currentImagePromise = _loadSceneImage(scene.visual, scene.narration);
       _preloadNextImage();

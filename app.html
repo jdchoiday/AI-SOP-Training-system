@@ -626,7 +626,7 @@
     // ===== 다국어 적용 =====
     document.querySelector('.nav-label-home').textContent = t.home;
     if (document.querySelector('.nav-label-tasks')) document.querySelector('.nav-label-tasks').textContent = lang === 'en' ? 'Tasks' : lang === 'vi' ? 'Nhiệm vụ' : '미션';
-    if (document.querySelector('.nav-label-praise')) document.querySelector('.nav-label-praise').textContent = lang === 'en' ? 'Praise' : lang === 'vi' ? 'Khen ngợi' : '부스트';
+    if (document.querySelector('.nav-label-praise')) document.querySelector('.nav-label-praise').textContent = lang === 'en' ? 'Boost' : lang === 'vi' ? 'Boost' : '부스트';
     document.querySelector('.nav-label-results').textContent = t.myResults;
     document.getElementById('progressLabel').textContent = t.progressLabel;
     document.getElementById('progressSummary').textContent = t.startLearning;
@@ -1314,209 +1314,306 @@
       }
     }
 
-    // ===== 신입 모험가 퀘스트 시스템 =====
-    const QUEST_STORAGE_KEY = 'sop_rookie_quest_' + (user?.email || 'demo');
+    // ===== 동적 티어 퀘스트 시스템 =====
+    let _myQuests = [];          // 현재 티어 퀘스트 목록
+    let _myQuestCompletions = {}; // { quest_id: { completed, xp_claimed } }
+    let _myTierBonusXp = 0;
+    let _questTierLabel = '';
 
-    function getQuestState() {
-      try { return JSON.parse(localStorage.getItem(QUEST_STORAGE_KEY) || '{}'); } catch { return {}; }
+    async function loadAndRenderQuests() {
+      const container = document.getElementById('rookieQuestCard');
+      if (!container) return;
+      if (!SupabaseMode._ready) {
+        // Supabase 미연결 시 fallback: 하드코딩 신입 퀘스트
+        _renderFallbackQuest(container);
+        return;
+      }
+
+      try {
+        const empId = await getEmployeeId();
+        if (!empId) return;
+
+        // 현재 XP → 티어 계산
+        const { data: empData } = await SupabaseMode._client.from('employees')
+          .select('total_xp').eq('id', empId).maybeSingle();
+        const totalXp = empData?.total_xp || 0;
+        const tier = calculateTier(totalXp);
+
+        // 해당 티어 퀘스트 로드
+        const { data: quests, error } = await SupabaseMode._client.from('quests')
+          .select('*').eq('tier_id', tier.tierId).eq('is_active', true)
+          .order('sort_order', { ascending: true });
+
+        if (error || !quests || quests.length === 0) {
+          // DB에 퀘스트가 없으면 fallback
+          _renderFallbackQuest(container);
+          return;
+        }
+
+        _myQuests = quests;
+        _myTierBonusXp = quests.reduce((max, q) => Math.max(max, q.bonus_xp || 0), 0);
+        _questTierLabel = tier.emoji + ' ' + (lang === 'en' ? tier.titleEn : lang === 'vi' ? tier.titleVn : tier.titleKo);
+
+        // 완료 상태 로드
+        const { data: completions } = await SupabaseMode._client.from('quest_completions')
+          .select('quest_id, xp_claimed').eq('employee_id', empId);
+        _myQuestCompletions = {};
+        (completions || []).forEach(c => { _myQuestCompletions[c.quest_id] = c; });
+
+        // 자동 감지 실행
+        await _autoDetectQuests(empId);
+
+        // 렌더링
+        _renderDynamicQuests(container);
+      } catch (e) {
+        console.warn('[Quest] Load error:', e);
+        _renderFallbackQuest(container);
+      }
     }
-    function saveQuestState(state) {
-      localStorage.setItem(QUEST_STORAGE_KEY, JSON.stringify(state));
-    }
 
-    // 각 퀘스트 완료 여부 체크
-    async function checkQuestCompletion() {
-      const state = getQuestState();
-      if (state.allDismissed) return state; // 완전히 닫은 경우
+    // 퀘스트 자동 감지
+    async function _autoDetectQuests(empId) {
+      for (const q of _myQuests) {
+        if (_myQuestCompletions[q.id]) continue; // 이미 완료
+        const count = q.quest_condition?.count || 1;
+        let done = false;
 
-      // 1) 프로필 완료 체크
-      const profileData = localStorage.getItem('sop_profile_' + (user?.email || ''));
-      if (profileData) {
         try {
-          const p = JSON.parse(profileData);
-          if ((p.intro && p.intro.trim()) || (p.avatarType && p.avatarType !== 'initial')) {
-            state.profile = true;
+          switch (q.quest_type) {
+            case 'profile': {
+              const pd = localStorage.getItem('sop_profile_' + (user?.email || ''));
+              if (pd) { const p = JSON.parse(pd); if ((p.intro && p.intro.trim()) || (p.avatarType && p.avatarType !== 'initial')) done = true; }
+              break;
+            }
+            case 'study_scenes': {
+              const progress = Progress.getAllResults();
+              const watched = (progress.completedVideos || []).length;
+              if (watched >= count) done = true;
+              break;
+            }
+            case 'quiz_pass': {
+              const progress = Progress.getAllResults();
+              let quizCount = Object.keys(progress.chapterResults || {}).length;
+              // 미니퀴즈도 카운트
+              for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('sop_miniquiz_score_')) quizCount++;
+              }
+              if (quizCount >= count) done = true;
+              break;
+            }
+            case 'boost_send': {
+              const { data } = await SupabaseMode._client.from('praise_logs')
+                .select('id').eq('from_employee_id', empId).limit(count);
+              if (data && data.length >= count) done = true;
+              break;
+            }
+            case 'team_task': {
+              const { data: members } = await SupabaseMode._client.from('team_task_members')
+                .select('id').eq('employee_id', empId);
+              const { data: created } = await SupabaseMode._client.from('team_tasks')
+                .select('id').eq('creator_id', empId);
+              const total = (members?.length || 0) + (created?.length || 0);
+              if (total >= count) done = true;
+              break;
+            }
+            case 'attendance_days': {
+              const { data } = await SupabaseMode._client.from('xp_transactions')
+                .select('id').eq('employee_id', empId).eq('source', 'daily_mission').like('source_id', 'dm_attendance_%');
+              if (data && data.length >= count) done = true;
+              break;
+            }
+            case 'total_xp': {
+              const { data: emp } = await SupabaseMode._client.from('employees')
+                .select('total_xp').eq('id', empId).maybeSingle();
+              if ((emp?.total_xp || 0) >= count) done = true;
+              break;
+            }
           }
-        } catch {}
-      }
+        } catch (e) { console.warn('[Quest] Auto-detect error for', q.quest_type, e); }
 
-      // 2) 영상 시청 체크
-      const progress = Progress.getAllResults();
-      if (progress.completedVideos && progress.completedVideos.length > 0) {
-        state.video = true;
-      }
-
-      // 3) 퀴즈 통과 체크
-      const chapterResults = progress.chapterResults || {};
-      if (Object.keys(chapterResults).length > 0) {
-        state.quiz = true;
-      } else {
-        // 미니퀴즈도 체크
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith('sop_miniquiz_score_')) {
-            state.quiz = true;
-            break;
-          }
+        if (done) {
+          try {
+            await SupabaseMode._client.from('quest_completions')
+              .upsert({ employee_id: empId, quest_id: q.id, xp_claimed: false }, { onConflict: 'employee_id,quest_id' });
+            _myQuestCompletions[q.id] = { quest_id: q.id, xp_claimed: false };
+          } catch (e) { console.warn('[Quest] Completion save error:', e); }
         }
       }
-
-      // 4) 칭찬 보내기 체크 (Supabase)
-      if (SupabaseMode._ready) {
-        try {
-          const empId = await getEmployeeId();
-          if (empId) {
-            const { data: praises } = await SupabaseMode._client
-              .from('praise_logs').select('id').eq('from_employee_id', empId).limit(1);
-            if (praises && praises.length > 0) state.praise = true;
-
-            // 5) 챌린지 참여 체크
-            const { data: members } = await SupabaseMode._client
-              .from('team_task_members').select('id').eq('employee_id', empId).limit(1);
-            const { data: created } = await SupabaseMode._client
-              .from('team_tasks').select('id').eq('creator_id', empId).limit(1);
-            if ((members && members.length > 0) || (created && created.length > 0)) state.team = true;
-          }
-        } catch {}
-      }
-
-      saveQuestState(state);
-      return state;
     }
 
-    // 퀘스트 EXP 수령
+    // 퀘스트 XP 수령
     async function claimQuestXp(questId, xpAmount) {
-      const state = getQuestState();
-      if (state['claimed_' + questId]) return;
-
+      if (_myQuestCompletions[questId]?.xp_claimed) return;
       const empId = await getEmployeeId();
-      if (empId && SupabaseMode._ready) {
-        try {
-          const result = await XpService.addXp(empId, xpAmount, 'quest', 'rookie_' + questId, '신입 퀘스트: ' + questId);
-          if (result) {
-            showXpToast(xpAmount);
-            if (result.leveledUp) showLevelUpCelebration(result.oldTier, result.newTier, lang);
-          }
-        } catch {}
-      }
-      state['claimed_' + questId] = true;
-      saveQuestState(state);
-      renderRookieQuest();
+      if (!empId) return;
+      try {
+        const result = await XpService.addXp(empId, xpAmount, 'quest', 'quest_' + questId, t.questTitle);
+        if (result) {
+          showXpToast(xpAmount);
+          if (result.leveledUp) showLevelUpCelebration(result.oldTier, result.newTier, lang);
+        }
+        await SupabaseMode._client.from('quest_completions')
+          .update({ xp_claimed: true, claimed_at: new Date().toISOString() })
+          .eq('employee_id', empId).eq('quest_id', questId);
+        _myQuestCompletions[questId] = { quest_id: questId, xp_claimed: true };
+        _renderDynamicQuests(document.getElementById('rookieQuestCard'));
+      } catch (e) { console.warn('[Quest] Claim error:', e); }
     }
 
-    // 보너스(전체 클리어) EXP 수령
+    // 티어 클리어 보너스 수령
     async function claimQuestBonus() {
-      const state = getQuestState();
-      if (state.bonusClaimed) return;
-
       const empId = await getEmployeeId();
-      if (empId && SupabaseMode._ready) {
-        try {
-          const result = await XpService.addXp(empId, 100, 'quest', 'rookie_bonus', '신입 퀘스트 졸업 보너스');
-          if (result) {
-            showXpToast(100, true);
-            if (result.leveledUp) showLevelUpCelebration(result.oldTier, result.newTier, lang);
-          }
-        } catch {}
-      }
-      state.bonusClaimed = true;
-      saveQuestState(state);
-      renderRookieQuest();
+      if (!empId || !_myTierBonusXp) return;
+      const bonusKey = 'quest_tier_bonus_' + (_myQuests[0]?.tier_id || 'iron');
+      try {
+        const result = await XpService.addXp(empId, _myTierBonusXp, 'quest', bonusKey, t.questTitle + ' 클리어 보너스');
+        if (result) {
+          showXpToast(_myTierBonusXp, true);
+          if (result.leveledUp) showLevelUpCelebration(result.oldTier, result.newTier, lang);
+        }
+        // 보너스 수령 기록을 localStorage에 저장 (간단한 중복 방지)
+        localStorage.setItem('sop_quest_bonus_' + bonusKey + '_' + (user?.email || ''), 'true');
+        _renderDynamicQuests(document.getElementById('rookieQuestCard'));
+      } catch (e) { console.warn('[Quest] Bonus claim error:', e); }
     }
 
-    // 퀘스트 카드 숨기기 (졸업 후)
     function dismissQuest() {
-      const state = getQuestState();
-      state.allDismissed = true;
-      saveQuestState(state);
+      localStorage.setItem('sop_quest_dismissed_' + (_myQuests[0]?.tier_id || '') + '_' + (user?.email || ''), 'true');
       document.getElementById('rookieQuestCard').innerHTML = '';
     }
 
-    // 퀘스트 UI 렌더링
-    async function renderRookieQuest() {
-      const container = document.getElementById('rookieQuestCard');
-      if (!container) return;
+    // 동적 퀘스트 렌더링
+    function _renderDynamicQuests(container) {
+      if (!container || _myQuests.length === 0) return;
 
-      const state = await checkQuestCompletion();
+      const tierId = _myQuests[0]?.tier_id || 'iron';
+      const dismissed = localStorage.getItem('sop_quest_dismissed_' + tierId + '_' + (user?.email || ''));
+      if (dismissed) { container.innerHTML = ''; return; }
+
+      const doneCount = _myQuests.filter(q => _myQuestCompletions[q.id]).length;
+      const allDone = doneCount === _myQuests.length;
+      const allClaimed = _myQuests.every(q => _myQuestCompletions[q.id]?.xp_claimed);
+      const pct = Math.round((doneCount / _myQuests.length) * 100);
+      const bonusKey = 'sop_quest_bonus_quest_tier_bonus_' + tierId + '_' + (user?.email || '');
+      const bonusClaimed = localStorage.getItem(bonusKey) === 'true';
+
+      const qTitle = _questTierLabel + ' ' + t.questTitle;
+
+      let questsHtml = '';
+      _myQuests.forEach(q => {
+        const comp = _myQuestCompletions[q.id];
+        const done = !!comp;
+        const claimed = !!comp?.xp_claimed;
+        const title = lang === 'en' ? (q.title_en || q.title_ko) : lang === 'vi' ? (q.title_vi || q.title_ko) : q.title_ko;
+        const desc = lang === 'en' ? (q.desc_en || q.desc_ko) : lang === 'vi' ? (q.desc_vi || q.desc_ko) : q.desc_ko;
+        const first = chapters[0];
+        const link = q.link || (first ? 'chapter.html?id=' + first.id : '#');
+
+        let actionBtn;
+        if (done && claimed) {
+          actionBtn = '<span class="quest-badge-done">' + t.questClaimed + '</span>';
+        } else if (done && !claimed) {
+          actionBtn = '<button class="quest-claim-btn" onclick="event.stopPropagation();claimQuestXp(\'' + q.id + '\',' + q.xp_reward + ')">' + t.questClaim + ' +' + q.xp_reward + '</button>';
+        } else {
+          actionBtn = '<a href="' + link + '" class="quest-go-btn">' + t.questGo + '</a>';
+        }
+
+        questsHtml += '<div class="quest-item ' + (done ? 'quest-done' : '') + '">'
+          + '<div class="quest-icon ' + (done ? 'quest-icon-done' : '') + '">' + (done ? '✅' : q.icon) + '</div>'
+          + '<div class="quest-info"><div class="quest-name">' + title + '</div><div class="quest-desc">' + desc + '</div></div>'
+          + '<div class="quest-action">' + actionBtn + '</div></div>';
+      });
+
+      let bonusHtml = '';
+      if (allDone && _myTierBonusXp > 0) {
+        if (bonusClaimed) {
+          bonusHtml = '<div class="quest-bonus quest-bonus-claimed"><span>🏆 ' + t.questCompleteDesc + '</span>'
+            + '<button class="quest-dismiss-btn" onclick="dismissQuest()">✕</button></div>';
+        } else {
+          bonusHtml = '<div class="quest-bonus quest-bonus-ready"><span>' + t.questComplete.replace('+100', '+' + _myTierBonusXp) + '</span>'
+            + '<button class="quest-claim-btn quest-claim-bonus" onclick="claimQuestBonus()">' + t.questBonusClaim + '</button></div>';
+        }
+      } else if (allDone && allClaimed) {
+        bonusHtml = '<div class="quest-bonus quest-bonus-claimed"><span>🏆 ' + t.questCompleteDesc + '</span>'
+          + '<button class="quest-dismiss-btn" onclick="dismissQuest()">✕</button></div>';
+      }
+
+      container.innerHTML = '<div class="quest-card">'
+        + '<div class="quest-header"><div>'
+        + '<div class="quest-title">' + qTitle + '</div>'
+        + '<div class="quest-subtitle">' + t.questSubtitle + '</div>'
+        + '</div><div class="quest-progress-ring">'
+        + '<svg viewBox="0 0 36 36" class="quest-ring-svg">'
+        + '<path class="quest-ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>'
+        + '<path class="quest-ring-fill" stroke-dasharray="' + pct + ', 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>'
+        + '</svg><div class="quest-ring-text">' + doneCount + '/' + _myQuests.length + '</div>'
+        + '</div></div><div class="quest-list">' + questsHtml + '</div>' + bonusHtml + '</div>';
+    }
+
+    // Fallback: Supabase 미연결 시 하드코딩 퀘스트
+    function _renderFallbackQuest(container) {
+      const quests = t.quests || [];
+      if (!quests || quests.length === 0) { container.innerHTML = ''; return; }
+      const storeKey = 'sop_rookie_quest_' + (user?.email || 'demo');
+      let state = {};
+      try { state = JSON.parse(localStorage.getItem(storeKey) || '{}'); } catch {}
       if (state.allDismissed) { container.innerHTML = ''; return; }
 
-      const quests = t.quests || [];
-      if (quests.length === 0) return;
+      // 간단한 자동 감지
+      const profileData = localStorage.getItem('sop_profile_' + (user?.email || ''));
+      if (profileData) { try { const p = JSON.parse(profileData); if (p.intro?.trim() || (p.avatarType && p.avatarType !== 'initial')) state.profile = true; } catch {} }
+      const progress = Progress.getAllResults();
+      if ((progress.completedVideos || []).length > 0) state.video = true;
+      if (Object.keys(progress.chapterResults || {}).length > 0) state.quiz = true;
+      localStorage.setItem(storeKey, JSON.stringify(state));
 
       const doneCount = quests.filter(q => state[q.id]).length;
-      const allDone = doneCount === quests.length;
-      const allClaimed = quests.every(q => state['claimed_' + q.id]);
       const pct = Math.round((doneCount / quests.length) * 100);
 
-      // 퀘스트 아이템 HTML
       let questsHtml = '';
       quests.forEach(q => {
         const done = !!state[q.id];
         const claimed = !!state['claimed_' + q.id];
         const first = chapters[0];
-        const link = q.link || (first ? `chapter.html?id=${first.id}` : '#');
-
+        const link = q.link || (first ? 'chapter.html?id=' + first.id : '#');
         let actionBtn;
-        if (done && claimed) {
-          actionBtn = `<span class="quest-badge-done">${t.questClaimed}</span>`;
-        } else if (done && !claimed) {
-          actionBtn = `<button class="quest-claim-btn" onclick="event.stopPropagation();claimQuestXp('${q.id}',${q.xp})">${t.questClaim} +${q.xp}</button>`;
-        } else {
-          actionBtn = `<a href="${link}" class="quest-go-btn">${t.questGo}</a>`;
-        }
-
-        questsHtml += `
-          <div class="quest-item ${done ? 'quest-done' : ''}">
-            <div class="quest-icon ${done ? 'quest-icon-done' : ''}">${done ? '✅' : q.icon}</div>
-            <div class="quest-info">
-              <div class="quest-name">${q.title}</div>
-              <div class="quest-desc">${q.desc}</div>
-            </div>
-            <div class="quest-action">
-              ${actionBtn}
-            </div>
-          </div>`;
+        if (done && claimed) actionBtn = '<span class="quest-badge-done">' + t.questClaimed + '</span>';
+        else if (done) actionBtn = '<button class="quest-claim-btn" onclick="event.stopPropagation();_fallbackClaimXp(\'' + q.id + '\',' + q.xp + ')">' + t.questClaim + ' +' + q.xp + '</button>';
+        else actionBtn = '<a href="' + link + '" class="quest-go-btn">' + t.questGo + '</a>';
+        questsHtml += '<div class="quest-item ' + (done ? 'quest-done' : '') + '">'
+          + '<div class="quest-icon ' + (done ? 'quest-icon-done' : '') + '">' + (done ? '✅' : q.icon) + '</div>'
+          + '<div class="quest-info"><div class="quest-name">' + q.title + '</div><div class="quest-desc">' + q.desc + '</div></div>'
+          + '<div class="quest-action">' + actionBtn + '</div></div>';
       });
 
-      // 보너스 영역
-      let bonusHtml = '';
-      if (allDone) {
-        if (state.bonusClaimed) {
-          bonusHtml = `
-            <div class="quest-bonus quest-bonus-claimed">
-              <span>🏆 ${t.questCompleteDesc}</span>
-              <button class="quest-dismiss-btn" onclick="dismissQuest()">✕</button>
-            </div>`;
-        } else {
-          bonusHtml = `
-            <div class="quest-bonus quest-bonus-ready">
-              <span>${t.questComplete}</span>
-              <button class="quest-claim-btn quest-claim-bonus" onclick="claimQuestBonus()">${t.questBonusClaim}</button>
-            </div>`;
-        }
-      }
-
-      container.innerHTML = `
-        <div class="quest-card">
-          <div class="quest-header">
-            <div>
-              <div class="quest-title">${t.questTitle}</div>
-              <div class="quest-subtitle">${t.questSubtitle}</div>
-            </div>
-            <div class="quest-progress-ring">
-              <svg viewBox="0 0 36 36" class="quest-ring-svg">
-                <path class="quest-ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-                <path class="quest-ring-fill" stroke-dasharray="${pct}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-              </svg>
-              <div class="quest-ring-text">${doneCount}/${quests.length}</div>
-            </div>
-          </div>
-          <div class="quest-list">
-            ${questsHtml}
-          </div>
-          ${bonusHtml}
-        </div>`;
+      container.innerHTML = '<div class="quest-card"><div class="quest-header"><div>'
+        + '<div class="quest-title">' + t.questTitle + '</div>'
+        + '<div class="quest-subtitle">' + t.questSubtitle + '</div>'
+        + '</div><div class="quest-progress-ring">'
+        + '<svg viewBox="0 0 36 36" class="quest-ring-svg">'
+        + '<path class="quest-ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>'
+        + '<path class="quest-ring-fill" stroke-dasharray="' + pct + ', 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>'
+        + '</svg><div class="quest-ring-text">' + doneCount + '/' + quests.length + '</div>'
+        + '</div></div><div class="quest-list">' + questsHtml + '</div></div>';
     }
+
+    window._fallbackClaimXp = async function(questId, xpAmount) {
+      const storeKey = 'sop_rookie_quest_' + (user?.email || 'demo');
+      let state = {};
+      try { state = JSON.parse(localStorage.getItem(storeKey) || '{}'); } catch {}
+      if (state['claimed_' + questId]) return;
+      const empId = await getEmployeeId();
+      if (empId && SupabaseMode._ready) {
+        try {
+          const result = await XpService.addXp(empId, xpAmount, 'quest', 'rookie_' + questId, t.questTitle);
+          if (result) { showXpToast(xpAmount); if (result.leveledUp) showLevelUpCelebration(result.oldTier, result.newTier, lang); }
+        } catch {}
+      }
+      state['claimed_' + questId] = true;
+      localStorage.setItem(storeKey, JSON.stringify(state));
+      _renderFallbackQuest(document.getElementById('rookieQuestCard'));
+    };
 
     // ===== XP 가이드 렌더링 =====
     let xpGuideOpen = true;
@@ -1655,7 +1752,7 @@
     try { updateNextAction(); } catch(e) { console.warn('[Init] updateNextAction:', e.message); }
     try { renderChapters(); } catch(e) { console.warn('[Init] renderChapters:', e.message); }
     try { renderMbtiCard(); } catch(e) { console.warn('[Init] renderMbtiCard:', e.message); }
-    try { renderRookieQuest(); } catch(e) { console.warn('[Init] renderRookieQuest:', e.message); }
+    try { loadAndRenderQuests(); } catch(e) { console.warn('[Init] loadAndRenderQuests:', e.message); }
     try { renderXpGuide(); } catch(e) { console.warn('[Init] renderXpGuide:', e.message); }
     try { renderXpRewards(); } catch(e) { console.warn('[Init] renderXpRewards:', e.message); }
     // 아래 카드들은 Supabase 동기화 완료 후 1회만 렌더링 (깜박임 방지)

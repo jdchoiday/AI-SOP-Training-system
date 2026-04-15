@@ -398,7 +398,7 @@
         skills: 'Kỹ năng / Thế mạnh', save: '💾 Lưu', saving: 'Đang lưu...', saved: '✅ Đã lưu!',
         avatarTitle: 'Chọn ảnh đại diện', uploadPhoto: 'Tải ảnh lên', orEmoji: 'hoặc chọn emoji', changePhoto: 'Đổi ảnh',
         cancel: 'Hủy', confirm: 'Xác nhận', toastSaved: 'Đã lưu hồ sơ!',
-        home: 'Trang chủ', tasks: 'Nhiệm vụ', praise: 'Khen', results: 'Hồ sơ',
+        home: 'Trang chủ', tasks: 'Nhiệm vụ', praise: 'Boost', results: 'Hồ sơ',
         basicInfo: 'Thông tin cơ bản', birthday: 'Sinh nhật', joinDate: 'Ngày vào', phone: 'SĐT (tùy chọn)',
         stats: 'Chỉ số của tôi', statsDesc: 'Tự đánh giá 1~10',
         statComm: 'Giao tiếp', statFocus: 'Tập trung', statTeam: 'Đồng đội',
@@ -501,8 +501,8 @@
     document.getElementById('likeInput').placeholder = p.likes;
     if (document.getElementById('strengthInput')) document.getElementById('strengthInput').placeholder = p.strengths;
     if (document.getElementById('weaknessInput')) document.getElementById('weaknessInput').placeholder = p.weaknesses;
-    if (document.getElementById('mottoInput')) document.getElementById('mottoInput').placeholder = p.motto;
-    if (document.getElementById('specialAbilityInput')) document.getElementById('specialAbilityInput').placeholder = p.special;
+    if (document.getElementById('mottoText')) document.getElementById('mottoText').placeholder = p.motto;
+    if (document.getElementById('specialText')) document.getElementById('specialText').placeholder = p.special;
 
     // Modal buttons i18n
     document.getElementById('btnCancel').textContent = t.cancel;

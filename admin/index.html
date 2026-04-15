@@ -311,6 +311,7 @@
       <a href="#" onclick="showPage('xp-rewards', event)" data-page="xp-rewards"><span class="ic">&#127873;</span> XP 혜택 관리</a>
       <a href="#" onclick="showPage('task-manage', event)" data-page="task-manage"><span class="ic">&#9989;</span> 성과제 관리</a>
       <a href="#" onclick="showPage('team-task-manage', event)" data-page="team-task-manage"><span class="ic">&#128101;</span> 팀 테스크 관리</a>
+      <a href="#" onclick="showPage('quest-manage', event)" data-page="quest-manage"><span class="ic">&#127918;</span> 퀘스트 관리</a>
 
       <div class="sidebar-section">시스템</div>
       <a href="#" onclick="showPage('admin-manage', event)" data-page="admin-manage" data-require="admin_manage"><span class="ic">&#128100;</span> 관리자 관리</a>
@@ -1128,6 +1129,63 @@
       </div>
     </div>
 
+    <!-- ========== 퀘스트 관리 ========== -->
+    <div id="page-quest-manage" style="display:none;">
+      <div class="topbar">
+        <h1>🎮 퀘스트 관리</h1>
+        <div class="topbar-actions">
+          <button class="btn btn-primary" onclick="openAddQuestModal()">+ 퀘스트 추가</button>
+        </div>
+      </div>
+      <p style="color:var(--gray-500);font-size:14px;margin-bottom:20px;">
+        각 레벨(티어)별 퀘스트를 설정합니다. 직원이 해당 티어에 도달하면 퀘스트가 표시됩니다.
+      </p>
+
+      <!-- 티어 탭 -->
+      <div id="questTierTabs" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px;"></div>
+
+      <!-- 퀘스트 목록 -->
+      <div class="card" style="padding:0; overflow:hidden; margin-bottom:20px;">
+        <table class="data-table" style="width:100%; font-size:13px;">
+          <thead>
+            <tr>
+              <th style="width:30px;">#</th>
+              <th style="width:36px;">아이콘</th>
+              <th>퀘스트명 (한국어)</th>
+              <th>타입</th>
+              <th>조건</th>
+              <th>XP</th>
+              <th>보너스</th>
+              <th>상태</th>
+              <th style="width:100px;">관리</th>
+            </tr>
+          </thead>
+          <tbody id="questTableBody">
+            <tr><td colspan="9" style="text-align:center;color:var(--gray-400);padding:20px;">티어를 선택하세요</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 직원별 퀘스트 진행 현황 -->
+      <h3 style="font-size:15px; color:var(--gray-700); margin-bottom:8px;">📊 직원 퀘스트 진행 현황</h3>
+      <div class="card" style="padding:0; overflow:hidden;">
+        <table class="data-table" style="width:100%; font-size:13px;">
+          <thead>
+            <tr>
+              <th>직원</th>
+              <th>지점</th>
+              <th>현재 티어</th>
+              <th>퀘스트 진행</th>
+              <th>완료/전체</th>
+            </tr>
+          </thead>
+          <tbody id="questProgressBody">
+            <tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:20px;">로딩중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- ========== XP 관리 (게이미피케이션) ========== -->
     <div id="page-xp-manage" style="display:none;">
       <div class="topbar">
@@ -1543,7 +1601,7 @@
     // ===== 페이지 전환 =====
     function showPage(page, event) {
       if (event) event.preventDefault();
-      ['sop', 'content', 'dashboard', 'employees', 'learning-path', 'chat-logs', 'notifications', 'reports', 'admin-manage', 'settings', 'audit-log', 'glossary', 'version-mgmt', 'xp-manage', 'praise-manage', 'task-manage', 'team-task-manage', 'branch-team'].forEach(p => {
+      ['sop', 'content', 'dashboard', 'employees', 'learning-path', 'chat-logs', 'notifications', 'reports', 'admin-manage', 'settings', 'audit-log', 'glossary', 'version-mgmt', 'xp-manage', 'praise-manage', 'task-manage', 'team-task-manage', 'quest-manage', 'branch-team'].forEach(p => {
         const el = document.getElementById('page-' + p);
         if (el) el.style.display = p === page ? 'block' : 'none';
       });
@@ -1567,6 +1625,7 @@
       if (page === 'praise-manage') renderPraiseManage();
       if (page === 'task-manage') { renderTaskManage(); loadDailyMissionConfigAdmin(); }
       if (page === 'team-task-manage') renderTeamTaskManage();
+      if (page === 'quest-manage') renderQuestManage();
       if (page === 'branch-team') renderBranchTeamPage();
 
       // 모바일 사이드바 닫기
@@ -1741,22 +1800,34 @@
     // ===== 선택 SOP 이미지 일괄 생성 =====
     async function sopBulkGenerateImages() {
       if (selectedSopIds.size === 0) { alert('SOP를 먼저 선택하세요.'); return; }
+      if (_isGeneratingImages) {
+        if (confirm('이전 생성 작업이 비정상 종료된 것 같습니다.\n강제로 초기화하고 다시 시작할까요?')) {
+          _isGeneratingImages = false;
+          const oldModal = document.getElementById('bulkImageModal');
+          if (oldModal) oldModal.remove();
+        } else return;
+      }
       _isGeneratingImages = true;
       const sops = getSops();
       const targets = sops.filter(s => selectedSopIds.has(s.id) && s.script && s.script.length > 0);
 
       if (targets.length === 0) {
+        _isGeneratingImages = false;
         alert('선택된 SOP 중 스크립트가 있는 SOP가 없습니다.\n먼저 각 SOP의 스크립트를 생성해주세요.');
         return;
       }
 
       const totalScenes = targets.reduce((sum, s) => sum + s.script.filter(sc => !sc.imageConfirmed).length, 0);
       if (totalScenes === 0) {
+        _isGeneratingImages = false;
         alert('모든 씬의 이미지가 이미 확정되었습니다.');
         return;
       }
 
-      if (!confirm(`${targets.length}개 SOP의 이미지를 일괄 생성합니다.\n\n총 ${totalScenes}개 씬\n예상 비용: ~$${(totalScenes * 0.04).toFixed(2)}\n\n진행하시겠습니까?`)) return;
+      if (!confirm(`${targets.length}개 SOP의 이미지를 일괄 생성합니다.\n\n총 ${totalScenes}개 씬\n예상 비용: ~$${(totalScenes * 0.04).toFixed(2)}\n\n진행하시겠습니까?`)) {
+        _isGeneratingImages = false;
+        return;
+      }
 
       // 프로그레스 모달
       const overlay = document.createElement('div');
@@ -1771,53 +1842,76 @@
           </div>
           <div id="bulkCount" style="font-size:14px; color:var(--gray-600);">0 / ${totalScenes} 이미지</div>
           <div id="bulkSopName" style="font-size:13px; color:var(--gray-400); margin-top:8px;"></div>
+          <button onclick="_cancelBulkGeneration()" style="margin-top:16px; padding:8px 20px; font-size:13px; background:#ef4444; color:white; border:none; border-radius:8px; cursor:pointer;">중단</button>
         </div>`;
       document.body.appendChild(overlay);
 
-      let done = 0;
-      const BATCH_SIZE = 3;
+      let done = 0, failed = 0;
+      let _bulkCancelled = false;
+      window._cancelBulkGeneration = () => { _bulkCancelled = true; };
+      const BATCH_SIZE = 2;
 
-      for (const sop of targets) {
-        const sopIdx = sops.findIndex(s => s.id === sop.id);
-        document.getElementById('bulkSopName').textContent = `📋 ${sop.title}`;
+      try {
+        for (const sop of targets) {
+          if (_bulkCancelled) break;
+          document.getElementById('bulkSopName').textContent = `📋 ${sop.title}`;
 
-        const sceneJobs = [];
-        for (let i = 0; i < sop.script.length; i++) {
-          if (!sop.script[i].imageConfirmed) sceneJobs.push(i);
-        }
+          const sceneJobs = [];
+          for (let i = 0; i < sop.script.length; i++) {
+            if (!sop.script[i].imageConfirmed) sceneJobs.push(i);
+          }
 
-        for (let b = 0; b < sceneJobs.length; b += BATCH_SIZE) {
-          const batch = sceneJobs.slice(b, b + BATCH_SIZE);
+          for (let b = 0; b < sceneJobs.length; b += BATCH_SIZE) {
+            if (_bulkCancelled) break;
+            const batch = sceneJobs.slice(b, b + BATCH_SIZE);
 
-          await Promise.all(batch.map(async (i) => {
-            const scene = sop.script[i];
-            try {
-              const imgRes = await fetch('/api/image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'generate-multi', visual: scene.visual || '', narration: scene.narration, sceneIndex: i, totalScenes: sop.script.length })
-              });
-              const imgData = await imgRes.json();
-              if (imgData.images && imgData.images.length > 0 && imgData.images[0].imageUrl) {
-                scene.imageUrl = imgData.images[0].imageUrl;
+            await Promise.all(batch.map(async (i) => {
+              const scene = sop.script[i];
+              try {
+                const imgRes = await fetch('/api/image', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'generate-multi', visual: scene.visual || '', narration: scene.narration, sceneIndex: i, totalScenes: sop.script.length })
+                });
+                const imgData = await imgRes.json();
+                if (imgData.images && imgData.images.length > 0 && imgData.images[0].imageUrl) {
+                  scene.imageUrl = imgData.images[0].imageUrl;
+                } else {
+                  failed++;
+                  console.warn(`이미지 생성 실패: ${sop.title} 씬${i+1}`, imgData.error || 'no image returned');
+                }
+              } catch (e) {
+                failed++;
+                console.warn(`이미지 실패: ${sop.title} 씬${i+1}`, e.message);
               }
-            } catch (e) { console.warn(`이미지 실패: ${sop.title} 씬${i+1}`, e.message); }
 
-            done++;
-            document.getElementById('bulkCount').textContent = `${done} / ${totalScenes} 이미지`;
-            document.getElementById('bulkBar').style.width = (done / totalScenes * 100) + '%';
-          }));
+              done++;
+              const countEl = document.getElementById('bulkCount');
+              const barEl = document.getElementById('bulkBar');
+              if (countEl) countEl.textContent = `${done} / ${totalScenes} 이미지${failed > 0 ? ` (실패: ${failed})` : ''}`;
+              if (barEl) barEl.style.width = (done / totalScenes * 100) + '%';
+            }));
 
-          saveSops(sops);
-          if (b + BATCH_SIZE < sceneJobs.length) await new Promise(r => setTimeout(r, 1000));
+            saveSops(sops);
+            if (b + BATCH_SIZE < sceneJobs.length) await new Promise(r => setTimeout(r, 2000));
+          }
         }
-      }
 
-      saveSops(sops);
-      _isGeneratingImages = false;
-      document.getElementById('bulkImageModal').remove();
-      alert(`✅ 완료! ${done}개 이미지 생성됨`);
-      renderSopList();
+        saveSops(sops);
+        const msg = _bulkCancelled
+          ? `중단됨. ${done}개 처리 (성공: ${done - failed}, 실패: ${failed})`
+          : `✅ 완료! ${done}개 처리 (성공: ${done - failed}${failed > 0 ? `, 실패: ${failed}` : ''})`;
+        alert(msg);
+      } catch (e) {
+        console.error('일괄 생성 오류:', e);
+        saveSops(sops);
+        alert(`오류 발생: ${e.message}\n\n${done}개 이미지까지 저장되었습니다.`);
+      } finally {
+        _isGeneratingImages = false;
+        const modal = document.getElementById('bulkImageModal');
+        if (modal) modal.remove();
+        renderSopList();
+      }
     }
 
     // ===== JSON 일괄 업로드 =====
@@ -7824,6 +7918,232 @@ ${text.slice(0, 3000)}
       AuditLog.clear();
       renderAuditLog();
     }
+
+    // ===== 퀘스트 관리 =====
+    const QUEST_TIERS = [
+      { id: 'iron', emoji: '🌱', ko: '새싹', xp: 0 },
+      { id: 'bronze', emoji: '🥉', ko: '성장', xp: 500 },
+      { id: 'silver', emoji: '⭐', ko: '빛나는', xp: 1500 },
+      { id: 'gold', emoji: '🌟', ko: '황금별', xp: 3500 },
+      { id: 'platinum', emoji: '💎', ko: '정예', xp: 7000 },
+      { id: 'diamond', emoji: '👑', ko: '챔피언', xp: 13000 },
+      { id: 'master', emoji: '🔮', ko: '전설', xp: 22000 },
+      { id: 'grandmaster', emoji: '🔥', ko: '불꽃', xp: 35000 },
+      { id: 'challenger', emoji: '⚡', ko: '키우자 신', xp: 50000 },
+    ];
+    const QUEST_TYPES = {
+      profile: '프로필 완성', study_scenes: '영상 시청', quiz_pass: '퀴즈 통과',
+      boost_send: '부스트 전송', team_task: '팀 챌린지', attendance_days: '출근 체크', total_xp: 'XP 달성', manual: '수동 확인'
+    };
+    let _questCurrentTier = 'iron';
+    let _questCache = [];
+
+    async function renderQuestManage() {
+      // 티어 탭 렌더링
+      const tabsEl = document.getElementById('questTierTabs');
+      tabsEl.innerHTML = QUEST_TIERS.map(t =>
+        `<button onclick="_selectQuestTier('${t.id}')" id="qtab-${t.id}"
+          style="padding:8px 16px; border-radius:20px; border:2px solid ${_questCurrentTier === t.id ? '#6366f1' : 'var(--gray-200)'};
+          background:${_questCurrentTier === t.id ? '#6366f1' : 'transparent'}; color:${_questCurrentTier === t.id ? 'white' : 'var(--gray-600)'};
+          cursor:pointer; font-size:13px; font-weight:600; transition:all .2s;">
+          ${t.emoji} ${t.ko} <span style="font-size:11px; opacity:0.7;">(${t.xp}+)</span>
+        </button>`
+      ).join('');
+      await _loadQuestsForTier(_questCurrentTier);
+      await _loadQuestProgress();
+    }
+
+    window._selectQuestTier = async function(tierId) {
+      _questCurrentTier = tierId;
+      document.querySelectorAll('#questTierTabs button').forEach(b => {
+        const active = b.id === 'qtab-' + tierId;
+        b.style.border = '2px solid ' + (active ? '#6366f1' : 'var(--gray-200)');
+        b.style.background = active ? '#6366f1' : 'transparent';
+        b.style.color = active ? 'white' : 'var(--gray-600)';
+      });
+      await _loadQuestsForTier(tierId);
+    };
+
+    async function _loadQuestsForTier(tierId) {
+      const tbody = document.getElementById('questTableBody');
+      if (!SupabaseMode._ready) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--gray-400);padding:20px;">Supabase 미연결</td></tr>'; return; }
+      try {
+        const { data, error } = await SupabaseMode._client.from('quests')
+          .select('*').eq('tier_id', tierId).order('sort_order', { ascending: true });
+        if (error) throw error;
+        _questCache = data || [];
+        if (_questCache.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--gray-400);padding:20px;">이 티어에 등록된 퀘스트가 없습니다</td></tr>';
+          return;
+        }
+        tbody.innerHTML = _questCache.map((q, i) => `
+          <tr>
+            <td>${q.sort_order}</td>
+            <td style="font-size:20px;">${q.icon}</td>
+            <td><strong>${q.title_ko}</strong><br><span style="font-size:11px;color:var(--gray-500);">${q.desc_ko}</span></td>
+            <td><span style="padding:2px 8px;border-radius:10px;background:rgba(99,102,241,0.1);color:#6366f1;font-size:11px;">${QUEST_TYPES[q.quest_type] || q.quest_type}</span></td>
+            <td style="font-size:12px;">${q.quest_condition?.count ? q.quest_condition.count + '회' : '-'}</td>
+            <td><strong style="color:#f59e0b;">+${q.xp_reward}</strong></td>
+            <td>${q.bonus_xp > 0 ? '<strong style="color:#10b981;">+' + q.bonus_xp + '</strong>' : '-'}</td>
+            <td>${q.is_active ? '<span style="color:#10b981;">✅</span>' : '<span style="color:var(--gray-400);">비활성</span>'}</td>
+            <td>
+              <button class="btn btn-sm" onclick="_editQuest('${q.id}')" style="margin-right:4px;">✏️</button>
+              <button class="btn btn-sm" onclick="_deleteQuest('${q.id}')" style="color:#ef4444;">🗑️</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="9" style="color:#ef4444;padding:12px;">오류: ' + e.message + '</td></tr>';
+      }
+    }
+
+    async function _loadQuestProgress() {
+      const tbody = document.getElementById('questProgressBody');
+      if (!SupabaseMode._ready) return;
+      try {
+        const { data: emps } = await SupabaseMode._client.from('employees').select('id, name, branch, total_xp').order('total_xp', { ascending: false });
+        const { data: completions } = await SupabaseMode._client.from('quest_completions').select('employee_id, quest_id, xp_claimed');
+        const { data: allQuests } = await SupabaseMode._client.from('quests').select('id, tier_id').eq('is_active', true);
+        if (!emps || emps.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:20px;">직원 데이터 없음</td></tr>'; return; }
+        const compMap = {};
+        (completions || []).forEach(c => { if (!compMap[c.employee_id]) compMap[c.employee_id] = []; compMap[c.employee_id].push(c); });
+        const questsByTier = {};
+        (allQuests || []).forEach(q => { if (!questsByTier[q.tier_id]) questsByTier[q.tier_id] = []; questsByTier[q.tier_id].push(q.id); });
+
+        tbody.innerHTML = emps.slice(0, 30).map(emp => {
+          const tier = typeof calculateTier === 'function' ? calculateTier(emp.total_xp || 0) : { tierId: 'iron', emoji: '🌱', titleKo: '새싹' };
+          const tierQuests = questsByTier[tier.tierId] || [];
+          const empComps = compMap[emp.id] || [];
+          const doneCount = tierQuests.filter(qid => empComps.some(c => c.quest_id === qid)).length;
+          const pct = tierQuests.length > 0 ? Math.round(doneCount / tierQuests.length * 100) : 0;
+          return `<tr>
+            <td><strong>${emp.name}</strong></td>
+            <td>${emp.branch || '-'}</td>
+            <td>${tier.emoji} ${tier.titleKo || tier.tierId}</td>
+            <td><div style="background:var(--gray-100);border-radius:8px;height:18px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#6366f1,#10b981);border-radius:8px;transition:width .3s;"></div></div></td>
+            <td>${doneCount}/${tierQuests.length}</td>
+          </tr>`;
+        }).join('');
+      } catch (e) { console.warn('[Quest] Progress load error:', e); }
+    }
+
+    // 퀘스트 추가/수정 모달
+    function openAddQuestModal(questId) {
+      const q = questId ? _questCache.find(x => x.id === questId) : null;
+      const isEdit = !!q;
+      const m = document.getElementById('modalContent');
+      m.innerHTML = `
+        <h3 style="margin-bottom:16px;">${isEdit ? '✏️ 퀘스트 수정' : '➕ 퀘스트 추가'}</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div>
+            <label style="font-size:12px;font-weight:600;">티어</label>
+            <select id="qm-tier" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;">
+              ${QUEST_TIERS.map(t => `<option value="${t.id}" ${(q?.tier_id || _questCurrentTier) === t.id ? 'selected' : ''}>${t.emoji} ${t.ko}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;">아이콘 (이모지)</label>
+            <input id="qm-icon" value="${q?.icon || '⭐'}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:20px;">
+          </div>
+          <div style="grid-column:span 2;">
+            <label style="font-size:12px;font-weight:600;">퀘스트명 (한국어) *</label>
+            <input id="qm-title-ko" value="${q?.title_ko || ''}" placeholder="예: 학습왕" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;">English Title</label>
+            <input id="qm-title-en" value="${q?.title_en || ''}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;">Tiếng Việt</label>
+            <input id="qm-title-vi" value="${q?.title_vi || ''}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;">
+          </div>
+          <div style="grid-column:span 2;">
+            <label style="font-size:12px;font-weight:600;">설명 (한국어) *</label>
+            <input id="qm-desc-ko" value="${q?.desc_ko || ''}" placeholder="예: 교육 영상 10개 시청" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;">Description (EN)</label>
+            <input id="qm-desc-en" value="${q?.desc_en || ''}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;">Mô tả (VI)</label>
+            <input id="qm-desc-vi" value="${q?.desc_vi || ''}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;">퀘스트 타입</label>
+            <select id="qm-type" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;">
+              ${Object.entries(QUEST_TYPES).map(([k,v]) => `<option value="${k}" ${q?.quest_type === k ? 'selected' : ''}>${v}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;">조건 수치 (회/개)</label>
+            <input id="qm-condition" type="number" min="0" value="${q?.quest_condition?.count || 1}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;">XP 보상</label>
+            <input id="qm-xp" type="number" min="0" value="${q?.xp_reward || 30}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;">티어 클리어 보너스 XP</label>
+            <input id="qm-bonus" type="number" min="0" value="${q?.bonus_xp || 0}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;">링크 (선택)</label>
+            <input id="qm-link" value="${q?.link || ''}" placeholder="예: profile.html" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;">정렬 순서</label>
+            <input id="qm-sort" type="number" min="0" value="${q?.sort_order || (_questCache.length + 1)}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;">
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:20px; justify-content:flex-end;">
+          <button class="btn" onclick="closeModal()">취소</button>
+          <button class="btn btn-primary" onclick="_saveQuest(${isEdit ? "'" + q.id + "'" : 'null'})">${isEdit ? '수정' : '추가'}</button>
+        </div>
+      `;
+      document.getElementById('modalOverlay').classList.add('show');
+    }
+
+    window._editQuest = function(id) { openAddQuestModal(id); };
+
+    window._saveQuest = async function(questId) {
+      const data = {
+        tier_id: document.getElementById('qm-tier').value,
+        icon: document.getElementById('qm-icon').value || '⭐',
+        title_ko: document.getElementById('qm-title-ko').value,
+        title_en: document.getElementById('qm-title-en').value,
+        title_vi: document.getElementById('qm-title-vi').value,
+        desc_ko: document.getElementById('qm-desc-ko').value,
+        desc_en: document.getElementById('qm-desc-en').value,
+        desc_vi: document.getElementById('qm-desc-vi').value,
+        quest_type: document.getElementById('qm-type').value,
+        quest_condition: { count: parseInt(document.getElementById('qm-condition').value) || 1 },
+        xp_reward: parseInt(document.getElementById('qm-xp').value) || 30,
+        bonus_xp: parseInt(document.getElementById('qm-bonus').value) || 0,
+        link: document.getElementById('qm-link').value,
+        sort_order: parseInt(document.getElementById('qm-sort').value) || 0,
+        is_active: true,
+      };
+      if (!data.title_ko) { alert('퀘스트명(한국어)은 필수입니다.'); return; }
+      try {
+        if (questId) {
+          await SupabaseMode._client.from('quests').update(data).eq('id', questId);
+        } else {
+          await SupabaseMode._client.from('quests').insert(data);
+        }
+        closeModal();
+        _questCurrentTier = data.tier_id;
+        await _loadQuestsForTier(data.tier_id);
+      } catch (e) { alert('저장 오류: ' + e.message); }
+    };
+
+    window._deleteQuest = async function(id) {
+      if (!confirm('이 퀘스트를 삭제하시겠습니까?')) return;
+      try {
+        await SupabaseMode._client.from('quests').delete().eq('id', id);
+        await _loadQuestsForTier(_questCurrentTier);
+      } catch (e) { alert('삭제 오류: ' + e.message); }
+    };
 
     // ===== 팀 테스크 관리 =====
     async function renderTeamTaskManage() {

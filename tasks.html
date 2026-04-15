@@ -238,6 +238,17 @@
     }
     .dm-card.completed .dm-title { color: #10B981; }
     .dm-card.completed .dm-xp { background: rgba(16,185,129,0.2); color: #34D399; }
+    .dm-checkin-btn {
+      background: linear-gradient(135deg, #10B981, #059669);
+      color: white; border: none; border-radius: 16px;
+      padding: 6px 14px; font-size: 12px; font-weight: 700;
+      cursor: pointer; white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(16,185,129,0.3);
+      transition: all 0.2s;
+    }
+    .dm-checkin-btn:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(16,185,129,0.4); }
+    .dm-checkin-btn:active { transform: scale(0.95); }
+    .dm-checkin-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
   </style>
 </head>
 <body>
@@ -378,8 +389,13 @@
         studyReward: '+50 XP',
         studyAllDone: '모든 학습을 완료했어요! 🎉',
         // 일일 미션 자동감지
-        dmAttendance: '출근 체크인',
-        dmAttendanceDesc: '오늘의 출근을 기록하세요',
+        dmAttendance: '출근 체크',
+        dmAttendanceDesc: 'GPS로 지점 위치를 확인합니다',
+        dmChecking: '📡 위치 확인 중...',
+        dmGpsSuccess: '✅ 지점 반경 내 확인!',
+        dmGpsFail: '📍 지점 범위 밖이지만 접속 인정!',
+        dmGpsError: '📱 GPS 오류 — 접속으로 인정!',
+        dmGpsNoConfig: '✅ 접속 확인 완료!',
         dmStudy: '학습 완료',
         dmStudyDesc: (n) => `오늘 ${n}개 이상 씬 학습`,
         dmQuiz: '퀴즈 만점',
@@ -410,7 +426,12 @@
         studyReward: '+50 XP',
         studyAllDone: 'All studies completed! 🎉',
         dmAttendance: 'Check In',
-        dmAttendanceDesc: 'Record your attendance today',
+        dmAttendanceDesc: 'Verify location via GPS',
+        dmChecking: '📡 Checking location...',
+        dmGpsSuccess: '✅ Within branch range!',
+        dmGpsFail: '📍 Outside range — access counted!',
+        dmGpsError: '📱 GPS error — access counted!',
+        dmGpsNoConfig: '✅ Access verified!',
         dmStudy: 'Study Complete',
         dmStudyDesc: (n) => `Complete ${n}+ scenes today`,
         dmQuiz: 'Perfect Quiz',
@@ -422,7 +443,7 @@
       },
       vi: {
         pageTitle: 'Nhiệm vụ',
-        home: 'Trang chủ', tasks: 'Nhiệm vụ', praise: 'Khen', results: 'Hồ sơ',
+        home: 'Trang chủ', tasks: 'Nhiệm vụ', praise: 'Boost', results: 'Hồ sơ',
         quarterPoints: 'Điểm quý này',
         totalPoints: (n) => `Tổng: ${n} P`,
         todayCompleted: 'Nhiệm vụ', todayPoints: 'XP hôm nay',
@@ -441,7 +462,12 @@
         studyReward: '+50 XP',
         studyAllDone: 'Hoàn thành tất cả bài học! 🎉',
         dmAttendance: 'Điểm danh',
-        dmAttendanceDesc: 'Ghi nhận đi làm hôm nay',
+        dmAttendanceDesc: 'Xác minh vị trí bằng GPS',
+        dmChecking: '📡 Đang kiểm tra vị trí...',
+        dmGpsSuccess: '✅ Trong phạm vi chi nhánh!',
+        dmGpsFail: '📍 Ngoài phạm vi — đã ghi nhận!',
+        dmGpsError: '📱 Lỗi GPS — đã ghi nhận!',
+        dmGpsNoConfig: '✅ Đã xác nhận truy cập!',
         dmStudy: 'Hoàn thành học',
         dmStudyDesc: (n) => `Học ${n}+ bài hôm nay`,
         dmQuiz: 'Điểm tuyệt đối',
@@ -576,6 +602,8 @@
             if (data?.length > 0) await claimMissionXp('boost');
           } catch (e) { console.warn('[DM] Boost check:', e); }
         }
+
+        // ☀️ 출근: 사용자가 직접 버튼 클릭으로 GPS 체크 (자동X)
       } catch (e) {
         console.warn('[DM] Check error:', e);
       } finally {
@@ -584,6 +612,87 @@
       renderDailyMissions();
       updateSummary();
       updatePointsCard();
+    }
+
+    // ===== GPS 출근 자동 감지 =====
+    let _branchLocations = null;
+
+    async function loadBranchLocations() {
+      if (_branchLocations) return _branchLocations;
+      try {
+        const { data } = await SupabaseMode._client
+          .from('app_config').select('value').eq('key', 'branch_locations').maybeSingle();
+        _branchLocations = data?.value || {};
+        return _branchLocations;
+      } catch (e) { return {}; }
+    }
+
+    function getDistanceKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    // 출근 체크 버튼 클릭 핸들러
+    async function onAttendanceCheckIn() {
+      if (dailyMissionStatus.attendance) return;
+
+      const statusEl = document.getElementById('attendanceStatus');
+      const btnEl = document.getElementById('attendanceBtn');
+      if (btnEl) btnEl.disabled = true;
+      if (statusEl) { statusEl.textContent = t.dmChecking; statusEl.style.display = 'block'; }
+
+      const empId = await getEmployeeId();
+      const locations = await loadBranchLocations();
+      const myBranch = user?.branch || '';
+      const loc = locations[myBranch];
+
+      // 지점 좌표가 없으면 접속만으로 출근 인정
+      if (!loc || !loc.lat || !loc.lng) {
+        await claimMissionXp('attendance');
+        if (statusEl) statusEl.textContent = t.dmGpsNoConfig;
+        setTimeout(() => { renderDailyMissions(); updateSummary(); }, 1200);
+        return;
+      }
+
+      // GPS 미지원
+      if (!navigator.geolocation) {
+        await claimMissionXp('attendance');
+        if (statusEl) statusEl.textContent = t.dmGpsError;
+        setTimeout(() => { renderDailyMissions(); updateSummary(); }, 1200);
+        return;
+      }
+
+      // GPS 위치 요청
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true, timeout: 10000, maximumAge: 60000,
+          });
+        });
+
+        const dist = getDistanceKm(pos.coords.latitude, pos.coords.longitude, loc.lat, loc.lng);
+        const radius = loc.radius || 0.3;
+        console.log('[DM] GPS distance: ' + dist.toFixed(3) + 'km (radius: ' + radius + 'km)');
+
+        if (dist <= radius) {
+          await claimMissionXp('attendance');
+          if (statusEl) statusEl.textContent = t.dmGpsSuccess;
+        } else {
+          // 범위 밖이어도 접속 인정 (fallback)
+          await claimMissionXp('attendance');
+          if (statusEl) statusEl.textContent = t.dmGpsFail;
+        }
+      } catch (e) {
+        // GPS 거부/오류 → 접속으로 인정
+        console.log('[DM] GPS error:', e.message || e.code);
+        await claimMissionXp('attendance');
+        if (statusEl) statusEl.textContent = t.dmGpsError;
+      }
+
+      setTimeout(() => { renderDailyMissions(); updateSummary(); }, 1500);
     }
 
     // ===== XP 보상 지급 =====
@@ -610,24 +719,12 @@
       }
     }
 
-    // ===== ☀️ 출근 체크인 =====
-    async function checkInAttendance() {
-      if (dailyMissionStatus.attendance) return;
-      if (!SupabaseMode._ready) { showToast('DB 연결 필요'); return; }
-      const btn = document.querySelector('.dm-check-btn');
-      if (btn) { btn.disabled = true; btn.textContent = '...'; }
-      const ok = await claimMissionXp('attendance');
-      if (ok) showToast(t.complete + ' ' + t.xpGained(dailyMissionConfig.attendance_xp));
-      renderDailyMissions();
-      updateSummary();
-    }
-
-    // ===== 일일 미션 렌더링 =====
+    // ===== 일일 미션 렌더링 (전부 자동) =====
     function renderDailyMissions() {
       const container = document.getElementById('dailyMissionList');
       if (!container) return;
       const missions = [
-        { type: 'attendance', icon: '☀️', title: t.dmAttendance, desc: t.dmAttendanceDesc, xp: dailyMissionConfig.attendance_xp, manual: true },
+        { type: 'attendance', icon: '📍', title: t.dmAttendance, desc: t.dmAttendanceDesc, xp: dailyMissionConfig.attendance_xp },
         { type: 'study', icon: '📺', title: t.dmStudy, desc: t.dmStudyDesc(dailyMissionConfig.study_required), xp: dailyMissionConfig.study_xp },
         { type: 'quiz', icon: '💯', title: t.dmQuiz, desc: t.dmQuizDesc, xp: dailyMissionConfig.quiz_xp },
         { type: 'boost', icon: '🙌', title: t.dmBoost, desc: t.dmBoostDesc, xp: dailyMissionConfig.boost_xp },
@@ -637,8 +734,12 @@
         let statusHtml;
         if (done) {
           statusHtml = '<div class="dm-done-badge">✓</div>';
-        } else if (m.manual) {
-          statusHtml = '<button class="dm-check-btn" onclick="checkInAttendance()">' + t.dmCheckIn + '</button>';
+        } else if (m.type === 'attendance') {
+          // 출근은 수동 버튼 + GPS 상태 표시
+          statusHtml = '<div style="text-align:center;">'
+            + '<button id="attendanceBtn" class="dm-checkin-btn" onclick="onAttendanceCheckIn()">' + t.dmCheckIn + '</button>'
+            + '<div id="attendanceStatus" style="display:none;font-size:11px;margin-top:4px;color:#10B981;"></div>'
+            + '</div>';
         } else {
           statusHtml = '<div class="dm-pending-badge"><span style="font-size:9px;">' + t.dmAutoDetect + '</span></div>';
         }

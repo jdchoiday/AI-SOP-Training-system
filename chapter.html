@@ -608,7 +608,7 @@
         examConfirmSubmit: 'Còn câu chưa trả lời. Nộp bài luôn?',
         examExistingGrade: (grade) => `Xếp hạng thi: ${grade}`,
         examRetakeAvailable: 'Có thể thi lại',
-        playAllSlides: '&#9654; Phat tat ca slide',
+        playAllSlides: '&#9654; Phát tất cả slide',
         nextChapter: 'Chương tiếp theo →',
         allChaptersComplete: '🎉 Đã hoàn thành tất cả!',
         goHome: 'Về trang chủ',
@@ -620,7 +620,7 @@
     // Apply nav labels
     document.querySelector('.nav-label-home').textContent = t.home;
     if (document.querySelector('.nav-label-tasks')) document.querySelector('.nav-label-tasks').textContent = t.tasks || (lang === 'en' ? 'Tasks' : lang === 'vi' ? 'Nhiệm vụ' : '미션');
-    if (document.querySelector('.nav-label-praise')) document.querySelector('.nav-label-praise').textContent = lang === 'en' ? 'Praise' : lang === 'vi' ? 'Khen ngợi' : '부스트';
+    if (document.querySelector('.nav-label-praise')) document.querySelector('.nav-label-praise').textContent = lang === 'en' ? 'Boost' : lang === 'vi' ? 'Boost' : '부스트';
     document.querySelector('.nav-label-results').textContent = t.myResults;
     document.getElementById('backHomeBtn').innerHTML = `&#8592; ${t.backHome}`;
     document.getElementById('backToListLabel').textContent = t.backToList;
@@ -770,8 +770,8 @@
         const completed = Progress.isVideoCompleted(video.id);
         if (completed) completedCount++;
 
-        // 나레이션 미리보기 (처음 40자)
-        const preview = (video.title_full || video.title || '').slice(0, 50);
+        // 나레이션 미리보기 (다국어 지원)
+        const preview = (getLocalizedText(video, 'title_full') || getLocalizedText(video, 'title') || video.title_full || video.title || '').slice(0, 50);
         const _mqEmail = (JSON.parse(localStorage.getItem('sop_user') || '{}').email || 'demo');
         const mqScoreData = localStorage.getItem('sop_miniquiz_score_' + _mqEmail + '_' + video.id);
         let mqBadge = '';
@@ -874,7 +874,7 @@
       document.getElementById('videoTitle').textContent = `${t.scene} ${video.order_num}`;
 
       const hasVideo = video.video_url && video.video_url.startsWith('http');
-      const narration = video.title_full || video.title || '';
+      const narration = getLocalizedText(video, 'title_full') || getLocalizedText(video, 'title') || video.title_full || video.title || '';
       const hasNarration = narration.length > 10;
 
       // 기본적으로 모두 숨김
@@ -889,7 +889,7 @@
         document.getElementById('subtitleBar').style.display = 'block';
         document.getElementById('narrationCard').style.display = 'block';
         document.getElementById('narrationText').textContent = narration;
-        document.getElementById('visualNote').textContent = video.visual ? t.videoGuide + video.visual : '';
+        document.getElementById('visualNote').textContent = '';
 
         const subBar = document.getElementById('subtitleBar');
         subBar.textContent = '';
@@ -910,7 +910,7 @@
         // 나레이션만 (영상 없음) → 기존 텍스트 표시
         document.getElementById('narrationCard').style.display = 'block';
         document.getElementById('narrationText').textContent = narration;
-        document.getElementById('visualNote').textContent = video.visual ? t.videoGuide + video.visual : '';
+        document.getElementById('visualNote').textContent = '';
       }
 
       document.getElementById('completeVideoBtn').textContent = t.completeBtn;
@@ -1076,7 +1076,7 @@
     async function generateMiniQuiz(videoId) {
       const video = videos.find(v => v.id === videoId);
       if (!video) return [];
-      const narration = video.title_full || video.title || '';
+      const narration = getLocalizedText(video, 'title_full') || getLocalizedText(video, 'title') || video.title_full || video.title || '';
       if (narration.length < 20) return [];
 
       // Try AI generation first
