@@ -1668,6 +1668,32 @@
       if (masterCb) { masterCb.checked = (checked === total && total > 0); masterCb.indeterminate = (checked > 0 && checked < total); }
     }
 
+    // 챕터 체크 → 하위 섹션 전체 선택/해제
+    function toggleChapterSelect(chapterId, childIds, event) {
+      event.stopPropagation();
+      const allSelected = childIds.every(id => selectedSopIds.has(id));
+      if (allSelected) {
+        // 전부 해제
+        childIds.forEach(id => selectedSopIds.delete(id));
+        selectedSopIds.delete(chapterId);
+      } else {
+        // 전부 선택
+        childIds.forEach(id => selectedSopIds.add(id));
+        selectedSopIds.add(chapterId);
+      }
+      // 섹션 체크박스 시각 동기화
+      childIds.forEach(id => {
+        const cb = document.querySelector(`.sop-checkbox[data-id="${id}"]`);
+        if (cb) cb.checked = selectedSopIds.has(id);
+      });
+      // 마스터 체크박스 동기화
+      const total = document.querySelectorAll('.sop-checkbox').length;
+      const checked = document.querySelectorAll('.sop-checkbox:checked').length;
+      const masterCb = document.getElementById('sopSelectAllCheckbox');
+      if (masterCb) { masterCb.checked = (checked === total && total > 0); masterCb.indeterminate = (checked > 0 && checked < total); }
+      updateBulkBar();
+    }
+
     function sopSelectAll() {
       let sops = getSops();
       if (currentSopFilter !== 'all') sops = sops.filter(s => s.status === currentSopFilter);
@@ -2252,18 +2278,25 @@ ${JSON.stringify({ fields: { title: "교정된 제목", title_en: "fixed title",
         const progress = childSections.length > 0 ? Math.round((generatedSections / childSections.length) * 100) : 0;
         const progressColor = progress === 100 ? '#10B981' : progress > 0 ? '#f59e0b' : '#475569';
 
+        const chChildIds = childSections.map(s => s.id);
+        const chAllChecked = chChildIds.length > 0 && chChildIds.every(id => selectedSopIds.has(id));
+        const chSomeChecked = chChildIds.some(id => selectedSopIds.has(id));
+
         html += `
-          <div style="background:linear-gradient(135deg,#0F172A 0%,#1a2744 100%); border:2px solid rgba(245,158,11,0.4); border-radius:16px; padding:20px; margin-bottom:4px; cursor:pointer; transition:all .2s;"
-               onclick="openChapterManager('${ch.id}')"
+          <div style="background:linear-gradient(135deg,#0F172A 0%,#1a2744 100%); border:2px solid rgba(245,158,11,0.4); border-radius:16px; padding:20px; margin-bottom:4px; transition:all .2s;"
                onmouseover="this.style.borderColor='rgba(245,158,11,0.8)';this.style.transform='translateY(-1px)'"
                onmouseout="this.style.borderColor='rgba(245,158,11,0.4)';this.style.transform='none'">
             <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
-              <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#f59e0b,#d97706); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; color:#0F172A; flex-shrink:0;">${chNum || '📘'}</div>
-              <div style="flex:1; min-width:0;">
+              <input type="checkbox" class="chapter-checkbox" data-chapter-id="${ch.id}"
+                ${chAllChecked ? 'checked' : ''}
+                ${!chAllChecked && chSomeChecked ? 'style="width:20px;height:20px;cursor:pointer;flex-shrink:0;accent-color:#f59e0b;opacity:0.6;"' : 'style="width:20px;height:20px;cursor:pointer;flex-shrink:0;accent-color:#f59e0b;"'}
+                onclick="toggleChapterSelect('${ch.id}', [${chChildIds.map(id => `'${id}'`).join(',')}], event)">
+              <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#f59e0b,#d97706); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; color:#0F172A; flex-shrink:0; cursor:pointer;" onclick="openChapterManager('${ch.id}')">${chNum || '📘'}</div>
+              <div style="flex:1; min-width:0; cursor:pointer;" onclick="openChapterManager('${ch.id}')">
                 <h3 style="color:#f59e0b; font-size:17px; font-weight:700; margin:0 0 4px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${chDisplayTitle}</h3>
                 <p style="font-size:12px; color:#94A3B8; margin:0;">${childSections.length}개 섹션 · ${totalScenes}씬${examCount > 0 ? ' · 시험 ' + examCount + '문제' : ''}</p>
               </div>
-              <span style="color:#f59e0b; font-size:22px;">›</span>
+              <span style="color:#f59e0b; font-size:22px; cursor:pointer;" onclick="openChapterManager('${ch.id}')">›</span>
             </div>
             <!-- 섹션 주제 미리보기 -->
             ${childSections.length > 0 ? `<div style="background:rgba(245,158,11,0.08); border-radius:8px; padding:10px 14px; margin-bottom:10px;">
