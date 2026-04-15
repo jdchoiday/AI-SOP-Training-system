@@ -1481,19 +1481,24 @@
     // ImageDB는 js/image-db.js에서 로드됨 (공유 모듈)
 
     // 동기 호환 래퍼 (getSops에서 사용 — 메모리 캐시 기반)
+    // ImageDB가 로드 실패(503 등)해도 안전하게 동작
     const _imageCache = {};
+    const _imageDBReady = typeof ImageDB !== 'undefined';
+    if (!_imageDBReady) console.warn('[Admin] ImageDB 미로드 — 이미지 캐시만 사용');
+
     async function preloadSceneImages(sopId, scriptLength) {
       for (let i = 0; i < scriptLength; i++) {
         const key = `sop_img_${sopId}_${i}`;
-        const img = await ImageDB.get(key);
-        if (img) _imageCache[key] = img;
+        if (_imageDBReady) {
+          try { const img = await ImageDB.get(key); if (img) _imageCache[key] = img; } catch(e) {}
+        }
       }
     }
     function saveSceneImage(sopId, sceneIndex, imageUrl) {
       if (!imageUrl || !imageUrl.startsWith('data:')) return;
       const key = `sop_img_${sopId}_${sceneIndex}`;
       _imageCache[key] = imageUrl;
-      ImageDB.save(key, imageUrl); // fire-and-forget
+      if (_imageDBReady) { try { ImageDB.save(key, imageUrl); } catch(e) {} }
     }
     function getSceneImage(sopId, sceneIndex) {
       const key = `sop_img_${sopId}_${sceneIndex}`;
@@ -1505,7 +1510,7 @@
         if (k.startsWith(`sop_img_${sopId}_`)) delete _imageCache[k];
       });
       // IndexedDB에서 제거
-      ImageDB.deleteByPrefix(`sop_img_${sopId}_`);
+      if (_imageDBReady) { try { ImageDB.deleteByPrefix(`sop_img_${sopId}_`); } catch(e) {} }
     }
 
     function getSops() {
@@ -1577,16 +1582,35 @@
         } else { throw e; }
       }
       if (SupabaseMode._ready) {
-        // Supabase에는 이미지 없는 경량 데이터만 전송
-        const forSync = JSON.parse(JSON.stringify(toSave));
+        // Supabase에 원본 전송 — saveSop()이 base64→Storage 업로드 처리
+        // __stored__ 포인터는 제거 (IndexedDB 전용이므로 Supabase에 불필요)
+        const forSync = JSON.parse(JSON.stringify(sops)); // 원본 sops (base64 이미지 포함)
         forSync.forEach(s => {
-          if (s.script) s.script.forEach(sc => {
-            if (sc.imageUrl && (sc.imageUrl.startsWith('data:') || sc.imageUrl.startsWith('__stored__'))) {
-              sc.imageUrl = null;
+          if (s.script) s.script.forEach((sc, idx) => {
+            if (sc.imageUrl && sc.imageUrl.startsWith('__stored__')) {
+              // IndexedDB 캐시에서 실제 base64 복원 시도
+              const key = `sop_img_${s.id}_${idx}`;
+              sc.imageUrl = _imageCache[key] || null;
             }
           });
         });
-        SupabaseMode.saveAllSops(forSync).catch(e => console.error('Admin SOP sync:', e));
+        SupabaseMode.saveAllSops(forSync).then(() => {
+          // Storage URL이 sops에 반영됐으므로 localStorage도 업데이트
+          // (saveSop이 sop.script[i].imageUrl을 Storage URL로 교체함)
+          try { localStorage.setItem('sop_documents', JSON.stringify(sops.map(s => {
+            const copy = {...s};
+            if (copy.script) copy.script = copy.script.map((sc, idx) => {
+              const c = {...sc};
+              // base64는 다시 __stored__ 포인터로 (localStorage 용량 보호)
+              if (c.imageUrl && c.imageUrl.startsWith('data:')) {
+                saveSceneImage(s.id, idx, c.imageUrl);
+                c.imageUrl = `__stored__:${s.id}:${idx}`;
+              }
+              return c;
+            });
+            return copy;
+          }))); } catch(e) {}
+        }).catch(e => console.error('Admin SOP sync:', e));
       }
     }
 
@@ -3932,26 +3956,15 @@ Output ONLY the prompt, nothing else.`;
         }
       }
 
-      // 단일 씬 이미지 + 퀴즈 동시 생성 (재시도 포함)
+      // 단일 씬 이미지 생성 (퀴즈는 별도 순차 처리)
       async function generateOneImage(scene, sceneIdx, retry = 0) {
         try {
-          // 이미지 + 퀴즈 동시 요청 (병렬)
-          const [imgRes, quizRes] = await Promise.all([
-            fetchWithTimeout('/api/image', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'generate-multi', visual: scene.visual || '', narration: scene.narration, sceneIndex: sceneIdx, totalScenes: sop.script.length })
-            }, FETCH_TIMEOUT),
-            // 씬별 퀴즈 3개 자동 생성
-            fetchWithTimeout('/api/quiz', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ narration: scene.narration, count: 3, mode: 'scene', sceneIndex: sceneIdx })
-            }, 35000).catch(e => {
-              console.warn(`씬 ${scene.scene} 퀴즈 생성 실패 (이미지는 계속):`, e.message);
-              return null;
-            })
-          ]);
+          // 이미지만 먼저 생성 (퀴즈는 모든 이미지 완료 후 순차 생성)
+          const imgRes = await fetchWithTimeout('/api/image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'generate-multi', visual: scene.visual || '', narration: scene.narration, sceneIndex: sceneIdx, totalScenes: sop.script.length })
+          }, FETCH_TIMEOUT);
 
           // 이미지 처리
           if (!imgRes.ok) {
@@ -3964,6 +3977,9 @@ Output ONLY the prompt, nothing else.`;
           } else {
             throw new Error(imgData.error || 'No image in response');
           }
+
+          // 퀴즈는 별도로 처리 (하위 호환 — quizRes 파싱 코드 스킵)
+          const quizRes = null;
 
           // 퀴즈 처리 (실패해도 이미지 생성은 성공)
           if (quizRes && quizRes.ok) {
@@ -4041,9 +4057,34 @@ Output ONLY the prompt, nothing else.`;
         }
       }
 
-      // 씬별 퀴즈 집계
-      const totalQuizzes = sop.script.reduce((sum, sc) => sum + (sc.quizzes?.length || 0), 0);
-      console.log(`[GenAll] 이미지 ${done - failed}/${total} 성공, 퀴즈 총 ${totalQuizzes}개 생성`);
+      // 이미지 완료 후 씬별 퀴즈 순차 생성 (rate limit 방지)
+      {
+        const statusEl = document.getElementById('imgGenStatus');
+        if (statusEl) statusEl.textContent = '📝 씬별 퀴즈 순차 생성 중...';
+        let quizDone = 0;
+        for (let i = 0; i < sop.script.length; i++) {
+          const sc = sop.script[i];
+          if (!sc.narration) continue;
+          try {
+            const qRes = await fetch('/api/quiz', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ narration: sc.narration, count: 3, mode: 'scene', sceneIndex: i })
+            });
+            if (qRes.ok) {
+              const qData = await qRes.json();
+              if (qData.quizzes?.length > 0) {
+                sc.quizzes = qData.quizzes;
+                quizDone += qData.quizzes.length;
+              }
+            }
+          } catch (e) { console.warn(`[Quiz] 씬 ${i} 퀴즈 실패:`, e.message); }
+          // 씬 간 1.5초 대기 (rate limit 방지)
+          if (i < sop.script.length - 1) await new Promise(r => setTimeout(r, 1500));
+          if (statusEl) statusEl.textContent = `📝 퀴즈 생성 ${i+1}/${sop.script.length} (${quizDone}개)`;
+        }
+        console.log(`[GenAll] 이미지 ${done - failed}/${total} 성공, 퀴즈 총 ${quizDone}개 생성`);
+      }
 
       // 섹션 퀴즈 3개 자동 생성 (전체 나레이션 기반)
       try {

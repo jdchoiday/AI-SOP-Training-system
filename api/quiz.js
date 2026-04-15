@@ -44,25 +44,48 @@ module.exports = async (req, res) => {
       prompt = buildSceneQuizPrompt(narration, detectedLang, count, sceneIndex);
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    // Gemini API 호출 (rate limit 대응 — 최대 2회 재시도)
+    let response;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.3,
-            responseMimeType: 'application/json',
-          },
-        }),
-        signal: controller.signal,
+      try {
+        response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                temperature: 0.3,
+                responseMimeType: 'application/json',
+              },
+            }),
+            signal: controller.signal,
+          }
+        );
+        clearTimeout(timeout);
+
+        // 429 (rate limit) or 503 → 재시도
+        if ((response.status === 429 || response.status === 503) && attempt < 2) {
+          const wait = (attempt + 1) * 3000; // 3s, 6s
+          console.log(`[Quiz] ${response.status} — ${wait/1000}s 후 재시도 (${attempt+1}/2)`);
+          await new Promise(r => setTimeout(r, wait));
+          continue;
+        }
+        break;
+      } catch (fetchErr) {
+        clearTimeout(timeout);
+        if (attempt < 2) {
+          console.log(`[Quiz] fetch error — 재시도 (${attempt+1}/2):`, fetchErr.message);
+          await new Promise(r => setTimeout(r, (attempt + 1) * 2000));
+          continue;
+        }
+        throw fetchErr;
       }
-    );
-    clearTimeout(timeout);
+    }
 
     const data = await response.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';

@@ -11,6 +11,7 @@ const SopStore = {
   getAll() {
     const sops = JSON.parse(localStorage.getItem(this._key) || '[]');
     // __stored__ 포인터 → IndexedDB 캐시에서 이미지 복원
+    // Supabase Storage URL(https://)은 이미 유효한 URL이므로 건드리지 않음
     sops.forEach(sop => {
       if (sop.script) sop.script.forEach((sc, idx) => {
         if (sc.imageUrl && sc.imageUrl.startsWith('__stored__:')) {
@@ -21,6 +22,10 @@ const SopStore = {
           } else {
             sc.imageUrl = null; // 캐시 없으면 나중에 비동기 로드
           }
+        }
+        // 유효하지 않은 imageUrl 정리 (data: base64 제외한 비-URL 문자열)
+        if (sc.imageUrl && !sc.imageUrl.startsWith('http') && !sc.imageUrl.startsWith('data:')) {
+          sc.imageUrl = null;
         }
       });
     });
