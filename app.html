@@ -157,13 +157,13 @@
         notifIncomplete: '아직 완료하지 않은 챕터가 있습니다',
         notifDeadline: (d) => `학습 마감일이 ${d}일 남았습니다`,
         notifNewSop: '새로운 교육 자료가 등록되었습니다',
-        welcome: (name) => `안녕하세요, ${name || '직원'}님!`,
-        startLearning: '학습을 시작해보세요',
-        progressLabel: '전체 진행률',
-        chapterProgress: (total, passed, videoDone) => `${total}개 챕터 중 ${passed}개 완료` + (videoDone > 0 && passed < total ? ` (${videoDone}개 영상 학습중)` : ''),
-        nextTodo: '다음 할 일',
-        startChapter: (n) => `챕터 ${n} 시작하기`,
-        allComplete: '모든 학습을 완료했습니다!',
+        welcome: (name) => `${name || '히어로'}님, 오늘도 파이팅!`,
+        startLearning: '오늘 한 챕터 깨볼까요?',
+        progressLabel: '나의 성장률',
+        chapterProgress: (total, passed, videoDone) => `${total}개 중 ${passed}개 클리어!` + (videoDone > 0 && passed < total ? ` (${videoDone}개 진행중 🔥)` : ''),
+        nextTodo: '다음 미션',
+        startChapter: (n) => `챕터 ${n} 도전!`,
+        allComplete: '전부 클리어! 당신은 진짜 프로 👏',
         completePrevious: '이전 챕터를 먼저 완료하세요',
         scenePrefix: '씬',
         quizChallenge: (title) => `${title} 퀴즈 도전!`,
@@ -237,13 +237,13 @@
         notifIncomplete: 'You have incomplete chapters',
         notifDeadline: (d) => `Training deadline in ${d} days`,
         notifNewSop: 'New training material has been published',
-        welcome: (name) => `Hello, ${name || 'Staff'}!`,
-        startLearning: 'Start your training',
-        progressLabel: 'Overall progress',
-        chapterProgress: (total, passed, videoDone) => `${passed} of ${total} chapters completed` + (videoDone > 0 && passed < total ? ` (${videoDone} videos in progress)` : ''),
-        nextTodo: 'Next to do',
-        startChapter: (n) => `Start Chapter ${n}`,
-        allComplete: 'All training completed!',
+        welcome: (name) => `Hey ${name || 'Hero'}, let's go!`,
+        startLearning: 'Ready to crush a chapter?',
+        progressLabel: 'My growth',
+        chapterProgress: (total, passed, videoDone) => `${passed} of ${total} cleared!` + (videoDone > 0 && passed < total ? ` (${videoDone} in progress 🔥)` : ''),
+        nextTodo: 'Next mission',
+        startChapter: (n) => `Chapter ${n} — Let's go!`,
+        allComplete: 'All cleared! You're a real pro 👏',
         completePrevious: 'Complete the previous chapter first',
         scenePrefix: 'Scene',
         quizChallenge: (title) => `${title} — Take Quiz!`,
@@ -315,13 +315,13 @@
         notifIncomplete: 'Bạn còn chương chưa hoàn thành',
         notifDeadline: (d) => `Hạn chót học tập còn ${d} ngày`,
         notifNewSop: 'Có tài liệu đào tạo mới',
-        welcome: (name) => `Xin chào, ${name || 'Nhân viên'}!`,
-        startLearning: 'Bắt đầu học tập',
-        progressLabel: 'Tiến độ tổng thể',
-        chapterProgress: (total, passed, videoDone) => `Hoàn thành ${passed}/${total} chương` + (videoDone > 0 && passed < total ? ` (${videoDone} video đang học)` : ''),
-        nextTodo: 'Việc tiếp theo',
-        startChapter: (n) => `Bắt đầu Chương ${n}`,
-        allComplete: 'Đã hoàn thành tất cả bài học!',
+        welcome: (name) => `${name || 'Hero'} ơi, cùng chiến nào!`,
+        startLearning: 'Sẵn sàng chinh phục chương mới?',
+        progressLabel: 'Mức tăng trưởng',
+        chapterProgress: (total, passed, videoDone) => `${passed}/${total} đã vượt qua!` + (videoDone > 0 && passed < total ? ` (${videoDone} đang học 🔥)` : ''),
+        nextTodo: 'Nhiệm vụ tiếp',
+        startChapter: (n) => `Chương ${n} — Chiến thôi!`,
+        allComplete: 'Hoàn thành hết rồi! Bạn là pro thật sự 👏',
         completePrevious: 'Hãy hoàn thành chương trước',
         scenePrefix: 'Cảnh',
         quizChallenge: (title) => `${title} — Làm bài kiểm tra!`,
@@ -1036,9 +1036,12 @@
     }
 
     async function renderLeaderboard() {
-      if (!SupabaseMode._ready) return;
       const section = document.getElementById('leaderboardSection');
       section.style.display = 'block';
+      if (!SupabaseMode._ready) {
+        document.getElementById('leaderboardContent').innerHTML = `<div class="card" style="text-align:center; padding:20px; color:var(--gray-500);">${t.lbEmpty || '아직 데이터가 없습니다'}</div>`;
+        return;
+      }
       document.getElementById('leaderboardTitle').textContent = t.leaderboard || '🏆 XP 리더보드';
       document.getElementById('lbToggle').textContent = lbOpen ? (t.lbCollapse || '접기 ▲') : (t.lbExpand || '펼치기 ▼');
 

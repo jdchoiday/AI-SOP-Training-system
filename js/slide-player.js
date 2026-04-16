@@ -62,14 +62,14 @@ const SlidePlayer = (() => {
     },
     vi: {
       slideOf: (c, t) => `${c} / ${t}`,
-      pause: 'Tam dung', play: 'Phat', prev: 'Truoc', next: 'Tiep',
-      close: 'Dong', autoPlay: 'Tu dong phat',
-      totalDuration: 'Thoi luong', min: 'phut', sec: 'giay',
-      visual: 'Hinh anh', narration: 'Thuyet minh',
-      completed: 'Hoan thanh!', completedMsg: 'Ban da xem het tat ca slide.',
-      closeBtn: 'Dong', slideTitle: (n, t) => `Canh ${n}/${t}`,
-      loading: 'Dang tao giong noi...', loadingShort: 'Dang tai...',
-      voiceReady: 'Giong noi san sang',
+      pause: 'Tạm dừng', play: 'Phát', prev: 'Trước', next: 'Tiếp',
+      close: 'Đóng', autoPlay: 'Tự động phát',
+      totalDuration: 'Thời lượng', min: 'phút', sec: 'giây',
+      visual: 'Hình ảnh', narration: 'Thuyết minh',
+      completed: 'Hoàn thành!', completedMsg: 'Bạn đã xem hết tất cả slide.',
+      closeBtn: 'Đóng', slideTitle: (n, t) => `Cảnh ${n}/${t}`,
+      loading: 'Đang tạo giọng nói...', loadingShort: 'Đang tải...',
+      voiceReady: 'Giọng nói sẵn sàng',
     }
   };
 

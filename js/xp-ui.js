@@ -68,8 +68,8 @@ function showLevelUpCelebration(oldTier, newTier, lang = 'ko') {
   overlay.id = 'levelup-overlay';
   overlay.className = 'levelup-overlay';
 
-  // confetti 효과도 함께 실행
-  showConfetti(4000, 50);
+  // 오버레이 내부 파티클이 있으므로 외부 showConfetti()는 호출하지 않음
+  // (호출 측에서 이미 showConfetti() 실행 후 레벨업 체크)
 
   // 폭죽 파티클 생성 (오버레이 내부용)
   let particles = '';

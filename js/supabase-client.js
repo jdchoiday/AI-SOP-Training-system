@@ -353,7 +353,7 @@ const SupabaseMode = {
       await this._client.from('employees').insert({
         name: emp.name,
         email: emp.email,
-        password_hash: emp.password || '1234',
+        password_hash: emp.password || null,  // admin이 비밀번호 설정 필수
         branch: emp.branch || '',
         team: emp.team || '',
         role: emp.role || 'staff',

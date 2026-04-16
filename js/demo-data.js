@@ -4,12 +4,17 @@
 // 관리자가 SOP를 배포하면 → 직원 앱에 챕터로 자동 반영
 // localStorage 기반 (Supabase 연결 전까지)
 
+// 안전한 JSON 파싱 (localStorage 손상 방어)
+function safeParse(raw, fallback) {
+  try { return JSON.parse(raw); } catch(e) { console.warn('[safeParse] 손상된 데이터:', e.message); return fallback; }
+}
+
 // ===== SOP 저장소 =====
 const SopStore = {
   _key: 'sop_documents',
 
   getAll() {
-    const sops = JSON.parse(localStorage.getItem(this._key) || '[]');
+    const sops = safeParse(localStorage.getItem(this._key) || '[]', []);
     // __stored__ 포인터 → IndexedDB 캐시에서 이미지 복원
     // Supabase Storage URL(https://)은 이미 유효한 URL이므로 건드리지 않음
     sops.forEach(sop => {
@@ -35,7 +40,7 @@ const SopStore = {
   // 비동기: 특정 SOP의 이미지를 IndexedDB에서 프리로드
   async preloadImages(sopId) {
     if (typeof ImageDB === 'undefined') return;
-    const sops = JSON.parse(localStorage.getItem(this._key) || '[]');
+    const sops = safeParse(localStorage.getItem(this._key) || '[]', []);
     const sop = sops.find(s => s.id === sopId);
     if (!sop?.script) return;
     if (typeof _imageCache === 'undefined') window._imageCache = {};
@@ -339,7 +344,7 @@ const EmployeeStore = {
   _key: 'sop_employees',
 
   getAll() {
-    return JSON.parse(localStorage.getItem(this._key) || '[]');
+    return safeParse(localStorage.getItem(this._key) || '[]', []);
   },
 
   save(emps) {
@@ -353,7 +358,7 @@ const EmployeeStore = {
 
   // 현재 로그인한 직원 정보
   getCurrentEmployee() {
-    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    const user = safeParse(localStorage.getItem('sop_user') || 'null', null);
     if (!user) return null;
     return this.getAll().find(e => e.email === user.email) || {
       id: user.id, name: user.name, email: user.email, branch: '본사', role: user.role
@@ -382,7 +387,7 @@ const Progress = {
 
   // 구조: { "employee_id": { completedVideos: [], chapterResults: {}, quizScores: {} } }
   _getData() {
-    return JSON.parse(localStorage.getItem(this._key) || '{}');
+    return safeParse(localStorage.getItem(this._key) || '{}', {});
   },
 
   _save(data) {
@@ -402,7 +407,7 @@ const Progress = {
   },
 
   _currentEmpId() {
-    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    const user = safeParse(localStorage.getItem('sop_user') || 'null', null);
     return user ? user.id : null;
   },
 
