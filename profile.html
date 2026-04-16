@@ -751,9 +751,19 @@
       // Supabase 저장
       if (SupabaseMode._ready && SupabaseMode._client) {
         try {
+          // 사진 → Supabase Storage 업로드 후 URL 저장
+          let avatarUrl = '';
+          if (profile.avatarType === 'photo' && profile.avatar && profile.avatar.startsWith('data:')) {
+            try {
+              const url = await SupabaseMode.uploadSceneImage('profiles', user.id, profile.avatar);
+              if (url) { avatarUrl = url; profile.avatar = url; /* 이후 base64 대신 URL 사용 */ }
+            } catch(e) { console.warn('[Profile] Avatar upload failed:', e); }
+          } else if (profile.avatarType === 'photo' && profile.avatar && profile.avatar.startsWith('http')) {
+            avatarUrl = profile.avatar; // 이미 URL
+          }
           await SupabaseMode._client.from('employee_profiles').upsert({
             employee_id: user.id,
-            avatar: profile.avatarType === 'photo' ? profile.avatar : '',
+            avatar: avatarUrl,
             avatar_type: profile.avatarType,
             avatar_emoji: profile.avatarType === 'emoji' ? profile.avatar : '',
             intro: profile.intro,

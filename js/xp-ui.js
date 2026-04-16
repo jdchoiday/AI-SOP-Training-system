@@ -1,12 +1,64 @@
 // ============================================
 // 키우자 히어로즈 — XP UI 컴포넌트
 // ============================================
-// XP 토스트 알림 + 레벨업 축하 모달
+// XP 토스트 알림 + 레벨업 축하 모달 + 효과음
+
+// ===== 효과음 엔진 (Web Audio API, 무료) =====
+const SFX = {
+  _ctx: null,
+  _enabled: true,
+
+  _getCtx() {
+    if (!this._ctx) try { this._ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+    return this._ctx;
+  },
+
+  /** XP 획득 "띠링" */
+  xp() {
+    if (!this._enabled) return;
+    const ctx = this._getCtx(); if (!ctx) return;
+    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine'; osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.3);
+  },
+
+  /** 레벨업 "빠밤!" */
+  levelUp() {
+    if (!this._enabled) return;
+    const ctx = this._getCtx(); if (!ctx) return;
+    [523, 659, 784, 1047].forEach((freq, i) => {
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'triangle'; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.12, ctx.currentTime + i * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.3);
+      osc.start(ctx.currentTime + i * 0.12); osc.stop(ctx.currentTime + i * 0.12 + 0.3);
+    });
+  },
+
+  /** Confetti/완료 "퐁" */
+  pop() {
+    if (!this._enabled) return;
+    const ctx = this._getCtx(); if (!ctx) return;
+    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine'; osc.frequency.setValueAtTime(600, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.2);
+  },
+};
 
 /**
  * XP 적립 토스트 (화면 상단에 "+50 XP" 표시)
  */
 function showXpToast(amount, isBonus = false) {
+  try { SFX.xp(); } catch(e) {}
   // 기존 토스트 제거
   const old = document.getElementById('xp-toast');
   if (old) old.remove();
@@ -34,6 +86,7 @@ function showXpToast(amount, isBonus = false) {
  * @param {number} count - 파티클 수, 기본 40
  */
 function showConfetti(duration = 2500, count = 40) {
+  try { SFX.pop(); } catch(e) {}
   const existing = document.getElementById('confetti-burst');
   if (existing) existing.remove();
 
@@ -59,6 +112,7 @@ function showConfetti(duration = 2500, count = 40) {
  * 레벨업 축하 풀스크린 오버레이
  */
 function showLevelUpCelebration(oldTier, newTier, lang = 'ko') {
+  try { SFX.levelUp(); } catch(e) {}
   // 기존 오버레이 제거
   const old = document.getElementById('levelup-overlay');
   if (old) old.remove();

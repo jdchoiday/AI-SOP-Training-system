@@ -45,7 +45,10 @@
 
     <!-- ===== 환영 카드 ===== -->
     <div class="card">
-      <h3 style="margin-bottom:4px;" id="welcomeMsg">안녕하세요!</h3>
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h3 style="margin-bottom:4px;" id="welcomeMsg">안녕하세요!</h3>
+        <div id="streakBadge" style="display:none; padding:4px 12px; border-radius:20px; background:linear-gradient(135deg,#FF6B35,#FFD700); color:white; font-size:13px; font-weight:700; white-space:nowrap;">🔥 0일</div>
+      </div>
       <p style="color:var(--gray-500); font-size:14px;" id="progressSummary"></p>
       <div class="progress-bar" style="margin-top:12px;">
         <div class="fill" id="totalProgress" style="width:0%"></div>
@@ -136,6 +139,20 @@
 
     <!-- 모바일 하단 네비 중복은 CSS가 처리 -->
 
+  </div>
+
+  <!-- ===== 온보딩 튜토리얼 (첫 로그인 시) ===== -->
+  <div id="onboardingOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:10000; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-card); border-radius:24px; padding:32px 24px; width:90%; max-width:380px; text-align:center; position:relative;">
+      <div id="onboardStep" style="font-size:48px; margin-bottom:16px;"></div>
+      <h2 id="onboardTitle" style="font-size:20px; font-weight:800; margin-bottom:8px; color:var(--gray-900);"></h2>
+      <p id="onboardDesc" style="font-size:14px; color:var(--gray-500); line-height:1.7; margin-bottom:24px;"></p>
+      <div style="display:flex; justify-content:center; gap:6px; margin-bottom:20px;" id="onboardDots"></div>
+      <div style="display:flex; gap:10px;">
+        <button id="onboardSkip" onclick="closeOnboarding()" style="flex:1; padding:12px; border-radius:12px; border:1px solid var(--gray-200); background:transparent; color:var(--gray-500); font-size:14px; font-weight:600; cursor:pointer;">건너뛰기</button>
+        <button id="onboardNext" onclick="nextOnboardStep()" style="flex:2; padding:12px; border-radius:12px; border:none; background:var(--primary); color:white; font-size:14px; font-weight:700; cursor:pointer;">다음</button>
+      </div>
+    </div>
   </div>
 
   <script src="js/image-db.js"></script>
@@ -1182,9 +1199,12 @@
     }
 
     async function renderCompetitiveRanking() {
-      if (!SupabaseMode._ready) return;
       const section = document.getElementById('competitiveSection');
       section.style.display = 'block';
+      if (!SupabaseMode._ready) {
+        document.getElementById('rankContent').innerHTML = `<div class="card" style="text-align:center; padding:20px; color:var(--gray-500);">${t.rankNoData || '아직 기록이 없습니다'}</div>`;
+        return;
+      }
       const container = document.getElementById('rankContent');
       const myId = _resolvedEmpId || user?.id;
       const myBranch = user?.branch || '';
@@ -1843,12 +1863,93 @@
     let notifEnabled = localStorage.getItem(notifKey) === 'true';
     let notifInterval = null;
 
+    // ===== 온보딩 튜토리얼 =====
+    const _onboardSteps = {
+      ko: [
+        { icon: '🎓', title: '키우자 히어로즈에 오신 걸 환영해요!', desc: '이 앱은 교육을 게임처럼 즐기면서 성장하는 플랫폼이에요.\nXP를 모아 티어를 올리고, 동료와 함께 성장해보세요!' },
+        { icon: '📺', title: '챕터를 깨봐요', desc: '각 챕터는 짧은 슬라이드와 퀴즈로 구성되어 있어요.\n퀴즈를 통과하면 XP를 받고, 만점이면 보너스까지!' },
+        { icon: '🙌', title: '동료에게 부스트를!', desc: '멋진 동료에게 부스트를 보내보세요.\n보내는 사람도 받는 사람도 XP를 획득합니다!' },
+        { icon: '🔥', title: '매일 접속하면 스트릭!', desc: '연속 접속하면 🔥 스트릭이 쌓여요.\n매일 조금씩, 꾸준히 성장하는 게 핵심!' },
+      ],
+      en: [
+        { icon: '🎓', title: 'Welcome to Kiwooza Heroes!', desc: 'This app makes training fun like a game.\nEarn XP, level up your tier, and grow with your team!' },
+        { icon: '📺', title: 'Crush some chapters', desc: 'Each chapter has short slides and quizzes.\nPass quizzes for XP, perfect score for bonus!' },
+        { icon: '🙌', title: 'Boost your colleagues!', desc: 'Send boosts to awesome teammates.\nBoth sender and receiver earn XP!' },
+        { icon: '🔥', title: 'Daily streak!', desc: 'Log in daily to build your 🔥 streak.\nConsistency is the key to growth!' },
+      ],
+      vi: [
+        { icon: '🎓', title: 'Chào mừng đến Kiwooza Heroes!', desc: 'Ứng dụng biến đào tạo thành trò chơi.\nKiếm XP, nâng cấp, và phát triển cùng đội!' },
+        { icon: '📺', title: 'Chinh phục các chương', desc: 'Mỗi chương có slide ngắn và quiz.\nĐạt điểm tuyệt đối để nhận thưởng bonus!' },
+        { icon: '🙌', title: 'Boost đồng nghiệp!', desc: 'Gửi boost cho đồng nghiệp xuất sắc.\nCả người gửi và nhận đều được XP!' },
+        { icon: '🔥', title: 'Streak hàng ngày!', desc: 'Đăng nhập mỗi ngày để xây streak 🔥.\nKiên trì là chìa khóa tăng trưởng!' },
+      ],
+    };
+
+    let _onboardIdx = 0;
+    function showOnboarding() {
+      const steps = _onboardSteps[lang] || _onboardSteps.ko;
+      _onboardIdx = 0;
+      const overlay = document.getElementById('onboardingOverlay');
+      overlay.style.display = 'flex';
+      _renderOnboardStep(steps);
+    }
+    function _renderOnboardStep(steps) {
+      const s = steps[_onboardIdx];
+      document.getElementById('onboardStep').textContent = s.icon;
+      document.getElementById('onboardTitle').textContent = s.title;
+      document.getElementById('onboardDesc').textContent = s.desc;
+      document.getElementById('onboardDots').innerHTML = steps.map((_, i) =>
+        `<div style="width:${i===_onboardIdx?'20px':'8px'};height:8px;border-radius:4px;background:${i===_onboardIdx?'var(--primary)':'var(--gray-200)'};transition:all 0.3s;"></div>`
+      ).join('');
+      const nextBtn = document.getElementById('onboardNext');
+      const skipBtn = document.getElementById('onboardSkip');
+      if (_onboardIdx === steps.length - 1) {
+        nextBtn.textContent = lang === 'en' ? "Let's go!" : lang === 'vi' ? 'Bắt đầu!' : '시작하기!';
+        skipBtn.style.display = 'none';
+      } else {
+        nextBtn.textContent = lang === 'en' ? 'Next' : lang === 'vi' ? 'Tiếp' : '다음';
+        skipBtn.textContent = lang === 'en' ? 'Skip' : lang === 'vi' ? 'Bỏ qua' : '건너뛰기';
+        skipBtn.style.display = 'block';
+      }
+    }
+    function nextOnboardStep() {
+      const steps = _onboardSteps[lang] || _onboardSteps.ko;
+      _onboardIdx++;
+      if (_onboardIdx >= steps.length) { closeOnboarding(); return; }
+      _renderOnboardStep(steps);
+    }
+    function closeOnboarding() {
+      document.getElementById('onboardingOverlay').style.display = 'none';
+      localStorage.setItem('sop_onboarded', 'true');
+    }
+
+    // 첫 로그인 감지
+    if (!localStorage.getItem('sop_onboarded')) {
+      setTimeout(() => showOnboarding(), 800); // 페이지 로드 후 0.8초 뒤 표시
+    }
+
     // ===== 초기화 =====
     try { updateProgress(); } catch(e) { console.warn('[Init] updateProgress:', e.message); }
     try { updateNextAction(); } catch(e) { console.warn('[Init] updateNextAction:', e.message); }
     try { renderChapters(); } catch(e) { console.warn('[Init] renderChapters:', e.message); }
     try { renderMbtiCard(); } catch(e) { console.warn('[Init] renderMbtiCard:', e.message); }
     try { loadAndRenderQuests(); } catch(e) { console.warn('[Init] loadAndRenderQuests:', e.message); }
+    // 스트릭 체크인
+    try {
+      const empId = user?.id;
+      if (empId && typeof StreakService !== 'undefined') {
+        StreakService.sync(empId).then(() => {
+          const streak = StreakService.checkIn(empId);
+          const badge = document.getElementById('streakBadge');
+          if (badge && streak.current > 0) {
+            badge.style.display = 'inline-block';
+            badge.textContent = `🔥 ${streak.current}일 연속`;
+            if (streak.current >= 7) badge.style.background = 'linear-gradient(135deg,#EF4444,#FF6B35)';
+            if (streak.current >= 30) badge.style.background = 'linear-gradient(135deg,#9B59B6,#EF4444)';
+          }
+        });
+      }
+    } catch(e) { console.warn('[Init] streak:', e.message); }
     try { renderXpGuide(); } catch(e) { console.warn('[Init] renderXpGuide:', e.message); }
     try { renderBoostGuide(); } catch(e) { console.warn('[Init] renderBoostGuide:', e.message); }
     try { renderXpRewards(); } catch(e) { console.warn('[Init] renderXpRewards:', e.message); }

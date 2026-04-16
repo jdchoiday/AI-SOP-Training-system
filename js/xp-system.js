@@ -527,3 +527,70 @@ async function savePraiseConfigToSupabase(config) {
     console.error('[PraiseConfig] Supabase 저장 실패:', e);
   }
 }
+
+// ===== 일일 스트릭 시스템 =====
+const StreakService = {
+  _key: 'sop_streak',
+
+  /** 오늘 접속 기록 + 스트릭 갱신 */
+  checkIn(empId) {
+    if (!empId) return this._get(empId);
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const data = this._get(empId);
+
+    if (data.lastDate === today) return data; // 이미 체크인
+
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    if (data.lastDate === yesterday) {
+      data.current += 1; // 연속!
+    } else {
+      data.current = 1; // 리셋
+    }
+    data.lastDate = today;
+    data.best = Math.max(data.best, data.current);
+    data.totalDays = (data.totalDays || 0) + 1;
+
+    localStorage.setItem(this._key + '_' + empId, JSON.stringify(data));
+
+    // Supabase 동기화 (fire & forget)
+    if (SupabaseMode._ready) {
+      SupabaseMode._client.from('employee_streaks').upsert({
+        employee_id: empId, current_streak: data.current,
+        best_streak: data.best, last_date: data.lastDate,
+        total_days: data.totalDays, updated_at: new Date().toISOString(),
+      }, { onConflict: 'employee_id' }).catch(() => {});
+    }
+
+    return data;
+  },
+
+  _get(empId) {
+    try {
+      const raw = localStorage.getItem(this._key + '_' + (empId || ''));
+      if (raw) return JSON.parse(raw);
+    } catch(e) {}
+    return { current: 0, best: 0, lastDate: '', totalDays: 0 };
+  },
+
+  /** Supabase에서 스트릭 로드 (첫 로드 시) */
+  async sync(empId) {
+    if (!SupabaseMode._ready || !empId) return;
+    try {
+      const { data } = await SupabaseMode._client
+        .from('employee_streaks').select('*').eq('employee_id', empId).maybeSingle();
+      if (data) {
+        const local = this._get(empId);
+        // Supabase가 더 높으면 동기화
+        if ((data.current_streak || 0) > local.current || (data.best_streak || 0) > local.best) {
+          const merged = {
+            current: Math.max(data.current_streak || 0, local.current),
+            best: Math.max(data.best_streak || 0, local.best),
+            lastDate: data.last_date || local.lastDate,
+            totalDays: Math.max(data.total_days || 0, local.totalDays),
+          };
+          localStorage.setItem(this._key + '_' + empId, JSON.stringify(merged));
+        }
+      }
+    } catch(e) {}
+  }
+};
