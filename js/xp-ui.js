@@ -7,10 +7,30 @@
 const SFX = {
   _ctx: null,
   _enabled: true,
+  _unlocked: false,
 
   _getCtx() {
-    if (!this._ctx) try { this._ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+    if (!this._ctx) {
+      try { this._ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return null; }
+    }
+    // iOS: suspended 상태면 resume 시도
+    if (this._ctx && this._ctx.state === 'suspended') {
+      this._ctx.resume().catch(() => {});
+    }
     return this._ctx;
+  },
+
+  // iOS/모바일: 첫 터치/클릭 시 AudioContext 활성화
+  _initOnGesture() {
+    if (this._unlocked) return;
+    const unlock = () => {
+      this._getCtx();
+      this._unlocked = true;
+      document.removeEventListener('click', unlock);
+      document.removeEventListener('touchstart', unlock);
+    };
+    document.addEventListener('click', unlock, { once: true });
+    document.addEventListener('touchstart', unlock, { once: true });
   },
 
   /** XP 획득 "띠링" */
@@ -53,6 +73,8 @@ const SFX = {
     osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.2);
   },
 };
+// iOS 모바일 대응: 페이지 로드 시 제스처 리스너 등록
+try { SFX._initOnGesture(); } catch(e) {}
 
 /**
  * XP 적립 토스트 (화면 상단에 "+50 XP" 표시)

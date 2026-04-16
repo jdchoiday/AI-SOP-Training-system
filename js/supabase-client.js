@@ -190,6 +190,34 @@ const SupabaseMode = {
     return text.replace(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/g, '');
   },
 
+  // 프로필 사진 업로드 (sop-images 버킷, profiles/ 경로)
+  async uploadProfilePhoto(empId, base64DataUrl) {
+    if (!this._ready || !base64DataUrl) return null;
+    try {
+      const match = base64DataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (!match) return null;
+      const mimeType = match[1];
+      const ext = mimeType.split('/')[1] || 'jpg';
+      const byteString = atob(match[2]);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+      const blob = new Blob([ab], { type: mimeType });
+
+      const filePath = `profiles/${empId}.${ext}`;
+      const { error } = await this._client.storage
+        .from('sop-images').upload(filePath, blob, { contentType: mimeType, upsert: true });
+      if (error) { console.warn('[Storage] 프로필 업로드 실패:', error.message); return null; }
+
+      const { data } = this._client.storage.from('sop-images').getPublicUrl(filePath);
+      console.log(`[Storage] ✅ 프로필 사진 업로드 완료 (${empId})`);
+      return data?.publicUrl || null;
+    } catch (e) {
+      console.warn('[Storage] 프로필 사진 오류:', e.message);
+      return null;
+    }
+  },
+
   // base64 이미지를 Supabase Storage에 업로드하고 공개 URL 반환
   async uploadSceneImage(sopId, sceneIndex, base64DataUrl) {
     if (!this._ready) return null;

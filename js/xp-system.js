@@ -535,12 +535,13 @@ const StreakService = {
   /** 오늘 접속 기록 + 스트릭 갱신 */
   checkIn(empId) {
     if (!empId) return this._get(empId);
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    // 로컬 타임존 기준 날짜 (KST 등 사용자 시간대 반영)
+    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD (local)
     const data = this._get(empId);
 
     if (data.lastDate === today) return data; // 이미 체크인
 
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
     if (data.lastDate === yesterday) {
       data.current += 1; // 연속!
     } else {

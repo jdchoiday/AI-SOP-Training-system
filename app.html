@@ -1054,8 +1054,9 @@
 
     async function renderLeaderboard() {
       const section = document.getElementById('leaderboardSection');
+      if (!section) return;
       section.style.display = 'block';
-      if (!SupabaseMode._ready) {
+      if (!SupabaseMode._ready || typeof XpService === 'undefined') {
         document.getElementById('leaderboardContent').innerHTML = `<div class="card" style="text-align:center; padding:20px; color:var(--gray-500);">${t.lbEmpty || '아직 데이터가 없습니다'}</div>`;
         return;
       }
@@ -1200,8 +1201,9 @@
 
     async function renderCompetitiveRanking() {
       const section = document.getElementById('competitiveSection');
+      if (!section) return;
       section.style.display = 'block';
-      if (!SupabaseMode._ready) {
+      if (!SupabaseMode._ready || typeof XpService === 'undefined') {
         document.getElementById('rankContent').innerHTML = `<div class="card" style="text-align:center; padding:20px; color:var(--gray-500);">${t.rankNoData || '아직 기록이 없습니다'}</div>`;
         return;
       }
