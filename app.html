@@ -260,7 +260,7 @@
         chapterProgress: (total, passed, videoDone) => `${passed} of ${total} cleared!` + (videoDone > 0 && passed < total ? ` (${videoDone} in progress 🔥)` : ''),
         nextTodo: 'Next mission',
         startChapter: (n) => `Chapter ${n} — Let's go!`,
-        allComplete: 'All cleared! You're a real pro 👏',
+        allComplete: "All cleared! You're a real pro 👏",
         completePrevious: 'Complete the previous chapter first',
         scenePrefix: 'Scene',
         quizChallenge: (title) => `${title} — Take Quiz!`,
@@ -432,19 +432,47 @@
     }
 
     // Supabase 초기화 (매번 최신 데이터 동기화)
+    // 첫 로그인 시 localStorage 비어있으면 sync 후 reload (chapterData const가 stale)
+    const _hadChapters = chapters.length > 0;
     SupabaseMode.init().then(connected => {
       if (connected) {
         SupabaseMode.syncAll().then(() => {
-          // Supabase 동기화 후 UI 갱신 (reload 하지 않음 — 깜박임 방지)
-          renderTierCard();
-          renderPraiseMiniCard();
-          renderTasksMiniCard();
-          renderTeamTasksMiniCard();
-          renderScoreCard();
-          renderLeaderboard();
-          renderCompetitiveRanking();
-          renderXpRewards();
+          // localStorage가 비어있었는데 이제 Supabase에서 챕터를 받았으면 reload
+          const freshChapters = SopStore.getChapters();
+          const freshCount = (freshChapters.chapters?.length || 0) + (freshChapters.orphanSections?.length || 0);
+          if (!_hadChapters && freshCount > 0) {
+            console.log('[Init] 첫 로그인 — Supabase 동기화 완료 후 새로고침');
+            window.location.reload();
+            return;
+          }
+
+          // Supabase 동기화 후 UI 갱신
+          try { updateProgress(); } catch(e) { console.warn('[Sync] updateProgress:', e.message); }
+          try { updateNextAction(); } catch(e) { console.warn('[Sync] updateNextAction:', e.message); }
+          try { loadAndRenderQuests(); } catch(e) { console.warn('[Sync] loadAndRenderQuests:', e.message); }
+          try { renderTierCard(); } catch(e) { console.warn('[Sync] renderTierCard:', e.message); }
+          try { renderPraiseMiniCard(); } catch(e) { console.warn('[Sync] renderPraiseMiniCard:', e.message); }
+          try { renderTasksMiniCard(); } catch(e) { console.warn('[Sync] renderTasksMiniCard:', e.message); }
+          try { renderTeamTasksMiniCard(); } catch(e) { console.warn('[Sync] renderTeamTasksMiniCard:', e.message); }
+          try { renderScoreCard(); } catch(e) { console.warn('[Sync] renderScoreCard:', e.message); }
+          try { renderLeaderboard(); } catch(e) { console.warn('[Sync] renderLeaderboard:', e.message); }
+          try { renderCompetitiveRanking(); } catch(e) { console.warn('[Sync] renderCompetitiveRanking:', e.message); }
+          try { renderXpRewards(); } catch(e) { console.warn('[Sync] renderXpRewards:', e.message); }
+          try { renderMbtiCard(); } catch(e) { console.warn('[Sync] renderMbtiCard:', e.message); }
+
+          // welcome 메시지도 최신 user 이름으로 갱신
+          try {
+            const freshUser = JSON.parse(localStorage.getItem('sop_user') || 'null');
+            if (freshUser?.name) {
+              document.getElementById('welcomeMsg').textContent = t.welcome(freshUser.name);
+            }
+          } catch(e) {}
         });
+      } else {
+        // Supabase 연결 안 됐을 때도 welcome 메시지는 갱신
+        try {
+          if (user?.name) document.getElementById('welcomeMsg').textContent = t.welcome(user.name);
+        } catch(e) {}
       }
     });
 
