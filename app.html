@@ -433,7 +433,9 @@
 
     // Supabase 초기화 (매번 최신 데이터 동기화)
     // 첫 로그인 시 localStorage 비어있으면 sync 후 reload (chapterData const가 stale)
-    const _hadChapters = chapters.length > 0;
+    // chapters 변수는 아래(line ~468)에서 정의되므로 SopStore에서 직접 확인
+    const _initialChapterData = SopStore.getChapters();
+    const _hadChapters = (_initialChapterData.chapters?.length || 0) + (_initialChapterData.orphanSections?.length || 0) > 0;
     SupabaseMode.init().then(connected => {
       if (connected) {
         SupabaseMode.syncAll().then(() => {
