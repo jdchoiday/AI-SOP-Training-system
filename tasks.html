@@ -688,13 +688,21 @@
           if (statusEl) statusEl.textContent = t.dmGpsFail;
         }
       } catch (e) {
-        // GPS 거부/오류 → 접속으로 인정
+        // GPS 거부/오류 → XP 지급 안 함 (어뷰즈 방지)
         console.log('[DM] GPS error:', e.message || e.code);
-        await claimMissionXp('attendance');
-        if (statusEl) statusEl.textContent = t.dmGpsError;
+        if (statusEl) {
+          statusEl.textContent = (e.code === 1) // 권한 거부
+            ? (lang === 'en' ? '⚠️ GPS permission denied. Enable location access to check in.'
+               : lang === 'vi' ? '⚠️ GPS bị từ chối. Bật vị trí để check-in.'
+               : '⚠️ GPS 권한이 거부되어 출근 체크를 할 수 없습니다.')
+            : (lang === 'en' ? '⚠️ GPS unavailable. Please try again or move to open sky.'
+               : lang === 'vi' ? '⚠️ GPS không khả dụng. Thử lại ở nơi có tín hiệu.'
+               : '⚠️ GPS 신호를 받지 못했습니다. 야외에서 다시 시도하세요.');
+        }
+        // 재시도 버튼 상태로 유지 (dailyMissionStatus.attendance는 그대로 false)
       }
 
-      setTimeout(() => { renderDailyMissions(); updateSummary(); }, 1500);
+      setTimeout(() => { renderDailyMissions(); updateSummary(); }, 2500);
     }
 
     // ===== XP 보상 지급 =====

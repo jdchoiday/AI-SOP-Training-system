@@ -548,15 +548,23 @@ const SupabaseMode = {
   async syncAll() {
     if (!this._ready) return;
     console.log('[Supabase] 전체 동기화 시작...');
+    const SYNC_TIMEOUT_MS = 15000; // 15초 글로벌 타임아웃
+
+    // 각 sync를 타임아웃으로 감싸기 (개별 hang 방지)
+    const withTimeout = (promise, name) => Promise.race([
+      promise,
+      new Promise((_, rej) => setTimeout(() => rej(new Error(`${name} timeout`)), SYNC_TIMEOUT_MS))
+    ]).catch(e => { console.warn(`[Supabase] ${name} 실패:`, e.message); return null; });
+
     await Promise.all([
-      this.syncSops(),
-      this.syncEmployees(),
-      this.syncBranchTeams(),
+      withTimeout(this.syncSops(), 'syncSops'),
+      withTimeout(this.syncEmployees(), 'syncEmployees'),
+      withTimeout(this.syncBranchTeams(), 'syncBranchTeams'),
     ]);
     // 로그인된 사용자의 진행률도 동기화
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
     if (user?.id) {
-      await this.syncProgress(user.id);
+      await withTimeout(this.syncProgress(user.id), 'syncProgress');
     }
     console.log('[Supabase] ✅ 전체 동기화 완료');
   },

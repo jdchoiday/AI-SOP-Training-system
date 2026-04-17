@@ -59,7 +59,14 @@
         <p style="font-size:48px; margin-bottom:12px;">🚫</p>
         <p style="font-size:16px; font-weight:600; margin-bottom:8px;" id="invalidTitle">유효하지 않은 초대 링크입니다</p>
         <p style="font-size:14px; color:var(--gray-500);" id="invalidDesc">관리자에게 새 초대 링크를 요청하세요</p>
-        <a href="index.html" class="btn btn-outline" style="margin-top:16px; display:inline-block;" id="goLoginBtn">로그인 페이지로</a>
+        <div style="margin-top:16px; padding:14px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:10px; text-align:left;">
+          <p style="font-size:13px; font-weight:600; color:#3B82F6; margin-bottom:6px;" id="invalidHelpTitle">🆘 도움이 필요하세요?</p>
+          <p style="font-size:13px; color:var(--gray-400); line-height:1.6;" id="invalidHelp">1. 관리자에게 카카오톡/슬랙으로 연락<br>2. 새 초대 링크 요청<br>3. 링크 클릭 시 <strong>전체 복사-붙여넣기</strong> 확인 (잘림 방지)</p>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:16px;">
+          <a href="index.html" class="btn btn-outline" style="flex:1; display:inline-block;" id="goLoginBtn">로그인 페이지</a>
+          <button onclick="location.reload()" class="btn btn-primary" style="flex:1;" id="retryBtn">🔄 다시 시도</button>
+        </div>
       </div>
 
       <div id="successMsg" style="display:none; text-align:center; padding:20px;">

@@ -5427,6 +5427,37 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
     }
 
     // ===== 직원 관리 =====
+    // 직원 비밀번호 초기화 (임시 비번 설정 → 직원에게 전달)
+    async function resetEmployeePassword(empId, email, name) {
+      const tempPw = prompt(`${name}님의 새 임시 비밀번호를 설정합니다.\n(예: kiwooza1234)\n\n직원에게 전달하고 첫 로그인 후 변경하도록 안내하세요.`, 'kiwooza1234');
+      if (!tempPw || tempPw.length < 4) return;
+
+      if (!SupabaseMode._ready) {
+        alert('Supabase 연결이 필요합니다');
+        return;
+      }
+
+      try {
+        // 서버에서 해시 생성
+        const hashRes = await fetch('/api/auth', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'hash', password: tempPw })
+        });
+        const { hash } = await hashRes.json();
+        if (!hash) throw new Error('해시 생성 실패');
+
+        // Supabase 업데이트
+        await SupabaseMode._client
+          .from('employees')
+          .update({ password_hash: hash })
+          .eq('id', empId);
+
+        alert(`✅ ${name}님의 비밀번호가 재설정되었습니다.\n\n이메일: ${email}\n새 비밀번호: ${tempPw}\n\n이 정보를 직원에게 안전하게 전달하세요.`);
+      } catch (e) {
+        alert('비밀번호 재설정 실패: ' + e.message);
+      }
+    }
+
     // Supabase에서 최신 직원 목록 다시 가져오기 (신규 가입자 반영)
     async function refreshEmployees() {
       if (!SupabaseMode._ready) {
@@ -5468,7 +5499,10 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
         <td>${mbtiHtml}</td>
         <td>${gradeHtml}</td>
         <td style="font-size:13px;color:var(--gray-500);">${emp.created}</td>
-        <td><button class="btn btn-outline" style="padding:4px 12px;font-size:12px;" onclick="showEmployeeDetail('${emp.id}')">상세</button></td></tr>`;
+        <td style="white-space:nowrap;">
+          <button class="btn btn-outline" style="padding:4px 10px;font-size:12px;margin-right:4px;" onclick="showEmployeeDetail('${emp.id}')">상세</button>
+          <button class="btn btn-outline" style="padding:4px 10px;font-size:12px;color:#f59e0b;border-color:#f59e0b;" onclick="resetEmployeePassword('${emp.id}','${emp.email}','${emp.name}')" title="비밀번호 초기화">🔑</button>
+        </td></tr>`;
       }).join('');
     }
 

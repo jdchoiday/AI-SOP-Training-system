@@ -12,7 +12,10 @@
 </head>
 <body>
 
-  <!-- ===== 첫 방문 언어 선택 오버레이 ===== -->
+  <!-- ===== 첫 방문 언어 선택 오버레이 (JS 실패 시 자동 숨김) ===== -->
+  <noscript>
+    <style>#langPickerOverlay { display: none !important; }</style>
+  </noscript>
   <div id="langPickerOverlay" style="display:none; position:fixed; inset:0; background:linear-gradient(135deg,#0F172A 0%,#1E293B 100%); z-index:10000; align-items:center; justify-content:center; padding:20px;">
     <div style="max-width:400px; width:100%; text-align:center;">
       <div style="font-size:80px; margin-bottom:16px;">🌍</div>
@@ -47,8 +50,19 @@
       </button>
 
       <p style="margin-top:24px; font-size:11px; color:#64748B;">You can change this later in settings</p>
+      <button onclick="document.getElementById('langPickerOverlay').style.display='none'" style="margin-top:8px;background:none;border:none;color:#64748B;font-size:11px;cursor:pointer;text-decoration:underline;">Skip / 건너뛰기</button>
     </div>
   </div>
+  <script>
+    // JS 실패 안전망: 8초 내 pickLang 함수가 정의 안 되면 오버레이 제거
+    setTimeout(() => {
+      if (typeof pickLang !== 'function') {
+        const o = document.getElementById('langPickerOverlay');
+        if (o) o.style.display = 'none';
+        console.warn('[Safety] pickLang 미정의 — 오버레이 제거');
+      }
+    }, 8000);
+  </script>
 
   <div class="login-container">
     <div class="login-card">
@@ -121,10 +135,13 @@
   <script src="js/config.js"></script>
   <script src="js/supabase-client.js"></script>
   <script>
-    // ===== 세션 타임아웃 체크 (24시간) =====
+    // ===== 세션 타임아웃 체크 (24시간) — 미래/음수 타임스탬프 방어 =====
     const SESSION_HOURS = 24;
-    const loginTime = localStorage.getItem('sop_login_time');
-    if (loginTime && (Date.now() - parseInt(loginTime)) > SESSION_HOURS * 60 * 60 * 1000) {
+    const loginTime = parseInt(localStorage.getItem('sop_login_time') || '0');
+    const now = Date.now();
+    const diff = now - loginTime;
+    // loginTime이 미래이거나, 24시간 초과면 무효화
+    if (loginTime > 0 && (loginTime > now || diff > SESSION_HOURS * 60 * 60 * 1000)) {
       localStorage.removeItem('sop_user');
       localStorage.removeItem('sop_login_time');
     }

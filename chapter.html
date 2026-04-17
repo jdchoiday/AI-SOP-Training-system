@@ -649,14 +649,44 @@
     const params = new URLSearchParams(window.location.search);
     const chapterId = params.get('id');
     const isExamMode = params.get('exam') === 'true'; // 챕터 종합시험 모드
-    const sop = SopStore.getById(chapterId);
-    const chapter = sop ? { id: sop.id, title: sop.title, title_en: sop.title_en, title_vn: sop.title_vn, doc_type: sop.doc_type } : null;
-    const videos = SopStore.getVideos(chapterId);
-    const chapterQuizzes = SopStore.getQuizzes(chapterId);
+    let sop = SopStore.getById(chapterId);
+    let chapter = sop ? { id: sop.id, title: sop.title, title_en: sop.title_en, title_vn: sop.title_vn, doc_type: sop.doc_type } : null;
+    let videos = SopStore.getVideos(chapterId);
+    let chapterQuizzes = SopStore.getQuizzes(chapterId);
 
+    // 첫 로그인 race condition: localStorage 비어있으면 Supabase sync 대기 후 재시도
     if (!chapter) {
-      console.warn('[Chapter] 챕터를 찾을 수 없습니다:', chapterId);
-      window.location.href = 'app.html';
+      console.warn('[Chapter] 로컬에 챕터 없음 — Supabase sync 대기 중...', chapterId);
+      // 로딩 UI 표시
+      document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;color:#94A3B8;">
+        <div style="width:48px;height:48px;border:4px solid rgba(16,185,129,0.3);border-top-color:#10B981;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+        <div>챕터 데이터 불러오는 중...</div>
+        <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+      </div>`;
+
+      (async () => {
+        // Supabase에서 직접 fetch (10초 타임아웃)
+        try {
+          await Promise.race([
+            SupabaseMode.init().then(() => SupabaseMode.syncSops()),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000)),
+          ]);
+          sop = SopStore.getById(chapterId);
+          if (sop) {
+            // 데이터 도착 → 페이지 새로고침하여 정상 플로우로
+            window.location.reload();
+          } else {
+            // 진짜 없음 → 홈으로
+            console.warn('[Chapter] Supabase에도 없음 — 홈으로 이동');
+            window.location.href = 'app.html';
+          }
+        } catch (e) {
+          console.warn('[Chapter] sync 타임아웃:', e.message);
+          window.location.href = 'app.html';
+        }
+      })();
+      // 아래 스크립트 중단 (chapter 없는 상태로 계속 실행하면 에러)
+      throw new Error('Waiting for chapter sync');
     }
 
     // === 챕터 종합시험 모드 (대챕터 → 30문제 시험) ===
