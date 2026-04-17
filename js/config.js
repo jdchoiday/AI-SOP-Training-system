@@ -10,8 +10,8 @@ const CONFIG = {
   // === 시스템 설정 ===
   APP_NAME: 'SOP Training System',
   DEFAULT_LANG: 'ko',        // 'ko' | 'en' | 'vi'
-  QUIZ_PASS_SCORE: 80,       // 퀴즈 합격 점수 (%)
-  CHAPTER_PASS_SCORE: 70,    // 챕터 테스트 합격 점수 (%)
+  QUIZ_PASS_SCORE: 60,       // 미니 퀴즈 합격 점수 (%) — 3문항 중 2개 통과
+  CHAPTER_PASS_SCORE: 60,    // 챕터 테스트 합격 점수 (%) — 3문항 중 2개 통과
   VIDEO_COMPLETE_PERCENT: 90, // 시청 완료 인정 비율 (%)
 
   // === API Proxy 설정 ===

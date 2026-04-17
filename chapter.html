@@ -760,6 +760,7 @@
     let quizIndex = 0;
     let quizCorrect = 0;
     let isChapterTest = false;
+    let wrongAnswersList = []; // 오답 해설 수집 (재도전 힌트용)
 
     // ===== 뷰 전환 =====
     function showView(viewId) {
@@ -871,21 +872,25 @@
             ${renderNextChapterBtn()}
           </div>
         `;
-      } else if (allComplete) {
-        area.innerHTML = `
-          <div class="chapter-test-banner">
-            <h3>&#128221; ${t.allVideosWatched}</h3>
-            <p>${t.passInfo(CONFIG.CHAPTER_PASS_SCORE).replace('\n', '<br>')}</p>
-            <button onclick="startChapterTest()">${t.startChapterTest}</button>
-          </div>
-        `;
       } else {
+        // 챕터 테스트 버튼은 항상 노출 (영상 미완료여도 도전 가능)
+        // 영상 미완료 시 경고만 표시하되 차단하지 않음
+        const videos = SopStore.getVideos(chapterId);
+        const completedCount = videos.filter(v => Progress.isVideoCompleted(v.id)).length;
+        const progressPct = videos.length > 0 ? Math.round((completedCount / videos.length) * 100) : 0;
+        const isAllDone = completedCount >= videos.length && videos.length > 0;
+
+        const warningHtml = !isAllDone
+          ? `<div style="margin-top:8px; padding:8px 12px; background:rgba(245,158,11,0.1); border-radius:8px; font-size:12px; color:#F59E0B;">⚠️ ${t.watchAllFirst || '영상 ' + completedCount + '/' + videos.length + '개 시청함 (먼저 시청하면 통과하기 쉬워요!)'}</div>`
+          : '';
+
         area.innerHTML = `
-          <div class="card" style="text-align:center; opacity:0.5; margin-top:20px;">
-            <span style="font-size:24px;">&#128274;</span>
-            <p style="margin-top:8px; font-size:14px; color:var(--gray-500);">
-              ${t.watchAllFirst}
-            </p>
+          <div class="chapter-test-banner" style="margin-top:20px;">
+            <h3>📝 ${isAllDone ? t.allVideosWatched : (t.readyForTest || '챕터 테스트 도전!')}</h3>
+            <p>${t.passInfo(CONFIG.CHAPTER_PASS_SCORE).replace('\n', '<br>')}</p>
+            ${warningHtml}
+            <button onclick="startChapterTest()" style="margin-top:12px;">${t.startChapterTest}</button>
+            ${result && !result.passed ? `<p style="margin-top:10px; font-size:13px; color:var(--gray-500);">💪 ${t.lastScore || '지난 점수'}: ${result.score}점 → ${t.tryAgain || '다시 도전해보세요!'}</p>` : ''}
           </div>
         `;
       }
@@ -1310,6 +1315,7 @@ ${narration.slice(0, 1500)}
       currentQuiz = chapterQuizzes;
       quizIndex = 0;
       quizCorrect = 0;
+      wrongAnswersList = [];
       document.getElementById('quizLabel').textContent =
         t.chapterQuiz(getLocalizedText(chapter, 'title'));
       showView('quizView');
@@ -1359,7 +1365,15 @@ ${narration.slice(0, 1500)}
         }
       });
 
-      if (selected === correct) quizCorrect++;
+      if (selected === correct) {
+        quizCorrect++;
+      } else {
+        // 오답 수집 (재도전 힌트용)
+        const lang2 = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
+        const qText = (lang2 === 'en' && q.question_en) ? q.question_en : (lang2 === 'vi' && q.question_vn) ? q.question_vn : q.question;
+        const correctText = (lang2 === 'en' && q.options_en) ? q.options_en[correct] : (lang2 === 'vi' && q.options_vn) ? q.options_vn[correct] : q.options[correct];
+        wrongAnswersList.push({ q: qText, correct: correctText, explanation: q.explanation || '' });
+      }
 
       // Show explanation
       let explanationDiv = document.getElementById('quizExplanation');
@@ -1456,9 +1470,44 @@ ${narration.slice(0, 1500)}
       document.getElementById('resultDetail').textContent =
         t.resultDetail(currentQuiz.length, quizCorrect, score);
 
-      // 재도전 버튼
+      // 오답 복습 (실패 시 크게 표시)
+      let reviewDiv = document.getElementById('wrongAnswersReview');
+      if (!reviewDiv) {
+        reviewDiv = document.createElement('div');
+        reviewDiv.id = 'wrongAnswersReview';
+        document.getElementById('resultDetail').after(reviewDiv);
+      }
+      if (!passed && wrongAnswersList.length > 0) {
+        const reviewTitle = lang === 'en' ? '💡 Review — Wrong Answers' : lang === 'vi' ? '💡 Ôn lại — Câu sai' : '💡 오답 복습';
+        const correctAnswerLabel = lang === 'en' ? 'Correct answer' : lang === 'vi' ? 'Đáp án đúng' : '정답';
+        reviewDiv.innerHTML = `
+          <div style="margin:16px 0; padding:16px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2); border-radius:12px; text-align:left;">
+            <div style="font-weight:700; color:#F59E0B; margin-bottom:10px; text-align:center;">${reviewTitle}</div>
+            ${wrongAnswersList.map((w, i) => `
+              <div style="margin-bottom:12px; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px;">
+                <div style="font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:6px;">Q${i+1}. ${w.q}</div>
+                <div style="font-size:13px; color:#10B981; margin-bottom:4px;">✓ ${correctAnswerLabel}: <strong>${w.correct}</strong></div>
+                ${w.explanation ? `<div style="font-size:12px; color:var(--gray-400); line-height:1.5;">💬 ${w.explanation}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else {
+        reviewDiv.innerHTML = '';
+      }
+
+      // 재도전 버튼 (실패 시 항상 표시 — 챕터/미니 구분 없이)
       const retryBtn = document.getElementById('resultRetryBtn');
-      retryBtn.style.display = (!passed && isChapterTest) ? 'block' : 'none';
+      if (!passed) {
+        retryBtn.style.display = 'block';
+        retryBtn.textContent = lang === 'en' ? '🔄 Try Again' : lang === 'vi' ? '🔄 Thử lại' : '🔄 다시 도전';
+        retryBtn.style.background = 'linear-gradient(135deg,#10B981,#3B82F6)';
+        retryBtn.style.color = 'white';
+        retryBtn.style.border = 'none';
+        retryBtn.style.fontWeight = '700';
+      } else {
+        retryBtn.style.display = 'none';
+      }
 
       // 종합시험 버튼 (챕터 테스트 통과 시)
       const examBtn = document.getElementById('resultExamBtn');
