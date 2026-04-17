@@ -553,8 +553,8 @@
 
       // Intro from profile
       const profile = JSON.parse(localStorage.getItem('sop_profile_' + user.email) || 'null');
-      if (profile?.introText) {
-        document.getElementById('heroIntro').textContent = `"${profile.introText}"`;
+      if (profile?.intro) {
+        document.getElementById('heroIntro').textContent = `"${profile.intro}"`;
       }
 
       // XP & Tier
@@ -616,7 +616,7 @@
       const profile = JSON.parse(localStorage.getItem('sop_profile_' + user.email) || 'null');
       const container = document.getElementById('profileContent');
 
-      if (!profile || (!profile.introText && !profile.mbti && !profile.motto)) {
+      if (!profile || (!profile.intro && !profile.bio && !profile.mbti && !profile.motto && !profile.personality && !profile.hobbies?.length)) {
         container.innerHTML = `
           <div class="empty-profile">
             <div class="big-emoji">🎭</div>
@@ -634,9 +634,14 @@
         html += `<div class="info-card"><div class="motto-text">"${profile.motto}"</div></div>`;
       }
 
-      // 자기소개
-      if (profile.bioText) {
-        html += `<div class="info-card"><h4>📝 ${t.tabAbout}</h4><p style="font-size:14px; line-height:1.6; color:var(--text-primary);">${profile.bioText}</p></div>`;
+      // 한 줄 소개 (intro)
+      if (profile.intro) {
+        html += `<div class="info-card"><p style="font-size:15px; font-weight:600; text-align:center; color:var(--primary);">💬 ${profile.intro}</p></div>`;
+      }
+
+      // 상세 소개 (bio)
+      if (profile.bio) {
+        html += `<div class="info-card"><h4>📝 ${t.tabAbout}</h4><p style="font-size:14px; line-height:1.6; color:var(--text-primary); white-space:pre-wrap;">${profile.bio}</p></div>`;
       }
 
       // 성격 & 취미
@@ -673,8 +678,8 @@
         html += `</div>`;
       }
 
-      // 업무 스타일
-      if (profile.workStyle) {
+      // 업무 스타일 (workStyles: array of selected style keys)
+      if (profile.workStyles?.length) {
         const wsLabels = {
           solo: lang === 'en' ? '🧑 Solo' : lang === 'vi' ? '🧑 Một mình' : '🧑 개인 작업',
           team: lang === 'en' ? '👥 Teamwork' : lang === 'vi' ? '👥 Nhóm' : '👥 팀 작업',
@@ -683,7 +688,7 @@
           planner: lang === 'en' ? '📋 Planner' : lang === 'vi' ? '📋 Kế hoạch' : '📋 계획형',
           flexible: lang === 'en' ? '🔄 Flexible' : lang === 'vi' ? '🔄 Linh hoạt' : '🔄 유연형',
         };
-        const activeStyles = Object.entries(profile.workStyle).filter(([k, v]) => v).map(([k]) => wsLabels[k] || k);
+        const activeStyles = profile.workStyles.map(k => wsLabels[k] || k);
         if (activeStyles.length) {
           html += `<div class="info-card"><h4>💼 ${t.workStyle}</h4>
             <div class="tag-list">${activeStyles.map(s => `<span class="tag-pill">${s}</span>`).join('')}</div></div>`;
