@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>키우자 히어로즈 — 앱 설치</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#10B981">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+      color: #F1F5F9;
+      min-height: 100vh;
+      padding: 20px 16px 60px;
+      line-height: 1.6;
+    }
+    .container { max-width: 480px; margin: 0 auto; }
+    .hero {
+      text-align: center;
+      padding: 40px 20px 30px;
+    }
+    .logo {
+      font-size: 64px;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 28px;
+      background: linear-gradient(135deg, #10B981, #3B82F6);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    .tagline { color: #94A3B8; font-size: 15px; margin-bottom: 20px; }
+    .qr-card {
+      background: white;
+      border-radius: 24px;
+      padding: 28px;
+      margin: 20px 0 24px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(16,185,129,0.2);
+    }
+    .qr-card img {
+      width: 100%;
+      max-width: 280px;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+    .qr-url {
+      margin-top: 16px;
+      font-size: 13px;
+      color: #475569;
+      font-family: 'SF Mono', Monaco, Consolas, monospace;
+      word-break: break-all;
+      padding: 8px 12px;
+      background: #F1F5F9;
+      border-radius: 8px;
+    }
+    .btn-primary {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, #10B981, #3B82F6);
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      text-align: center;
+      margin-bottom: 12px;
+      transition: transform 0.15s;
+      box-shadow: 0 4px 14px rgba(16,185,129,0.3);
+    }
+    .btn-primary:active { transform: scale(0.98); }
+    .install-guide {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 20px;
+      margin-top: 24px;
+    }
+    .install-guide h3 {
+      font-size: 15px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
+      font-size: 14px;
+      color: #CBD5E1;
+    }
+    .step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #10B981;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .step-text strong { color: #F1F5F9; }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+      color: #94A3B8;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+    }
+    .tab.active {
+      background: rgba(16,185,129,0.15);
+      color: #10B981;
+      border-color: rgba(16,185,129,0.3);
+    }
+    .features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 24px 0;
+    }
+    .feature {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 16px 12px;
+      text-align: center;
+    }
+    .feature-emoji { font-size: 28px; margin-bottom: 6px; }
+    .feature-name { font-size: 13px; font-weight: 600; color: #F1F5F9; }
+    .feature-desc { font-size: 11px; color: #94A3B8; margin-top: 2px; }
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 12px;
+      color: #64748B;
+    }
+    #installBtn { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <div class="logo">🌱</div>
+      <h1>키우자 히어로즈</h1>
+      <p class="tagline">게임처럼 성장하는 직원 교육 플랫폼</p>
+    </div>
+
+    <div class="qr-card">
+      <img id="qrImage" alt="QR Code" src="">
+      <div class="qr-url" id="urlDisplay">ai-sop-training-system.vercel.app</div>
+    </div>
+
+    <a href="index.html" class="btn-primary">🚀 지금 시작하기</a>
+    <button id="installBtn" class="btn-primary" style="background:linear-gradient(135deg,#3B82F6,#8B5CF6);">📲 홈 화면에 앱 추가</button>
+
+    <div class="features">
+      <div class="feature">
+        <div class="feature-emoji">🎮</div>
+        <div class="feature-name">게임처럼</div>
+        <div class="feature-desc">XP · 티어 · 퀘스트</div>
+      </div>
+      <div class="feature">
+        <div class="feature-emoji">🔥</div>
+        <div class="feature-name">매일 스트릭</div>
+        <div class="feature-desc">꾸준히 성장</div>
+      </div>
+      <div class="feature">
+        <div class="feature-emoji">🙌</div>
+        <div class="feature-name">동료 부스트</div>
+        <div class="feature-desc">서로 응원하기</div>
+      </div>
+      <div class="feature">
+        <div class="feature-emoji">🏆</div>
+        <div class="feature-name">리더보드</div>
+        <div class="feature-desc">전국 랭킹</div>
+      </div>
+    </div>
+
+    <div class="install-guide">
+      <h3>📱 <span>핸드폰 홈 화면에 앱처럼 설치하기</span></h3>
+
+      <div class="tabs">
+        <div class="tab active" onclick="showTab(this, 'ios')">🍎 iPhone</div>
+        <div class="tab" onclick="showTab(this, 'android')">🤖 Android</div>
+      </div>
+
+      <div id="ios" class="tab-content">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text"><strong>Safari</strong>로 접속 (Chrome 불가)</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">하단 <strong>공유 버튼</strong> 탭 <span style="font-size:18px;">⬆️</span></div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text"><strong>"홈 화면에 추가"</strong> 선택</div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-text">우측 상단 <strong>"추가"</strong> 탭 → 완료!</div>
+        </div>
+      </div>
+
+      <div id="android" class="tab-content" style="display:none;">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text"><strong>Chrome</strong>으로 접속</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">우측 상단 <strong>⋮ 메뉴</strong> 탭</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text"><strong>"홈 화면에 추가"</strong> 또는 <strong>"앱 설치"</strong> 선택</div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-text"><strong>"설치"</strong> 탭 → 완료!</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      © 2026 Kiwooza Heroes · Made with 💚
+    </div>
+  </div>
+
+  <script>
+    // QR 코드 생성 (무료 API — QR Server)
+    const url = location.origin + '/index.html';
+    document.getElementById('urlDisplay').textContent = url.replace(/^https?:\/\//, '');
+    document.getElementById('qrImage').src =
+      `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(url)}&color=10B981&margin=10`;
+
+    // 탭 전환
+    function showTab(tab, id) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
+    }
+
+    // 디바이스 자동 감지 → 맞는 탭 표시
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    if (isAndroid) {
+      showTab(document.querySelectorAll('.tab')[1], 'android');
+    }
+
+    // PWA 설치 프롬프트 (Chrome 지원)
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('installBtn').style.display = 'block';
+    });
+    document.getElementById('installBtn').addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      document.getElementById('installBtn').style.display = 'none';
+    });
+  </script>
+</body>
+</html>
