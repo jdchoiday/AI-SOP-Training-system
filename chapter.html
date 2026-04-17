@@ -965,6 +965,14 @@
       if (_syncController) { _syncController.stop(); _syncController = null; }
       SlidePlayer.onClose(() => {
         renderVideoList();
+        // 전체 슬라이드를 끝까지 봤으면 → 자동으로 챕터 퀴즈 시작
+        const completed = typeof SlidePlayer.wasCompleted === 'function' && SlidePlayer.wasCompleted();
+        if (completed && chapterQuizzes && chapterQuizzes.length > 0) {
+          setTimeout(() => { startChapterTest(); }, 400);
+        } else if (completed) {
+          // 퀴즈 없으면 바로 홈으로
+          setTimeout(() => { window.location.href = 'app.html'; }, 400);
+        }
       });
       SlidePlayer.open(chapterId);
     }
@@ -1448,10 +1456,15 @@ ${narration.slice(0, 1500)}
       showView('resultView');
     }
 
-    // 결과에서 돌아가기
+    // 결과에서 돌아가기 — 챕터 퀴즈였으면 홈(app.html)으로, 아니면 비디오 리스트로
     document.getElementById('resultBackBtn').addEventListener('click', () => {
-      showView('videoListView');
-      renderVideoList();
+      const wasChapterTest = document.getElementById('resultTitle').textContent === t.chapterTestPass;
+      if (wasChapterTest) {
+        window.location.href = 'app.html';
+      } else {
+        showView('videoListView');
+        renderVideoList();
+      }
     });
 
     // 재도전

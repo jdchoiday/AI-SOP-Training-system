@@ -24,6 +24,8 @@ const SlidePlayer = (() => {
   let destroyed = false;
   let autoPlay = true;
   let playSessionId = 0;  // 재생 세션 ID (씬 이동 시 이전 재생 취소용)
+  let _slideCompleted = false;  // 마지막 슬라이드까지 완료 여부
+  let _onCloseCallback = null;
 
   // --- Audio state ---
   let currentAudio = null;       // HTMLAudioElement currently playing
@@ -44,8 +46,8 @@ const SlidePlayer = (() => {
       close: '닫기', autoPlay: '자동 재생',
       totalDuration: '예상 소요', min: '분', sec: '초',
       visual: '시각 설명', narration: '나레이션',
-      completed: '학습 완료!', completedMsg: '모든 슬라이드를 시청했습니다.',
-      closeBtn: '닫기', slideTitle: (n, t) => `씬 ${n}/${t}`,
+      completed: '학습 완료!', completedMsg: '이제 퀴즈를 풀어볼까요?',
+      closeBtn: '퀴즈 풀러가기 →', slideTitle: (n, t) => `씬 ${n}/${t}`,
       loading: '음성 생성 중...', loadingShort: '로딩...',
       voiceReady: '음성 준비 완료',
     },
@@ -55,8 +57,8 @@ const SlidePlayer = (() => {
       close: 'Close', autoPlay: 'Auto Play',
       totalDuration: 'Est. duration', min: 'min', sec: 'sec',
       visual: 'Visual', narration: 'Narration',
-      completed: 'Training Complete!', completedMsg: 'You have viewed all slides.',
-      closeBtn: 'Close', slideTitle: (n, t) => `Scene ${n}/${t}`,
+      completed: 'Training Complete!', completedMsg: 'Ready for the quiz?',
+      closeBtn: 'Take Quiz →', slideTitle: (n, t) => `Scene ${n}/${t}`,
       loading: 'Generating voice...', loadingShort: 'Loading...',
       voiceReady: 'Voice ready',
     },
@@ -66,8 +68,8 @@ const SlidePlayer = (() => {
       close: 'Đóng', autoPlay: 'Tự động phát',
       totalDuration: 'Thời lượng', min: 'phút', sec: 'giây',
       visual: 'Hình ảnh', narration: 'Thuyết minh',
-      completed: 'Hoàn thành!', completedMsg: 'Bạn đã xem hết tất cả slide.',
-      closeBtn: 'Đóng', slideTitle: (n, t) => `Cảnh ${n}/${t}`,
+      completed: 'Hoàn thành!', completedMsg: 'Sẵn sàng làm bài quiz?',
+      closeBtn: 'Làm Quiz →', slideTitle: (n, t) => `Cảnh ${n}/${t}`,
       loading: 'Đang tạo giọng nói...', loadingShort: 'Đang tải...',
       voiceReady: 'Giọng nói sẵn sàng',
     }
@@ -1416,6 +1418,7 @@ const SlidePlayer = (() => {
 
   function _showCompletion() {
     isPlaying = false;
+    _slideCompleted = true;
     _updatePlayBtn();
 
     // Mark all videos as watched
@@ -1592,12 +1595,11 @@ const SlidePlayer = (() => {
     }
   }
 
-  let _onCloseCallback = null;
-
   return {
-    open(sid) { _open(sid); },
+    open(sid) { _slideCompleted = false; _open(sid); },
     close() { _close(); },
     isOpen() { return !!overlay && !destroyed; },
     onClose(fn) { _onCloseCallback = fn; },
+    wasCompleted() { return _slideCompleted; },
   };
 })();
