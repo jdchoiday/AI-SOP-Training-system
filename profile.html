@@ -137,12 +137,12 @@
       <h3>📝 <span id="lblIntro">자기소개</span></h3>
       <div class="field-group">
         <label id="lblIntroText">한 줄 소개</label>
-        <input type="text" id="introText" maxlength="60" placeholder="예: 커피와 아이들을 좋아하는 3년차 바리스타입니다!">
+        <input type="text" id="introText" maxlength="60" placeholder="" data-i18n-placeholder="profile.intro">
         <div style="text-align:right; font-size:11px; color:var(--gray-500); margin-top:4px;"><span id="introCount">0</span>/60</div>
       </div>
       <div class="field-group">
         <label id="lblBio">상세 소개</label>
-        <textarea id="bioText" maxlength="300" rows="3" placeholder="나를 소개해주세요..."></textarea>
+        <textarea id="bioText" maxlength="300" rows="3" placeholder="" data-i18n-placeholder="profile.bio"></textarea>
         <div style="text-align:right; font-size:11px; color:var(--gray-500); margin-top:4px;"><span id="bioCount">0</span>/300</div>
       </div>
     </div>
@@ -345,6 +345,7 @@
   <script src="js/config.js"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/demo-data.js"></script>
+  <script src="js/i18n-helper.js"></script>
   <script src="js/xp-system.js"></script>
   <script src="js/xp-ui.js"></script>
   <script>

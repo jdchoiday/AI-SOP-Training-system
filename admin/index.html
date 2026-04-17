@@ -8368,6 +8368,15 @@ ${text.slice(0, 3000)}
         is_active: true,
       };
       if (!data.title_ko) { alert('퀘스트명(한국어)은 필수입니다.'); return; }
+      // 다국어 필수 체크 (사용자 앱에서 한국어가 섞여 보이는 문제 방지)
+      const missing = [];
+      if (!data.title_en) missing.push('영문 퀘스트명');
+      if (!data.title_vi) missing.push('베트남어 퀘스트명');
+      if (!data.desc_en) missing.push('영문 설명');
+      if (!data.desc_vi) missing.push('베트남어 설명');
+      if (missing.length > 0) {
+        if (!confirm(`다음 번역이 누락되었습니다:\n\n• ${missing.join('\n• ')}\n\n그래도 저장하시겠습니까? (누락 시 사용자 앱에서 한국어로 표시됩니다)`)) return;
+      }
       try {
         if (questId) {
           await SupabaseMode._client.from('quests').update(data).eq('id', questId);
