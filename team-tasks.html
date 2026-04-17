@@ -555,6 +555,9 @@
       let html = '';
       filtered.forEach(task => {
         const dl = deadlineInfo(task.deadline);
+        const myMembershipOnCard = task.members.find(m => m.employee_id === empId);
+        const isCreatorOnCard = task.creator_id === empId;
+        const canJoinOnCard = !isCreatorOnCard && !myMembershipOnCard && task.status === 'open';
         const acceptedMembers = task.members.filter(m => m.status === 'accepted' || m.status === 'completed');
         const memberCount = acceptedMembers.length + (task.members.some(m => m.employee_id === task.creator_id) ? 0 : 1); // creator + accepted
 
@@ -590,6 +593,8 @@
                 <span class="reward-tag reward-p">+${task.point_reward} P</span>
               </div>
             </div>
+            ${canJoinOnCard ? `<button onclick="event.stopPropagation();joinTask('${task.id}')" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#10B981,#3B82F6);color:white;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(16,185,129,0.3);">🙋 ${t.btnJoin || '참여하기'}</button>` : ''}
+            ${myMembershipOnCard && myMembershipOnCard.status === 'accepted' ? `<div style="width:100%;margin-top:10px;padding:8px;border-radius:10px;background:rgba(16,185,129,0.1);color:var(--primary);font-size:12px;font-weight:600;text-align:center;">✓ ${t.joined || '참여중'}</div>` : ''}
           </div>`;
       });
 

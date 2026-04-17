@@ -430,23 +430,46 @@ const SupabaseMode = {
         this._client.from('chapter_results').select('chapter_id, score, passed, completed_at').eq('employee_id', employeeId),
       ]);
 
-      if (vp || cr) {
-        const all = JSON.parse(localStorage.getItem('sop_progress_v2') || '{}');
-        if (!all[employeeId]) all[employeeId] = { completedVideos: [], chapterResults: {}, quizScores: {} };
+      // 빈 배열은 "데이터 없음"이므로 localStorage 덮어쓰지 않음 (기록 손실 방지)
+      const hasVp = vp && vp.length > 0;
+      const hasCr = cr && cr.length > 0;
 
-        if (vp) all[employeeId].completedVideos = vp.map(v => v.video_id);
-        if (cr) {
-          cr.forEach(c => {
-            all[employeeId].chapterResults[c.chapter_id] = {
-              score: c.score,
-              passed: c.passed,
-              date: c.completed_at,
-            };
-          });
-        }
-        localStorage.setItem('sop_progress_v2', JSON.stringify(all));
-        console.log(`[Supabase] 진행률 동기화 완료 (${employeeId})`);
+      let all;
+      try { all = JSON.parse(localStorage.getItem('sop_progress_v2') || '{}'); } catch(e) { all = {}; }
+      if (!all[employeeId]) all[employeeId] = { completedVideos: [], chapterResults: {}, quizScores: {} };
+
+      // 머지 전략: Supabase에 데이터가 있으면 합침, 로컬 진행률은 보존
+      if (hasVp) {
+        const remoteVids = vp.map(v => v.video_id);
+        const localVids = all[employeeId].completedVideos || [];
+        // 유니온 (중복 제거)
+        all[employeeId].completedVideos = Array.from(new Set([...localVids, ...remoteVids]));
       }
+      if (hasCr) {
+        cr.forEach(c => {
+          const local = all[employeeId].chapterResults[c.chapter_id];
+          // 로컬에 없거나, 원격이 더 높은 점수면 업데이트
+          if (!local || (c.score || 0) >= (local.score || 0)) {
+            all[employeeId].chapterResults[c.chapter_id] = {
+              score: c.score, passed: c.passed, date: c.completed_at,
+            };
+          }
+        });
+      }
+
+      // 로컬 진행률 Supabase로 푸시 (로컬에만 있는 기록 업로드)
+      const localResults = all[employeeId].chapterResults || {};
+      const remoteChapterIds = new Set((cr || []).map(c => c.chapter_id));
+      const toPush = Object.entries(localResults).filter(([chapterId]) => !remoteChapterIds.has(chapterId));
+      if (toPush.length > 0) {
+        console.log(`[Supabase] 로컬 진행률 ${toPush.length}개 원격으로 업로드...`);
+        for (const [chapterId, result] of toPush) {
+          this.saveChapterResult(employeeId, chapterId, result.score, result.passed).catch(() => {});
+        }
+      }
+
+      localStorage.setItem('sop_progress_v2', JSON.stringify(all));
+      console.log(`[Supabase] 진행률 동기화 완료 (${employeeId}) — 원격 video:${hasVp ? vp.length : 0}, chapter:${hasCr ? cr.length : 0}`);
     } catch (e) {
       console.error('[Supabase] 진행률 동기화 오류:', e);
     }
