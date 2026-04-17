@@ -1370,7 +1370,12 @@ const SlidePlayer = (() => {
 
   let _goToDebounce = 0;
   function _goToSlide(idx) {
-    if (idx < 0 || idx >= scenes.length) return;
+    // 마지막 슬라이드 너머로 이동 시도 → 완료 화면 표시
+    if (idx >= scenes.length) {
+      if (!document.querySelector('.sp-complete-overlay')) _showCompletion();
+      return;
+    }
+    if (idx < 0) return;
     // 빠른 연타 방지 (300ms 쿨다운)
     const now = Date.now();
     if (now - _goToDebounce < 300) return;
