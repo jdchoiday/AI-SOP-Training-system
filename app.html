@@ -183,6 +183,8 @@
         startChapter: (n) => `챕터 ${n} 도전!`,
         allComplete: '전부 클리어! 당신은 진짜 프로 👏',
         streakLabel: (n) => `🔥 ${n}일 연속`,
+        statusLocked: '🔒', statusStart: '시작', statusQuiz: '퀴즈',
+        readyForQuiz: '🎯 영상 완료 · 퀴즈 풀 차례!',
         completePrevious: '이전 챕터를 먼저 완료하세요',
         scenePrefix: '씬',
         quizChallenge: (title) => `${title} 퀴즈 도전!`,
@@ -264,6 +266,8 @@
         startChapter: (n) => `Chapter ${n} — Let's go!`,
         allComplete: "All cleared! You're a real pro 👏",
         streakLabel: (n) => `🔥 ${n} day${n > 1 ? 's' : ''} streak`,
+        statusLocked: '🔒', statusStart: 'Start', statusQuiz: 'Quiz',
+        readyForQuiz: '🎯 Videos done · Time for quiz!',
         completePrevious: 'Complete the previous chapter first',
         scenePrefix: 'Scene',
         quizChallenge: (title) => `${title} — Take Quiz!`,
@@ -343,6 +347,8 @@
         startChapter: (n) => `Chương ${n} — Chiến thôi!`,
         allComplete: 'Hoàn thành hết rồi! Bạn là pro thật sự 👏',
         streakLabel: (n) => `🔥 Chuỗi ${n} ngày`,
+        statusLocked: '🔒', statusStart: 'Bắt đầu', statusQuiz: 'Quiz',
+        readyForQuiz: '🎯 Xong video · Đến quiz rồi!',
         completePrevious: 'Hãy hoàn thành chương trước',
         scenePrefix: 'Cảnh',
         quizChallenge: (title) => `${title} — Làm bài kiểm tra!`,
@@ -653,40 +659,57 @@
             </div>
           `;
         } else {
-          // === 독립 섹션 (기존 방식) ===
+          // === 독립 섹션 (간결한 카드 UI) ===
           const unlocked = Progress.isChapterUnlocked(globalIndex);
           const passed = Progress.isChapterPassed(ch.id);
           const videoProgress = Progress.getChapterVideoProgress(ch.id);
           const videos = SopStore.getVideos(ch.id);
           globalIndex++;
 
-          let statusClass = unlocked ? '' : 'locked';
-          if (passed) statusClass = 'completed';
+          // 5단계 상태 판정: locked / fresh / inProgress / quizReady / completed
+          let state = 'fresh';
+          if (!unlocked) state = 'locked';
+          else if (passed) state = 'completed';
+          else if (videoProgress >= 100) state = 'quizReady';
+          else if (videoProgress > 0) state = 'inProgress';
 
-          let statusIcon = passed
-            ? '<span style="color:var(--success);font-size:20px;">&#9989;</span>'
-            : !unlocked
-              ? '<svg width="20" height="20" fill="none" stroke="var(--gray-300)" stroke-width="2"><path d="M10 2a4 4 0 014 4v2H6V6a4 4 0 014-4zM4 10h12v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z"/></svg>'
-              : '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 4l8 8-8 8"/></svg>';
+          // 상태별 배지 (작고 명확하게)
+          const badges = {
+            locked:     { text: t.statusLocked || '🔒', color: 'var(--gray-500)', bg: 'rgba(100,116,139,0.15)' },
+            fresh:      { text: t.statusStart  || '시작', color: 'var(--primary)', bg: 'rgba(16,185,129,0.12)' },
+            inProgress: { text: `${videoProgress}%`,    color: '#3B82F6',        bg: 'rgba(59,130,246,0.12)' },
+            quizReady:  { text: t.statusQuiz   || '퀴즈', color: '#F59E0B',       bg: 'rgba(245,158,11,0.15)' },
+            completed:  { text: '✓',                   color: 'var(--success)', bg: 'rgba(16,185,129,0.2)' },
+          };
+          const badge = badges[state];
 
-          const subtitle = !unlocked ? t.completePrevious
-            : passed ? t.completedScore(Progress.getAllResults().chapterResults[ch.id]?.score || 0)
-            : t.scenesInfo(videos.length, ch.estimatedMinutes || 0);
+          // 부제: 상태에 따라 간결하게
+          let subtitle;
+          if (state === 'locked') subtitle = t.completePrevious;
+          else if (state === 'completed') {
+            const score = Progress.getAllResults().chapterResults[ch.id]?.score || 0;
+            subtitle = `✨ ${score}점`;
+          }
+          else if (state === 'quizReady') subtitle = t.readyForQuiz || '영상 완료 · 퀴즈 풀 차례!';
+          else if (state === 'inProgress') subtitle = t.scenesInfo(videos.length, ch.estimatedMinutes || 0);
+          else subtitle = t.scenesInfo(videos.length, ch.estimatedMinutes || 0);
 
-          const progressHTML = unlocked && !passed && videoProgress > 0
-            ? `<div class="progress-bar" style="margin-top:8px;height:4px;"><div class="fill" style="width:${videoProgress}%"></div></div>` : '';
+          // 진행률 바 (진행중 or 퀴즈대기 상태에만)
+          const progressHTML = (state === 'inProgress' || state === 'quizReady')
+            ? `<div class="progress-bar" style="margin-top:8px;height:3px;"><div class="fill" style="width:${videoProgress}%;background:${state === 'quizReady' ? 'linear-gradient(90deg,#F59E0B,#F97316)' : ''};"></div></div>` : '';
 
           const link = unlocked ? `chapter.html?id=${ch.id}` : '#';
+          const stateClass = state === 'completed' ? 'completed' : state === 'locked' ? 'locked' : '';
 
           container.innerHTML += `
-            <a class="chapter-item ${statusClass}" href="${link}" ${!unlocked ? `onclick="showToast('${lockMsg}'); return false;"` : ''}>
+            <a class="chapter-item ${stateClass}" href="${link}" ${!unlocked ? `onclick="showToast('${lockMsg}'); return false;"` : ''}>
               <div class="chapter-num">${globalIndex}</div>
-              <div class="chapter-info">
-                <h3>${getLocalizedText(ch, 'title')}</h3>
+              <div class="chapter-info" style="min-width:0;">
+                <h3 style="word-break:break-word; overflow-wrap:break-word;">${getLocalizedText(ch, 'title')}</h3>
                 <p>${subtitle}</p>
                 ${progressHTML}
               </div>
-              ${statusIcon}
+              <div style="padding:4px 10px; border-radius:10px; background:${badge.bg}; color:${badge.color}; font-size:12px; font-weight:700; white-space:nowrap;">${badge.text}</div>
             </a>
           `;
         }
