@@ -12,6 +12,44 @@
 </head>
 <body>
 
+  <!-- ===== 첫 방문 언어 선택 오버레이 ===== -->
+  <div id="langPickerOverlay" style="display:none; position:fixed; inset:0; background:linear-gradient(135deg,#0F172A 0%,#1E293B 100%); z-index:10000; align-items:center; justify-content:center; padding:20px;">
+    <div style="max-width:400px; width:100%; text-align:center;">
+      <div style="font-size:80px; margin-bottom:16px;">🌍</div>
+      <h1 style="font-size:28px; margin-bottom:8px; background:linear-gradient(135deg,#10B981,#3B82F6); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;">Choose your language</h1>
+      <p style="color:#94A3B8; font-size:14px; margin-bottom:32px;">언어를 선택해주세요 · Chọn ngôn ngữ</p>
+
+      <button onclick="pickLang('ko')" style="display:flex; align-items:center; gap:16px; width:100%; padding:18px 20px; margin-bottom:12px; border:2px solid rgba(255,255,255,0.08); border-radius:16px; background:rgba(255,255,255,0.03); color:#F1F5F9; font-size:17px; font-weight:600; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.borderColor='#10B981';this.style.background='rgba(16,185,129,0.1)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)';this.style.background='rgba(255,255,255,0.03)'">
+        <span style="font-size:32px;">🇰🇷</span>
+        <div style="text-align:left; flex:1;">
+          <div>한국어</div>
+          <div style="font-size:12px; color:#94A3B8; font-weight:400;">Korean</div>
+        </div>
+        <span style="color:#10B981; font-size:20px;">→</span>
+      </button>
+
+      <button onclick="pickLang('en')" style="display:flex; align-items:center; gap:16px; width:100%; padding:18px 20px; margin-bottom:12px; border:2px solid rgba(255,255,255,0.08); border-radius:16px; background:rgba(255,255,255,0.03); color:#F1F5F9; font-size:17px; font-weight:600; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.borderColor='#3B82F6';this.style.background='rgba(59,130,246,0.1)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)';this.style.background='rgba(255,255,255,0.03)'">
+        <span style="font-size:32px;">🇺🇸</span>
+        <div style="text-align:left; flex:1;">
+          <div>English</div>
+          <div style="font-size:12px; color:#94A3B8; font-weight:400;">English</div>
+        </div>
+        <span style="color:#3B82F6; font-size:20px;">→</span>
+      </button>
+
+      <button onclick="pickLang('vi')" style="display:flex; align-items:center; gap:16px; width:100%; padding:18px 20px; margin-bottom:12px; border:2px solid rgba(255,255,255,0.08); border-radius:16px; background:rgba(255,255,255,0.03); color:#F1F5F9; font-size:17px; font-weight:600; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.borderColor='#F59E0B';this.style.background='rgba(245,158,11,0.1)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)';this.style.background='rgba(255,255,255,0.03)'">
+        <span style="font-size:32px;">🇻🇳</span>
+        <div style="text-align:left; flex:1;">
+          <div>Tiếng Việt</div>
+          <div style="font-size:12px; color:#94A3B8; font-weight:400;">Vietnamese</div>
+        </div>
+        <span style="color:#F59E0B; font-size:20px;">→</span>
+      </button>
+
+      <p style="margin-top:24px; font-size:11px; color:#64748B;">You can change this later in settings</p>
+    </div>
+  </div>
+
   <div class="login-container">
     <div class="login-card">
       <!-- 로고 영역 -->
@@ -151,6 +189,25 @@
     };
 
     let currentLang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
+
+    // 첫 방문자 언어 선택 오버레이 (sop_lang이 없을 때만)
+    if (!localStorage.getItem('sop_lang')) {
+      document.getElementById('langPickerOverlay').style.display = 'flex';
+    }
+
+    function pickLang(lang) {
+      localStorage.setItem('sop_lang', lang);
+      currentLang = lang;
+      if (document.documentElement) document.documentElement.lang = lang;
+      // 오버레이 페이드아웃
+      const overlay = document.getElementById('langPickerOverlay');
+      overlay.style.transition = 'opacity 0.3s';
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        updateTexts();
+      }, 300);
+    }
 
     function setLang(lang) {
       currentLang = lang;
