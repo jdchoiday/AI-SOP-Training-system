@@ -483,25 +483,35 @@
 
     // Placeholder i18n
     const ph = {
-      ko: { personality:'예: 밝고 활발한', hobby:'예: 요리, 등산, 게임...', likes:'예: 커피, 고양이, 여행...',
+      ko: { intro:'예: 커피와 아이들을 좋아하는 3년차 바리스타입니다!', bio:'나를 소개해주세요...',
+            personality:'예: 밝고 활발한', hobby:'예: 요리, 등산, 게임...', likes:'예: 커피, 고양이, 여행...',
             strengths:'예: 꼼꼼함, 리더십...', weaknesses:'예: 시간관리, 발표...',
-            motto:'예: 오늘도 파이팅!', special:'예: 3개 국어 가능, 바리스타 자격증' },
-      en: { personality:'e.g., Bright and energetic', hobby:'e.g., Cooking, Hiking, Gaming...',
+            motto:'예: 오늘도 파이팅!', skills:'예: 라떼아트, 외국어, 엑셀',
+            goal:'예: 전 챕터 완료하고 골드 티어 달성!', special:'예: 3개 국어 가능, 바리스타 자격증' },
+      en: { intro:'e.g., 3rd year barista who loves coffee and kids!', bio:'Tell us about yourself...',
+            personality:'e.g., Bright and energetic', hobby:'e.g., Cooking, Hiking, Gaming...',
             likes:'e.g., Coffee, Cats, Travel...', strengths:'e.g., Detail-oriented, Leadership...',
             weaknesses:'e.g., Time management, Presentations...',
-            motto:'e.g., Stay positive!', special:'e.g., Trilingual, Barista certified' },
-      vi: { personality:'VD: Vui vẻ, năng động', hobby:'VD: Nấu ăn, Leo núi...',
+            motto:'e.g., Stay positive!', skills:'e.g., Latte art, Languages, Excel',
+            goal:'e.g., Finish all chapters and reach Gold!', special:'e.g., Trilingual, Barista certified' },
+      vi: { intro:'VD: Barista năm thứ 3 yêu cà phê và trẻ em!', bio:'Hãy giới thiệu về bạn...',
+            personality:'VD: Vui vẻ, năng động', hobby:'VD: Nấu ăn, Leo núi...',
             likes:'VD: Cà phê, Mèo, Du lịch...', strengths:'VD: Tỉ mỉ, Lãnh đạo...',
             weaknesses:'VD: Quản lý thời gian...',
-            motto:'VD: Hôm nay cũng cố lên!', special:'VD: 3 ngôn ngữ, Chứng chỉ barista' }
+            motto:'VD: Hôm nay cũng cố lên!', skills:'VD: Latte art, Ngoại ngữ, Excel',
+            goal:'VD: Hoàn thành các chương và đạt Vàng!', special:'VD: 3 ngôn ngữ, Chứng chỉ barista' }
     };
     const p = ph[lang] || ph.ko;
+    if (document.getElementById('introText')) document.getElementById('introText').placeholder = p.intro;
+    if (document.getElementById('bioText')) document.getElementById('bioText').placeholder = p.bio;
     document.getElementById('personalityText').placeholder = p.personality;
     document.getElementById('hobbyInput').placeholder = p.hobby;
     document.getElementById('likeInput').placeholder = p.likes;
     if (document.getElementById('strengthInput')) document.getElementById('strengthInput').placeholder = p.strengths;
     if (document.getElementById('weaknessInput')) document.getElementById('weaknessInput').placeholder = p.weaknesses;
     if (document.getElementById('mottoText')) document.getElementById('mottoText').placeholder = p.motto;
+    if (document.getElementById('skillsText')) document.getElementById('skillsText').placeholder = p.skills;
+    if (document.getElementById('goalText')) document.getElementById('goalText').placeholder = p.goal;
     if (document.getElementById('specialText')) document.getElementById('specialText').placeholder = p.special;
 
     // Modal buttons i18n

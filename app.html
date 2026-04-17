@@ -47,7 +47,7 @@
     <div class="card">
       <div style="display:flex; align-items:center; justify-content:space-between;">
         <h3 style="margin-bottom:4px;" id="welcomeMsg">안녕하세요!</h3>
-        <div id="streakBadge" style="display:none; padding:4px 12px; border-radius:20px; background:linear-gradient(135deg,#FF6B35,#FFD700); color:white; font-size:13px; font-weight:700; white-space:nowrap;">🔥 0일</div>
+        <div id="streakBadge" style="display:none; padding:4px 12px; border-radius:20px; background:linear-gradient(135deg,#FF6B35,#FFD700); color:white; font-size:13px; font-weight:700; white-space:nowrap;">🔥</div>
       </div>
       <p style="color:var(--gray-500); font-size:14px;" id="progressSummary"></p>
       <div class="progress-bar" style="margin-top:12px;">
@@ -181,6 +181,7 @@
         nextTodo: '다음 미션',
         startChapter: (n) => `챕터 ${n} 도전!`,
         allComplete: '전부 클리어! 당신은 진짜 프로 👏',
+        streakLabel: (n) => `🔥 ${n}일 연속`,
         completePrevious: '이전 챕터를 먼저 완료하세요',
         scenePrefix: '씬',
         quizChallenge: (title) => `${title} 퀴즈 도전!`,
@@ -261,6 +262,7 @@
         nextTodo: 'Next mission',
         startChapter: (n) => `Chapter ${n} — Let's go!`,
         allComplete: "All cleared! You're a real pro 👏",
+        streakLabel: (n) => `🔥 ${n} day${n > 1 ? 's' : ''} streak`,
         completePrevious: 'Complete the previous chapter first',
         scenePrefix: 'Scene',
         quizChallenge: (title) => `${title} — Take Quiz!`,
@@ -339,6 +341,7 @@
         nextTodo: 'Nhiệm vụ tiếp',
         startChapter: (n) => `Chương ${n} — Chiến thôi!`,
         allComplete: 'Hoàn thành hết rồi! Bạn là pro thật sự 👏',
+        streakLabel: (n) => `🔥 Chuỗi ${n} ngày`,
         completePrevious: 'Hãy hoàn thành chương trước',
         scenePrefix: 'Cảnh',
         quizChallenge: (title) => `${title} — Làm bài kiểm tra!`,
@@ -1975,7 +1978,7 @@
           const badge = document.getElementById('streakBadge');
           if (badge && streak.current > 0) {
             badge.style.display = 'inline-block';
-            badge.textContent = `🔥 ${streak.current}일 연속`;
+            badge.textContent = t.streakLabel ? t.streakLabel(streak.current) : `🔥 ${streak.current}`;
             if (streak.current >= 7) badge.style.background = 'linear-gradient(135deg,#EF4444,#FF6B35)';
             if (streak.current >= 30) badge.style.background = 'linear-gradient(135deg,#9B59B6,#EF4444)';
           }
