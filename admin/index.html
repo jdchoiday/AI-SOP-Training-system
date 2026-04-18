@@ -955,9 +955,21 @@
             <select id="teamBranchSelect" onchange="renderTeamList()" style="padding:10px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;width:100%;"></select>
           </div>
           <div id="teamList" style="margin-bottom:12px;"></div>
+
+          <!-- 빠른 추가: 사업 단위 팀 원클릭 -->
+          <div style="background:var(--gray-50); border-radius:10px; padding:12px; margin-bottom:12px;">
+            <p style="font-size:12px; color:var(--gray-500); margin-bottom:8px; font-weight:600;">빠른 추가 — 사업 단위 팀</p>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <button class="btn btn-outline" style="padding:6px 12px; font-size:12px; border-color:#F59E0B; color:#F59E0B;" onclick="quickAddTeam('AION 킨더 팀')">🏫 AION 킨더 팀</button>
+              <button class="btn btn-outline" style="padding:6px 12px; font-size:12px; border-color:#EC4899; color:#EC4899;" onclick="quickAddTeam('키우자 타운 팀')">🎪 키우자 타운 팀</button>
+              <button class="btn btn-outline" style="padding:6px 12px; font-size:12px; border-color:#EF4444; color:#EF4444;" onclick="quickAddTeam('BBQ 로맨스 팀')">🥩 BBQ 로맨스 팀</button>
+            </div>
+          </div>
+
+          <!-- 직접 입력 -->
           <div style="display:flex;gap:8px;">
-            <input type="text" id="newTeamName" placeholder="새 팀 이름 (예: 홀팀, 주방팀)" style="flex:1;padding:10px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;">
-            <button class="btn btn-primary" style="padding:10px 16px;white-space:nowrap;" onclick="addTeam()">+ 팀 추가</button>
+            <input type="text" id="newTeamName" placeholder="직접 입력 (예: 관리팀, 청소팀)" style="flex:1;padding:10px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;">
+            <button class="btn btn-primary" style="padding:10px 16px;white-space:nowrap;" onclick="addTeam()">+ 추가</button>
           </div>
         </div>
 
@@ -6201,6 +6213,22 @@ function saveInvitation(code) {
       renderBranchTeamStats();
     }
 
+    // 빠른 추가 — 사업 단위 팀 원클릭 버튼용
+    function quickAddTeam(teamName) {
+      const branch = document.getElementById('teamBranchSelect')?.value;
+      if (!branch) { alert('지점을 먼저 선택하세요'); return; }
+      const bt = getBranchTeams();
+      if (!bt[branch]) bt[branch] = [];
+      if (bt[branch].includes(teamName)) {
+        alert(`"${teamName}"은 "${branch}"에 이미 있습니다`);
+        return;
+      }
+      bt[branch].push(teamName);
+      saveBranchTeams(bt);
+      renderTeamList();
+      renderBranchTeamStats();
+    }
+
     async function removeTeam(branch, name) {
       const emps = EmployeeStore.getAll().filter(e => e.branch === branch && e.team === name);
 
@@ -6244,6 +6272,16 @@ function saveInvitation(code) {
       renderBranchTeamStats();
     }
 
+    // 팀 이름 → 색상 (사업 단위 팀만 컬러, 나머지는 회색)
+    const TEAM_VISUAL = {
+      'AION 킨더 팀': { icon: '🏫', color: '#F59E0B' },
+      '키우자 타운 팀': { icon: '🎪', color: '#EC4899' },
+      'BBQ 로맨스 팀': { icon: '🥩', color: '#EF4444' },
+    };
+    function getTeamVisual(name) {
+      return TEAM_VISUAL[name] || { icon: '👥', color: 'var(--gray-500)' };
+    }
+
     function renderBranchTeamStats() {
       const branches = getBranches();
       const bt = getBranchTeams();
@@ -6255,10 +6293,11 @@ function saveInvitation(code) {
         const teamRows = teams.length > 0
           ? teams.map(t => {
               const tc = branchEmps.filter(e => e.team === t).length;
-              return `<div style="display:flex;justify-content:space-between;padding:4px 0 4px 24px;font-size:13px;">
-                <span style="color:var(--gray-600);">└ ${t}</span><span style="font-weight:600;">${tc}명</span></div>`;
+              const vis = getTeamVisual(t);
+              return `<div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:13px;margin:4px 0 4px 16px;border-radius:6px;background:rgba(255,255,255,0.04);border-left:3px solid ${vis.color};">
+                <span style="color:var(--text-primary);font-weight:500;">${vis.icon} ${t}</span><span style="font-weight:700;color:${vis.color};">${tc}명</span></div>`;
             }).join('')
-          : '<div style="padding:4px 0 4px 24px;font-size:12px;color:var(--gray-400);">팀 미설정</div>';
+          : '<div style="padding:4px 0 4px 24px;font-size:12px;color:var(--gray-400);">아직 팀이 없습니다 — 빠른 추가 버튼 활용</div>';
         const noTeam = branchEmps.filter(e => !e.team || !teams.includes(e.team)).length;
         const noTeamRow = noTeam > 0
           ? `<div style="display:flex;justify-content:space-between;padding:4px 0 4px 24px;font-size:13px;"><span style="color:var(--gray-400);">└ 미배정</span><span style="font-weight:600;color:var(--gray-400);">${noTeam}명</span></div>`
