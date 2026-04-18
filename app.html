@@ -78,30 +78,29 @@
       <!-- JS에서 동적 생성 -->
     </div>
 
-    <!-- ===== 리더보드 (화려한 1등 게시판) ===== -->
-    <div id="leaderboardSection" style="display:none; margin-top:20px;">
+    <!-- ===== 🏆 XP 리더보드 (통합: 범위 + 기간 필터) ===== -->
+    <div id="competitiveSection" style="display:none; margin-top:20px;">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
         <h3 style="font-size:16px; color:var(--gray-700);" id="leaderboardTitle">🏆 XP 리더보드</h3>
-        <button onclick="toggleLeaderboard()" id="lbToggle" style="background:none; border:none; font-size:13px; color:var(--primary); cursor:pointer; font-weight:600;">접기 ▲</button>
+        <button onclick="toggleCompetitive()" id="lbToggle" style="background:none; border:none; font-size:13px; color:var(--primary); cursor:pointer; font-weight:600;">접기 ▲</button>
       </div>
-      <div id="leaderboardContent">
-        <!-- JS 동적 생성 -->
+      <div id="competitiveBody">
+        <!-- 범위: 전국 / 우리 지점 -->
+        <div style="display:flex; gap:8px; margin-bottom:8px;">
+          <button onclick="switchRankScope('all')" id="rankScopeAll" style="flex:1; padding:10px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; border:2px solid #F59E0B; background:rgba(245,158,11,0.15); color:#F59E0B; transition:all 0.2s;">🌍 전국 랭킹</button>
+          <button onclick="switchRankScope('branch')" id="rankScopeBranch" style="flex:1; padding:10px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; border:2px solid transparent; background:rgba(255,255,255,0.06); color:var(--gray-500); transition:all 0.2s;">🏠 우리 지점</button>
+        </div>
+        <!-- 기간: 월간 / 일간 -->
+        <div style="display:flex; gap:8px; margin-bottom:12px;">
+          <button onclick="switchRankPeriod('monthly')" id="rankPeriodMonthly" style="flex:1; padding:8px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; border:none; background:rgba(245,158,11,0.12); color:#F59E0B; transition:all 0.2s;">🔥 월간</button>
+          <button onclick="switchRankPeriod('daily')" id="rankPeriodDaily" style="flex:1; padding:8px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; border:none; background:rgba(255,255,255,0.04); color:var(--gray-500); transition:all 0.2s;">⚡ 일간</button>
+        </div>
+        <div id="rankContent"></div>
       </div>
     </div>
-
-    <!-- ===== 경쟁 랭킹 (전국 / 지점 × 월간 / 일간) ===== -->
-    <div id="competitiveSection" style="display:none; margin-top:20px;">
-      <!-- 범위: 전국 / 우리 지점 -->
-      <div style="display:flex; gap:8px; margin-bottom:8px;">
-        <button onclick="switchRankScope('all')" id="rankScopeAll" style="flex:1; padding:10px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; border:2px solid #F59E0B; background:rgba(245,158,11,0.15); color:#F59E0B; transition:all 0.2s;">🌍 전국 랭킹</button>
-        <button onclick="switchRankScope('branch')" id="rankScopeBranch" style="flex:1; padding:10px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; border:2px solid transparent; background:rgba(255,255,255,0.06); color:var(--gray-500); transition:all 0.2s;">🏠 우리 지점</button>
-      </div>
-      <!-- 기간: 월간 / 일간 -->
-      <div style="display:flex; gap:8px; margin-bottom:12px;">
-        <button onclick="switchRankPeriod('monthly')" id="rankPeriodMonthly" style="flex:1; padding:8px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; border:none; background:rgba(245,158,11,0.12); color:#F59E0B; transition:all 0.2s;">🔥 월간</button>
-        <button onclick="switchRankPeriod('daily')" id="rankPeriodDaily" style="flex:1; padding:8px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; border:none; background:rgba(255,255,255,0.04); color:var(--gray-500); transition:all 0.2s;">⚡ 일간</button>
-      </div>
-      <div id="rankContent"></div>
+    <!-- (구) 간단 리더보드 - 중복이므로 숨김 -->
+    <div id="leaderboardSection" style="display:none;">
+      <div id="leaderboardContent"></div>
     </div>
 
     <!-- ===== XP 혜택 (XP로 얻을 수 있는 보상) ===== -->
@@ -469,7 +468,6 @@
           try { renderTasksMiniCard(); } catch(e) { console.warn('[Sync] renderTasksMiniCard:', e.message); }
           try { renderTeamTasksMiniCard(); } catch(e) { console.warn('[Sync] renderTeamTasksMiniCard:', e.message); }
           try { renderScoreCard(); } catch(e) { console.warn('[Sync] renderScoreCard:', e.message); }
-          try { renderLeaderboard(); } catch(e) { console.warn('[Sync] renderLeaderboard:', e.message); }
           try { renderCompetitiveRanking(); } catch(e) { console.warn('[Sync] renderCompetitiveRanking:', e.message); }
           try { renderXpRewards(); } catch(e) { console.warn('[Sync] renderXpRewards:', e.message); }
           try { renderMbtiCard(); } catch(e) { console.warn('[Sync] renderMbtiCard:', e.message); }
@@ -1258,10 +1256,35 @@
       renderCompetitiveRanking();
     }
 
+    // 통합 리더보드 접기/펼치기
+    let competitiveOpen = true;
+    function toggleCompetitive() {
+      competitiveOpen = !competitiveOpen;
+      document.getElementById('competitiveBody').style.display = competitiveOpen ? 'block' : 'none';
+      document.getElementById('lbToggle').textContent = competitiveOpen ? (t.lbCollapse || '접기 ▲') : (t.lbExpand || '펼치기 ▼');
+    }
+
+    // 필터 버튼 i18n 적용
+    function applyLeaderboardI18n() {
+      try {
+        const lbTitle = document.getElementById('leaderboardTitle');
+        if (lbTitle) lbTitle.textContent = t.leaderboard || '🏆 XP 리더보드';
+        const btnAll = document.getElementById('rankScopeAll');
+        if (btnAll) btnAll.textContent = t.rankScopeAll || '🌍 전국 랭킹';
+        const btnBr = document.getElementById('rankScopeBranch');
+        if (btnBr) btnBr.textContent = t.rankScopeBranch || '🏠 우리 지점';
+        const btnM = document.getElementById('rankPeriodMonthly');
+        if (btnM) btnM.textContent = t.rankMonthly || '🔥 월간';
+        const btnD = document.getElementById('rankPeriodDaily');
+        if (btnD) btnD.textContent = t.rankDaily || '⚡ 일간';
+      } catch(e) { console.warn('[Leaderboard i18n]', e.message); }
+    }
+
     async function renderCompetitiveRanking() {
       const section = document.getElementById('competitiveSection');
       if (!section) return;
       section.style.display = 'block';
+      applyLeaderboardI18n();
       if (!SupabaseMode._ready || typeof XpService === 'undefined') {
         document.getElementById('rankContent').innerHTML = `<div class="card" style="text-align:center; padding:20px; color:var(--gray-500);">${t.rankNoData || '아직 기록이 없습니다'}</div>`;
         return;
@@ -2018,7 +2041,6 @@
     // Supabase 연결 안 되면 여기서 렌더
     if (!SupabaseMode._ready) {
       try { renderTierCard(); } catch(e) { console.warn('[Init] renderTierCard:', e.message); }
-      try { renderLeaderboard(); } catch(e) { console.warn('[Init] renderLeaderboard:', e.message); }
       try { renderCompetitiveRanking(); } catch(e) { console.warn('[Init] renderCompetitiveRanking:', e.message); }
     }
 
