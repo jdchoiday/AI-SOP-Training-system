@@ -3,15 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>실사 영상 교육 데모 — 키우자 히어로즈</title>
+<title>AION KINDER · 등원 맞이</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --accent: #10B981;
+  --accent-dim: #047857;
+  --highlight: #FBBF24;
+  --danger: #EF4444;
+  --bg: #0A0A0A;
+  --fg: #FAFAFA;
+}
+html, body { background: var(--bg); color: var(--fg); overflow: hidden; height: 100%; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  background: #000;
-  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Noto Sans KR', system-ui, sans-serif;
   min-height: 100vh;
-  overflow: hidden;
+  font-feature-settings: 'ss01', 'cv01';
 }
 
 .container {
@@ -20,151 +27,429 @@ body {
   height: 100vh;
   max-width: 480px;
   margin: 0 auto;
-  background: #000;
+  background: var(--bg);
   overflow: hidden;
 }
 
-/* 영상 영역 */
-.video-stage {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  background: #0F172A;
+/* ====================================================
+ *  공통 씬 스테이지 (모든 씬 타입 여기 렌더)
+ * ==================================================== */
+.scene-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--bg);
 }
-.scene-video {
+
+/* 비디오 백그라운드 (Ken Burns + 어두운 그라데이션) */
+.bg-video {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  transition: opacity 0.8s ease;
+  animation: kenburns 12s ease-out forwards;
 }
-.scene-video.active {
-  opacity: 1;
+.bg-video.active { opacity: 1; transition: opacity 0.8s ease; }
+@keyframes kenburns {
+  0%   { transform: scale(1.05); }
+  100% { transform: scale(1.15); }
 }
 
-/* 영상 위 어두운 그라데이션 (자막 가독성) */
-.overlay-gradient {
+.bg-dim {
   position: absolute;
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(0,0,0,0.6) 0%,
-    rgba(0,0,0,0.1) 30%,
-    rgba(0,0,0,0.1) 70%,
-    rgba(0,0,0,0.85) 100%
+    rgba(0,0,0,0.4) 0%,
+    rgba(0,0,0,0.1) 35%,
+    rgba(0,0,0,0.55) 75%,
+    rgba(0,0,0,0.9) 100%
   );
   pointer-events: none;
 }
 
-/* 상단 헤더 */
-.top-bar {
+/* ====================================================
+ *  씬 타입 1: 풀 비디오 + 자막 (현재 기본)
+ * ==================================================== */
+.scene-video-focus { /* 스테이지 전체 */ }
+.scene-video-focus .caption {
+  position: absolute;
+  bottom: 130px;
+  left: 24px;
+  right: 24px;
+  text-align: center;
+}
+.scene-video-focus .caption-text {
+  display: inline-block;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.5;
+  padding: 14px 22px;
+  background: rgba(0,0,0,0.65);
+  border-radius: 14px;
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,0.08);
+  max-width: 100%;
+  opacity: 0;
+  transform: translateY(16px);
+  animation: fadeUp 0.7s 0.3s forwards;
+}
+.scene-video-focus .tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--accent);
+  padding: 6px 12px;
+  background: rgba(16,185,129,0.15);
+  border: 1px solid rgba(16,185,129,0.4);
+  border-radius: 4px;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: fadeIn 0.5s 0.1s forwards;
+}
+
+/* ====================================================
+ *  씬 타입 2: 타이포그래피 포커스 (넷플릭스 스타일)
+ * ==================================================== */
+.scene-typography {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 32px;
+  background: var(--bg);
+}
+.scene-typography .bg-video {
+  opacity: 0.25 !important;
+}
+.scene-typography .bg-dim {
+  background: linear-gradient(180deg, rgba(0,0,0,0.5), rgba(0,0,0,0.8));
+}
+.typo-label {
+  position: relative;
+  z-index: 2;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: var(--accent);
+  margin-bottom: 20px;
+  opacity: 0;
+  animation: fadeIn 0.5s 0.2s forwards;
+}
+.typo-main {
+  position: relative;
+  z-index: 2;
+  font-size: 48px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin-bottom: 16px;
+  color: #fff;
+  opacity: 0;
+  transform: translateY(24px);
+  animation: slideUpBig 0.9s 0.4s forwards;
+}
+.typo-main .hl {
+  color: var(--highlight);
+  display: inline-block;
+  animation: hlPop 1s 1.2s both;
+}
+@keyframes hlPop {
+  0% { transform: scale(1); color: inherit; }
+  40% { transform: scale(1.1); color: var(--highlight); }
+  100% { transform: scale(1); color: var(--highlight); }
+}
+.typo-sub {
+  position: relative;
+  z-index: 2;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.75);
+  max-width: 380px;
+  opacity: 0;
+  animation: fadeIn 0.7s 1s forwards;
+}
+
+/* ====================================================
+ *  씬 타입 3: 빅 스탯 (큰 숫자 강조)
+ * ==================================================== */
+.scene-stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  background: radial-gradient(ellipse at center, #0F172A 0%, #000 80%);
+}
+.scene-stat .bg-video {
+  opacity: 0.15 !important;
+  filter: blur(2px);
+}
+.stat-tag {
+  position: relative;
+  z-index: 2;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: var(--accent);
+  margin-bottom: 24px;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: fadeIn 0.5s 0.3s forwards;
+}
+.stat-number {
+  position: relative;
+  z-index: 2;
+  font-size: 120px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  background: linear-gradient(180deg, #fff 0%, #888 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+  opacity: 0;
+  transform: scale(0.6);
+  animation: popScale 1.1s 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.stat-unit {
+  position: relative;
+  z-index: 2;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--highlight);
+  margin-bottom: 28px;
+  opacity: 0;
+  animation: fadeIn 0.6s 0.9s forwards;
+}
+.stat-context {
+  position: relative;
+  z-index: 2;
+  font-size: 17px;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.8);
+  max-width: 340px;
+  opacity: 0;
+  animation: fadeIn 0.7s 1.1s forwards;
+}
+
+/* ====================================================
+ *  씬 타입 4: 인포그래픽 (3스텝 체크리스트 등)
+ * ==================================================== */
+.scene-infographic {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 40px 28px;
+  background: linear-gradient(135deg, #0A0A0A 0%, #1E293B 100%);
+}
+.info-header {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 28px;
+  opacity: 0;
+  animation: fadeIn 0.5s 0.2s forwards;
+}
+.info-header-tag {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.info-header-title {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.2;
+  color: #fff;
+}
+.info-steps {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.info-step {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+  opacity: 0;
+  transform: translateX(-24px);
+}
+.info-step:nth-child(1) { animation: slideRight 0.6s 0.5s forwards; }
+.info-step:nth-child(2) { animation: slideRight 0.6s 0.8s forwards; }
+.info-step:nth-child(3) { animation: slideRight 0.6s 1.1s forwards; }
+.info-step:nth-child(4) { animation: slideRight 0.6s 1.4s forwards; }
+.info-step-num {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 900;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(16,185,129,0.35);
+}
+.info-step-text {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.4;
+}
+.info-step-text span { color: var(--highlight); font-weight: 800; }
+
+/* ====================================================
+ *  씬 타입 5: 타이틀 카드 (넷플릭스 오프닝 느낌)
+ * ==================================================== */
+.scene-title-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  background: #000;
+}
+.title-card-chapter {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 6px;
+  color: var(--accent);
+  margin-bottom: 24px;
+  opacity: 0;
+  animation: fadeIn 0.6s 0.3s forwards;
+}
+.title-card-main {
+  font-size: 56px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-align: center;
+  color: #fff;
+  margin-bottom: 20px;
+  opacity: 0;
+  transform: scale(0.8);
+  animation: popIn 0.8s 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.title-card-main .accent { color: var(--accent); }
+.title-card-line {
+  width: 60px;
+  height: 3px;
+  background: var(--accent);
+  margin-bottom: 20px;
+  opacity: 0;
+  animation: expandLine 0.6s 1.3s forwards;
+}
+@keyframes expandLine {
+  from { width: 0; opacity: 0; }
+  to { width: 60px; opacity: 1; }
+}
+.title-card-sub {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.6);
+  text-transform: uppercase;
+  opacity: 0;
+  animation: fadeIn 0.6s 1.5s forwards;
+}
+
+/* ====================================================
+ *  공통 애니메이션
+ * ==================================================== */
+@keyframes fadeIn { to { opacity: 1; } }
+@keyframes fadeUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUpBig {
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideRight {
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes popIn {
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes popScale {
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ====================================================
+ *  상단 HUD
+ * ==================================================== */
+.top-hud {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  padding: 16px 20px;
+  padding: 18px 20px 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  z-index: 10;
+  z-index: 50;
+  pointer-events: none;
 }
-.chapter-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.9);
-  background: rgba(0,0,0,0.4);
-  padding: 6px 14px;
-  border-radius: 20px;
+.hud-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: rgba(255,255,255,0.85);
+  padding: 6px 12px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 3px;
   backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.08);
 }
-.scene-counter {
-  font-size: 12px;
-  color: rgba(255,255,255,0.8);
-  background: rgba(16,185,129,0.3);
-  padding: 4px 12px;
-  border-radius: 20px;
-  border: 1px solid rgba(16,185,129,0.5);
-  font-weight: 600;
+.hud-counter {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  padding: 5px 12px;
+  background: rgba(16,185,129,0.15);
+  border: 1px solid rgba(16,185,129,0.4);
+  border-radius: 3px;
   backdrop-filter: blur(10px);
 }
 
-/* 진행률 바 */
-.progress-bar {
+/* 진행률 (상단 얇은 바) */
+.top-progress {
   position: absolute;
-  top: 60px;
-  left: 20px;
-  right: 20px;
-  height: 3px;
-  background: rgba(255,255,255,0.15);
-  border-radius: 2px;
-  overflow: hidden;
-  z-index: 10;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 51;
 }
-.progress-fill {
+.top-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #10B981, #3B82F6);
-  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
   transition: width 0.3s linear;
+  width: 0%;
 }
 
-/* 타이틀 (슬라이드 위) */
-.scene-title {
-  position: absolute;
-  top: 100px;
-  left: 24px;
-  right: 24px;
-  z-index: 10;
-  font-size: 22px;
-  font-weight: 800;
-  color: #fff;
-  text-shadow: 0 2px 12px rgba(0,0,0,0.6);
-  line-height: 1.3;
-  opacity: 0;
-  transform: translateY(20px);
-  animation: slideUp 0.8s 0.3s forwards;
-}
-@keyframes slideUp {
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* 자막 (하단) */
-.subtitle-area {
-  position: absolute;
-  bottom: 120px;
-  left: 20px;
-  right: 20px;
-  z-index: 10;
-  text-align: center;
-}
-.subtitle-text {
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.5;
-  color: #fff;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.8);
-  padding: 16px;
-  background: rgba(0,0,0,0.35);
-  border-radius: 16px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.1);
-}
-.keyword {
-  color: #FBBF24;
-  font-weight: 800;
-  display: inline-block;
-  transform-origin: center;
-  animation: pop 0.5s ease;
-}
-@keyframes pop {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.15); color: #FCD34D; }
-  100% { transform: scale(1); color: #FBBF24; }
-}
-
-/* 컨트롤 */
-.controls {
+/* ====================================================
+ *  하단 컨트롤
+ * ==================================================== */
+.bottom-controls {
   position: absolute;
   bottom: 24px;
   left: 20px;
@@ -172,43 +457,43 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 20px;
-  z-index: 10;
+  gap: 16px;
+  z-index: 60;
 }
-.ctrl-btn {
-  width: 48px;
-  height: 48px;
+.ctrl {
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
   color: #fff;
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
-  backdrop-filter: blur(10px);
-  transition: all 0.2s;
+  backdrop-filter: blur(14px);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.15s;
 }
-.ctrl-btn:hover {
-  background: rgba(255,255,255,0.25);
-  transform: scale(1.05);
+.ctrl:hover { background: rgba(255,255,255,0.18); }
+.ctrl-main {
+  width: 58px;
+  height: 58px;
+  background: var(--accent);
+  border: none;
+  font-size: 22px;
+  box-shadow: 0 8px 24px rgba(16,185,129,0.4);
 }
-.ctrl-btn.play {
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(135deg, #10B981, #3B82F6);
-  font-size: 24px;
-}
+.ctrl-main:hover { background: #0EA572; transform: scale(1.04); }
 
-/* 크레딧 (작게) */
 .credit {
   position: absolute;
   bottom: 4px;
-  right: 8px;
+  right: 10px;
   font-size: 9px;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255,255,255,0.35);
   z-index: 5;
+  letter-spacing: 0.5px;
 }
 
 /* 로딩 */
@@ -219,61 +504,27 @@ body {
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 16px;
-  z-index: 20;
-  background: rgba(0,0,0,0.7);
+  gap: 20px;
+  z-index: 90;
+  background: #000;
 }
 .loading.hidden { display: none; }
 .spinner {
   width: 48px;
   height: 48px;
-  border: 4px solid rgba(16,185,129,0.3);
-  border-top-color: #10B981;
+  border: 3px solid rgba(16,185,129,0.25);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
+.loading-text {
+  font-size: 13px;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
 @keyframes spin { to { transform: rotate(360deg); } }
-
-/* 완료 화면 */
-.completion {
-  position: absolute;
-  inset: 0;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  background: linear-gradient(135deg, #0F172A, #1E293B);
-  z-index: 30;
-  padding: 40px;
-  text-align: center;
-}
-.completion.active { display: flex; }
-.completion-icon { font-size: 80px; }
-.completion-title {
-  font-size: 28px;
-  font-weight: 800;
-  background: linear-gradient(135deg, #10B981, #3B82F6);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.completion-msg {
-  font-size: 15px;
-  color: #94A3B8;
-  line-height: 1.6;
-}
-.completion-btn {
-  margin-top: 20px;
-  padding: 14px 32px;
-  border-radius: 12px;
-  border: none;
-  background: linear-gradient(135deg, #10B981, #3B82F6);
-  color: #fff;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-}
 
 /* 시작 화면 */
 .start-screen {
@@ -284,61 +535,119 @@ body {
   align-items: center;
   justify-content: center;
   gap: 24px;
-  background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #334155 100%);
-  z-index: 40;
+  background: radial-gradient(ellipse at top, #0F172A 0%, #000 70%);
+  z-index: 100;
   padding: 40px;
   text-align: center;
 }
 .start-screen.hidden { display: none; }
-.start-logo { font-size: 72px; }
-.start-title {
-  font-size: 26px;
+.start-kicker {
+  font-size: 11px;
   font-weight: 800;
-  background: linear-gradient(135deg, #10B981, #3B82F6);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  letter-spacing: 5px;
+  color: var(--accent);
+  text-transform: uppercase;
 }
-.start-subtitle {
-  font-size: 14px;
-  color: #94A3B8;
-  line-height: 1.7;
-  max-width: 340px;
+.start-title {
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  max-width: 360px;
 }
-.start-chapter-info {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  padding: 14px 20px;
-  border-radius: 12px;
+.start-title span { color: var(--accent); }
+.start-line {
+  width: 40px;
+  height: 2px;
+  background: var(--accent);
+}
+.start-meta {
   display: flex;
   gap: 20px;
-  font-size: 13px;
-  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 1px;
 }
+.start-meta span {
+  padding: 0 8px;
+  border-left: 1px solid rgba(255,255,255,0.15);
+}
+.start-meta span:first-child { border-left: none; padding-left: 0; }
 .start-btn {
-  padding: 16px 40px;
-  border-radius: 14px;
+  margin-top: 12px;
+  padding: 16px 42px;
+  border-radius: 2px;
   border: none;
-  background: linear-gradient(135deg, #10B981, #3B82F6);
-  color: #fff;
-  font-size: 16px;
-  font-weight: 700;
+  background: #fff;
+  color: #000;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(16,185,129,0.4);
-  transition: transform 0.15s;
+  transition: all 0.2s;
 }
+.start-btn:hover { background: var(--accent); color: #fff; }
 .start-btn:active { transform: scale(0.97); }
 
-.note {
-  position: fixed;
-  bottom: 8px;
-  left: 0;
-  right: 0;
+/* 완료 */
+.completion {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: radial-gradient(ellipse at center, #0F172A 0%, #000 80%);
+  z-index: 80;
+  padding: 40px;
   text-align: center;
-  font-size: 10px;
-  color: rgba(255,255,255,0.3);
-  z-index: 50;
-  pointer-events: none;
+}
+.completion.active { display: flex; }
+.completion-kicker {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 5px;
+  color: var(--accent);
+  text-transform: uppercase;
+  opacity: 0;
+  animation: fadeIn 0.6s 0.2s forwards;
+}
+.completion-title {
+  font-size: 44px;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: #fff;
+  margin: 8px 0;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: slideUpBig 0.8s 0.5s forwards;
+}
+.completion-msg {
+  font-size: 15px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.6;
+  max-width: 300px;
+  opacity: 0;
+  animation: fadeIn 0.6s 1s forwards;
+}
+.completion-btn {
+  margin-top: 24px;
+  padding: 14px 40px;
+  border-radius: 2px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  cursor: pointer;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: fadeIn 0.6s 1.3s forwards;
 }
 </style>
 </head>
@@ -348,147 +657,158 @@ body {
 
   <!-- 시작 화면 -->
   <div class="start-screen" id="startScreen">
-    <div class="start-logo">🏫</div>
-    <h1 class="start-title">유치원 · 등원 맞이</h1>
-    <p class="start-subtitle">
-      실사 영상 + 자연스러운 AI 나레이션으로 학습하는<br>
-      새로운 교육 방식 데모<br>
-      <span style="color:#FCD34D;">🔊 음소거 해제하고 보세요</span>
-    </p>
-    <div class="start-chapter-info">
-      <div>⏱️ 약 40초</div>
-      <div>·</div>
-      <div>🎬 5개 씬</div>
+    <div class="start-kicker">Aion Kinder · Training</div>
+    <h1 class="start-title">등원 <span>맞이</span>의<br>3가지 원칙</h1>
+    <div class="start-line"></div>
+    <div class="start-meta">
+      <span>약 60초</span>
+      <span>9개 씬</span>
+      <span>🔊 소리 켜세요</span>
     </div>
-    <button class="start-btn" onclick="startDemo()">
-      시작하기 ▶
-    </button>
+    <button class="start-btn" onclick="startDemo()">▶ 시작</button>
   </div>
 
   <!-- 로딩 -->
   <div class="loading" id="loading">
     <div class="spinner"></div>
-    <div style="font-size:14px; color:#94A3B8;">영상 준비 중...</div>
+    <div class="loading-text" id="loadingText">PREPARING</div>
   </div>
 
-  <!-- 영상 스테이지 -->
-  <div class="video-stage" id="videoStage">
-    <!-- 동적으로 video 요소 삽입됨 -->
-  </div>
-  <div class="overlay-gradient"></div>
-
-  <!-- 상단 -->
-  <div class="top-bar">
-    <div class="chapter-label">🏫 유치원 · 등원 맞이</div>
-    <div class="scene-counter" id="sceneCounter">1 / 5</div>
-  </div>
+  <!-- 씬 스테이지 (동적 렌더) -->
+  <div class="scene-stage" id="sceneStage"></div>
 
   <!-- 진행률 -->
-  <div class="progress-bar">
-    <div class="progress-fill" id="progressFill" style="width:0%"></div>
-  </div>
+  <div class="top-progress"><div class="top-progress-fill" id="progressFill"></div></div>
 
-  <!-- 타이틀 -->
-  <div class="scene-title" id="sceneTitle"></div>
-
-  <!-- 자막 -->
-  <div class="subtitle-area">
-    <div class="subtitle-text" id="subtitleText"></div>
+  <!-- 상단 HUD -->
+  <div class="top-hud">
+    <div class="hud-label">AION KINDER</div>
+    <div class="hud-counter" id="sceneCounter">1 / 9</div>
   </div>
 
   <!-- 컨트롤 -->
-  <div class="controls">
-    <button class="ctrl-btn" onclick="prevScene()" title="이전">‹</button>
-    <button class="ctrl-btn play" id="playBtn" onclick="togglePlay()" title="재생">⏸</button>
-    <button class="ctrl-btn" onclick="nextScene()" title="다음">›</button>
+  <div class="bottom-controls">
+    <button class="ctrl" onclick="prevScene()">‹</button>
+    <button class="ctrl ctrl-main" id="playBtn" onclick="togglePlay()">⏸</button>
+    <button class="ctrl" onclick="nextScene()">›</button>
   </div>
 
-  <!-- 크레딧 -->
-  <div class="credit" id="credit">Videos: Pexels</div>
+  <div class="credit" id="credit">VIDEOS · PEXELS</div>
 
-  <!-- 완료 화면 -->
+  <!-- 완료 -->
   <div class="completion" id="completion">
-    <div class="completion-icon">🎓</div>
+    <div class="completion-kicker">Chapter Complete</div>
     <h2 class="completion-title">학습 완료!</h2>
-    <p class="completion-msg">
-      등원 맞이의 핵심을 배우셨어요.<br>
-      이제 퀴즈로 확인해볼까요?
-    </p>
+    <p class="completion-msg">3가지 원칙을 배우셨습니다.<br>이제 퀴즈로 확인해볼까요?</p>
     <button class="completion-btn" onclick="location.reload()">다시 보기</button>
   </div>
-
 </div>
 
-<div class="note">이 데모는 시나리오 예시입니다. 실제 우리 회사 규정에 맞게 조정됩니다.</div>
-
 <script>
-// ===================================================
-// 샘플 시나리오: 유치원 "등원 맞이" 챕터
-// ===================================================
-// 각 씬은 Pexels에서 실사 영상을 자동 검색해 배치
-// 제공되는 나레이션은 스크립트 예시 (실제 교재 기반으로 대체)
-// ===================================================
+/* ========================================================
+ * 씬 구성 — Netflix 다큐 + 인포그래픽 스타일
+ * 다양한 타입 교차로 지루함 방지
+ * ======================================================== */
 
 const SCENES = [
   {
-    title: "월요일 아침 9시",
-    subtitle: "첫 등원이 시작되는 <span class='keyword'>긴장의 순간</span>",
-    searchQuery: "kindergarten entrance morning",
-    duration: 7,
-    narration: "월요일 아침 아홉 시, 서준이의 첫 등원이 시작됩니다"
+    type: 'title_card',
+    kicker: 'Episode 01',
+    titleMain: '등원 <span class="accent">맞이</span>',
+    titleSub: 'Morning Welcome Protocol',
+    narration: '아이온 킨더. 오늘의 주제는 등원 맞이입니다',
+    duration: 5,
   },
   {
-    title: "눈물 가득한 서준",
-    subtitle: "처음 유치원에 온 아이의 <span class='keyword'>불안감</span>",
-    searchQuery: "sad child crying preschool",
+    type: 'video_focus',
+    searchQuery: 'kindergarten entrance morning children',
+    tag: 'SCENE',
+    caption: '월요일 아침 <b>아홉 시</b>. 첫 등원이 시작됩니다',
+    narration: '월요일 아침 아홉 시, 서준이의 첫 등원이 시작됩니다',
     duration: 7,
-    narration: "처음인 서준이는 눈물 가득. 어머니도 걱정스러운 표정입니다"
   },
   {
-    title: "눈높이를 맞추세요",
-    subtitle: "선생님은 아이의 <span class='keyword'>눈높이</span>에 앉아주세요",
-    searchQuery: "teacher kneeling child comfort",
+    type: 'stat',
+    tag: 'RESEARCH',
+    number: '72',
+    unit: '%',
+    context: '첫 등원 경험이<br>1년의 유치원 생활을 결정합니다',
+    narration: '연구에 따르면, 첫 등원 경험이 유치원 생활의 칠십 이 퍼센트를 결정합니다',
+    duration: 7,
+  },
+  {
+    type: 'video_focus',
+    searchQuery: 'child crying preschool separation anxiety',
+    tag: 'MOMENT',
+    caption: '처음 온 아이. <b>불안</b>한 부모.',
+    narration: '처음인 서준이는 눈물 가득, 어머니도 걱정스러운 표정입니다',
+    duration: 6,
+  },
+  {
+    type: 'typography',
+    searchQuery: 'teacher kneeling comforting child',
+    label: 'PRINCIPLE 1',
+    main: '눈<span class="hl">높이</span>를<br>맞추세요',
+    sub: '서서 인사하지 마세요. 아이 시선에 앉아야 신뢰가 시작됩니다.',
+    narration: '첫 번째 원칙, 눈높이를 맞추세요. 서서 인사하지 마세요',
     duration: 8,
-    narration: "민지 선생님은 서서 인사하지 않습니다. 서준이 눈높이에 앉아 따뜻하게 인사했어요"
   },
   {
-    title: "안전한 연결 만들기",
-    subtitle: "어머니와 <span class='keyword'>따뜻한 인사</span>도 잊지 마세요",
-    searchQuery: "parent teacher conversation school",
-    duration: 8,
-    narration: "부모님과의 짧은 인사 한 마디. 이게 신뢰 관계의 시작입니다"
+    type: 'video_focus',
+    searchQuery: 'parent teacher conversation kindergarten',
+    tag: 'ACTION',
+    caption: '부모님께 <b>따뜻한 인사</b> 한 마디',
+    narration: '부모님과의 짧은 인사 한 마디. 이것이 신뢰 관계의 시작입니다',
+    duration: 6,
   },
   {
-    title: "첫 번째 등원의 완성",
-    subtitle: "오늘 배운 <span class='keyword'>3가지</span>를 기억하세요",
-    searchQuery: "happy children kindergarten classroom",
+    type: 'infographic',
+    headerTag: 'CHECKLIST',
+    headerTitle: '등원 맞이<br>3가지 필수',
+    steps: [
+      '아이 <span>눈높이</span>에 앉기',
+      '<span>따뜻한 미소</span>로 이름 부르기',
+      '부모님과 <span>30초 소통</span>',
+    ],
+    narration: '꼭 기억하세요. 눈높이, 따뜻한 미소, 30초 부모 소통. 세 가지입니다',
+    duration: 9,
+  },
+  {
+    type: 'video_focus',
+    searchQuery: 'happy children kindergarten classroom play',
+    tag: 'OUTCOME',
+    caption: '세 가지가 <b>하루</b>를 바꿉니다',
+    narration: '이 세 가지 원칙이 서준이의 하루를, 일년을 바꿉니다',
     duration: 7,
-    narration: "눈높이, 따뜻한 미소, 부모와의 짧은 인사. 이 세 가지가 첫 등원을 바꿉니다"
-  }
+  },
+  {
+    type: 'title_card',
+    kicker: 'Next Up',
+    titleMain: '퀴즈<span class="accent">로</span><br>확인',
+    titleSub: 'Test Your Knowledge',
+    narration: '이제, 배운 내용을 퀴즈로 확인해봅시다',
+    duration: 5,
+  },
 ];
 
-// ===================================================
-// 플레이어 상태
-// ===================================================
 let currentIndex = 0;
 let isPlaying = true;
 let currentAudio = null;
-let videoElements = [];
-let audioElements = []; // 미리 생성한 오디오
+let audioElements = [];
+let videoCache = {};
 let advanceTimer = null;
 
-// ===================================================
-// 시작
-// ===================================================
+/* ========================================================
+ * 시작
+ * ======================================================== */
 async function startDemo() {
   document.getElementById('startScreen').classList.add('hidden');
   document.getElementById('loading').classList.remove('hidden');
 
-  // 모든 씬의 영상 + 나레이션 오디오 미리 생성
-  document.querySelector('#loading div:last-child').textContent = '영상 검색 중...';
+  document.getElementById('loadingText').textContent = 'SEARCHING VIDEOS';
   await loadAllVideos();
 
-  document.querySelector('#loading div:last-child').textContent = '자연스러운 나레이션 생성 중...';
+  document.getElementById('loadingText').textContent = 'GENERATING NARRATION';
   await loadAllNarrations();
 
   document.getElementById('loading').classList.add('hidden');
@@ -496,86 +816,126 @@ async function startDemo() {
   playScene(0);
 }
 
-// Edge TTS API로 각 씬 나레이션 생성 (MP3 Blob URL 반환)
-async function loadAllNarrations() {
-  audioElements = [];
-  const promises = SCENES.map(async (scene, idx) => {
-    try {
-      const res = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: scene.narration,
-          lang: 'ko-KR',
-          gender: 'female',
-        })
-      });
-      if (!res.ok) throw new Error('TTS HTTP ' + res.status);
-      const blob = await res.blob();
-      const audioUrl = URL.createObjectURL(blob);
-      audioElements[idx] = new Audio(audioUrl);
-      audioElements[idx].preload = 'auto';
-    } catch (e) {
-      console.warn(`씬 ${idx} TTS 실패, Web Speech 폴백:`, e.message);
-      audioElements[idx] = null; // 폴백 처리
-    }
-  });
-  await Promise.all(promises);
-}
-
 async function loadAllVideos() {
-  // 각 씬에 대해 Pexels 영상 검색
-  const promises = SCENES.map(async (scene, idx) => {
+  const uniqueQueries = [...new Set(SCENES.filter(s => s.searchQuery).map(s => s.searchQuery))];
+  await Promise.all(uniqueQueries.map(async q => {
     try {
       const res = await fetch('/api/video-search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: scene.searchQuery,
-          count: 3,
-          minDuration: 4,
-          maxDuration: 20
-        })
+        body: JSON.stringify({ query: q, count: 1, minDuration: 4, maxDuration: 20 })
       });
       const data = await res.json();
-      if (data.results && data.results.length > 0) {
-        scene.videoUrl = data.results[0].url;
-        scene.thumbnail = data.results[0].thumbnail;
-        scene.author = data.results[0].author;
-      }
-    } catch (e) {
-      console.warn(`씬 ${idx} 영상 검색 실패:`, e.message);
-    }
-  });
-  await Promise.all(promises);
-
-  // 영상 태그 미리 생성 (프리로드)
-  const stage = document.getElementById('videoStage');
-  stage.innerHTML = '';
-  videoElements = SCENES.map((scene, idx) => {
-    const v = document.createElement('video');
-    v.className = 'scene-video';
-    v.src = scene.videoUrl || '';
-    v.muted = true;
-    v.playsInline = true;
-    v.loop = true;
-    v.preload = idx < 2 ? 'auto' : 'metadata'; // 처음 2개만 auto 프리로드
-    stage.appendChild(v);
-    return v;
-  });
+      if (data.results?.[0]) videoCache[q] = data.results[0];
+    } catch (e) { console.warn('Video search failed:', q, e.message); }
+  }));
 }
 
-// ===================================================
-// 씬 재생
-// ===================================================
+async function loadAllNarrations() {
+  audioElements = [];
+  await Promise.all(SCENES.map(async (scene, idx) => {
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: scene.narration, lang: 'ko-KR', gender: 'female' })
+      });
+      if (!res.ok) throw new Error('TTS HTTP ' + res.status);
+      const blob = await res.blob();
+      audioElements[idx] = new Audio(URL.createObjectURL(blob));
+      audioElements[idx].preload = 'auto';
+    } catch (e) {
+      console.warn(`Scene ${idx} TTS failed:`, e.message);
+      audioElements[idx] = null;
+    }
+  }));
+}
+
+/* ========================================================
+ * 씬 렌더링 (타입별 레이아웃)
+ * ======================================================== */
+function renderScene(scene) {
+  const stage = document.getElementById('sceneStage');
+  const videoData = scene.searchQuery ? videoCache[scene.searchQuery] : null;
+
+  // 공통: 배경 영상 (있으면)
+  const bgVideoHtml = videoData ? `
+    <video class="bg-video active" src="${videoData.url}" autoplay muted playsinline loop></video>
+    <div class="bg-dim"></div>
+  ` : '<div class="bg-dim"></div>';
+
+  if (scene.type === 'title_card') {
+    stage.innerHTML = `
+      <div class="scene-title-card">
+        <div class="title-card-chapter">${scene.kicker}</div>
+        <h1 class="title-card-main">${scene.titleMain}</h1>
+        <div class="title-card-line"></div>
+        <div class="title-card-sub">${scene.titleSub}</div>
+      </div>
+    `;
+  } else if (scene.type === 'video_focus') {
+    stage.innerHTML = `
+      ${bgVideoHtml}
+      <div class="scene-video-focus">
+        <div class="caption">
+          ${scene.tag ? `<div class="tag">${scene.tag}</div><br>` : ''}
+          <span class="caption-text">${scene.caption}</span>
+        </div>
+      </div>
+    `;
+  } else if (scene.type === 'stat') {
+    stage.innerHTML = `
+      ${bgVideoHtml}
+      <div class="scene-stat">
+        <div class="stat-tag">${scene.tag || 'DATA'}</div>
+        <div class="stat-number">${scene.number}</div>
+        ${scene.unit ? `<div class="stat-unit">${scene.unit}</div>` : ''}
+        <div class="stat-context">${scene.context}</div>
+      </div>
+    `;
+  } else if (scene.type === 'typography') {
+    stage.innerHTML = `
+      ${bgVideoHtml}
+      <div class="scene-typography">
+        <div class="typo-label">${scene.label}</div>
+        <h2 class="typo-main">${scene.main}</h2>
+        <p class="typo-sub">${scene.sub}</p>
+      </div>
+    `;
+  } else if (scene.type === 'infographic') {
+    stage.innerHTML = `
+      <div class="scene-infographic">
+        <div class="info-header">
+          <div class="info-header-tag">${scene.headerTag}</div>
+          <h2 class="info-header-title">${scene.headerTitle}</h2>
+        </div>
+        <div class="info-steps">
+          ${scene.steps.map((s, i) => `
+            <div class="info-step">
+              <div class="info-step-num">${i+1}</div>
+              <div class="info-step-text">${s}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // 크레딧 업데이트
+  if (videoData?.author) {
+    document.getElementById('credit').textContent = `VIDEO · ${videoData.author.toUpperCase()} / PEXELS`;
+  } else {
+    document.getElementById('credit').textContent = 'AION KINDER ACADEMY';
+  }
+}
+
+/* ========================================================
+ * 씬 재생
+ * ======================================================== */
 function playScene(idx) {
   if (idx < 0 || idx >= SCENES.length) return;
 
-  // 이전 영상 숨김 + 오디오 정지
-  videoElements.forEach(v => {
-    v.classList.remove('active');
-    v.pause();
-  });
+  // 정리
   audioElements.forEach(a => { if (a) { a.pause(); a.currentTime = 0; } });
   if (currentAudio) { currentAudio.pause(); currentAudio = null; }
   if ('speechSynthesis' in window) speechSynthesis.cancel();
@@ -585,50 +945,31 @@ function playScene(idx) {
   const scene = SCENES[idx];
 
   // UI 업데이트
-  document.getElementById('sceneCounter').textContent = `${idx+1} / ${SCENES.length}`;
+  document.getElementById('sceneCounter').textContent = `${String(idx+1).padStart(2,'0')} · ${SCENES.length}`;
   document.getElementById('progressFill').style.width = `${((idx+1)/SCENES.length)*100}%`;
-  document.getElementById('sceneTitle').textContent = scene.title;
-  document.getElementById('subtitleText').innerHTML = scene.subtitle;
-  document.getElementById('credit').textContent = scene.author ? `Video: ${scene.author} / Pexels` : 'Videos: Pexels';
 
-  // 타이틀 애니메이션 재시작
-  const titleEl = document.getElementById('sceneTitle');
-  titleEl.style.animation = 'none';
-  titleEl.offsetHeight;
-  titleEl.style.animation = 'slideUp 0.8s 0.3s forwards';
+  // 렌더
+  renderScene(scene);
 
-  // 영상 재생
-  const videoEl = videoElements[idx];
-  if (videoEl && videoEl.src) {
-    videoEl.classList.add('active');
-    videoEl.currentTime = 0;
-    videoEl.play().catch(() => {});
-  }
-
-  // 나레이션 재생 — Edge TTS (Microsoft Azure 고품질 음성) 우선
+  // 오디오 재생
   currentAudio = audioElements[idx];
-  let audioDuration = scene.duration; // 기본값
+  let audioDuration = scene.duration;
   if (isPlaying && currentAudio) {
     try {
       currentAudio.currentTime = 0;
-      currentAudio.play().catch(e => console.warn('Audio play:', e.message));
-      // 오디오 길이에 맞춰 duration 조정 (최소 scene.duration 보장)
+      currentAudio.play().catch(e => console.warn('Audio:', e.message));
       currentAudio.onloadedmetadata = () => {
         const audioDur = currentAudio.duration;
         if (audioDur > audioDuration) {
-          audioDuration = audioDur + 0.5;
-          // 타이머 재설정
+          audioDuration = audioDur + 0.7; // 오디오 끝난 후 약간 여유
           if (advanceTimer) clearTimeout(advanceTimer);
           advanceTimer = setTimeout(() => {
-            if (idx === SCENES.length - 1) showCompletion();
-            else playScene(idx + 1);
+            idx === SCENES.length - 1 ? showCompletion() : playScene(idx + 1);
           }, audioDuration * 1000);
         }
       };
     } catch (e) { console.warn('Audio play error:', e); }
   } else if (isPlaying && 'speechSynthesis' in window) {
-    // 폴백: 브라우저 내장 TTS
-    speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(scene.narration);
     utter.lang = 'ko-KR';
     const voices = speechSynthesis.getVoices();
@@ -637,59 +978,45 @@ function playScene(idx) {
     speechSynthesis.speak(utter);
   }
 
-  // 자동 다음 씬 (audioDuration초 후)
+  // 자동 전환
   if (isPlaying) {
     advanceTimer = setTimeout(() => {
-      if (idx === SCENES.length - 1) {
-        showCompletion();
-      } else {
-        playScene(idx + 1);
-      }
+      idx === SCENES.length - 1 ? showCompletion() : playScene(idx + 1);
     }, audioDuration * 1000);
   }
 }
 
-// ===================================================
-// 컨트롤
-// ===================================================
+/* ========================================================
+ * 컨트롤
+ * ======================================================== */
 function togglePlay() {
   isPlaying = !isPlaying;
   document.getElementById('playBtn').textContent = isPlaying ? '⏸' : '▶';
-
   if (isPlaying) {
     playScene(currentIndex);
   } else {
-    videoElements.forEach(v => v.pause());
-    audioElements.forEach(a => { if (a) { a.pause(); a.currentTime = 0; } });
-    if (currentAudio) currentAudio.pause();
+    audioElements.forEach(a => { if (a) a.pause(); });
+    document.querySelectorAll('.bg-video').forEach(v => v.pause());
     if ('speechSynthesis' in window) speechSynthesis.cancel();
     if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; }
   }
 }
 
-function prevScene() {
-  if (currentIndex > 0) playScene(currentIndex - 1);
-}
+function prevScene() { if (currentIndex > 0) playScene(currentIndex - 1); }
 function nextScene() {
-  if (currentIndex < SCENES.length - 1) {
-    playScene(currentIndex + 1);
-  } else {
-    showCompletion();
-  }
+  if (currentIndex < SCENES.length - 1) playScene(currentIndex + 1);
+  else showCompletion();
 }
 
 function showCompletion() {
-  videoElements.forEach(v => v.pause());
   audioElements.forEach(a => { if (a) a.pause(); });
+  document.querySelectorAll('.bg-video').forEach(v => v.pause());
   if ('speechSynthesis' in window) speechSynthesis.cancel();
   if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; }
   document.getElementById('completion').classList.add('active');
 }
 
-// speechSynthesis 음성 로딩 대기 (일부 브라우저에서 비동기)
-if ('speechSynthesis' in window) {
-  speechSynthesis.onvoiceschanged = () => {};
-}
+if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => {};
 </script>
 </body>
 </html>
