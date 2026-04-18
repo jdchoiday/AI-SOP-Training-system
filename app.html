@@ -504,15 +504,33 @@
       if (chapterData.orphanSections) {
         chapterData.orphanSections.forEach(s => flat.push(s));
       }
-      // 학습 경로 필터
+      // 학습 경로 필터 — 팀 기반 우선, 없으면 지점 기반 폴백
       if (!user) return flat;
       const emp = typeof EmployeeStore !== 'undefined' ? EmployeeStore.getCurrentEmployee() : null;
       const branch = emp?.branch || user.branch;
-      if (!branch) return flat;
-      const paths = JSON.parse(localStorage.getItem('sop_learning_paths') || '{}');
-      const assigned = paths[branch];
-      if (!assigned || assigned.length === 0) return flat;
-      return flat.filter(ch => assigned.includes(ch.id));
+      const team = emp?.team || user.team;
+      let paths = {};
+      try { paths = JSON.parse(localStorage.getItem('sop_learning_paths') || '{}'); } catch(e) {}
+
+      // 1순위: 팀 기반 경로 (__team__{팀명})
+      if (team) {
+        const teamKey = '__team__' + team;
+        const teamAssigned = paths[teamKey];
+        if (teamAssigned && teamAssigned.length > 0) {
+          return flat.filter(ch => teamAssigned.includes(ch.id));
+        }
+      }
+
+      // 2순위: 지점 기반 경로 (하위 호환)
+      if (branch) {
+        const assigned = paths[branch];
+        if (assigned && assigned.length > 0) {
+          return flat.filter(ch => assigned.includes(ch.id));
+        }
+      }
+
+      // 폴백: 전체 공개
+      return flat;
     })();
 
     // ===== 전체 진행률 =====

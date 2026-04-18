@@ -6947,7 +6947,15 @@ Requirements:
       closeModal();
     }
 
-    // 카테고리 → 지점 자동 매칭 (유치원 카테고리 SOP → 유치원 지점 배정)
+    // 팀명 → 업종 카테고리 매핑 (팀별 자동 매칭용)
+    const TEAM_TO_CATEGORY = {
+      'AION 킨더 팀': '유치원',
+      '키우자 타운 팀': '키즈카페',
+      'BBQ 로맨스 팀': 'KBBQ',
+    };
+
+    // 카테고리 → 팀 자동 매칭 (유치원 카테고리 SOP → AION 킨더 팀 배정)
+    // 지점별이 아닌 팀별로 학습경로 키 저장 (예: "__team__AION 킨더 팀")
     function autoAssignLearningPaths() {
       const sops = getSops().filter(s => s.status === 'published');
       if (sops.length === 0) {
@@ -6955,44 +6963,40 @@ Requirements:
         return;
       }
 
-      const branches = getBranches();
-      if (branches.length === 0) {
-        alert('등록된 지점이 없습니다. 지점/팀 관리에서 먼저 지점을 등록하세요.');
-        return;
-      }
-
-      // 카테고리가 지점 이름과 일치하는 SOP들을 자동 매핑
       const paths = getLearningPaths();
       const report = [];
 
-      branches.forEach(branch => {
-        const matching = sops.filter(s => (s.category || '').trim() === branch);
+      // 팀별 매핑 (우리 구조의 핵심)
+      Object.keys(TEAM_TO_CATEGORY).forEach(teamName => {
+        const category = TEAM_TO_CATEGORY[teamName];
+        const matching = sops.filter(s => (s.category || '').trim() === category);
+        const teamKey = '__team__' + teamName;
         if (matching.length > 0) {
-          paths[branch] = matching.map(s => s.id);
-          report.push(`✓ ${branch}: ${matching.length}개 배정`);
+          paths[teamKey] = matching.map(s => s.id);
+          report.push(`✓ ${teamName} (${category}): ${matching.length}개 배정`);
         } else {
-          report.push(`✗ ${branch}: 매칭 SOP 없음`);
+          report.push(`✗ ${teamName} (${category}): 매칭 SOP 없음`);
         }
       });
 
-      // 카테고리 "본사"는 모든 지점에 공통 배정
+      // "본사" 공통 SOP → 전 팀 배정
       const commonSops = sops.filter(s => (s.category || '').trim() === '본사');
       if (commonSops.length > 0) {
-        branches.forEach(branch => {
-          if (paths[branch]) {
-            commonSops.forEach(s => { if (!paths[branch].includes(s.id)) paths[branch].push(s.id); });
-          } else {
-            paths[branch] = commonSops.map(s => s.id);
-          }
+        Object.keys(TEAM_TO_CATEGORY).forEach(teamName => {
+          const teamKey = '__team__' + teamName;
+          if (!paths[teamKey]) paths[teamKey] = [];
+          commonSops.forEach(s => {
+            if (!paths[teamKey].includes(s.id)) paths[teamKey].push(s.id);
+          });
         });
-        report.push(`✓ 본사 공통 SOP ${commonSops.length}개 → 전 지점 배정`);
+        report.push(`✓ 본사 공통 SOP ${commonSops.length}개 → 전 팀 배정`);
       }
 
-      if (!confirm(`자동 매칭 결과:\n\n${report.join('\n')}\n\n적용하시겠습니까?`)) return;
+      if (!confirm(`팀별 자동 매칭 결과:\n\n${report.join('\n')}\n\n적용하시겠습니까?`)) return;
 
       saveLearningPaths(paths);
       renderLearningPaths();
-      alert('자동 매칭 완료!');
+      alert('자동 매칭 완료! 팀별로 해당 업종 교재만 배포됩니다.');
     }
 
     // ===== 학습 경로 관리 =====
@@ -7020,31 +7024,47 @@ Requirements:
 
     function renderLearningPaths() {
       const paths = getLearningPaths();
-      const branches = getBranchNames();
       const sops = getSops().filter(s => s.status === 'published');
       const tbody = document.getElementById('lpTableBody');
+      const thead = document.getElementById('lpTableHead');
+
+      // 헤더 변경: 팀 기준
+      if (thead) thead.innerHTML = '<tr><th>팀 (사업 단위)</th><th>배정된 SOP</th><th>관리</th></tr>';
 
       if (sops.length === 0) {
         tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:40px; color:var(--gray-500);">배포된 SOP가 없습니다. SOP를 먼저 배포하세요.</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = branches.map(branch => {
-        const assigned = paths[branch]; // undefined means all
+      // 팀 목록 (TEAM_TO_CATEGORY에 정의된 팀들이 주요 대상)
+      const teams = Object.keys(TEAM_TO_CATEGORY);
+
+      tbody.innerHTML = teams.map(teamName => {
+        const teamKey = '__team__' + teamName;
+        const category = TEAM_TO_CATEGORY[teamName];
+        const color = BUSINESS_COLORS[category] || { icon: '📁', color: 'var(--gray-500)', bg: 'var(--gray-100)' };
+
+        const assigned = paths[teamKey];
         const allAssigned = !assigned || assigned.length === sops.length;
         const assignedSops = allAssigned
           ? sops
           : sops.filter(s => assigned.includes(s.id));
-        const sopNames = allAssigned
-          ? `<span class="badge" style="background:rgba(16,185,129,0.15); color:var(--success);">전체 배정 (${sops.length}개)</span>`
-          : assignedSops.length > 0
-            ? assignedSops.map(s => `<span class="badge" style="background:var(--primary-light); color:var(--primary);">${s.title}</span>`).join(' ')
-            : `<span class="badge" style="background:var(--gray-100); color:var(--danger);">미배정</span>`;
+        const sopNames = assignedSops.length > 0
+          ? assignedSops.map(s => `<span class="badge" style="background:${color.bg}; color:${color.color};">${s.title}</span>`).join(' ')
+          : `<span class="badge" style="background:var(--gray-100); color:var(--danger);">미배정 — 자동 매칭 실행하세요</span>`;
 
         return `<tr>
-          <td><strong>${branch}</strong></td>
-          <td style="max-width:400px;">${sopNames}</td>
-          <td><button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="editLearningPath('${branch.replace(/'/g, "\\'")}')">편집</button></td>
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:22px;">${color.icon}</span>
+              <div>
+                <div style="font-weight:700; font-size:14px;">${teamName}</div>
+                <div style="font-size:12px; color:var(--gray-500);">${category} 사업 · ${assignedSops.length}개 교재</div>
+              </div>
+            </div>
+          </td>
+          <td style="max-width:500px;">${sopNames}</td>
+          <td><button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="editLearningPath('${teamKey.replace(/'/g, "\\'")}','${teamName.replace(/'/g, "\\'")}')">편집</button></td>
         </tr>`;
       }).join('');
     }
@@ -7056,9 +7076,11 @@ Requirements:
       const allAssigned = !assigned;
 
       const m = document.getElementById('modalContent');
+      // 팀 이름 인자도 받음 (두 번째 인자)
+      const displayName = arguments[1] || branch;
       m.innerHTML = `
-        <h3>학습 경로 편집 — ${branch}</h3>
-        <p style="font-size:14px; color:var(--gray-500); margin-bottom:16px;">이 지점 직원에게 배정할 SOP를 선택하세요</p>
+        <h3>학습 경로 편집 — ${displayName}</h3>
+        <p style="font-size:14px; color:var(--gray-500); margin-bottom:16px;">이 팀 직원에게 배정할 SOP를 선택하세요 (모든 지점 공통)</p>
         <div style="margin-bottom:16px;">
           <label style="display:flex; align-items:center; gap:8px; padding:10px; background:var(--gray-50); border-radius:8px; cursor:pointer; font-weight:600;">
             <input type="checkbox" id="lpAssignAll" onchange="toggleAssignAll()" ${allAssigned ? 'checked' : ''}> 전체 배정 (모든 SOP)
