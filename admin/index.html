@@ -513,6 +513,7 @@
         <button class="btn btn-primary" style="padding:10px 20px; font-size:14px;" onclick="openModal('addEmployee')">+ 직원 추가</button>
         <button class="btn btn-outline" style="padding:10px 20px; font-size:14px;" onclick="openModal('inviteLink')">🔗 초대 링크</button>
         <button class="btn btn-outline" style="padding:10px 16px; font-size:14px;" onclick="refreshEmployees()" title="Supabase에서 최신 직원 목록 가져오기">🔄 새로고침</button>
+        <button class="btn btn-outline" style="padding:10px 16px; font-size:14px; color:#F59E0B; border-color:#F59E0B;" onclick="cleanupDemoAccounts()" title="테스트/데모 계정 일괄 삭제">🧹 데모 정리</button>
       </div>
       <!-- 필터 -->
       <div class="card" style="margin-bottom:0; border-radius:12px 12px 0 0; padding:12px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
@@ -5468,6 +5469,50 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
       }
     }
 
+    // 데모/테스트 계정 일괄 삭제
+    async function cleanupDemoAccounts() {
+      const allEmps = EmployeeStore.getAll();
+      // 데모 계정 감지 기준: @test.com, @company.com 도메인 + role='admin'은 제외
+      const demoEmails = [
+        'staff@test.com',
+        'minji@company.com', 'junseok@company.com', 'soyoung@company.com',
+        'taeyoung@company.com', 'younghee@company.com', 'junho@company.com',
+        'sumin@company.com', 'jieun@company.com', 'nguyen@company.com'
+      ];
+      const toDelete = allEmps.filter(e => demoEmails.includes(e.email) && e.role !== 'admin');
+
+      if (toDelete.length === 0) {
+        alert('✨ 삭제할 데모 계정이 없습니다!\n(이미 정리되었거나 실제 계정만 남아있음)');
+        return;
+      }
+
+      const list = toDelete.map(e => `• ${e.name} (${e.email})`).join('\n');
+      if (!confirm(`다음 ${toDelete.length}개 데모 계정을 삭제합니다:\n\n${list}\n\n⚠️ 이 계정들의 학습 기록/XP도 같이 삭제됩니다.\n관리자 계정(admin@test.com)은 영향 없음.\n\n정말 삭제하시겠습니까?`)) return;
+
+      if (!SupabaseMode._ready) {
+        alert('Supabase 연결이 필요합니다.');
+        return;
+      }
+
+      let ok = 0, fail = 0;
+      for (const emp of toDelete) {
+        try {
+          await SupabaseMode._client.from('employees').delete().eq('id', emp.id);
+          ok++;
+        } catch (e) {
+          fail++;
+          console.error('[Cleanup] 삭제 실패:', emp.email, e.message);
+        }
+      }
+
+      // localStorage 동기화
+      const remaining = allEmps.filter(e => !demoEmails.includes(e.email));
+      EmployeeStore.save(remaining);
+
+      alert(`✅ 데모 정리 완료!\n\n삭제: ${ok}개\n실패: ${fail}개\n남은 직원: ${remaining.length}명`);
+      renderEmployeeManage();
+    }
+
     // Supabase에서 최신 직원 목록 다시 가져오기 (신규 가입자 반영)
     async function refreshEmployees() {
       if (!SupabaseMode._ready) {
@@ -5490,7 +5535,11 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
       // 필터 적용
       const filterBranch = document.getElementById('empFilterBranch')?.value || '';
       const filterTeam = document.getElementById('empFilterTeam')?.value || '';
-      if (filterBranch) emps = emps.filter(e => e.branch === filterBranch);
+      if (filterBranch === '__unassigned__') {
+        emps = emps.filter(e => !e.branch || e.branch === '');
+      } else if (filterBranch) {
+        emps = emps.filter(e => e.branch === filterBranch);
+      }
       if (filterTeam) emps = emps.filter(e => e.team === filterTeam);
       const countEl = document.getElementById('empFilterCount');
       if (countEl) countEl.textContent = `${emps.length}명`;
@@ -5791,7 +5840,12 @@ function saveInvitation(code) {
       const sel = document.getElementById('empFilterBranch');
       if (!sel) return;
       const prevBranch = sel.value;
-      sel.innerHTML = '<option value="">전체 지점</option>' +
+      // "미배정" 상태 직원도 필터에서 찾을 수 있게 옵션 추가
+      const unassignedCount = EmployeeStore.getAll().filter(e => e.role !== 'admin' && (!e.branch || e.branch === '')).length;
+      const unassignedOption = unassignedCount > 0
+        ? `<option value="__unassigned__">⚠️ 미배정 (${unassignedCount}명)</option>`
+        : '';
+      sel.innerHTML = '<option value="">전체 지점</option>' + unassignedOption +
         branches.map(b => `<option value="${b}">${b}</option>`).join('');
       if (prevBranch) sel.value = prevBranch;
       // 팀 필터도 보존
@@ -5881,10 +5935,65 @@ function saveInvitation(code) {
       renderBranchTeamPage();
     }
 
-    function removeBranch(name) {
+    async function removeBranch(name) {
       const emps = EmployeeStore.getAll().filter(e => e.branch === name && e.role !== 'admin');
-      if (emps.length > 0) { alert(`${name}에 ${emps.length}명의 직원이 있어 삭제할 수 없습니다.\n직원을 먼저 다른 지점으로 이동하세요.`); return; }
-      if (!confirm(`"${name}" 지점을 삭제하시겠습니까?`)) return;
+
+      // 직원이 없으면 바로 삭제
+      if (emps.length === 0) {
+        if (!confirm(`"${name}" 지점을 삭제하시겠습니까?`)) return;
+        _doBranchDelete(name);
+        return;
+      }
+
+      // 직원이 있으면 처리 옵션 선택 팝업
+      const otherBranches = getBranches().filter(b => b !== name);
+      const optionList = [
+        '1️⃣ 직원을 "미배정" 상태로 옮기고 지점 삭제',
+        ...otherBranches.map((b, i) => `${i+2}️⃣ "${b}" 지점으로 이동 후 삭제`),
+        '❌ 취소'
+      ];
+      const msg = `"${name}" 지점에 ${emps.length}명의 직원이 있습니다.\n\n⚠️ 직원 정보(XP/학습기록/프로필)는 절대 삭제되지 않아요.\n지점 소속만 바뀝니다.\n\n어떻게 할까요?\n\n${optionList.join('\n')}\n\n번호를 입력하세요:`;
+      const choice = prompt(msg, '1');
+      if (!choice) return;
+
+      const n = parseInt(choice);
+      if (n === 1) {
+        // 미배정으로 이동
+        if (!confirm(`${emps.length}명을 "미배정" 상태로 옮기고 지점을 삭제합니다.\n계속하시겠습니까?`)) return;
+        await _reassignEmployees(emps, '', '');
+        _doBranchDelete(name);
+        alert(`✅ ${emps.length}명을 미배정으로 옮기고 지점을 삭제했습니다.\n\n직원 관리 페이지에서 "미배정" 필터로 확인 가능합니다.`);
+      } else if (n >= 2 && n <= otherBranches.length + 1) {
+        const target = otherBranches[n - 2];
+        if (!confirm(`${emps.length}명을 "${target}" 지점으로 이동하고 "${name}" 지점을 삭제합니다.\n계속하시겠습니까?`)) return;
+        await _reassignEmployees(emps, target, '');
+        _doBranchDelete(name);
+        alert(`✅ ${emps.length}명을 "${target}"으로 이동하고 "${name}" 지점을 삭제했습니다.`);
+      }
+    }
+
+    // 직원 소속 재배정 (로컬 + Supabase)
+    async function _reassignEmployees(emps, newBranch, newTeam) {
+      const all = EmployeeStore.getAll();
+      emps.forEach(emp => {
+        const idx = all.findIndex(e => e.id === emp.id);
+        if (idx >= 0) { all[idx].branch = newBranch; all[idx].team = newTeam; }
+      });
+      EmployeeStore.save(all);
+
+      // Supabase 동기화 (병렬)
+      if (SupabaseMode._ready) {
+        await Promise.all(emps.map(emp =>
+          SupabaseMode._client.from('employees')
+            .update({ branch: newBranch, team: newTeam })
+            .eq('id', emp.id)
+            .then(() => {})
+            .catch(e => console.warn('[Branch] 재배정 실패:', emp.name, e.message))
+        ));
+      }
+    }
+
+    function _doBranchDelete(name) {
       const branches = getBranches().filter(b => b !== name);
       saveBranches(branches);
       const bt = getBranchTeams();
@@ -5938,10 +6047,42 @@ function saveInvitation(code) {
       renderBranchTeamStats();
     }
 
-    function removeTeam(branch, name) {
+    async function removeTeam(branch, name) {
       const emps = EmployeeStore.getAll().filter(e => e.branch === branch && e.team === name);
-      if (emps.length > 0) { alert(`${name}에 ${emps.length}명이 있어 삭제할 수 없습니다.\n직원을 먼저 다른 팀으로 이동하세요.`); return; }
-      if (!confirm(`"${name}" 팀을 삭제하시겠습니까?`)) return;
+
+      if (emps.length === 0) {
+        if (!confirm(`"${name}" 팀을 삭제하시겠습니까?`)) return;
+        _doTeamDelete(branch, name);
+        return;
+      }
+
+      const bt = getBranchTeams();
+      const otherTeams = (bt[branch] || []).filter(t => t !== name);
+      const optionList = [
+        '1️⃣ 직원을 "팀 없음" 상태로 옮기고 팀 삭제',
+        ...otherTeams.map((t, i) => `${i+2}️⃣ "${t}" 팀으로 이동 후 삭제`),
+        '❌ 취소'
+      ];
+      const msg = `"${branch}/${name}" 팀에 ${emps.length}명의 직원이 있습니다.\n\n⚠️ 직원 정보는 그대로 유지됩니다. 팀 소속만 바뀝니다.\n\n어떻게 할까요?\n\n${optionList.join('\n')}\n\n번호를 입력하세요:`;
+      const choice = prompt(msg, '1');
+      if (!choice) return;
+
+      const n = parseInt(choice);
+      if (n === 1) {
+        if (!confirm(`${emps.length}명을 "팀 없음" 상태로 옮기고 팀을 삭제합니다.`)) return;
+        await _reassignEmployees(emps, branch, ''); // 지점은 유지, 팀만 비움
+        _doTeamDelete(branch, name);
+        alert(`✅ ${emps.length}명의 팀 소속을 해제하고 "${name}" 팀을 삭제했습니다.`);
+      } else if (n >= 2 && n <= otherTeams.length + 1) {
+        const target = otherTeams[n - 2];
+        if (!confirm(`${emps.length}명을 "${target}" 팀으로 이동합니다.`)) return;
+        await _reassignEmployees(emps, branch, target);
+        _doTeamDelete(branch, name);
+        alert(`✅ ${emps.length}명을 "${target}"으로 이동하고 "${name}" 팀을 삭제했습니다.`);
+      }
+    }
+
+    function _doTeamDelete(branch, name) {
       const bt = getBranchTeams();
       bt[branch] = (bt[branch] || []).filter(t => t !== name);
       saveBranchTeams(bt);
