@@ -1325,8 +1325,11 @@
     }
 
     // ===== 멀티 관리자 역할 시스템 =====
-    const adminRole = user.adminRole || 'superadmin';
+    // role='admin'이면 무조건 superadmin 취급 (전체 조회 가능)
+    // adminRole 필드는 향후 지점장 등 세분화용 예약
+    const adminRole = (user.role === 'admin' && !user.adminRole) ? 'superadmin' : (user.adminRole || 'superadmin');
     const adminBranch = user.adminBranch || '';
+    console.log('[Admin] 접속 권한:', { role: user.role, adminRole, adminBranch, name: user.name });
 
     function hasPermission(action) {
       if (adminRole === 'superadmin') return true;
@@ -1470,21 +1473,28 @@
     // Supabase 초기화 + 데이터 동기화
     SupabaseMode.init().then(connected => {
       if (connected) {
+        // 1단계: 직원 목록 최우선으로 가져오기 (SOP보다 빠르게)
+        SupabaseMode.syncEmployees().then(() => {
+          const emps = EmployeeStore.getAll();
+          console.log(`[Admin] 직원 ${emps.length}명 로드됨:`, emps.map(e => e.name).join(', '));
+          try {
+            if (typeof renderEmployeeManage === 'function') renderEmployeeManage();
+            else if (typeof renderEmployeeTable === 'function') renderEmployeeTable(emps);
+          } catch(e) { console.warn('[Sync] 직원 렌더:', e.message); }
+        }).catch(e => console.warn('[Admin] 직원 sync 실패:', e.message));
+
+        // 2단계: 나머지 전체 동기화
         SupabaseMode.syncAll().then(() => {
           try { renderSopList(); } catch(e) { console.warn('[Sync] renderSopList:', e.message); }
-          // 직원 목록도 재렌더 (신규 가입자 반영)
+          // 직원 목록 다시 재렌더 (최신 상태)
           try {
-            if (typeof renderEmployees === 'function') renderEmployees();
-            else if (typeof renderEmployeeTable === 'function') {
-              const emps = EmployeeStore.getAll();
-              renderEmployeeTable(emps);
-            }
-          } catch(e) { console.warn('[Sync] renderEmployees:', e.message); }
+            if (typeof renderEmployeeManage === 'function') renderEmployeeManage();
+          } catch(e) { console.warn('[Sync] renderEmployeeManage:', e.message); }
           // 지점/팀 목록도 재렌더
           try { if (typeof renderBranchList === 'function') renderBranchList(); } catch(e) {}
           try { if (typeof renderTeamList === 'function') renderTeamList(); } catch(e) {}
           if (typeof renderTrainingReport === 'function') renderTrainingReport();
-          console.log('[Admin] Supabase 동기화 완료 — UI 재렌더링됨');
+          console.log('[Admin] Supabase 전체 동기화 완료 — UI 재렌더링됨');
         });
       }
     });
