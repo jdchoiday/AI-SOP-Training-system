@@ -383,6 +383,38 @@
           </div>
         </div>
 
+        <!-- 업종별 필터 탭 -->
+        <div id="sopCategoryTabs" style="display:flex; gap:6px; padding:8px 0; flex-wrap:wrap;">
+          <button class="sop-cat-tab active" data-cat="all" onclick="setSopCategoryFilter('all')"
+            style="padding:8px 16px; border-radius:10px; border:2px solid transparent; background:rgba(255,255,255,0.06); color:var(--text-primary); font-size:13px; font-weight:600; cursor:pointer;">
+            전체
+          </button>
+          <button class="sop-cat-tab" data-cat="유치원" onclick="setSopCategoryFilter('유치원')"
+            style="padding:8px 16px; border-radius:10px; border:2px solid rgba(245,158,11,0.3); background:rgba(245,158,11,0.08); color:#F59E0B; font-size:13px; font-weight:600; cursor:pointer;">
+            🏫 유치원
+          </button>
+          <button class="sop-cat-tab" data-cat="키즈카페" onclick="setSopCategoryFilter('키즈카페')"
+            style="padding:8px 16px; border-radius:10px; border:2px solid rgba(236,72,153,0.3); background:rgba(236,72,153,0.08); color:#EC4899; font-size:13px; font-weight:600; cursor:pointer;">
+            🎪 키즈카페
+          </button>
+          <button class="sop-cat-tab" data-cat="KBBQ" onclick="setSopCategoryFilter('KBBQ')"
+            style="padding:8px 16px; border-radius:10px; border:2px solid rgba(239,68,68,0.3); background:rgba(239,68,68,0.08); color:#EF4444; font-size:13px; font-weight:600; cursor:pointer;">
+            🥩 KBBQ
+          </button>
+          <button class="sop-cat-tab" data-cat="본사" onclick="setSopCategoryFilter('본사')"
+            style="padding:8px 16px; border-radius:10px; border:2px solid rgba(99,102,241,0.3); background:rgba(99,102,241,0.08); color:#6366F1; font-size:13px; font-weight:600; cursor:pointer;">
+            🏢 본사(공통)
+          </button>
+        </div>
+        <style>
+          .sop-cat-tab.active {
+            background: linear-gradient(135deg, #10B981, #3B82F6) !important;
+            color: white !important;
+            border-color: transparent !important;
+            box-shadow: 0 2px 8px rgba(16,185,129,0.3);
+          }
+        </style>
+
         <!-- 전체 선택 헤더 -->
         <div id="sopListHeader" style="display:none; align-items:center; gap:12px; padding:10px 20px; background:var(--gray-50); border-radius:var(--radius) var(--radius) 0 0; border:1px solid var(--gray-200); border-bottom:none;">
           <input type="checkbox" id="sopSelectAllCheckbox" onchange="sopToggleSelectAll(this.checked)"
@@ -419,9 +451,22 @@
             </select>
           </div>
           <div class="form-group" style="margin:0; flex:1; min-width:200px;">
-            <label>카테고리</label>
-            <select id="sopCategory">
-              <option>오프닝</option><option>고객 응대</option><option>안전/위생</option><option>클로징</option><option>비상 대응</option><option>기타</option>
+            <label>업종 / 카테고리</label>
+            <select id="sopCategory" style="font-weight:600;">
+              <optgroup label="━━ 업종 (사업장별 분류) ━━">
+                <option value="유치원">🏫 유치원</option>
+                <option value="키즈카페">🎪 키즈카페</option>
+                <option value="KBBQ">🥩 KBBQ</option>
+                <option value="본사">🏢 본사 (공통)</option>
+              </optgroup>
+              <optgroup label="━━ 기타 카테고리 ━━">
+                <option value="오프닝">오프닝</option>
+                <option value="고객 응대">고객 응대</option>
+                <option value="안전/위생">안전/위생</option>
+                <option value="클로징">클로징</option>
+                <option value="비상 대응">비상 대응</option>
+                <option value="기타">기타</option>
+              </optgroup>
             </select>
           </div>
         </div>
@@ -461,6 +506,9 @@
         <h1>대시보드</h1>
         <button class="btn btn-outline" style="padding:8px 16px; font-size:13px;" onclick="exportAllCSV()">&#128229; 내보내기</button>
       </div>
+      <!-- 업종별 요약 카드 -->
+      <div id="businessSummaryCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:16px;"></div>
+
       <div class="stats-grid">
         <div class="stat-card"><p class="label">전체 직원</p><p class="value" id="statTotalEmp">0</p></div>
         <div class="stat-card"><p class="label">학습 완료</p><p class="value" style="color:var(--success);" id="statCompleted">0</p></div>
@@ -539,6 +587,16 @@
       <div class="topbar">
         <h1>학습 경로</h1>
         <p style="font-size:14px; color:var(--gray-500); margin-left:12px;">지점별로 배정할 SOP를 선택하세요</p>
+      </div>
+      <!-- 업종별 자동 매칭 (카테고리 기반 원클릭 설정) -->
+      <div class="card" style="margin-bottom:12px; padding:16px; background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(236,72,153,0.08)); border:1px solid rgba(99,102,241,0.2);">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <div>
+            <h3 style="font-size:15px; margin-bottom:4px;">자동 매칭</h3>
+            <p style="font-size:13px; color:var(--gray-500); margin:0;">SOP 카테고리를 기반으로 지점별 학습 경로를 자동 설정합니다. 예: 카테고리 "유치원" → 지점 "유치원"에 자동 배정.</p>
+          </div>
+          <button class="btn btn-primary" style="padding:10px 20px;" onclick="autoAssignLearningPaths()">자동 매칭 실행</button>
+        </div>
       </div>
       <div class="card" style="padding:0; overflow:hidden;">
         <div style="overflow-x:auto;">
@@ -1705,7 +1763,29 @@
 
     // ===== SOP 필터/선택 상태 =====
     let currentSopFilter = 'all';
+    let currentSopCategoryFilter = 'all'; // 업종 필터 (유치원/키즈카페/KBBQ)
     let selectedSopIds = new Set();
+
+    // 업종별 색상/아이콘 매핑 (관리자 화면 구분용)
+    const BUSINESS_COLORS = {
+      '유치원': { bg: 'rgba(245,158,11,0.15)', color: '#F59E0B', border: '#F59E0B', icon: '🏫' },
+      '키즈카페': { bg: 'rgba(236,72,153,0.15)', color: '#EC4899', border: '#EC4899', icon: '🎪' },
+      'KBBQ': { bg: 'rgba(239,68,68,0.15)', color: '#EF4444', border: '#EF4444', icon: '🥩' },
+      '본사': { bg: 'rgba(99,102,241,0.15)', color: '#6366F1', border: '#6366F1', icon: '🏢' },
+    };
+    function getBusinessBadge(category) {
+      const b = BUSINESS_COLORS[category];
+      if (!b) return category ? `<span class="badge" style="background:var(--gray-100);color:var(--gray-600);">${category}</span>` : '';
+      return `<span class="badge" style="background:${b.bg};color:${b.color};border:1px solid ${b.border};font-weight:700;">${b.icon} ${category}</span>`;
+    }
+    function setSopCategoryFilter(cat) {
+      currentSopCategoryFilter = cat;
+      // 탭 active 표시
+      document.querySelectorAll('.sop-cat-tab').forEach(el => {
+        el.classList.toggle('active', el.dataset.cat === cat);
+      });
+      renderSopList();
+    }
 
     function updateBulkBar() {
       const bar = document.getElementById('sopBulkBar');
@@ -2246,6 +2326,10 @@ ${JSON.stringify({ fields: { title: "교정된 제목", title_en: "fixed title",
       if (currentSopFilter !== 'all') {
         sops = sops.filter(s => s.status === currentSopFilter);
       }
+      // 업종 카테고리 필터링
+      if (currentSopCategoryFilter !== 'all') {
+        sops = sops.filter(s => (s.category || '').trim() === currentSopCategoryFilter);
+      }
       const container = document.getElementById('sopList');
 
       const listHeader = document.getElementById('sopListHeader');
@@ -2295,8 +2379,12 @@ ${JSON.stringify({ fields: { title: "교정된 제목", title_en: "fixed title",
         const quizInfo = hasQuiz ? ` · 퀴즈 ${sop.quizzes.length}` : '';
         const sceneQuizInfo = sceneQuizCount > 0 ? ` · 씬퀴즈 ${sceneQuizCount}` : '';
 
+        // 업종(카테고리) 좌측 컬러 바
+        const bizColor = BUSINESS_COLORS[sop.category];
+        const leftBar = bizColor ? `border-left:4px solid ${bizColor.border};` : '';
+
         return `
-          <div class="sop-list-item" style="position:relative; ${indent ? 'margin-left:12px; border-left:none; background:rgba(30,41,59,0.5); border-radius:10px; margin-bottom:3px;' : ''}">
+          <div class="sop-list-item" style="position:relative; ${leftBar} ${indent ? 'margin-left:12px; border-left:none; background:rgba(30,41,59,0.5); border-radius:10px; margin-bottom:3px;' : ''}">
             <input type="checkbox" class="sop-checkbox" data-id="${sop.id}"
               ${isChecked ? 'checked' : ''}
               onclick="toggleSopSelect('${sop.id}', event)"
@@ -2307,6 +2395,7 @@ ${JSON.stringify({ fields: { title: "교정된 제목", title_en: "fixed title",
               <p style="font-size:12px; color:#94A3B8;">${statusIcon} ${sceneInfo}${quizInfo}${sceneQuizInfo}</p>
             </div>
             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+              ${sop.category ? getBusinessBadge(sop.category) : ''}
               <span class="badge" style="background:${st.bg}; color:${st.color}; font-size:11px;">${st.label}</span>
               ${hasScript ? '<span class="badge" style="background:rgba(16,185,129,0.15); color:#10B981; font-size:10px;">스크립트 ✓</span>' : ''}
             </div>
@@ -5302,6 +5391,55 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
       document.getElementById('statNotStarted').textContent = n;
       renderEmployeeTable(emps);
 
+      // 업종별 요약 카드 렌더링 (유치원/키즈카페/KBBQ)
+      try {
+        const sopsAll = getSops();
+        const container = document.getElementById('businessSummaryCards');
+        if (container) {
+          const businesses = ['유치원', '키즈카페', 'KBBQ'];
+          container.innerHTML = businesses.map(biz => {
+            const bizEmps = emps.filter(e => e.branch === biz);
+            const bizSops = sopsAll.filter(s => (s.category || '') === biz);
+            const publishedSops = bizSops.filter(s => s.status === 'published').length;
+            const doneEmps = bizEmps.filter(e => e.status === 'completed').length;
+            const color = BUSINESS_COLORS[biz];
+            const avgProgress = bizEmps.length > 0
+              ? Math.round(bizEmps.reduce((sum, e) => sum + (e.progress || 0), 0) / bizEmps.length)
+              : 0;
+            return `
+              <div style="padding:18px; border-radius:14px; border:2px solid ${color.border}40; background:linear-gradient(135deg, ${color.bg}, transparent); cursor:pointer;"
+                   onclick="setSopCategoryFilter('${biz}'); showPage('sop');">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                  <span style="font-size:28px;">${color.icon}</span>
+                  <h3 style="font-size:18px; color:${color.color}; margin:0;">${biz}</h3>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:13px;">
+                  <div>
+                    <div style="color:var(--gray-500); font-size:11px;">직원</div>
+                    <div style="font-weight:700; font-size:20px; color:var(--text-primary);">${bizEmps.length}명</div>
+                  </div>
+                  <div>
+                    <div style="color:var(--gray-500); font-size:11px;">챕터</div>
+                    <div style="font-weight:700; font-size:20px; color:var(--text-primary);">${publishedSops}/${bizSops.length}</div>
+                  </div>
+                  <div>
+                    <div style="color:var(--gray-500); font-size:11px;">완료율</div>
+                    <div style="font-weight:700; font-size:20px; color:${color.color};">${avgProgress}%</div>
+                  </div>
+                  <div>
+                    <div style="color:var(--gray-500); font-size:11px;">수료</div>
+                    <div style="font-weight:700; font-size:20px; color:var(--success);">${doneEmps}명</div>
+                  </div>
+                </div>
+                <div style="margin-top:10px; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${avgProgress}%; height:100%; background:${color.color}; transition:width 0.4s;"></div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      } catch(e) { console.warn('[Dashboard] 업종 요약:', e.message); }
+
       // 지점 필터 드롭다운 채우기
       const branchFilter = document.getElementById('branchFilter');
       if (branchFilter) {
@@ -6807,6 +6945,54 @@ Requirements:
       document.getElementById('sopEditor').innerHTML = v.content;
       saveSop();
       closeModal();
+    }
+
+    // 카테고리 → 지점 자동 매칭 (유치원 카테고리 SOP → 유치원 지점 배정)
+    function autoAssignLearningPaths() {
+      const sops = getSops().filter(s => s.status === 'published');
+      if (sops.length === 0) {
+        alert('배포된 SOP가 없습니다. 먼저 SOP를 published 상태로 전환하세요.');
+        return;
+      }
+
+      const branches = getBranches();
+      if (branches.length === 0) {
+        alert('등록된 지점이 없습니다. 지점/팀 관리에서 먼저 지점을 등록하세요.');
+        return;
+      }
+
+      // 카테고리가 지점 이름과 일치하는 SOP들을 자동 매핑
+      const paths = getLearningPaths();
+      const report = [];
+
+      branches.forEach(branch => {
+        const matching = sops.filter(s => (s.category || '').trim() === branch);
+        if (matching.length > 0) {
+          paths[branch] = matching.map(s => s.id);
+          report.push(`✓ ${branch}: ${matching.length}개 배정`);
+        } else {
+          report.push(`✗ ${branch}: 매칭 SOP 없음`);
+        }
+      });
+
+      // 카테고리 "본사"는 모든 지점에 공통 배정
+      const commonSops = sops.filter(s => (s.category || '').trim() === '본사');
+      if (commonSops.length > 0) {
+        branches.forEach(branch => {
+          if (paths[branch]) {
+            commonSops.forEach(s => { if (!paths[branch].includes(s.id)) paths[branch].push(s.id); });
+          } else {
+            paths[branch] = commonSops.map(s => s.id);
+          }
+        });
+        report.push(`✓ 본사 공통 SOP ${commonSops.length}개 → 전 지점 배정`);
+      }
+
+      if (!confirm(`자동 매칭 결과:\n\n${report.join('\n')}\n\n적용하시겠습니까?`)) return;
+
+      saveLearningPaths(paths);
+      renderLearningPaths();
+      alert('자동 매칭 완료!');
     }
 
     // ===== 학습 경로 관리 =====
