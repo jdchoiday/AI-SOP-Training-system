@@ -1500,6 +1500,17 @@
       }
     });
 
+    // 새로고침 시 마지막 페이지 복원 (DOMContentLoaded 후)
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        const lastPage = localStorage.getItem('sop_admin_last_page');
+        if (lastPage && lastPage !== 'sop') {
+          // sop가 기본값이므로 다른 페이지만 복원
+          setTimeout(() => showPage(lastPage), 100);
+        }
+      } catch(e) {}
+    });
+
     // ===== SOP 데이터 (localStorage + Supabase 동기화) =====
     // 이미지는 IndexedDB에 저장 (localStorage 5MB 제한 극복). sop_documents에는 포인터만 보관.
     // ImageDB는 js/image-db.js에서 로드됨 (공유 모듈)
@@ -1650,12 +1661,17 @@
     // ===== 페이지 전환 =====
     function showPage(page, event) {
       if (event) event.preventDefault();
+      // 현재 페이지를 저장 — 새로고침 시 복원
+      try { localStorage.setItem('sop_admin_last_page', page); } catch(e) {}
       ['sop', 'content', 'dashboard', 'employees', 'learning-path', 'chat-logs', 'notifications', 'reports', 'admin-manage', 'settings', 'audit-log', 'glossary', 'version-mgmt', 'xp-manage', 'praise-manage', 'task-manage', 'team-task-manage', 'quest-manage', 'branch-team'].forEach(p => {
         const el = document.getElementById('page-' + p);
         if (el) el.style.display = p === page ? 'block' : 'none';
       });
       document.querySelectorAll('.admin-sidebar nav a').forEach(a => a.classList.remove('active'));
-      if (event) event.currentTarget.classList.add('active');
+      // 사이드바 active 표시 (event 없어도 복원되도록)
+      const sidebarLink = document.querySelector(`.admin-sidebar nav a[data-page="${page}"]`);
+      if (sidebarLink) sidebarLink.classList.add('active');
+      else if (event) event.currentTarget.classList.add('active');
 
       if (page === 'sop') renderSopList();
       if (page === 'content') renderGeneratedContent();
@@ -7968,6 +7984,13 @@ ${text.slice(0, 3000)}
 
     function openAddTaskTemplate() {
       const m = document.getElementById('modalContent');
+      const overlay = document.getElementById('modalOverlay');
+      if (!m || !overlay) {
+        alert('⚠️ 모달 요소를 찾을 수 없습니다. 페이지를 새로고침해주세요.');
+        console.error('[성과제] modalContent 또는 modalOverlay가 DOM에 없음');
+        return;
+      }
+      console.log('[성과제] 모달 열기');
       m.innerHTML = `<h3>성과제 추가</h3>
         <div style="display:grid; gap:12px;">
           <div class="form-group" style="margin:0;">
@@ -8023,30 +8046,47 @@ ${text.slice(0, 3000)}
     }
 
     async function saveNewTaskTemplate() {
-      const title = document.getElementById('newTaskTitle').value.trim();
+      const title = document.getElementById('newTaskTitle')?.value.trim();
       if (!title) { alert('업무명을 입력하세요'); return; }
-      if (!SupabaseMode._ready) return;
+      if (!SupabaseMode._ready) {
+        alert('⚠️ Supabase에 연결되지 않았습니다.\n\n콘솔(F12)에서 에러를 확인하거나 페이지를 새로고침(Ctrl+Shift+R)해보세요.');
+        return;
+      }
+
+      const payload = {
+        title,
+        title_en: document.getElementById('newTaskTitleEn')?.value.trim() || '',
+        title_vi: document.getElementById('newTaskTitleVi')?.value.trim() || '',
+        category: document.getElementById('newTaskCat')?.value || 'daily',
+        xp_reward: parseInt(document.getElementById('newTaskXp')?.value) || 10,
+        point_reward: parseInt(document.getElementById('newTaskPoints')?.value) || 5,
+        icon: document.getElementById('newTaskIcon')?.value.trim() || '📋',
+        sort_order: parseInt(document.getElementById('newTaskSort')?.value) || 0,
+        branch: document.getElementById('newTaskBranch')?.value.trim() || '',
+        is_active: true,
+      };
+
+      console.log('[성과제 추가] 시도:', payload);
 
       try {
-        const { error } = await SupabaseMode._client
+        const { data, error } = await SupabaseMode._client
           .from('basic_task_templates')
-          .insert({
-            title,
-            title_en: document.getElementById('newTaskTitleEn').value.trim(),
-            title_vi: document.getElementById('newTaskTitleVi').value.trim(),
-            category: document.getElementById('newTaskCat').value,
-            xp_reward: parseInt(document.getElementById('newTaskXp').value) || 10,
-            point_reward: parseInt(document.getElementById('newTaskPoints').value) || 5,
-            icon: document.getElementById('newTaskIcon').value.trim() || '📋',
-            sort_order: parseInt(document.getElementById('newTaskSort').value) || 0,
-            branch: document.getElementById('newTaskBranch').value.trim(),
-          });
+          .insert(payload)
+          .select();
 
-        if (error) { alert('저장 실패: ' + error.message); return; }
+        if (error) {
+          console.error('[성과제 추가] Supabase 오류:', error);
+          alert('❌ 저장 실패\n\n오류: ' + error.message + '\n\n코드: ' + (error.code || 'N/A') + '\n\nF12 콘솔에서 상세 내용 확인 가능');
+          return;
+        }
+
+        console.log('[성과제 추가] ✅ 성공:', data);
         closeModal();
-        renderTaskManage();
+        alert(`✅ "${title}" 성과제가 추가되었습니다!`);
+        if (typeof renderTaskManage === 'function') await renderTaskManage();
       } catch (e) {
-        alert('오류: ' + e.message);
+        console.error('[성과제 추가] 예외:', e);
+        alert('❌ 예외 오류: ' + e.message);
       }
     }
 
