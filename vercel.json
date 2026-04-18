@@ -8,7 +8,8 @@
     { "source": "/api/image", "destination": "/api/image" },
     { "source": "/api/quiz", "destination": "/api/quiz" },
     { "source": "/api/siliconflow", "destination": "/api/siliconflow" },
-    { "source": "/api/tts", "destination": "/api/tts" }
+    { "source": "/api/tts", "destination": "/api/tts" },
+    { "source": "/api/video-search", "destination": "/api/video-search" }
   ],
   "functions": {
     "api/image.js": {
@@ -19,6 +20,9 @@
     },
     "api/tts.js": {
       "maxDuration": 25
+    },
+    "api/video-search.js": {
+      "maxDuration": 15
     }
   },
   "headers": [
