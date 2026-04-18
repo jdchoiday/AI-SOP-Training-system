@@ -7614,12 +7614,24 @@ ${text.slice(0, 3000)}
               onchange="xpRewardsList[${idx}].icon=this.value;saveXpRewards();">
           </div>
           <div style="flex:1;min-width:0;">
-            <input type="text" value="${reward.name}" placeholder="혜택 이름 (예: 음료 쿠폰)"
-              style="width:100%;padding:8px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;font-weight:600;margin-bottom:6px;background:var(--bg-card);color:var(--text-primary);box-sizing:border-box;"
+            <input type="text" value="${reward.name || ''}" placeholder="🇰🇷 혜택 이름"
+              style="width:100%;padding:8px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;font-weight:600;margin-bottom:4px;background:var(--bg-card);color:var(--text-primary);box-sizing:border-box;"
               onchange="xpRewardsList[${idx}].name=this.value;saveXpRewards();">
-            <input type="text" value="${reward.description || ''}" placeholder="설명 (예: 스타벅스 아메리카노 1잔)"
-              style="width:100%;padding:8px;border:1px solid var(--gray-300);border-radius:8px;font-size:13px;margin-bottom:6px;background:var(--bg-card);color:var(--text-secondary);box-sizing:border-box;"
+            <input type="text" value="${reward.name_en || ''}" placeholder="🇺🇸 EN name"
+              style="width:100%;padding:6px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;margin-bottom:4px;background:var(--bg-card);color:var(--text-secondary);box-sizing:border-box;"
+              onchange="xpRewardsList[${idx}].name_en=this.value;saveXpRewards();">
+            <input type="text" value="${reward.name_vi || ''}" placeholder="🇻🇳 VI tên"
+              style="width:100%;padding:6px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;margin-bottom:8px;background:var(--bg-card);color:var(--text-secondary);box-sizing:border-box;"
+              onchange="xpRewardsList[${idx}].name_vi=this.value;saveXpRewards();">
+            <input type="text" value="${reward.description || ''}" placeholder="🇰🇷 설명"
+              style="width:100%;padding:8px;border:1px solid var(--gray-300);border-radius:8px;font-size:13px;margin-bottom:4px;background:var(--bg-card);color:var(--text-secondary);box-sizing:border-box;"
               onchange="xpRewardsList[${idx}].description=this.value;saveXpRewards();">
+            <input type="text" value="${reward.description_en || ''}" placeholder="🇺🇸 EN description"
+              style="width:100%;padding:6px;border:1px solid var(--gray-200);border-radius:8px;font-size:11px;margin-bottom:4px;background:var(--bg-card);color:var(--text-secondary);box-sizing:border-box;"
+              onchange="xpRewardsList[${idx}].description_en=this.value;saveXpRewards();">
+            <input type="text" value="${reward.description_vi || ''}" placeholder="🇻🇳 VI mô tả"
+              style="width:100%;padding:6px;border:1px solid var(--gray-200);border-radius:8px;font-size:11px;margin-bottom:6px;background:var(--bg-card);color:var(--text-secondary);box-sizing:border-box;"
+              onchange="xpRewardsList[${idx}].description_vi=this.value;saveXpRewards();">
             <div style="display:flex;align-items:center;gap:8px;">
               <label style="font-size:12px;color:var(--gray-500);white-space:nowrap;">필요 XP:</label>
               <input type="number" value="${reward.required_xp}" min="1"

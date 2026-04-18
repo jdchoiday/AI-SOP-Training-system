@@ -1862,6 +1862,9 @@
       const card = document.getElementById('xpRewardsCard');
       const body = document.getElementById('xpRewardsBody');
       document.getElementById('xpRewardsTitle').textContent = t.xpRewards || '🎁 XP 혜택';
+      // 토글 버튼도 언어에 맞게
+      const toggleBtn = document.getElementById('xpRewardsToggle');
+      if (toggleBtn) toggleBtn.textContent = xpRewardsOpen ? (t.lbCollapse || '접기 ▲') : (t.lbExpand || '펼치기 ▼');
 
       // 1) 혜택 데이터 로드 (Supabase app_config → localStorage 폴백)
       let rewards = [];
@@ -1915,6 +1918,14 @@
         const unlocked = myXp >= reward.required_xp;
         const needed = reward.required_xp - myXp;
 
+        // 다국어 필드 선택 (fallback: ko → en → vi)
+        const rName = lang === 'en' ? (reward.name_en || reward.name)
+                    : lang === 'vi' ? (reward.name_vi || reward.name)
+                    : reward.name;
+        const rDesc = lang === 'en' ? (reward.description_en || reward.description || '')
+                    : lang === 'vi' ? (reward.description_vi || reward.description || '')
+                    : (reward.description || '');
+
         html += `
         <div style="padding:12px;border-radius:12px;margin-bottom:8px;
           background:${unlocked ? 'rgba(16,185,129,0.08)' : 'var(--bg-card)'};
@@ -1923,8 +1934,8 @@
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
             <span style="font-size:24px;">${reward.icon || '🎁'}</span>
             <div style="flex:1;min-width:0;">
-              <div style="font-size:14px;font-weight:700;color:var(--text-primary);">${reward.name}</div>
-              <div style="font-size:12px;color:var(--text-secondary);margin-top:1px;">${reward.description || ''}</div>
+              <div style="font-size:14px;font-weight:700;color:var(--text-primary);">${rName}</div>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:1px;">${rDesc}</div>
             </div>
             <div style="text-align:right;flex-shrink:0;">
               <div style="font-size:13px;font-weight:700;color:${unlocked ? 'var(--primary)' : '#F59E0B'};">
