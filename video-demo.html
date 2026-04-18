@@ -351,8 +351,9 @@ body {
     <div class="start-logo">🏫</div>
     <h1 class="start-title">유치원 · 등원 맞이</h1>
     <p class="start-subtitle">
-      실사 영상 + AI 나레이션으로 학습하는<br>
-      새로운 교육 방식 데모
+      실사 영상 + 자연스러운 AI 나레이션으로 학습하는<br>
+      새로운 교육 방식 데모<br>
+      <span style="color:#FCD34D;">🔊 음소거 해제하고 보세요</span>
     </p>
     <div class="start-chapter-info">
       <div>⏱️ 약 40초</div>
@@ -473,6 +474,7 @@ let currentIndex = 0;
 let isPlaying = true;
 let currentAudio = null;
 let videoElements = [];
+let audioElements = []; // 미리 생성한 오디오
 let advanceTimer = null;
 
 // ===================================================
@@ -482,12 +484,43 @@ async function startDemo() {
   document.getElementById('startScreen').classList.add('hidden');
   document.getElementById('loading').classList.remove('hidden');
 
-  // 모든 씬의 영상을 미리 검색
+  // 모든 씬의 영상 + 나레이션 오디오 미리 생성
+  document.querySelector('#loading div:last-child').textContent = '영상 검색 중...';
   await loadAllVideos();
+
+  document.querySelector('#loading div:last-child').textContent = '자연스러운 나레이션 생성 중...';
+  await loadAllNarrations();
 
   document.getElementById('loading').classList.add('hidden');
   currentIndex = 0;
   playScene(0);
+}
+
+// Edge TTS API로 각 씬 나레이션 생성 (MP3 Blob URL 반환)
+async function loadAllNarrations() {
+  audioElements = [];
+  const promises = SCENES.map(async (scene, idx) => {
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: scene.narration,
+          lang: 'ko-KR',
+          gender: 'female',
+        })
+      });
+      if (!res.ok) throw new Error('TTS HTTP ' + res.status);
+      const blob = await res.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      audioElements[idx] = new Audio(audioUrl);
+      audioElements[idx].preload = 'auto';
+    } catch (e) {
+      console.warn(`씬 ${idx} TTS 실패, Web Speech 폴백:`, e.message);
+      audioElements[idx] = null; // 폴백 처리
+    }
+  });
+  await Promise.all(promises);
 }
 
 async function loadAllVideos() {
@@ -543,7 +576,9 @@ function playScene(idx) {
     v.classList.remove('active');
     v.pause();
   });
+  audioElements.forEach(a => { if (a) { a.pause(); a.currentTime = 0; } });
   if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
   if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; }
 
   currentIndex = idx;
@@ -570,22 +605,39 @@ function playScene(idx) {
     videoEl.play().catch(() => {});
   }
 
-  // 나레이션 재생 (Web Speech API 사용 — 브라우저 내장, 무료)
-  if (isPlaying && 'speechSynthesis' in window) {
+  // 나레이션 재생 — Edge TTS (Microsoft Azure 고품질 음성) 우선
+  currentAudio = audioElements[idx];
+  let audioDuration = scene.duration; // 기본값
+  if (isPlaying && currentAudio) {
+    try {
+      currentAudio.currentTime = 0;
+      currentAudio.play().catch(e => console.warn('Audio play:', e.message));
+      // 오디오 길이에 맞춰 duration 조정 (최소 scene.duration 보장)
+      currentAudio.onloadedmetadata = () => {
+        const audioDur = currentAudio.duration;
+        if (audioDur > audioDuration) {
+          audioDuration = audioDur + 0.5;
+          // 타이머 재설정
+          if (advanceTimer) clearTimeout(advanceTimer);
+          advanceTimer = setTimeout(() => {
+            if (idx === SCENES.length - 1) showCompletion();
+            else playScene(idx + 1);
+          }, audioDuration * 1000);
+        }
+      };
+    } catch (e) { console.warn('Audio play error:', e); }
+  } else if (isPlaying && 'speechSynthesis' in window) {
+    // 폴백: 브라우저 내장 TTS
     speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(scene.narration);
     utter.lang = 'ko-KR';
-    utter.rate = 1.0;
-    utter.pitch = 1.0;
-    // 한국어 여성 음성 선호
     const voices = speechSynthesis.getVoices();
-    const krVoice = voices.find(v => v.lang.startsWith('ko') && v.name.includes('Female'))
-                 || voices.find(v => v.lang.startsWith('ko'));
+    const krVoice = voices.find(v => v.lang.startsWith('ko'));
     if (krVoice) utter.voice = krVoice;
     speechSynthesis.speak(utter);
   }
 
-  // 자동 다음 씬 (duration초 후)
+  // 자동 다음 씬 (audioDuration초 후)
   if (isPlaying) {
     advanceTimer = setTimeout(() => {
       if (idx === SCENES.length - 1) {
@@ -593,7 +645,7 @@ function playScene(idx) {
       } else {
         playScene(idx + 1);
       }
-    }, scene.duration * 1000);
+    }, audioDuration * 1000);
   }
 }
 
@@ -608,8 +660,9 @@ function togglePlay() {
     playScene(currentIndex);
   } else {
     videoElements.forEach(v => v.pause());
+    audioElements.forEach(a => { if (a) { a.pause(); a.currentTime = 0; } });
     if (currentAudio) currentAudio.pause();
-    speechSynthesis.cancel();
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
     if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; }
   }
 }
@@ -627,7 +680,8 @@ function nextScene() {
 
 function showCompletion() {
   videoElements.forEach(v => v.pause());
-  speechSynthesis.cancel();
+  audioElements.forEach(a => { if (a) a.pause(); });
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
   if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; }
   document.getElementById('completion').classList.add('active');
 }
