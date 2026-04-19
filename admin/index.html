@@ -3288,7 +3288,7 @@ ${text.slice(0, 3000)}`;
       if (sections.length === 0) { alert('섹션이 없습니다. 먼저 섹션을 배치하세요.'); return; }
 
       const examCount = (typeof CONFIG !== 'undefined' && CONFIG.CHAPTER_EXAM_COUNT) || 20;
-      if (!confirm(`${sections.length}개 섹션 기반 종합시험 ${examCount}문제를 AI로 생성합니다.\n4지선다 / 통과 기준 70% / 제한시간 60분\n예상 시간: ~15초\n\n진행하시겠습니까?`)) return;
+      if (!confirm(`${sections.length}개 섹션 기반 종합시험 ${examCount}문제를 AI로 생성합니다.\n4지선다 / 통과 기준 70%\n예상 시간: ~15초\n\n진행하시겠습니까?`)) return;
 
       // 각 섹션의 콘텐츠 요약 수집
       const sectionData = sections.map(s => ({
