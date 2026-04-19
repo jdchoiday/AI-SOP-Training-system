@@ -354,7 +354,8 @@
             <button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="sopDeselectAll()">선택 해제</button>
           </div>
           <div style="display:flex; gap:8px;">
-            <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkGenerateImages()">🎨 선택 SOP 이미지 생성</button>
+            <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkGenerateVideos()">🎬 선택 SOP 영상 생성</button>
+            <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkGenerateImages()">🎨 이미지 생성 (레거시)</button>
             <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkFixTitles()">🔤 띄어쓰기 교정</button>
             <button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="sopExportSelected()">&#128229; 내보내기</button>
             <button class="btn" style="padding:6px 14px; font-size:13px; background:#dc2626; color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopDeleteSelected()">&#128465; 선택 삭제</button>
@@ -2097,6 +2098,105 @@
       }
     }
 
+    // ===== 선택 SOP 영상 일괄 생성 (Phase 1: Pexels + Infographic) =====
+    async function sopBulkGenerateVideos() {
+      if (selectedSopIds.size === 0) { alert('SOP를 먼저 선택하세요.'); return; }
+      if (_isGeneratingImages) { alert('다른 생성 작업이 진행 중입니다.'); return; }
+
+      const sops = getSops();
+      const targets = sops.filter(s => selectedSopIds.has(s.id) && s.script && s.script.length > 0);
+      if (targets.length === 0) {
+        alert('선택된 SOP 중 스크립트가 있는 SOP가 없습니다. 먼저 스크립트를 생성해주세요.');
+        return;
+      }
+
+      let totalVideo = 0, totalInfo = 0;
+      targets.forEach(s => {
+        s.script.forEach(sc => {
+          if (['video_scenario','stat','comparison'].includes(sc.type) && !sc.videoUrl) totalVideo++;
+          if (sc.type === 'infographic' && !sc.imageUrl) totalInfo++;
+        });
+      });
+      const total = totalVideo + totalInfo;
+      if (total === 0) { alert('모든 씬에 영상/이미지가 준비되어 있습니다.'); return; }
+
+      if (!confirm(`${targets.length}개 SOP 영상 일괄 생성\n\n• Pexels 영상: ${totalVideo}씬 (무료)\n• 인포그래픽: ${totalInfo}씬 (~$${(totalInfo*0.04).toFixed(2)})\n\n진행하시겠습니까?`)) return;
+
+      _isGeneratingImages = true;
+      const overlay = document.createElement('div');
+      overlay.id = 'bulkVideoModal';
+      overlay.className = 'modal-overlay show';
+      overlay.innerHTML = `
+        <div class="modal" style="max-width:500px; text-align:center;">
+          <h3>🎬 SOP 영상 일괄 생성</h3>
+          <div id="bulkVSopName" style="font-size:13px; color:var(--gray-400); margin:10px 0;"></div>
+          <div style="background:rgba(148,163,184,0.2); border-radius:8px; height:10px; overflow:hidden; margin:16px 0;">
+            <div id="bulkVBar" style="background:linear-gradient(90deg,#10B981,#3B82F6); height:100%; width:0%; transition:width 0.3s;"></div>
+          </div>
+          <div id="bulkVCount" style="font-size:14px; color:var(--gray-600);">0 / ${total}</div>
+        </div>`;
+      document.body.appendChild(overlay);
+
+      let done = 0, failed = 0;
+      const tick = () => {
+        done++;
+        document.getElementById('bulkVCount').textContent = `${done} / ${total}` + (failed ? ` (실패 ${failed})` : '');
+        document.getElementById('bulkVBar').style.width = (done/total*100) + '%';
+      };
+
+      try {
+        for (const sop of targets) {
+          document.getElementById('bulkVSopName').textContent = `📋 ${sop.title}`;
+          // Pass 1: Pexels
+          for (let i = 0; i < sop.script.length; i++) {
+            const sc = sop.script[i];
+            if (!['video_scenario','stat','comparison'].includes(sc.type) || sc.videoUrl) continue;
+            try {
+              if (sc.type === 'comparison') {
+                const [L, R] = await Promise.all([
+                  _searchPexels(sc.left_video_keywords || []),
+                  _searchPexels(sc.right_video_keywords || []),
+                ]);
+                if (L) sc.leftVideoUrl = L.url;
+                if (R) sc.rightVideoUrl = R.url;
+                if (!L && !R) failed++;
+              } else {
+                const r = await _searchPexels(sc.video_keywords || []);
+                if (r) { sc.videoUrl = r.url; sc.videoThumbnail = r.thumbnail; sc.videoAuthor = r.author; }
+                else failed++;
+              }
+            } catch(e) { failed++; }
+            tick();
+          }
+          // Pass 2: 인포그래픽
+          for (let i = 0; i < sop.script.length; i++) {
+            const sc = sop.script[i];
+            if (sc.type !== 'infographic' || sc.imageUrl) continue;
+            try {
+              const r = await fetch('/api/image', {
+                method: 'POST', headers: { 'Content-Type':'application/json' },
+                body: JSON.stringify({ action:'generate-multi', visual: sc.visual||'', narration: sc.narration, sceneIndex: i, totalScenes: sop.script.length })
+              });
+              const d = await r.json();
+              if (d.images?.[0]?.imageUrl) sc.imageUrl = d.images[0].imageUrl;
+              else failed++;
+            } catch(e) { failed++; }
+            tick();
+            await new Promise(r => setTimeout(r, 1500));
+          }
+          saveSops(sops);
+        }
+        alert(`✅ 완료! ${done}/${total}` + (failed ? ` (실패 ${failed})` : ''));
+      } catch (e) {
+        console.error(e); saveSops(sops);
+        alert('오류: ' + e.message);
+      } finally {
+        _isGeneratingImages = false;
+        document.getElementById('bulkVideoModal')?.remove();
+        renderSopList();
+      }
+    }
+
     // ===== 선택 SOP 제목 번역 일괄 수정 (띄어쓰기 + 영어/베트남어 번역) =====
     async function sopBulkFixTitles() {
       if (selectedSopIds.size === 0) { alert('SOP를 먼저 선택하세요.'); return; }
@@ -3288,8 +3388,11 @@ ${text.slice(0, 3000)}`;
           <button onclick="generateQuizOnly()" style="padding:10px 18px; font-size:13px; font-weight:700; background:${hasQuiz ? '#f8fafc; color:#6366f1; border:2px solid #6366f1' : 'linear-gradient(135deg,#f59e0b,#f97316); color:white'}; border:none; border-radius:10px; cursor:pointer;">
             ${hasQuiz ? '&#128260; 퀴즈 다시 생성' : '&#10067; 퀴즈 생성'}
           </button>
+          <button onclick="_generateAllVideos()" style="padding:10px 18px; font-size:13px; font-weight:700; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:10px; cursor:pointer;">
+            &#127916; 영상 생성
+          </button>
           <button onclick="_generateAllImages()" style="padding:10px 18px; font-size:13px; font-weight:700; background:linear-gradient(135deg,#f59e0b,#ef4444); color:white; border:none; border-radius:10px; cursor:pointer;">
-            &#127912; 이미지 생성
+            &#127912; 이미지 생성 (레거시)
           </button>
           <button onclick="_openImageReview()" style="padding:10px 18px; font-size:13px; font-weight:700; background:#10b981; color:white; border:none; border-radius:10px; cursor:pointer;">
             &#128444; 이미지 리뷰
@@ -4009,6 +4112,184 @@ Output ONLY the prompt, nothing else.`;
     }
 
     // ===== 이미지 일괄 사전 생성 =====
+    // ===== Phase 1 신규: 영상 생성 파이프라인 =====
+    // 씬 타입에 따라 자동 분기:
+    //   video_scenario / stat / comparison → Pexels 검색 (영상)
+    //   infographic → AI 이미지 (인포그래픽)
+    //   title_card → 텍스트만 (별도 자산 없음)
+    window._generateAllVideos = async function() {
+      if (_isGeneratingImages) {
+        alert('생성이 이미 진행 중입니다. 완료될 때까지 기다려주세요.');
+        return;
+      }
+      _isGeneratingImages = true;
+      try {
+        const sops = getSops();
+        const idx = sops.findIndex(s => s.id === currentSopId);
+        if (idx === -1) { _isGeneratingImages = false; return; }
+        const sop = sops[idx];
+
+        if (!sop.script || sop.script.length === 0) {
+          alert('스크립트가 없습니다. 먼저 AI 스크립트 생성을 실행하세요.');
+          _isGeneratingImages = false;
+          return;
+        }
+
+        // 씬 타입별 분류
+        const videoScenes = sop.script
+          .map((s, i) => ({ scene: s, idx: i }))
+          .filter(x => ['video_scenario', 'stat', 'comparison'].includes(x.scene.type) && !x.scene.videoUrl);
+        const infographicScenes = sop.script
+          .map((s, i) => ({ scene: s, idx: i }))
+          .filter(x => x.scene.type === 'infographic' && !x.scene.imageUrl);
+        const titleScenes = sop.script.filter(s => s.type === 'title_card').length;
+
+        const totalToGen = videoScenes.length + infographicScenes.length;
+
+        if (totalToGen === 0) {
+          alert(`모든 씬에 영상/이미지가 준비되어 있습니다.\n\n총 씬: ${sop.script.length}\n  • 영상: ${sop.script.filter(s=>s.videoUrl).length}\n  • 인포그래픽: ${sop.script.filter(s=>s.imageUrl).length}\n  • 타이틀: ${titleScenes}`);
+          _isGeneratingImages = false;
+          return;
+        }
+
+        const estCost = (videoScenes.length * 0).toFixed(2) + ' (Pexels 무료) + ' + (infographicScenes.length * 0.04).toFixed(2);
+        if (!confirm(`영상 생성을 시작합니다.\n\n• 영상 검색 (Pexels): ${videoScenes.length}씬\n• 인포그래픽 (AI): ${infographicScenes.length}씬\n• 타이틀 카드: ${titleScenes}씬 (자산 불필요)\n\n예상 비용: $${estCost} USD\n예상 시간: ~${Math.ceil(totalToGen * 5)}초\n\n진행하시겠습니까?`)) {
+          _isGeneratingImages = false;
+          return;
+        }
+
+        // 진행 상태 UI
+        const progressId = 'videoGenProgress';
+        document.getElementById(progressId)?.remove();
+        const overlay = document.createElement('div');
+        overlay.id = progressId;
+        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:9999; background:linear-gradient(135deg,#0F172A,#1E293B); border-bottom:2px solid #10B981; padding:16px 24px; box-shadow:0 4px 20px rgba(0,0,0,0.5);';
+        overlay.innerHTML = `
+          <div style="max-width:700px; margin:0 auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <strong style="color:#E2E8F0; font-size:15px;">🎬 영상 생성 중</strong>
+              <span id="vgenCount" style="color:#94A3B8; font-size:14px; font-weight:600;">0 / ${totalToGen}</span>
+            </div>
+            <div style="background:rgba(148,163,184,0.2); border-radius:8px; height:10px; overflow:hidden;">
+              <div id="vgenBar" style="background:linear-gradient(90deg,#10B981,#3B82F6); height:100%; width:0%; transition:width 0.3s; border-radius:8px;"></div>
+            </div>
+            <div id="vgenStatus" style="font-size:12px; color:#94A3B8; margin-top:8px;">준비 중...</div>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+
+        let done = 0, failed = 0;
+        const updateProgress = (status) => {
+          done++;
+          document.getElementById('vgenCount').textContent = `${done} / ${totalToGen}` + (failed ? ` (❌${failed})` : '');
+          document.getElementById('vgenBar').style.width = (done / totalToGen * 100) + '%';
+          if (status) document.getElementById('vgenStatus').textContent = status;
+        };
+
+        // === Pass 1: 영상 검색 (Pexels) ===
+        document.getElementById('vgenStatus').textContent = '🎥 Pexels 영상 검색 중...';
+        for (const x of videoScenes) {
+          try {
+            const sc = x.scene;
+            // comparison은 left/right 둘 다
+            if (sc.type === 'comparison') {
+              const [leftR, rightR] = await Promise.all([
+                _searchPexels(sc.left_video_keywords || []),
+                _searchPexels(sc.right_video_keywords || []),
+              ]);
+              if (leftR) sc.leftVideoUrl = leftR.url;
+              if (rightR) sc.rightVideoUrl = rightR.url;
+              if (!leftR && !rightR) failed++;
+            } else {
+              // video_scenario, stat
+              const result = await _searchPexels(sc.video_keywords || []);
+              if (result) {
+                sc.videoUrl = result.url;
+                sc.videoThumbnail = result.thumbnail;
+                sc.videoAuthor = result.author;
+              } else { failed++; }
+            }
+            updateProgress(`🎥 영상 검색 ${done}/${videoScenes.length}`);
+          } catch (e) {
+            console.warn('Pexels search error:', e.message);
+            failed++;
+            updateProgress();
+          }
+        }
+
+        // === Pass 2: 인포그래픽 이미지 생성 ===
+        document.getElementById('vgenStatus').textContent = '🎨 인포그래픽 이미지 생성 중...';
+        for (const x of infographicScenes) {
+          try {
+            const sc = x.scene;
+            const imgRes = await fetch('/api/image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'generate-multi',
+                visual: sc.visual || '',
+                narration: sc.narration,
+                sceneIndex: x.idx,
+                totalScenes: sop.script.length
+              })
+            });
+            const imgData = await imgRes.json();
+            if (imgData.images?.[0]?.imageUrl) {
+              sc.imageUrl = imgData.images[0].imageUrl;
+            } else { failed++; }
+            updateProgress(`🎨 인포그래픽 ${done - videoScenes.length}/${infographicScenes.length}`);
+            await new Promise(r => setTimeout(r, 1500)); // rate limit
+          } catch (e) {
+            console.warn('Image gen error:', e.message);
+            failed++;
+            updateProgress();
+          }
+        }
+
+        // === 저장 ===
+        sops[idx] = sop;
+        saveSops(sops);
+
+        // 마무리
+        document.getElementById('vgenStatus').textContent = `✅ 완료! 영상 ${videoScenes.length - failed}/${videoScenes.length}, 인포 ${infographicScenes.length}개`;
+        setTimeout(() => overlay.remove(), 3000);
+
+        const successMsg = `🎬 영상 콘텐츠 생성 완료!\n\n` +
+          `🎥 영상 (Pexels): ${videoScenes.length - failed}/${videoScenes.length}\n` +
+          `🎨 인포그래픽 (AI): ${infographicScenes.length}\n` +
+          `📋 타이틀 카드: ${titleScenes}\n\n` +
+          (failed > 0 ? `⚠️ ${failed}개 실패 (씬 미리보기에서 수동 재시도 가능)` : '모두 성공');
+        alert(successMsg);
+
+        // 검토 화면 열기
+        if (typeof renderAiResults === 'function') renderAiResults(sop);
+      } catch (err) {
+        console.error('[Video Gen] 오류:', err);
+        alert('영상 생성 중 오류: ' + err.message);
+      } finally {
+        _isGeneratingImages = false;
+      }
+    };
+
+    // Pexels 검색 헬퍼 (여러 검색어 중 첫 매치 반환)
+    async function _searchPexels(queries) {
+      if (!queries || queries.length === 0) return null;
+      for (const q of queries) {
+        try {
+          const res = await fetch('/api/video-search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: q, count: 1, minDuration: 4, maxDuration: 20 })
+          });
+          if (!res.ok) continue;
+          const data = await res.json();
+          if (data.results?.[0]) return data.results[0];
+        } catch (e) { /* try next */ }
+      }
+      return null;
+    }
+
+    // ===== 레거시: 기존 이미지 생성 (하위 호환용) =====
     window._generateAllImages = async function() {
       if (_isGeneratingImages) {
         alert('이미지 생성이 이미 진행 중입니다. 완료될 때까지 기다려주세요.');

@@ -156,71 +156,215 @@ const AI = {
       if (hasVietnamese || titleHasVie) langInstruction = '나레이션은 반드시 베트남어(tiếng Việt)로 작성';
       else if (isEnglish || titleHasEn) langInstruction = '나레이션은 반드시 영어(English)로 작성';
 
-      const prompt = `당신은 직원 교육 영상의 시각 디렉터이자 스크립트 작성 전문가입니다.
+      const prompt = `당신은 Netflix 다큐멘터리 스타일의 교육 영상 시각 디렉터입니다.
 
-아래 SOP 문서의 모든 내용을 빠짐없이 교육 영상 스크립트로 변환하세요.
-JSON 배열로 생성하며, 각 항목은 { "scene": 번호, "narration": "나레이션 텍스트", "visual": "영어 이미지 프롬프트" } 형식입니다.
+아래 SOP 문서를 영상 다큐멘터리 스크립트로 변환합니다.
+각 씬은 5가지 타입 중 하나로 분류하고, 타입에 맞는 메타데이터를 작성합니다.
 
 SOP 제목: ${sopTitle}
 SOP 내용:
 ${plainText}
 
-중요 규칙:
-- ${langInstruction}. SOP 원문의 언어와 동일한 언어로 나레이션을 작성할 것
-- 반드시 ${minScenes}씬 이상 생성할 것 (SOP 내용이 길므로 충분한 씬이 필요)
-- SOP의 모든 단락과 항목을 빠짐없이 포함할 것. 내용을 생략하지 말 것
-- 첫 씬은 인사와 주제 소개
-- 마지막 씬은 핵심 요약과 마무리
-- 나레이션은 자연스럽고 친근한 말투로 2~4문장
-- 각 씬은 교육 영상의 한 장면 (30초~1분 분량)
+═══════════════════════════════════════════════
+★ 5가지 씬 타입 (반드시 type 필드에 명시) ★
+═══════════════════════════════════════════════
 
-★★★ visual 필드 핵심 규칙 (시각 다양성 극대화) ★★★
-- visual 필드는 반드시 영어로 된 상세한 이미지 생성 프롬프트를 작성할 것
-- ★ 매 씬마다 다른 시각 타입을 사용할 것 (연속 2씬 이상 같은 타입 금지):
-  * 실사 사진 (인물 중심): "A young Korean woman in polo shirt and apron + action + place"
-  * 인포그래픽: "Clean flat-design infographic showing 5 numbered steps for hand washing..."
-  * 비교도 (BEFORE/AFTER): "Split-screen comparison: LEFT messy, RIGHT clean..."
-  * 클로즈업: "Extreme close-up of hands/objects with shallow depth of field..."
-  * 다이어그램/플로우차트: "Professional flowchart: Step A → Step B → Step C..."
-  * 오버헤드/플랫레이: "Top-down overhead shot of items neatly arranged..."
-  * 일러스트/만화: "Cute kawaii educational illustration showing..."
-  * 시네마틱: "Cinematic wide shot with dramatic lighting..."
-- ★ 나레이션의 핵심 교육 내용을 시각화할 것 (배경 분위기가 아닌 핵심 행동/개념 포커스)
-- 절차 설명 → 인포그래픽이 효과적
-- 올바른/잘못된 비교 → 분할 비교도가 효과적
-- 도구/재료 나열 → 오버헤드 플랫레이가 효과적
-- 감정/관계 → 인물 감성 사진이 효과적
-- visual의 인물은 "A young Korean woman in a light blue polo shirt and beige apron" (키즈카페 직원)
-- visual의 장소는 키즈카페/실내놀이터/교육실 등 아동 관련 환경
-- 절대로 의사, 간호사, 과학자, 의료인으로 묘사하지 말 것
-- visual 예시들:
-  * 절차 → "Step-by-step infographic: 6 numbered icons showing handwashing procedure — wet, soap, scrub 20sec, rinse, dry, sanitize. Clean medical-style illustration."
-  * 비교 → "Split-screen BEFORE/AFTER: left shows cluttered messy play area, right shows organized clean play area. Same camera angle, bright lighting."
-  * 감정 → "Close-up portrait of a Korean woman in polo shirt making warm eye contact with a child at eye level, genuine smile, shallow depth of field, warm golden light."
-  * 도구 → "Overhead flat-lay of first aid kit contents neatly arranged on white surface: bandages, antiseptic, gloves, scissors. Clean minimalist photography."
-  * 안전 → "Cute illustrated safety poster with 5 rules: icons and Korean text, kawaii style, bright colors."
-  * 시네마틱 → "Cinematic wide shot of colorful LED lights turning on across indoor playground. Dark-to-bright transition, morning atmosphere."
-- 각 visual은 50-80 단어로 구체적 묘사 포함
-- ★★★ 인포그래픽/다이어그램/포스터 등 텍스트가 포함된 시각 타입의 경우:
-  * 나레이션이 한국어면 → visual에 "with Korean text labels" 명시 (예: "Step-by-step infographic with Korean labels: 1단계, 2단계...")
-  * 나레이션이 영어면 → visual에 "with English text labels" 명시 (예: "Infographic with English labels: Step 1, Step 2...")
-  * 나레이션이 베트남어면 → visual에 "with Vietnamese text labels" 명시 (예: "Infographic with Vietnamese labels: Bước 1, Bước 2...")
-  * 이미지 안의 텍스트는 반드시 나레이션과 같은 언어로 작성되어야 합니다
-- JSON 배열만 출력, 다른 텍스트 없이`;
+1. "title_card" — 챕터/섹션 도입
+   - 큰 텍스트만, 영상/이미지 없음
+   - 사용: 첫 씬, 큰 섹션 시작, 마무리
+   - 필드: { scene, type:"title_card", narration, kicker, title_main, title_sub }
+
+2. "video_scenario" — 실제 상황/행동 (★ 가장 많이 사용)
+   - 실사 영상 (Pexels에서 검색)
+   - 사용: "교사가 체온 잰다", "아이와 인사한다" 같은 동작/장면
+   - 필드: { scene, type:"video_scenario", narration, video_keywords:[…], caption, tag }
+
+3. "infographic" — 절차/체크리스트/단계
+   - AI 이미지 (인포그래픽 차트)
+   - 사용: "체온 측정 3단계", "5가지 주의사항"
+   - 필드: { scene, type:"infographic", narration, header_tag, header_title, steps:[…], visual }
+
+4. "stat" — 큰 숫자/통계 강조
+   - 텍스트만, 배경에 흐린 영상
+   - 사용: "90초가 결정한다", "72%가 만족"
+   - 필드: { scene, type:"stat", narration, tag, number, unit, context, source(optional), video_keywords }
+
+5. "comparison" — 잘못 vs 올바른 (BEFORE/AFTER)
+   - 화면 위/아래 분할, 영상 2개
+   - 사용: "이렇게 하지 마세요 / 이렇게 하세요"
+   - 필드: { scene, type:"comparison", narration, left_label, left_text, left_video_keywords:[…], right_label, right_text, right_video_keywords:[…] }
+
+═══════════════════════════════════════════════
+★ 분배 가이드라인 ★
+═══════════════════════════════════════════════
+- 첫 씬: title_card (도입)
+- 두 번째 씬: stat 또는 video_scenario (왜 중요한지)
+- 본문: video_scenario 위주, 사이사이 infographic 끼워넣기
+- 절차/체크리스트 있으면 반드시 infographic 1~2씬
+- 잘못 vs 올바른 사례 있으면 comparison 1씬
+- 마지막 씬: title_card (전환/요약)
+
+전체 비율 (참고):
+- title_card: 10~20% (도입+마무리)
+- video_scenario: 50~60% (메인)
+- infographic: 20~30% (절차/요약)
+- stat: 5~10% (강조)
+- comparison: 0~10% (있으면 효과적)
+
+═══════════════════════════════════════════════
+★ 각 타입별 필드 작성 규칙 ★
+═══════════════════════════════════════════════
+
+【공통】
+- ${langInstruction}. SOP 원문의 언어와 동일하게 나레이션 작성
+- 반드시 ${minScenes}씬 이상 생성
+- SOP의 모든 단락/항목을 빠짐없이 포함
+- 나레이션은 자연스럽고 친근한 2~4문장 (TTS가 읽음, 이모지 금지)
+
+【title_card 필드】
+- kicker: 영문 작은 라벨 (예: "Chapter 01 · Welcome Protocol")
+- title_main: 핵심 제목 (예: "등원 <span class='accent'>맞이</span>")
+   <span class='accent'>로 감싸면 강조색
+- title_sub: 영문 서브타이틀 (예: "Morning Welcome SOP")
+
+【video_scenario 필드】
+- video_keywords: 영어 검색어 배열 (3개), 구체적이고 다양하게
+   예: ["teacher checking child temperature forehead", "kindergarten health screening", "preschool morning entry"]
+- caption: 화면 자막 (한 줄, <b>로 키워드 강조 가능)
+   예: "도착 즉시 <b>체온 측정</b>. 37.5도 이상이면 격리"
+- tag: 작은 영문 라벨 (예: "STEP 01", "ACTION", "MOMENT")
+
+【infographic 필드】
+- header_tag: 영문 카테고리 (예: "Health Screening", "Checklist")
+- header_title: 한국어 제목 (예: "체온 체크 <span style='color:var(--highlight)'>3단계</span>")
+- steps: 단계 배열 3~5개, 각 항목에 <span class='hl'>키워드</span>로 강조
+   예: ["비접촉 체온계로 이마 중앙 <span class='hl'>3회 측정</span>", ...]
+- visual: AI 이미지 생성용 영어 프롬프트 (50~80단어)
+   "Modern educational infographic showing N numbered steps with icons, soft pastel palette teal/amber, clean flat design, mobile-friendly vertical composition, ${hasVietnamese ? 'with Vietnamese text labels' : isEnglish ? 'with English text labels' : 'with Korean text labels'}"
+
+【stat 필드】
+- tag: 영문 라벨 (예: "RESEARCH", "DATA", "WHY IT MATTERS")
+- number: 큰 숫자 (예: "90", "37.5", "72")
+- unit: 단위 (예: "SECONDS", "%", "분", "도", null도 가능)
+- context: 한국어 부연 설명 1~2줄
+- source: 출처 (선택, 예: "MOE Childhood Study, 2023")
+- video_keywords: 배경에 깔 영상 검색어 (3개)
+
+【comparison 필드】
+- left_label: "잘못된 방식" / "이전" 등
+- left_text: 잘못된 행동 설명 (한 줄)
+- left_video_keywords: 영어 검색어 (3개)
+- right_label: "올바른 방식" / "권장" 등
+- right_text: 올바른 행동 설명 (한 줄)
+- right_video_keywords: 영어 검색어 (3개)
+
+═══════════════════════════════════════════════
+★ video_keywords 작성 핵심 ★
+═══════════════════════════════════════════════
+- 반드시 영어로 작성 (Pexels는 영어 검색이 결과 많음)
+- 구체적이고 다양하게 3개씩 (1순위 → 3순위 폴백)
+- 사람/장소/행동을 명시: "subject + action + setting"
+- 좋은 예:
+  * "teacher kneeling eye level with child preschool"
+  * "parent handing child to teacher kindergarten morning"
+  * "Asian woman barbecue restaurant grilling meat"
+- 나쁜 예 (너무 추상적):
+  * "education", "training", "morning" (너무 일반적)
+
+═══════════════════════════════════════════════
+★ 출력 형식 ★
+═══════════════════════════════════════════════
+JSON 배열만 출력, 다른 텍스트 없이.
+각 씬에 type 필드 필수.
+type에 맞지 않는 필드는 생략 가능.
+
+예시:
+[
+  {
+    "scene": 1,
+    "type": "title_card",
+    "narration": "오늘은 등원 맞이 표준 절차를 배워보겠습니다",
+    "kicker": "Chapter 01 · Morning Welcome",
+    "title_main": "등원 <span class='accent'>맞이</span>",
+    "title_sub": "Standard Operating Procedure"
+  },
+  {
+    "scene": 2,
+    "type": "stat",
+    "narration": "연구에 따르면 첫 90초가 하루의 정서를 결정합니다",
+    "tag": "WHY IT MATTERS",
+    "number": "90",
+    "unit": "SECONDS",
+    "context": "아이가 유치원을 좋아할지<br>결정되는 시간",
+    "video_keywords": ["kindergarten morning entrance", "preschool first day", "child entering school"]
+  },
+  {
+    "scene": 3,
+    "type": "video_scenario",
+    "narration": "도착 즉시 비접촉 체온계로 체온을 측정합니다",
+    "tag": "STEP 01",
+    "caption": "도착 즉시 <b>체온 측정</b>. 37.5도 이상이면 격리",
+    "video_keywords": ["teacher checking child temperature forehead", "non-contact thermometer kindergarten", "health screening preschool"]
+  },
+  {
+    "scene": 4,
+    "type": "infographic",
+    "narration": "체온 측정은 3단계로 진행합니다. 이마 중앙 3회 측정, 평균 37.5도 이상이면 격리, 보호자 즉시 연락",
+    "header_tag": "Health Screening",
+    "header_title": "체온 체크 <span style='color:var(--highlight)'>3단계</span>",
+    "steps": [
+      "비접촉 체온계로 이마 중앙 <span class='hl'>3회 측정</span>",
+      "평균값이 <span class='hl'>37.5도 이상</span>이면 격리실 안내",
+      "보호자에게 즉시 연락 · 원아 기록부 작성"
+    ],
+    "visual": "Modern educational infographic showing 3 numbered steps for health screening, soft pastel palette teal/amber, clean flat design, vertical mobile composition, with Korean text labels"
+  }
+]`;
 
       const result = await this._callLLM(provider, prompt);
       const parsed = JSON.parse(result.match(/\[[\s\S]*\]/)?.[0] || '[]');
       if (parsed.length === 0) return this._localGenerateScript(sopTitle, sopContent);
 
-      // visual 필드 품질 검증: 부실한 visual은 나레이션 기반으로 재생성
-      parsed.forEach(scene => {
-        if (!scene.visual || scene.visual.length < 30 ||
-            /^scene\s*\d/i.test(scene.visual) ||
-            /training content/i.test(scene.visual) ||
-            /slide/i.test(scene.visual)) {
-          scene.visual = window.ScenePrompts
-            ? window.ScenePrompts.narrationToPrompt(scene.narration || '', '', { withCamera: false })
-            : this._narrationToVisual(scene.narration || '', '');
+      // 씬 타입 정규화 + 폴백 처리
+      parsed.forEach((scene, idx) => {
+        // type 필드 누락 시 기본값
+        if (!scene.type) {
+          // 첫 씬과 마지막 씬은 title_card, 나머지는 video_scenario 기본
+          if (idx === 0 || idx === parsed.length - 1) scene.type = 'title_card';
+          else if (scene.visual && /infographic|chart|diagram|flowchart/i.test(scene.visual)) {
+            scene.type = 'infographic';
+          } else {
+            scene.type = 'video_scenario';
+          }
+        }
+
+        // video_scenario / stat / comparison: video_keywords 누락 시 자동 생성
+        if (['video_scenario', 'stat'].includes(scene.type) &&
+            (!scene.video_keywords || scene.video_keywords.length === 0)) {
+          scene.video_keywords = this._narrationToKeywords(scene.narration || '');
+        }
+        if (scene.type === 'comparison') {
+          if (!scene.left_video_keywords) scene.left_video_keywords = this._narrationToKeywords(scene.left_text || scene.narration || '');
+          if (!scene.right_video_keywords) scene.right_video_keywords = this._narrationToKeywords(scene.right_text || scene.narration || '');
+        }
+
+        // infographic: visual 필드 품질 검증
+        if (scene.type === 'infographic') {
+          if (!scene.visual || scene.visual.length < 30 ||
+              /^scene\s*\d/i.test(scene.visual) ||
+              /training content/i.test(scene.visual) ||
+              /slide/i.test(scene.visual)) {
+            scene.visual = window.ScenePrompts
+              ? window.ScenePrompts.narrationToPrompt(scene.narration || '', '', { withCamera: false })
+              : this._narrationToVisual(scene.narration || '', '');
+          }
+        }
+
+        // title_card / stat 기본 텍스트 폴백
+        if (scene.type === 'title_card') {
+          if (!scene.kicker) scene.kicker = `Scene ${scene.scene || idx + 1}`;
+          if (!scene.title_main) scene.title_main = (scene.narration || '').slice(0, 30);
+          if (!scene.title_sub) scene.title_sub = '';
         }
       });
       return parsed;
@@ -469,6 +613,40 @@ ${historyText}
     });
 
     return script;
+  },
+
+  // 나레이션에서 영상 검색용 영어 키워드 자동 추출 (Pexels용)
+  _narrationToKeywords(narration) {
+    const text = (narration || '').toLowerCase();
+    const keywordMap = [
+      { kw: ['체온', '열', '발열'], en: ['child temperature check kindergarten', 'thermometer scanning forehead', 'health screening preschool'] },
+      { kw: ['손 씻', '손씻', '비누'], en: ['child washing hands soap', 'handwashing kindergarten', 'kids hygiene routine'] },
+      { kw: ['청소', '소독'], en: ['cleaning preschool surfaces', 'disinfecting toys daycare', 'sanitizing classroom'] },
+      { kw: ['인사', '환영', '맞이', '등원'], en: ['teacher greeting child morning', 'kindergarten welcome scene', 'parent dropping off child'] },
+      { kw: ['아이', '어린이', '유아', '아동'], en: ['happy children playing kindergarten', 'preschool kids classroom', 'daycare children activity'] },
+      { kw: ['놀이', '장난감', '놀이터'], en: ['children playing toys preschool', 'indoor playground kids', 'kids play area daycare'] },
+      { kw: ['식사', '점심', '급식'], en: ['kindergarten lunch time children', 'preschool meal eating', 'kids cafeteria snack'] },
+      { kw: ['수업', '학습', '교육'], en: ['kindergarten teacher lesson', 'preschool learning activity', 'children classroom education'] },
+      { kw: ['선생님', '교사'], en: ['kindergarten teacher with children', 'preschool teacher classroom', 'female teacher kids'] },
+      { kw: ['부모', '학부모'], en: ['parent teacher conversation school', 'mother dropping child preschool', 'parent child handoff'] },
+      { kw: ['위험', '응급', '비상', '안전'], en: ['child safety preschool', 'emergency drill kindergarten', 'first aid kit kids'] },
+      { kw: ['감정', '울', '달래', '진정'], en: ['comforting crying child', 'teacher hugging upset kid', 'soothing toddler kindergarten'] },
+      { kw: ['고기', '구이', '바베큐', 'bbq'], en: ['korean bbq grill restaurant', 'meat grilling table', 'asian barbecue dining'] },
+      { kw: ['주방', '조리', '요리'], en: ['restaurant kitchen cooking', 'chef preparing food', 'commercial kitchen staff'] },
+      { kw: ['고객', '손님', '서비스'], en: ['restaurant customer service', 'waitress greeting customer', 'asian restaurant dining'] },
+      { kw: ['매장', '카페', '레스토랑'], en: ['busy restaurant interior', 'cafe staff working', 'restaurant atmosphere dining'] },
+    ];
+
+    const matches = [];
+    for (const m of keywordMap) {
+      if (m.kw.some(k => text.includes(k))) matches.push(...m.en);
+    }
+
+    // 매칭 없으면 일반 폴백
+    if (matches.length === 0) {
+      return ['professional workplace training', 'employee learning scene', 'modern office setting'];
+    }
+    return matches.slice(0, 3); // 상위 3개
   },
 
   _narrationToVisual(narration, section) {

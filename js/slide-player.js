@@ -620,13 +620,95 @@ const SlidePlayer = (() => {
       </div>
     `;
 
-    // 사전 생성된 이미지가 있으면 즉시 표시, 없으면 API 호출
-    if (scene.imageUrl) {
-      const vis = document.getElementById('spSceneVisual');
-      if (vis) vis.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:auto;max-height:80vh;object-fit:contain;display:block;margin:0 auto;border-radius:8px;" alt="scene">`;
-    } else {
-      _currentImagePromise = _loadSceneImage(scene.visual, scene.narration);
-      _preloadNextImage();
+    // === Phase 1: 씬 타입별 렌더링 ===
+    const vis = document.getElementById('spSceneVisual');
+    if (vis) {
+      // 1) 영상 시나리오 / 통계 — Pexels 영상 재생
+      if ((scene.type === 'video_scenario' || scene.type === 'stat') && scene.videoUrl) {
+        const dimGrad = scene.type === 'stat'
+          ? 'background:linear-gradient(180deg,rgba(0,0,0,0.7),rgba(0,0,0,0.85));'
+          : 'background:linear-gradient(180deg,rgba(0,0,0,0.3),rgba(0,0,0,0.6));';
+        const overlayHtml = scene.type === 'stat'
+          ? `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;z-index:5;padding:24px;">
+              ${scene.tag ? `<div style="font-size:11px;font-weight:800;letter-spacing:4px;color:#10B981;margin-bottom:18px;text-transform:uppercase;">${scene.tag}</div>` : ''}
+              <div style="font-size:120px;font-weight:900;line-height:0.85;background:linear-gradient(180deg,#fff,#777);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.04em;">${scene.number || ''}</div>
+              ${scene.unit ? `<div style="font-size:22px;font-weight:700;color:#FBBF24;margin-top:6px;">${scene.unit}</div>` : ''}
+              <div style="font-size:16px;font-weight:500;color:rgba(255,255,255,0.85);margin-top:18px;max-width:340px;line-height:1.5;">${scene.context || ''}</div>
+            </div>`
+          : (scene.caption ? `<div style="position:absolute;bottom:14vh;left:18px;right:18px;text-align:center;z-index:5;">
+              ${scene.tag ? `<div style="display:inline-block;font-size:10px;font-weight:800;letter-spacing:2.5px;color:#10B981;padding:5px 12px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);border-radius:4px;margin-bottom:12px;">${scene.tag}</div><br>` : ''}
+              <div style="display:inline-block;font-size:18px;font-weight:700;line-height:1.45;padding:14px 20px;background:rgba(0,0,0,0.7);border-radius:14px;backdrop-filter:blur(14px);max-width:100%;">${scene.caption}</div>
+            </div>` : '');
+
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;overflow:hidden;background:#000;">
+          <video src="${scene.videoUrl}" autoplay muted playsinline loop style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;${scene.type === 'stat' ? 'filter:blur(2px);opacity:0.3;' : ''}"></video>
+          <div style="position:absolute;inset:0;${dimGrad}pointer-events:none;"></div>
+          ${overlayHtml}
+        </div>`;
+      }
+      // 2) 비교 (잘못된 vs 올바른) — 위/아래 분할
+      else if (scene.type === 'comparison' && (scene.leftVideoUrl || scene.rightVideoUrl)) {
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:grid;grid-template-rows:1fr 1fr;gap:3px;background:#000;">
+          <div style="position:relative;overflow:hidden;background:rgba(239,68,68,0.08);">
+            ${scene.leftVideoUrl ? `<video src="${scene.leftVideoUrl}" autoplay muted playsinline loop style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.55;"></video>` : ''}
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.3),rgba(0,0,0,0.7));"></div>
+            <div style="position:absolute;left:18px;bottom:18px;right:18px;z-index:2;">
+              <div style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:2px;padding:5px 10px;background:rgba(239,68,68,0.2);color:#EF4444;border:1px solid rgba(239,68,68,0.5);border-radius:4px;margin-bottom:10px;">✕ ${scene.left_label || '잘못된 방식'}</div>
+              <div style="font-size:17px;font-weight:700;line-height:1.3;color:#fff;">${scene.left_text || ''}</div>
+            </div>
+          </div>
+          <div style="position:relative;overflow:hidden;background:rgba(16,185,129,0.08);">
+            ${scene.rightVideoUrl ? `<video src="${scene.rightVideoUrl}" autoplay muted playsinline loop style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.55;"></video>` : ''}
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.3),rgba(0,0,0,0.7));"></div>
+            <div style="position:absolute;left:18px;bottom:18px;right:18px;z-index:2;">
+              <div style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:2px;padding:5px 10px;background:rgba(16,185,129,0.2);color:#10B981;border:1px solid rgba(16,185,129,0.5);border-radius:4px;margin-bottom:10px;">✓ ${scene.right_label || '올바른 방식'}</div>
+              <div style="font-size:17px;font-weight:700;line-height:1.3;color:#fff;">${scene.right_text || ''}</div>
+            </div>
+          </div>
+        </div>`;
+      }
+      // 3) 인포그래픽 (steps 배열 기반) — 텍스트 단계 표시 (이미지 있으면 같이)
+      else if (scene.type === 'infographic' && scene.steps && scene.steps.length > 0) {
+        const stepsHtml = scene.steps.map((s, i) => `
+          <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-left:4px solid #10B981;border-radius:10px;animation:fadeUp 0.5s ${(i*0.3)+0.4}s both;">
+            <div style="flex-shrink:0;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#10B981,#047857);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#fff;box-shadow:0 4px 12px rgba(16,185,129,0.35);">${i+1}</div>
+            <div style="flex:1;font-size:15px;font-weight:600;color:#fff;line-height:1.4;">${s}</div>
+          </div>
+        `).join('');
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;padding:32px 20px;background:linear-gradient(135deg,#0A0A0A,#1E293B,#0A0A0A);">
+          <div style="margin-bottom:24px;">
+            ${scene.header_tag ? `<div style="font-size:10px;font-weight:800;letter-spacing:3px;color:#10B981;margin-bottom:8px;text-transform:uppercase;">${scene.header_tag}</div>` : ''}
+            ${scene.header_title ? `<div style="font-size:24px;font-weight:900;line-height:1.2;color:#fff;">${scene.header_title}</div>` : ''}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">${stepsHtml}</div>
+          <style>@keyframes fadeUp { from { opacity:0; transform: translateX(-20px); } to { opacity:1; transform: translateX(0); } }</style>
+        </div>`;
+      }
+      // 4) 인포그래픽 — steps 없고 이미지만 있는 경우 (기존 방식)
+      else if (scene.type === 'infographic' && scene.imageUrl) {
+        vis.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:100%;object-fit:contain;background:#0A0A0A;" alt="infographic">`;
+      }
+      // 5) 타이틀 카드 — 텍스트 애니메이션
+      else if (scene.type === 'title_card') {
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;background:#000;text-align:center;padding:32px;">
+          ${scene.kicker ? `<div style="font-size:11px;font-weight:800;letter-spacing:6px;color:#10B981;margin-bottom:24px;text-transform:uppercase;animation:fadeIn 0.6s 0.3s both;">${scene.kicker}</div>` : ''}
+          <div style="font-size:52px;font-weight:900;line-height:1;letter-spacing:-0.04em;color:#fff;margin-bottom:24px;animation:popIn 0.8s 0.6s both;">${scene.title_main || scene.narration || ''}</div>
+          <div style="width:60px;height:2px;background:#10B981;margin-bottom:18px;animation:expandLine 0.6s 1.3s both;"></div>
+          ${scene.title_sub ? `<div style="font-size:13px;font-weight:500;letter-spacing:1.5px;color:rgba(255,255,255,0.6);text-transform:uppercase;animation:fadeIn 0.5s 1.5s both;">${scene.title_sub}</div>` : ''}
+          <style>
+            @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+            @keyframes popIn { from { opacity:0; transform: scale(0.8); } to { opacity:1; transform: scale(1); } }
+            @keyframes expandLine { from { width: 0; } to { width: 60px; } }
+          </style>
+        </div>`;
+      }
+      // 6) 폴백: 기존 이미지 또는 신규 생성
+      else if (scene.imageUrl) {
+        vis.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:auto;max-height:80vh;object-fit:contain;display:block;margin:0 auto;border-radius:8px;" alt="scene">`;
+      } else {
+        _currentImagePromise = _loadSceneImage(scene.visual, scene.narration);
+        _preloadNextImage();
+      }
     }
 
     // 자막 즉시 표시 — 첫 청크를 바로 보여주고, 이후 자동 전환
