@@ -22,15 +22,26 @@ body {
 }
 
 /* ====================================================
- *  컨테이너 — 풀스크린 (가로 세로 전부)
+ *  컨테이너 — 항상 9:16 세로형 (모바일 우선)
+ *  데스크탑에서도 핸드폰처럼 가운데 세로 박스로
  * ==================================================== */
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
 .container {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
+  position: relative;
+  width: min(100vw, calc(100vh * 9 / 16));
+  height: min(100vh, calc(100vw * 16 / 9));
+  max-width: 480px;
   background: #000;
   overflow: hidden;
+  box-shadow: 0 20px 80px rgba(0,0,0,0.6);
+}
+@media (max-width: 480px) {
+  .container { max-width: 100vw; height: 100vh; }
 }
 
 /* ====================================================
@@ -102,15 +113,15 @@ body {
 }
 .scene-video-focus .caption-text {
   display: inline-block;
-  font-size: clamp(18px, 2.4vw, 32px);
+  font-size: 19px;
   font-weight: 700;
-  line-height: 1.4;
-  padding: 16px 26px;
+  line-height: 1.45;
+  padding: 14px 22px;
   background: rgba(0,0,0,0.7);
   border-radius: 14px;
   backdrop-filter: blur(14px);
   border: 1px solid rgba(255,255,255,0.08);
-  max-width: 900px;
+  max-width: 100%;
   opacity: 0;
   transform: translateY(16px);
   animation: fadeUp 0.7s 0.4s forwards;
@@ -149,13 +160,12 @@ body {
 .typo-main {
   position: relative;
   z-index: 2;
-  font-size: clamp(42px, 7vw, 96px);
+  font-size: 44px;
   font-weight: 900;
-  line-height: 1.0;
+  line-height: 1.05;
   letter-spacing: -0.03em;
-  margin-bottom: clamp(20px, 3vh, 32px);
+  margin-bottom: 22px;
   color: #fff;
-  max-width: 1100px;
   opacity: 0;
   transform: translateY(24px);
   animation: slideUpBig 0.9s 0.4s forwards;
@@ -174,11 +184,11 @@ body {
 .typo-sub {
   position: relative;
   z-index: 2;
-  font-size: clamp(16px, 1.8vw, 22px);
+  font-size: 16px;
   font-weight: 500;
   line-height: 1.6;
   color: rgba(255,255,255,0.8);
-  max-width: 700px;
+  max-width: 360px;
   opacity: 0;
   animation: fadeIn 0.7s 1s forwards;
 }
@@ -217,7 +227,7 @@ body {
 .stat-number {
   position: relative;
   z-index: 2;
-  font-size: clamp(100px, 22vw, 280px);
+  font-size: 140px;
   font-weight: 900;
   line-height: 0.85;
   letter-spacing: -0.05em;
@@ -289,12 +299,11 @@ body {
   text-transform: uppercase;
 }
 .info-header-title {
-  font-size: clamp(30px, 5vw, 64px);
+  font-size: 32px;
   font-weight: 900;
-  line-height: 1.1;
+  line-height: 1.15;
   letter-spacing: -0.02em;
   color: #fff;
-  max-width: 900px;
 }
 .info-steps {
   position: relative;
@@ -336,7 +345,7 @@ body {
 }
 .info-step-text {
   flex: 1;
-  font-size: clamp(16px, 1.8vw, 22px);
+  font-size: 16px;
   font-weight: 600;
   color: #fff;
   line-height: 1.45;
@@ -369,16 +378,15 @@ body {
   text-transform: uppercase;
 }
 .title-card-main {
-  font-size: clamp(52px, 9vw, 140px);
+  font-size: 64px;
   font-weight: 900;
   line-height: 0.95;
   letter-spacing: -0.04em;
   color: #fff;
-  margin-bottom: clamp(24px, 3vh, 40px);
+  margin-bottom: 28px;
   opacity: 0;
   transform: scale(0.75);
   animation: popIn 0.9s 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  max-width: 1000px;
 }
 .title-card-main .accent { color: var(--accent); }
 .title-card-line {
@@ -406,11 +414,12 @@ body {
 /* ====================================================
  *  씬 타입 6: 2단 비교 (올바른/잘못된)
  * ==================================================== */
+/* 세로형이므로 비교 씬은 위/아래로 분할 */
 .scene-comparison {
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
   gap: 4px;
   background: #000;
 }
@@ -617,11 +626,10 @@ body {
   text-transform: uppercase;
 }
 .start-title {
-  font-size: clamp(42px, 7vw, 110px);
+  font-size: 56px;
   font-weight: 900;
   line-height: 1.0;
   letter-spacing: -0.03em;
-  max-width: 900px;
 }
 .start-title .accent { color: var(--accent); }
 .start-line { width: 50px; height: 2px; background: var(--accent); }
@@ -673,7 +681,7 @@ body {
   opacity: 0; animation: fadeIn 0.6s 0.2s forwards;
 }
 .completion-title {
-  font-size: clamp(44px, 7vw, 100px);
+  font-size: 52px;
   font-weight: 900;
   line-height: 1.05;
   letter-spacing: -0.03em;
