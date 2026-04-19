@@ -153,8 +153,16 @@ const AI = {
       const titleHasEn = /eng|ENG|영어|english/i.test(sopTitle);
 
       let langInstruction = '나레이션은 한국어로 작성';
-      if (hasVietnamese || titleHasVie) langInstruction = '나레이션은 반드시 베트남어(tiếng Việt)로 작성';
-      else if (isEnglish || titleHasEn) langInstruction = '나레이션은 반드시 영어(English)로 작성';
+      let regionHint = 'East Asian / Korean context';
+      if (hasVietnamese || titleHasVie) {
+        langInstruction = '나레이션은 반드시 베트남어(tiếng Việt)로 작성';
+        regionHint = 'Vietnamese / Southeast Asian context — ALL video_keywords MUST include "vietnamese" or "asian" prefix for authentic representation';
+      } else if (isEnglish || titleHasEn) {
+        langInstruction = '나레이션은 반드시 영어(English)로 작성';
+        regionHint = 'Asian context preferred — prefer "asian" prefix in video_keywords when describing people';
+      } else {
+        regionHint = 'Korean / East Asian context — include "korean" or "asian" prefix in people-related video_keywords';
+      }
 
       const prompt = `당신은 Netflix 다큐멘터리 스타일의 교육 영상 시각 디렉터입니다.
 
@@ -264,12 +272,15 @@ ${plainText}
 - 반드시 영어로 작성 (Pexels는 영어 검색이 결과 많음)
 - 구체적이고 다양하게 3개씩 (1순위 → 3순위 폴백)
 - 사람/장소/행동을 명시: "subject + action + setting"
-- 좋은 예:
-  * "teacher kneeling eye level with child preschool"
-  * "parent handing child to teacher kindergarten morning"
-  * "Asian woman barbecue restaurant grilling meat"
-- 나쁜 예 (너무 추상적):
+- ★★ 이 SOP의 지역 맥락: ${regionHint} ★★
+- 사람이 나오는 씬에는 반드시 "asian" / "vietnamese" / "korean" 중 하나의 지역 수식어 포함
+- 좋은 예 (지역 수식어 포함):
+  * "asian teacher kneeling eye level with child preschool"
+  * "vietnamese kindergarten morning arrival greeting"
+  * "korean woman barbecue restaurant grilling meat"
+- 나쁜 예 (너무 추상적 / 지역 없음):
   * "education", "training", "morning" (너무 일반적)
+  * "teacher with child" (지역 수식어 누락)
 
 ═══════════════════════════════════════════════
 ★ 출력 형식 ★

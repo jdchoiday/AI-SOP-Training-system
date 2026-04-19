@@ -620,11 +620,38 @@ const SlidePlayer = (() => {
       </div>
     `;
 
-    // === Phase 1: 씬 타입별 렌더링 ===
+    // === Phase 1/2: 씬 타입별 렌더링 ===
     const vis = document.getElementById('spSceneVisual');
     if (vis) {
+      // Phase 2: Pexels 실패 → AI 이미지로 폴백된 씬 (aiFallback + imageUrl 보유)
+      // video_scenario / stat 타입인데 videoUrl 없고 imageUrl이 있으면 이미지 전체 배경 + 오버레이
+      const isAiFallbackScene = (scene.type === 'video_scenario' || scene.type === 'stat')
+        && !scene.videoUrl && scene.imageUrl;
+
+      if (isAiFallbackScene) {
+        const dimGrad = scene.type === 'stat'
+          ? 'background:linear-gradient(180deg,rgba(0,0,0,0.7),rgba(0,0,0,0.85));'
+          : 'background:linear-gradient(180deg,rgba(0,0,0,0.25),rgba(0,0,0,0.55));';
+        const overlayHtml = scene.type === 'stat'
+          ? `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;z-index:5;padding:24px;">
+              ${scene.tag ? `<div style="font-size:11px;font-weight:800;letter-spacing:4px;color:#10B981;margin-bottom:18px;text-transform:uppercase;">${scene.tag}</div>` : ''}
+              <div style="font-size:120px;font-weight:900;line-height:0.85;background:linear-gradient(180deg,#fff,#777);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.04em;">${scene.number || ''}</div>
+              ${scene.unit ? `<div style="font-size:22px;font-weight:700;color:#FBBF24;margin-top:6px;">${scene.unit}</div>` : ''}
+              <div style="font-size:16px;font-weight:500;color:rgba(255,255,255,0.85);margin-top:18px;max-width:340px;line-height:1.5;">${scene.context || ''}</div>
+            </div>`
+          : (scene.caption ? `<div style="position:absolute;bottom:14vh;left:18px;right:18px;text-align:center;z-index:5;">
+              ${scene.tag ? `<div style="display:inline-block;font-size:10px;font-weight:800;letter-spacing:2.5px;color:#10B981;padding:5px 12px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);border-radius:4px;margin-bottom:12px;">${scene.tag}</div><br>` : ''}
+              <div style="display:inline-block;font-size:18px;font-weight:700;line-height:1.45;padding:14px 20px;background:rgba(0,0,0,0.7);border-radius:14px;backdrop-filter:blur(14px);max-width:100%;">${scene.caption}</div>
+            </div>` : '');
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;overflow:hidden;background:#000;">
+          <img src="${scene.imageUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;${scene.type === 'stat' ? 'filter:blur(3px);opacity:0.45;' : ''}" alt="ai-fallback">
+          <div style="position:absolute;inset:0;${dimGrad}pointer-events:none;"></div>
+          <div style="position:absolute;top:10px;right:10px;font-size:9px;font-weight:700;letter-spacing:1px;padding:3px 7px;background:rgba(16,185,129,0.25);color:#10B981;border:1px solid rgba(16,185,129,0.5);border-radius:3px;backdrop-filter:blur(6px);">AI</div>
+          ${overlayHtml}
+        </div>`;
+      }
       // 1) 영상 시나리오 / 통계 — Pexels 영상 재생
-      if ((scene.type === 'video_scenario' || scene.type === 'stat') && scene.videoUrl) {
+      else if ((scene.type === 'video_scenario' || scene.type === 'stat') && scene.videoUrl) {
         const dimGrad = scene.type === 'stat'
           ? 'background:linear-gradient(180deg,rgba(0,0,0,0.7),rgba(0,0,0,0.85));'
           : 'background:linear-gradient(180deg,rgba(0,0,0,0.3),rgba(0,0,0,0.6));';

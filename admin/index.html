@@ -354,7 +354,7 @@
             <button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="sopDeselectAll()">선택 해제</button>
           </div>
           <div style="display:flex; gap:8px;">
-            <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkGenerateVideos()">🎬 선택 SOP 영상 생성</button>
+            <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkGenerateVideos()" title="Phase 2: 지역 컨텍스트 자동 주입 + AI 폴백">🎬 영상 생성 (Phase 2)</button>
             <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkGenerateImages()">🎨 이미지 생성 (레거시)</button>
             <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkFixTitles()">🔤 띄어쓰기 교정</button>
             <button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="sopExportSelected()">&#128229; 내보내기</button>
@@ -2158,27 +2158,38 @@
 
       try {
         for (const sop of targets) {
-          document.getElementById('bulkVSopName').textContent = `📋 ${sop.title}`;
-          // Pass 1: Pexels
+          // Phase 2: SOP별로 컨텍스트 감지
+          const sopCtx = _detectSopContext(sop);
+          const ctxLabel = sopCtx.locale === 'vietnamese' ? '🇻🇳' : sopCtx.locale === 'korean' ? '🇰🇷' : '🌏';
+          document.getElementById('bulkVSopName').textContent = `${ctxLabel} ${sop.title}`;
+          const missed = [];
+          // Pass 1: Pexels (context 주입)
           for (let i = 0; i < sop.script.length; i++) {
             const sc = sop.script[i];
             if (!['video_scenario','stat','comparison'].includes(sc.type) || sc.videoUrl) continue;
             try {
               if (sc.type === 'comparison') {
                 const [L, R] = await Promise.all([
-                  _searchPexels(sc.left_video_keywords || []),
-                  _searchPexels(sc.right_video_keywords || []),
+                  _searchPexels(sc.left_video_keywords || [], sopCtx),
+                  _searchPexels(sc.right_video_keywords || [], sopCtx),
                 ]);
                 if (L) sc.leftVideoUrl = L.url;
                 if (R) sc.rightVideoUrl = R.url;
-                if (!L && !R) failed++;
+                if (!L && !R) missed.push({ scene: sc, idx: i });
               } else {
-                const r = await _searchPexels(sc.video_keywords || []);
+                const r = await _searchPexels(sc.video_keywords || [], sopCtx);
                 if (r) { sc.videoUrl = r.url; sc.videoThumbnail = r.thumbnail; sc.videoAuthor = r.author; }
-                else failed++;
+                else missed.push({ scene: sc, idx: i });
               }
-            } catch(e) { failed++; }
+            } catch(e) { missed.push({ scene: sc, idx: i }); }
             tick();
+          }
+          // Pass 1.5: Pexels 실패 → AI 폴백 (Phase 2)
+          for (const m of missed) {
+            const url = await _generateAIFallbackImage(m.scene, sopCtx);
+            if (url) { m.scene.imageUrl = url; m.scene.aiFallback = true; }
+            else failed++;
+            await new Promise(r => setTimeout(r, 1200));
           }
           // Pass 2: 인포그래픽
           for (let i = 0; i < sop.script.length; i++) {
@@ -2198,7 +2209,7 @@
           }
           saveSops(sops);
         }
-        alert(`✅ 완료! ${done}/${total}` + (failed ? ` (실패 ${failed})` : ''));
+        alert(`✅ Phase 2 완료! ${done}/${total}` + (failed ? ` (실패 ${failed})` : '') + `\n\n지역 컨텍스트 자동 주입 + AI 폴백 적용됨`);
       } catch (e) {
         console.error(e); saveSops(sops);
         alert('오류: ' + e.message);
@@ -3400,8 +3411,8 @@ ${text.slice(0, 3000)}`;
           <button onclick="generateQuizOnly()" style="padding:10px 18px; font-size:13px; font-weight:700; background:${hasQuiz ? '#f8fafc; color:#6366f1; border:2px solid #6366f1' : 'linear-gradient(135deg,#f59e0b,#f97316); color:white'}; border:none; border-radius:10px; cursor:pointer;">
             ${hasQuiz ? '&#128260; 퀴즈 다시 생성' : '&#10067; 퀴즈 생성'}
           </button>
-          <button onclick="_generateAllVideos()" style="padding:10px 18px; font-size:13px; font-weight:700; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:10px; cursor:pointer;">
-            &#127916; 영상 생성
+          <button onclick="_generateAllVideos()" title="Phase 2: 지역 컨텍스트 자동 주입 + AI 폴백" style="padding:10px 18px; font-size:13px; font-weight:700; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:10px; cursor:pointer;">
+            &#127916; 영상 생성 (Phase 2)
           </button>
           <button onclick="_generateAllImages()" style="padding:10px 18px; font-size:13px; font-weight:700; background:linear-gradient(135deg,#f59e0b,#ef4444); color:white; border:none; border-radius:10px; cursor:pointer;">
             &#127912; 이미지 생성 (레거시)
@@ -4147,6 +4158,10 @@ Output ONLY the prompt, nothing else.`;
           return;
         }
 
+        // Phase 2: SOP 언어/지역 컨텍스트 감지 → Pexels 검색에 prefix 자동 주입
+        const sopContext = _detectSopContext(sop);
+        console.log('[Phase 2] SOP context:', sopContext);
+
         // 레거시 씬 (type 없음) → video_scenario로 자동 지정 + 나레이션 기반 키워드
         sop.script.forEach(sc => {
           if (!sc.type) {
@@ -4175,7 +4190,8 @@ Output ONLY the prompt, nothing else.`;
         }
 
         const estCost = (videoScenes.length * 0).toFixed(2) + ' (Pexels 무료) + ' + (infographicScenes.length * 0.04).toFixed(2);
-        if (!confirm(`영상 생성을 시작합니다.\n\n• 영상 검색 (Pexels): ${videoScenes.length}씬\n• 인포그래픽 (AI): ${infographicScenes.length}씬\n• 타이틀 카드: ${titleScenes}씬 (자산 불필요)\n\n예상 비용: $${estCost} USD\n예상 시간: ~${Math.ceil(totalToGen * 5)}초\n\n진행하시겠습니까?`)) {
+        const contextLabel = sopContext.locale === 'vietnamese' ? '🇻🇳 베트남' : sopContext.locale === 'korean' ? '🇰🇷 한국' : '🌏 일반 아시아';
+        if (!confirm(`🚀 Phase 2 영상 생성을 시작합니다.\n\n[컨텍스트] ${contextLabel} (Pexels 검색어에 자동 주입)\n\n• 영상 검색 (Pexels): ${videoScenes.length}씬\n• 인포그래픽 (AI): ${infographicScenes.length}씬\n• 타이틀 카드: ${titleScenes}씬 (자산 불필요)\n• Pexels 실패 씬은 AI 이미지로 자동 폴백\n\n예상 비용: $${estCost} USD (AI 폴백 최대 $${(videoScenes.length * 0.04).toFixed(2)})\n예상 시간: ~${Math.ceil(totalToGen * 5)}초\n\n진행하시겠습니까?`)) {
           _isGeneratingImages = false;
           return;
         }
@@ -4208,34 +4224,51 @@ Output ONLY the prompt, nothing else.`;
           if (status) document.getElementById('vgenStatus').textContent = status;
         };
 
-        // === Pass 1: 영상 검색 (Pexels) ===
-        document.getElementById('vgenStatus').textContent = '🎥 Pexels 영상 검색 중...';
+        // === Pass 1: 영상 검색 (Pexels) — Phase 2: context 주입 ===
+        document.getElementById('vgenStatus').textContent = `🎥 Pexels 검색 중 (${contextLabel} 컨텍스트)...`;
+        const pexelsMissed = []; // AI 폴백 대상
         for (const x of videoScenes) {
           try {
             const sc = x.scene;
             // comparison은 left/right 둘 다
             if (sc.type === 'comparison') {
               const [leftR, rightR] = await Promise.all([
-                _searchPexels(sc.left_video_keywords || []),
-                _searchPexels(sc.right_video_keywords || []),
+                _searchPexels(sc.left_video_keywords || [], sopContext),
+                _searchPexels(sc.right_video_keywords || [], sopContext),
               ]);
               if (leftR) sc.leftVideoUrl = leftR.url;
               if (rightR) sc.rightVideoUrl = rightR.url;
-              if (!leftR && !rightR) failed++;
+              if (!leftR && !rightR) pexelsMissed.push(x);
             } else {
               // video_scenario, stat
-              const result = await _searchPexels(sc.video_keywords || []);
+              const result = await _searchPexels(sc.video_keywords || [], sopContext);
               if (result) {
                 sc.videoUrl = result.url;
                 sc.videoThumbnail = result.thumbnail;
                 sc.videoAuthor = result.author;
-              } else { failed++; }
+              } else { pexelsMissed.push(x); }
             }
             updateProgress(`🎥 영상 검색 ${done}/${videoScenes.length}`);
           } catch (e) {
             console.warn('Pexels search error:', e.message);
-            failed++;
+            pexelsMissed.push(x);
             updateProgress();
+          }
+        }
+
+        // === Pass 1.5: Pexels 실패 씬 → AI 이미지 폴백 (Phase 2) ===
+        if (pexelsMissed.length > 0) {
+          document.getElementById('vgenStatus').textContent = `🎨 AI 폴백 이미지 생성 (${pexelsMissed.length}씬)...`;
+          for (const x of pexelsMissed) {
+            const sc = x.scene;
+            const imgUrl = await _generateAIFallbackImage(sc, sopContext);
+            if (imgUrl) {
+              sc.imageUrl = imgUrl;
+              sc.aiFallback = true;
+            } else {
+              failed++;
+            }
+            await new Promise(r => setTimeout(r, 1200));
           }
         }
 
@@ -4293,6 +4326,55 @@ Output ONLY the prompt, nothing else.`;
       }
     };
 
+    // Phase 2: SOP 언어/컨텍스트 자동 감지 (베트남/한국/영미권 중 지역 결정)
+    function _detectSopContext(sop) {
+      const title = (sop?.title || '').toLowerCase();
+      const plainText = (sop?.script || [])
+        .map(s => (s.narration || '') + ' ' + (s.visual || ''))
+        .join(' ')
+        .slice(0, 2000);
+      const hasVietnamese = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(plainText) ||
+                            /vie|베트남|vietnam|việt/i.test(title);
+      const hasKorean = /[가-힣]/.test(plainText) || /korea|한국/i.test(title);
+
+      if (hasVietnamese) {
+        return {
+          locale: 'vietnamese',
+          // 검색어 앞뒤에 부착할 수식어 (변형 3가지 – 폴백 용)
+          prefixes: ['vietnamese', 'asian', 'southeast asian'],
+          personHint: 'Vietnamese person, Southeast Asian features'
+        };
+      }
+      if (hasKorean) {
+        return {
+          locale: 'korean',
+          prefixes: ['korean', 'asian', 'east asian'],
+          personHint: 'Korean person, East Asian features'
+        };
+      }
+      return {
+        locale: 'neutral',
+        prefixes: ['', 'asian', ''],
+        personHint: 'Asian person'
+      };
+    }
+
+    // Phase 2: 검색어 + 컨텍스트 확장 – "teacher" → ["vietnamese teacher", "asian teacher", "teacher"]
+    function _expandWithContext(keywords, context) {
+      if (!keywords || keywords.length === 0) return [];
+      const prefixes = context?.prefixes || ['', '', ''];
+      const out = [];
+      // 각 원 키워드마다 prefix 변형을 순차 생성 (total = keywords × prefixes, dedupe)
+      for (const kw of keywords) {
+        const lower = (kw || '').toLowerCase();
+        for (const p of prefixes) {
+          const combo = p && !lower.includes(p.toLowerCase()) ? `${p} ${kw}` : kw;
+          if (!out.includes(combo)) out.push(combo);
+        }
+      }
+      return out;
+    }
+
     // 레거시 스크립트: 나레이션/비주얼 텍스트 → Pexels 영어 검색어 매핑 (한/영/베 지원)
     function _legacyKeywords(text) {
       const t = (text || '').toLowerCase();
@@ -4326,9 +4408,11 @@ Output ONLY the prompt, nothing else.`;
     }
 
     // Pexels 검색 헬퍼 (여러 검색어 중 첫 매치 반환)
-    async function _searchPexels(queries) {
+    // Phase 2: context 파라미터 받아 지역 prefix를 자동 앞에 붙임
+    async function _searchPexels(queries, context = null) {
       if (!queries || queries.length === 0) return null;
-      for (const q of queries) {
+      const expanded = context ? _expandWithContext(queries, context) : queries;
+      for (const q of expanded) {
         try {
           const res = await fetch('/api/video-search', {
             method: 'POST',
@@ -4341,6 +4425,36 @@ Output ONLY the prompt, nothing else.`;
         } catch (e) { /* try next */ }
       }
       return null;
+    }
+
+    // Phase 2: AI 이미지 폴백 생성 (Pexels 실패 씬 커버)
+    // 해당 씬을 아시아/베트남 맥락의 풀프레임 사진으로 생성
+    async function _generateAIFallbackImage(scene, context) {
+      const personHint = context?.personHint || 'Asian person';
+      const narr = scene.narration || scene.caption || scene.visual || 'workplace training scene';
+      // 영어 시각 프롬프트 변환 (영어 글자는 그대로, 한/베 포함 시 요약)
+      const visual = scene.visual && scene.visual.length > 30
+        ? scene.visual
+        : `Cinematic documentary photograph of ${personHint} in a workplace setting related to: ${narr.slice(0, 200)}. Warm natural lighting, authentic Southeast Asian context, shallow depth of field, 9:16 vertical composition.`;
+
+      try {
+        const res = await fetch('/api/image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'generate-multi',
+            visual: visual,
+            narration: scene.narration || '',
+            sceneIndex: 0,
+            totalScenes: 1
+          })
+        });
+        const data = await res.json();
+        return data?.images?.[0]?.imageUrl || null;
+      } catch (e) {
+        console.warn('AI fallback image failed:', e.message);
+        return null;
+      }
     }
 
     // ===== 레거시: 기존 이미지 생성 (하위 호환용) =====
@@ -5524,7 +5638,7 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin:12px 0 16px;">
             <button style="padding:12px 20px; font-size:15px; font-weight:700; background:#6366f1; color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_addScene()">➕ 씬 추가</button>
             <button style="padding:12px 20px; font-size:15px; font-weight:700; background:#3b82f6; color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_saveScripts()">💾 스크립트 저장</button>
-            <button style="padding:12px 20px; font-size:15px; font-weight:700; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_generateAllVideos()">🎬 영상 일괄 생성</button>
+            <button style="padding:12px 20px; font-size:15px; font-weight:700; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_generateAllVideos()" title="Phase 2: 지역 컨텍스트 자동 주입 + AI 폴백">🎬 영상 일괄 생성 (Phase 2)</button>
             <button style="padding:12px 20px; font-size:15px; font-weight:700; background:linear-gradient(135deg,#f59e0b,#ef4444); color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_generateAllImages()">🎨 이미지 (레거시)</button>
             <button style="padding:12px 20px; font-size:15px; font-weight:700; background:#10b981; color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_openImageReview()">🖼️ 이미지 리뷰</button>
           </div>
