@@ -4293,22 +4293,28 @@ Output ONLY the prompt, nothing else.`;
       }
     };
 
-    // 레거시 스크립트: 나레이션/비주얼 텍스트 → Pexels 영어 검색어 매핑
+    // 레거시 스크립트: 나레이션/비주얼 텍스트 → Pexels 영어 검색어 매핑 (한/영/베 지원)
     function _legacyKeywords(text) {
       const t = (text || '').toLowerCase();
       const map = [
-        { kw: ['체온', '열', '발열', '온도'], en: ['child temperature check', 'kindergarten health check', 'thermometer kid'] },
-        { kw: ['손 씻', '손씻', '비누', '위생'], en: ['child washing hands', 'kid soap hands', 'kindergarten hygiene'] },
-        { kw: ['식사', '급식', '먹', '점심'], en: ['kindergarten lunch', 'children eating meal', 'kids dining'] },
-        { kw: ['놀이', '장난감', '활동'], en: ['kindergarten play', 'children playing', 'preschool activity'] },
-        { kw: ['낮잠', '수면', '자'], en: ['kindergarten nap time', 'children sleeping', 'preschool rest'] },
-        { kw: ['청소', '소독', '방역'], en: ['cleaning disinfect classroom', 'kindergarten sanitize'] },
-        { kw: ['부모', '학부모', '소통'], en: ['parent teacher meeting', 'communication parents'] },
-        { kw: ['안전', '응급', '사고'], en: ['child safety kindergarten', 'emergency preschool'] },
-        { kw: ['인사', '등원', '하원'], en: ['kindergarten arrival', 'greeting children', 'preschool morning'] },
-        { kw: ['수업', '학습', '교육'], en: ['kindergarten class', 'preschool teacher', 'learning children'] },
-        { kw: ['고기', '고객', '서빙', '주문', '레스토랑'], en: ['korean bbq restaurant', 'waiter serving', 'grilling meat'] },
-        { kw: ['카페', '키즈'], en: ['kids cafe play', 'indoor playground children'] },
+        { kw: ['체온', '열', '발열', '온도', 'temperature', 'fever', 'nhiệt độ', 'sốt'], en: ['child temperature check', 'kindergarten health check', 'thermometer kid'] },
+        { kw: ['손 씻', '손씻', '비누', '위생', 'hand wash', 'soap', 'hygiene', 'rửa tay', 'xà phòng'], en: ['child washing hands', 'kid soap hands', 'kindergarten hygiene'] },
+        { kw: ['식사', '급식', '먹', '점심', 'meal', 'lunch', 'eating', 'bữa ăn', 'bữa trưa', 'ăn'], en: ['kindergarten lunch', 'children eating meal', 'kids dining'] },
+        { kw: ['놀이', '장난감', '활동', 'play', 'toy', 'activity', 'chơi', 'đồ chơi', 'hoạt động'], en: ['kindergarten play', 'children playing', 'preschool activity'] },
+        { kw: ['낮잠', '수면', 'nap', 'sleep', 'ngủ', 'giấc ngủ'], en: ['kindergarten nap time', 'children sleeping', 'preschool rest'] },
+        { kw: ['청소', '소독', '방역', 'clean', 'disinfect', 'sanitize', 'vệ sinh', 'khử trùng'], en: ['cleaning classroom', 'kindergarten sanitize'] },
+        { kw: ['부모', '학부모', '소통', 'parent', 'communication', 'phụ huynh', 'giao tiếp'], en: ['parent teacher meeting', 'communication parents'] },
+        { kw: ['안전', '응급', '사고', 'safety', 'emergency', 'an toàn', 'khẩn cấp'], en: ['child safety kindergarten', 'emergency preschool'] },
+        { kw: ['인사', '등원', '하원', 'arrival', 'greeting', 'chào', 'đón'], en: ['kindergarten arrival', 'greeting children', 'preschool morning'] },
+        { kw: ['수업', '학습', '교육', 'class', 'learn', 'education', 'teach', 'học', 'giáo dục', 'dạy'], en: ['kindergarten class', 'preschool teacher', 'learning children'] },
+        { kw: ['유치원', 'kinder', 'kindergarten', 'preschool', 'mầm non', 'mẫu giáo'], en: ['vietnamese kindergarten', 'preschool children asia', 'kinder academy'] },
+        { kw: ['선생', 'teacher', 'giáo viên'], en: ['kindergarten teacher', 'preschool teacher asian'] },
+        { kw: ['아이', '어린이', 'child', 'children', 'kid', 'trẻ em', 'trẻ'], en: ['asian children kindergarten', 'vietnamese kids preschool'] },
+        { kw: ['비전', '철학', 'vision', 'philosophy', 'mission', 'tầm nhìn', 'triết lý', 'sứ mệnh'], en: ['inspiring education vision', 'children future bright', 'hopeful classroom'] },
+        { kw: ['역사', '설립', 'history', 'founded', 'establish', 'lịch sử', 'thành lập'], en: ['kindergarten building exterior', 'school history archive', 'education milestone'] },
+        { kw: ['베트남', 'vietnam', 'việt nam'], en: ['vietnam kindergarten', 'vietnamese children school', 'hanoi education'] },
+        { kw: ['고기', '서빙', '주문', '레스토랑', 'restaurant', 'bbq', 'grill', 'nhà hàng', 'thịt nướng'], en: ['korean bbq restaurant', 'waiter serving', 'grilling meat'] },
+        { kw: ['카페', '키즈', 'cafe', 'playground', 'quán'], en: ['kids cafe play', 'indoor playground children'] },
       ];
       const hits = [];
       for (const m of map) {
@@ -5518,7 +5524,8 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin:12px 0 16px;">
             <button style="padding:12px 20px; font-size:15px; font-weight:700; background:#6366f1; color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_addScene()">➕ 씬 추가</button>
             <button style="padding:12px 20px; font-size:15px; font-weight:700; background:#3b82f6; color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_saveScripts()">💾 스크립트 저장</button>
-            <button style="padding:12px 20px; font-size:15px; font-weight:700; background:linear-gradient(135deg,#f59e0b,#ef4444); color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_generateAllImages()">🎨 이미지 일괄 생성</button>
+            <button style="padding:12px 20px; font-size:15px; font-weight:700; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_generateAllVideos()">🎬 영상 일괄 생성</button>
+            <button style="padding:12px 20px; font-size:15px; font-weight:700; background:linear-gradient(135deg,#f59e0b,#ef4444); color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_generateAllImages()">🎨 이미지 (레거시)</button>
             <button style="padding:12px 20px; font-size:15px; font-weight:700; background:#10b981; color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_openImageReview()">🖼️ 이미지 리뷰</button>
           </div>
           <div style="display:flex; gap:12px; margin-bottom:12px; padding:10px 16px; background:rgba(30,41,59,0.8); border-radius:8px; font-size:14px; color:#94a3b8; border:1px solid rgba(148,163,184,0.15);">
