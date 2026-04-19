@@ -10,8 +10,11 @@ const CONFIG = {
   // === 시스템 설정 ===
   APP_NAME: 'SOP Training System',
   DEFAULT_LANG: 'ko',        // 'ko' | 'en' | 'vi'
-  QUIZ_PASS_SCORE: 60,       // 미니 퀴즈 합격 점수 (%) — 3문항 중 2개 통과
-  CHAPTER_PASS_SCORE: 60,    // 챕터 테스트 합격 점수 (%) — 3문항 중 2개 통과
+  QUIZ_PASS_SCORE: 70,       // 씬별 미니 퀴즈 합격 점수 (%) — 3문항 중 ≥70%
+  CHAPTER_PASS_SCORE: 70,    // 챕터 종합시험 합격 점수 (%) — 20문항 중 ≥14개
+  CHAPTER_EXAM_COUNT: 20,    // 챕터 종합시험 문항 수 (E2 설계)
+  CHAPTER_EXAM_MINUTES: 60,  // 챕터 종합시험 제한 시간 (E4 설계, 분)
+  CERT_TIER_THRESHOLDS: { bronze: 70, silver: 80, gold: 90 }, // E6 자동 자격증 등급 (챕터 평균 점수 기준)
   VIDEO_COMPLETE_PERCENT: 90, // 시청 완료 인정 비율 (%)
 
   // === API Proxy 설정 ===

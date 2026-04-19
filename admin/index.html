@@ -3280,14 +3280,15 @@ ${text.slice(0, 3000)}`;
       renderSopList();
     }
 
-    // 챕터 종합시험 AI 자동 생성 (30문제)
+    // 챕터 종합시험 AI 자동 생성 (E2: 20문제 / 4지선다 / 70% 통과)
     async function _generateChapterExam(chapterId) {
       const sops = getSops();
       const chapter = sops.find(s => s.id === chapterId);
       const sections = sops.filter(s => s.parent_id === chapterId);
       if (sections.length === 0) { alert('섹션이 없습니다. 먼저 섹션을 배치하세요.'); return; }
 
-      if (!confirm(`${sections.length}개 섹션 기반 종합시험 30문제를 AI로 생성합니다.\n예상 시간: ~15초\n\n진행하시겠습니까?`)) return;
+      const examCount = (typeof CONFIG !== 'undefined' && CONFIG.CHAPTER_EXAM_COUNT) || 20;
+      if (!confirm(`${sections.length}개 섹션 기반 종합시험 ${examCount}문제를 AI로 생성합니다.\n4지선다 / 통과 기준 70% / 제한시간 60분\n예상 시간: ~15초\n\n진행하시겠습니까?`)) return;
 
       // 각 섹션의 콘텐츠 요약 수집
       const sectionData = sections.map(s => ({
@@ -3297,11 +3298,11 @@ ${text.slice(0, 3000)}`;
       }));
 
       try {
-        showLoading('종합시험 30문제 생성 중...');
+        showLoading(`종합시험 ${examCount}문제 생성 중...`);
         const res = await fetch('/api/quiz', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mode: 'exam', sections: sectionData, count: 30 })
+          body: JSON.stringify({ mode: 'exam', sections: sectionData, count: examCount })
         });
         hideLoading();
 

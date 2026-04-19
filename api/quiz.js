@@ -207,7 +207,8 @@ Return ONLY a JSON array:
 ]`;
 }
 
-// 챕터 종합시험 프롬프트 (30문제)
+// 챕터 종합시험 프롬프트 (20문제, 전부 객관식 4지선다)
+// E2 + E3 제외 반영: 단답형 없음, 모든 문항 4지선다로 통일
 function buildExamPrompt(sections, lang, count) {
   const langMap = { ko: 'Korean', en: 'English', vi: 'Vietnamese' };
   const langName = langMap[lang] || 'Korean';
@@ -218,28 +219,34 @@ function buildExamPrompt(sections, lang, count) {
 
   return `You are a comprehensive exam generator for employee training.
 
-Generate exactly ${count} exam questions covering ALL sections below:
+Generate exactly ${count} multiple-choice exam questions covering ALL sections below:
 
 ${sectionSummaries}
 
 Rules:
-- Distribute questions EVENLY across all sections
+- Distribute questions EVENLY across all sections (each section roughly equal coverage)
 - Mix difficulty: 30% easy, 50% medium, 20% hard
-- Question types: mostly multiple choice (4 options), include 3-5 short-answer
+- EVERY question MUST be 4-option multiple choice (NO short-answer, NO true/false)
+- Only 1 correct answer per question
 - Test PRACTICAL workplace application, not just memorization
+- Distractors must be plausible but clearly wrong on careful reading
+- Balance correct-answer positions across 0/1/2/3 (avoid all-same-index)
 - Primary language: ${langName}, with EN and VN translations
-- For short-answer questions, set options to [] and correct to -1
-- Include explanation for each correct answer
+- Include a brief explanation for each correct answer (1 sentence)
 
-Return ONLY a JSON array:
+Return ONLY a JSON array (no markdown):
 [
   {
-    "question": "...", "question_en": "...", "question_vn": "...",
-    "options": ["A","B","C","D"], "options_en": [...], "options_vn": [...],
-    "correct": 0, "explanation": "...",
+    "question": "질문 (${langName})",
+    "question_en": "Question in English",
+    "question_vn": "Câu hỏi tiếng Việt",
+    "options": ["옵션A", "옵션B", "옵션C", "옵션D"],
+    "options_en": ["Option A", "Option B", "Option C", "Option D"],
+    "options_vn": ["Lựa chọn A", "Lựa chọn B", "Lựa chọn C", "Lựa chọn D"],
+    "correct": 0,
+    "explanation": "정답 설명",
     "section_index": 0,
-    "difficulty": "easy|medium|hard",
-    "type": "mc|short"
+    "difficulty": "easy"
   }
 ]`;
 }

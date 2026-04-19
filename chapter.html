@@ -355,7 +355,10 @@
     <div id="chapterExamView" style="display:none;">
       <div class="exam-header">
         <h3 id="examTitle">챕터 종합시험</h3>
-        <span class="exam-counter" id="examCounter">1 / 20</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span id="examTimer" style="display:none;font-size:14px;font-weight:700;padding:4px 10px;border-radius:8px;background:rgba(99,102,241,0.15);color:#6366f1;border:1px solid rgba(99,102,241,0.3);">⏱ 60:00</span>
+          <span class="exam-counter" id="examCounter">1 / 20</span>
+        </div>
       </div>
 
       <div class="exam-progress-bar">
@@ -1629,6 +1632,67 @@ ${narration.slice(0, 1500)}
       return qs;
     }
 
+    // E7: 문항+보기 랜덤화 (correct 인덱스 같이 이동)
+    function _shuffleExamQuestions(questions) {
+      // 1) 전체 문항 순서 shuffle (Fisher-Yates)
+      const arr = questions.slice();
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      // 2) 각 문항의 options 셔플 + correct 재매핑 (객관식만)
+      return arr.map(q => {
+        if (q.type !== 'mc' || !Array.isArray(q.options) || q.options.length < 2) return q;
+        const opts = q.options.map((opt, idx) => ({ opt, origIdx: idx }));
+        for (let i = opts.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [opts[i], opts[j]] = [opts[j], opts[i]];
+        }
+        const newCorrect = opts.findIndex(o => o.origIdx === q.correct);
+        return { ...q, options: opts.map(o => o.opt), correct: newCorrect >= 0 ? newCorrect : 0 };
+      });
+    }
+
+    // E4: 60분 카운트다운 타이머 (자동 제출)
+    var _examTimerId = null;
+    var _examEndTime = 0;
+    function _startExamTimer(minutes) {
+      const el = document.getElementById('examTimer');
+      if (!el) return;
+      _examEndTime = Date.now() + minutes * 60 * 1000;
+      el.style.display = 'inline-block';
+      const tick = () => {
+        const remainMs = _examEndTime - Date.now();
+        if (remainMs <= 0) {
+          el.textContent = '⏱ 00:00';
+          el.style.background = 'rgba(239,68,68,0.2)';
+          el.style.color = '#ef4444';
+          clearInterval(_examTimerId); _examTimerId = null;
+          // 자동 제출
+          if (typeof submitExam === 'function' && document.getElementById('chapterExamView')?.style.display !== 'none') {
+            alert(lang==='en'?'Time is up. Exam auto-submitted.':lang==='vi'?'Hết giờ. Bài thi tự động nộp.':'시간 종료 — 시험이 자동 제출됩니다.');
+            submitExam();
+          }
+          return;
+        }
+        const m = Math.floor(remainMs / 60000);
+        const s = Math.floor((remainMs % 60000) / 1000);
+        el.textContent = `⏱ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        // 5분 남으면 경고 색상
+        if (remainMs < 5 * 60 * 1000) {
+          el.style.background = 'rgba(245,158,11,0.2)';
+          el.style.color = '#f59e0b';
+        }
+      };
+      tick();
+      _examTimerId = setInterval(tick, 1000);
+    }
+    function _stopExamTimer() {
+      if (_examTimerId) { clearInterval(_examTimerId); _examTimerId = null; }
+      const el = document.getElementById('examTimer');
+      if (el) el.style.display = 'none';
+    }
+
     async function startChapterExam() {
       if(examLoading) return;
       if(!Progress.isChapterPassed(chapterId)){
@@ -1648,10 +1712,15 @@ ${narration.slice(0, 1500)}
         examQuestions=generateFallbackExam(SopStore.getQuizzes(chapterId),(sd&&sd.content||'').replace(/<[^>]+>/g,' '),extractKeywords(sd&&sd.content),(sd&&sd.title)||'');
       }
       toast.remove(); examLoading=false;
+      // E7: 랜덤화 적용
+      examQuestions = _shuffleExamQuestions(examQuestions);
       examAnswers=new Array(examQuestions.length).fill(null); examCurrentIndex=0;
       document.getElementById('examTitle').textContent=t.examTitle;
       document.getElementById('examPrevBtn').textContent=t.examPrev;
       showView('chapterExamView'); renderExamQuestion(0);
+      // E4: 60분 타이머 시작
+      var mins = (typeof CONFIG !== 'undefined' && CONFIG.CHAPTER_EXAM_MINUTES) || 60;
+      _startExamTimer(mins);
     }
 
     function renderExamQuestion(idx) {
@@ -1708,6 +1777,7 @@ ${narration.slice(0, 1500)}
     function submitExam(){
       var un=examAnswers.filter(function(a){return a===null;}).length;
       if(un>0&&!confirm(t.examConfirmSubmit)) return;
+      _stopExamTimer(); // E4: 제출 시 타이머 정지
       var mcC=0,mcT=0,saS=0,saT=0;
       var da=examQuestions.map(function(q,i){
         var ua=examAnswers[i];
@@ -1769,18 +1839,18 @@ ${narration.slice(0, 1500)}
       showView('examResultView');
     }
 
-    // ===== 챕터 종합시험 (대챕터 exam_quizzes 30문제) =====
+    // ===== 챕터 종합시험 (대챕터 exam_quizzes 20문제, E2) =====
     function _startChapterFinalExam(examQs, chapterInfo) {
-      // 기존 exam 인프라 재활용
+      // 기존 exam 인프라 재활용 — 모든 문항을 객관식으로 통일 (E3 제외)
       examQuestions = examQs.map(q => ({
-        type: q.type === 'short' ? 'sa' : 'mc',
+        type: 'mc',
         question: (lang === 'en' ? q.question_en : lang === 'vi' ? q.question_vn : q.question) || q.question,
         options: (lang === 'en' ? q.options_en : lang === 'vi' ? q.options_vn : q.options) || q.options || [],
         correct: q.correct,
         explanation: q.explanation || '',
-        keywords: q.keywords || [],
-        sampleAnswer: q.sampleAnswer || '',
       }));
+      // E7: 랜덤화
+      examQuestions = _shuffleExamQuestions(examQuestions);
       examAnswers = new Array(examQuestions.length).fill(null);
       examCurrentIndex = 0;
 
@@ -1789,6 +1859,9 @@ ${narration.slice(0, 1500)}
       document.getElementById('examPrevBtn').textContent = t.examPrev;
       showView('chapterExamView');
       renderExamQuestion(0);
+      // E4: 60분 타이머
+      var mins = (typeof CONFIG !== 'undefined' && CONFIG.CHAPTER_EXAM_MINUTES) || 60;
+      _startExamTimer(mins);
     }
 
     // ===== 초기 렌더링 =====
