@@ -2110,6 +2110,18 @@
         return;
       }
 
+      // 레거시 씬 type 자동 지정
+      targets.forEach(s => {
+        s.script.forEach(sc => {
+          if (!sc.type) {
+            sc.type = 'video_scenario';
+            if (!sc.video_keywords || sc.video_keywords.length === 0) {
+              sc.video_keywords = _legacyKeywords(sc.narration || sc.visual || '');
+            }
+          }
+        });
+      });
+
       let totalVideo = 0, totalInfo = 0;
       targets.forEach(s => {
         s.script.forEach(sc => {
@@ -4135,6 +4147,16 @@ Output ONLY the prompt, nothing else.`;
           return;
         }
 
+        // 레거시 씬 (type 없음) → video_scenario로 자동 지정 + 나레이션 기반 키워드
+        sop.script.forEach(sc => {
+          if (!sc.type) {
+            sc.type = 'video_scenario';
+            if (!sc.video_keywords || sc.video_keywords.length === 0) {
+              sc.video_keywords = _legacyKeywords(sc.narration || sc.visual || '');
+            }
+          }
+        });
+
         // 씬 타입별 분류
         const videoScenes = sop.script
           .map((s, i) => ({ scene: s, idx: i }))
@@ -4270,6 +4292,32 @@ Output ONLY the prompt, nothing else.`;
         _isGeneratingImages = false;
       }
     };
+
+    // 레거시 스크립트: 나레이션/비주얼 텍스트 → Pexels 영어 검색어 매핑
+    function _legacyKeywords(text) {
+      const t = (text || '').toLowerCase();
+      const map = [
+        { kw: ['체온', '열', '발열', '온도'], en: ['child temperature check', 'kindergarten health check', 'thermometer kid'] },
+        { kw: ['손 씻', '손씻', '비누', '위생'], en: ['child washing hands', 'kid soap hands', 'kindergarten hygiene'] },
+        { kw: ['식사', '급식', '먹', '점심'], en: ['kindergarten lunch', 'children eating meal', 'kids dining'] },
+        { kw: ['놀이', '장난감', '활동'], en: ['kindergarten play', 'children playing', 'preschool activity'] },
+        { kw: ['낮잠', '수면', '자'], en: ['kindergarten nap time', 'children sleeping', 'preschool rest'] },
+        { kw: ['청소', '소독', '방역'], en: ['cleaning disinfect classroom', 'kindergarten sanitize'] },
+        { kw: ['부모', '학부모', '소통'], en: ['parent teacher meeting', 'communication parents'] },
+        { kw: ['안전', '응급', '사고'], en: ['child safety kindergarten', 'emergency preschool'] },
+        { kw: ['인사', '등원', '하원'], en: ['kindergarten arrival', 'greeting children', 'preschool morning'] },
+        { kw: ['수업', '학습', '교육'], en: ['kindergarten class', 'preschool teacher', 'learning children'] },
+        { kw: ['고기', '고객', '서빙', '주문', '레스토랑'], en: ['korean bbq restaurant', 'waiter serving', 'grilling meat'] },
+        { kw: ['카페', '키즈'], en: ['kids cafe play', 'indoor playground children'] },
+      ];
+      const hits = [];
+      for (const m of map) {
+        if (m.kw.some(k => t.includes(k))) hits.push(...m.en);
+        if (hits.length >= 3) break;
+      }
+      if (hits.length === 0) hits.push('kindergarten teacher children', 'preschool classroom', 'early childhood education');
+      return hits.slice(0, 3);
+    }
 
     // Pexels 검색 헬퍼 (여러 검색어 중 첫 매치 반환)
     async function _searchPexels(queries) {
