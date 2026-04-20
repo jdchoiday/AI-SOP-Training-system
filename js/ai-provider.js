@@ -488,9 +488,22 @@ type에 맞지 않는 필드는 생략 가능.
       throw err;
     }
 
-    // --- Pass 2: 씬 상세 작성 ---
+    // --- Pass 2: 씬 상세 작성 (500/timeout 대비 최대 2회 재시도) ---
     console.log('[createVideoScript] Pass 2 시작 — 씬 작성, 목표 씬 수:', plan.scene_count);
-    const scenes = await this._authorScenes(plan, sopTitle, plainText, provider);
+    let scenes;
+    let lastErr;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        scenes = await this._authorScenes(plan, sopTitle, plainText, provider);
+        break;
+      } catch (e) {
+        lastErr = e;
+        const isRetryable = /500|INTERNAL|timeout|aborted|Empty/i.test(e.message);
+        console.warn(`[createVideoScript] Pass 2 시도 ${attempt}/3 실패: ${e.message}${isRetryable && attempt < 3 ? ' — 재시도' : ''}`);
+        if (!isRetryable || attempt === 3) throw e;
+        await new Promise(r => setTimeout(r, 3000 * attempt));
+      }
+    }
     console.log('[createVideoScript] Pass 2 완료 — 생성 씬:', scenes.length);
 
     // 씬에 persona/mood 주입 (다운스트림 Pexels 검색에 hint 사용)
@@ -533,9 +546,9 @@ ${plainText.slice(0, 6000)}
   "story_arc": [
     { "scene": 1, "purpose": "hook", "type": "title_card", "idea": "이 씬에서 전달할 핵심 한 줄" },
     { "scene": 2, "purpose": "why_it_matters", "type": "stat", "idea": "..." },
-    { "scene": 3, "purpose": "core_1", "type": "video_scenario", "idea": "..." },
-    ...
+    { "scene": 3, "purpose": "core_1", "type": "video_scenario", "idea": "..." }
   ],
+  "★ type은 반드시 아래 5개 중 하나만 사용 (다른 값 금지) ★": "title_card | video_scenario | infographic | stat | comparison",
   "language": "${lang}",
   "duration_estimate_seconds": 180
 }
