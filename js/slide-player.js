@@ -667,8 +667,13 @@ const SlidePlayer = (() => {
               <div style="display:inline-block;font-size:18px;font-weight:700;line-height:1.45;padding:14px 20px;background:rgba(0,0,0,0.7);border-radius:14px;backdrop-filter:blur(14px);max-width:100%;">${scene.caption}</div>
             </div>` : '');
 
-        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;overflow:hidden;background:#000;">
-          <video src="${scene.videoUrl}" autoplay muted playsinline loop style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;${scene.type === 'stat' ? 'filter:blur(2px);opacity:0.3;' : ''}"></video>
+        const posterAttr = scene.videoThumbnail ? ` poster="${scene.videoThumbnail}"` : '';
+        const bgImg = scene.videoThumbnail ? `background-image:url('${scene.videoThumbnail}');background-size:cover;background-position:center;` : '';
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;overflow:hidden;background:#000;${bgImg}">
+          <video src="${scene.videoUrl}"${posterAttr} autoplay muted playsinline loop preload="auto"
+            onerror="this.style.display='none';console.warn('[Video] load failed:', this.src);"
+            onloadeddata="this.play().catch(e=>console.warn('[Video] play blocked:',e.message));"
+            style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;${scene.type === 'stat' ? 'filter:blur(2px);opacity:0.3;' : ''}"></video>
           <div style="position:absolute;inset:0;${dimGrad}pointer-events:none;"></div>
           ${overlayHtml}
         </div>`;
