@@ -15,6 +15,9 @@
     "api/image.js": {
       "maxDuration": 60
     },
+    "api/gemini.js": {
+      "maxDuration": 60
+    },
     "api/quiz.js": {
       "maxDuration": 30
     },

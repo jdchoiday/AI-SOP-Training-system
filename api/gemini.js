@@ -47,7 +47,8 @@ module.exports = async function handler(req, res) {
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 25000);
+      // 55s: 8192 토큰 + 긴 프롬프트가 안정적으로 완료되도록 Vercel Pro 60s 여유 내로 설정
+      const timeout = setTimeout(() => controller.abort(), 55000);
       let response;
       try {
         response = await fetch(url, {

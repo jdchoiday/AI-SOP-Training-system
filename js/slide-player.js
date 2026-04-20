@@ -654,7 +654,8 @@ const SlidePlayer = (() => {
         </div>`;
       }
       // 1) 영상 시나리오 / 통계 — Pexels 영상 재생
-      else if ((scene.type === 'video_scenario' || scene.type === 'stat') && scene.videoUrl) {
+      // 레거시 폴백: type 필드 없어도 videoUrl 있으면 영상으로 재생 (Phase 1 이전 스크립트 호환)
+      else if (((scene.type === 'video_scenario' || scene.type === 'stat') && scene.videoUrl) || (!scene.type && scene.videoUrl)) {
         const dimGrad = scene.type === 'stat'
           ? 'background:linear-gradient(180deg,rgba(0,0,0,0.7),rgba(0,0,0,0.85));'
           : 'background:linear-gradient(180deg,rgba(0,0,0,0.3),rgba(0,0,0,0.6));';
