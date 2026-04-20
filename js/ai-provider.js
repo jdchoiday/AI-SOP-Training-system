@@ -466,6 +466,245 @@ type에 맞지 않는 필드는 생략 가능.
     }
   },
 
+  // ============================================
+  // 2-PASS 영상 스크립트 생성 (새 파이프라인)
+  // Pass 1: 구조 설계 (persona/mood/story_arc/scene_count)
+  // Pass 2: 씬 상세 작성 (Pass 1 plan 주입, 씬간 persona/mood 지속성 확보)
+  // ============================================
+  async createVideoScript(sopTitle, sopContent) {
+    const provider = AI_CONFIG.scriptProvider || 'gemini';
+    if (provider === 'local') return this._localGenerateScript(sopTitle, sopContent);
+
+    const plainText = this._htmlToText(sopContent);
+
+    // --- Pass 1: 구조 설계 ---
+    console.log('[createVideoScript] Pass 1 시작 — 구조 설계');
+    const plan = await this._planVideoStructure(sopTitle, plainText, provider);
+    console.log('[createVideoScript] Pass 1 완료:', plan);
+
+    if (plan.viable === false) {
+      const err = new Error(`영상화 불가: ${plan.reason || '원문이 부족합니다'}`);
+      err.plan = plan;
+      throw err;
+    }
+
+    // --- Pass 2: 씬 상세 작성 ---
+    console.log('[createVideoScript] Pass 2 시작 — 씬 작성, 목표 씬 수:', plan.scene_count);
+    const scenes = await this._authorScenes(plan, sopTitle, plainText, provider);
+    console.log('[createVideoScript] Pass 2 완료 — 생성 씬:', scenes.length);
+
+    // 씬에 persona/mood 주입 (다운스트림 Pexels 검색에 hint 사용)
+    scenes.forEach(sc => {
+      sc._persona = plan.persona;
+      sc._mood = plan.mood;
+      sc._region = plan.region;
+    });
+
+    return { scenes, plan };
+  },
+
+  // Pass 1: 구조 설계 — 빠른 호출 (maxTokens 1500)
+  async _planVideoStructure(sopTitle, plainText, provider) {
+    const hasVietnamese = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(plainText);
+    const isEnglish = !hasVietnamese && /^[\x00-\x7F\s.,!?;:'"()\-\d\n]+$/.test(plainText.slice(0, 300));
+    const lang = hasVietnamese ? 'Vietnamese' : isEnglish ? 'English' : 'Korean';
+
+    const prompt = `당신은 교육 영상 다큐멘터리 기획자입니다. 어떤 자료든 받아서 "영상 교재로서 효과적인지"를 판단하고 구조를 설계합니다.
+
+[자료 제목] ${sopTitle}
+[자료 내용]
+${plainText.slice(0, 6000)}
+
+[미션]
+이 자료를 보고 영상 다큐멘터리 구조를 설계하세요. 원문 그대로가 아니라 "학습자가 6분 안에 이해하고 기억에 남는" 구조여야 합니다.
+
+[출력 규칙]
+반드시 다음 JSON 한 개만 출력 (배열 아님):
+
+{
+  "viable": true,
+  "reason": "가능한 경우는 한줄 요약, 불가능하면 부족한 내용 설명",
+  "persona": "이 영상의 주 화자/주인공 (예: '유치원 교사', 'BBQ 식당 매니저', '한국어 교사')",
+  "region": "korean" | "vietnamese" | "asian" | "global",
+  "mood": "분위기 한 줄 (예: 'warm classroom, soft natural light, friendly pace')",
+  "audience": "누구를 위한 영상인지 (예: '4-5세 자녀를 둔 부모', '신입 직원')",
+  "core_messages": ["핵심 메시지 1", "핵심 메시지 2", "핵심 메시지 3"],
+  "scene_count": 7~10 사이 추천 (숫자),
+  "story_arc": [
+    { "scene": 1, "purpose": "hook", "type": "title_card", "idea": "이 씬에서 전달할 핵심 한 줄" },
+    { "scene": 2, "purpose": "why_it_matters", "type": "stat", "idea": "..." },
+    { "scene": 3, "purpose": "core_1", "type": "video_scenario", "idea": "..." },
+    ...
+  ],
+  "language": "${lang}",
+  "duration_estimate_seconds": 180
+}
+
+[판단 기준]
+- 원문이 200자 미만이거나 내용이 단편적이면 viable: false
+- 원문이 법률/약관 같은 딱딱한 텍스트면 viable: true지만 스토리 아크에 예시/스텟 강화
+- scene_count는 원문 길이에 비례: 200자=5씬, 1000자=8씬, 3000자+=10씬 (최대 10)
+- 원문에서 핵심 메시지 3~5개를 뽑아 story_arc 설계
+- 같은 type 3개 연속 금지 (title→stat→video→infographic→video→comparison→video→title 식으로 다양화)
+- 첫 씬은 반드시 title_card (hook), 마지막 씬은 title_card (요약/전환)
+
+JSON만 출력, 마크다운/설명 금지.`;
+
+    const raw = await this._callLLM(provider, prompt, {
+      generationConfig: { temperature: 0.6, maxOutputTokens: 2000 }
+    });
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Pass 1 JSON 파싱 실패');
+    const plan = JSON.parse(jsonMatch[0]);
+
+    // 기본값 보강
+    if (!plan.persona) plan.persona = '교육자';
+    if (!plan.region) plan.region = hasVietnamese ? 'vietnamese' : 'korean';
+    if (!plan.mood) plan.mood = 'warm, professional, approachable';
+    if (!plan.scene_count || plan.scene_count < 5) plan.scene_count = Math.min(10, Math.max(5, Math.ceil(plainText.length / 400)));
+    if (!Array.isArray(plan.story_arc) || plan.story_arc.length === 0) {
+      plan.story_arc = Array.from({ length: plan.scene_count }, (_, i) => ({
+        scene: i + 1,
+        purpose: i === 0 ? 'hook' : i === plan.scene_count - 1 ? 'closing' : 'core',
+        type: i === 0 || i === plan.scene_count - 1 ? 'title_card' : 'video_scenario',
+        idea: ''
+      }));
+    }
+    plan.language = plan.language || lang;
+    return plan;
+  },
+
+  // Pass 2: Pass 1 plan 기반으로 씬 상세 작성
+  async _authorScenes(plan, sopTitle, plainText, provider) {
+    const regionHint = plan.region === 'vietnamese'
+      ? 'Vietnamese / Southeast Asian context — ALL video_keywords MUST include "vietnamese" or "asian" prefix'
+      : plan.region === 'korean'
+        ? 'Korean / East Asian context — include "korean" or "asian" prefix in people-related keywords'
+        : 'Asian context preferred — "asian" prefix recommended';
+
+    const langInstr = plan.language === 'Vietnamese'
+      ? '나레이션은 반드시 베트남어(tiếng Việt)로 작성'
+      : plan.language === 'English'
+        ? '나레이션은 반드시 영어(English)로 작성'
+        : '나레이션은 반드시 한국어로 작성';
+
+    const storyArcJson = JSON.stringify(plan.story_arc, null, 2);
+
+    const prompt = `당신은 Netflix 다큐멘터리 스타일의 교육 영상 시각 디렉터입니다.
+Pass 1에서 구조가 이미 확정되었습니다. 이제 각 씬을 상세 작성합니다.
+
+[영상 기획 정보 — Pass 1 결과]
+- 제목: ${sopTitle}
+- 페르소나: ${plan.persona}
+- 청중: ${plan.audience || '학습자'}
+- 분위기: ${plan.mood}
+- 지역: ${plan.region}
+- 핵심 메시지: ${(plan.core_messages || []).join(' / ')}
+
+[스토리 아크 — 이 구조를 정확히 따라 ${plan.scene_count}씬 생성]
+${storyArcJson}
+
+[원문 자료]
+${plainText.slice(0, 8000)}
+
+═══ 작성 규칙 ═══
+
+★ 원칙 1 — 문장 분류
+A. CONCRETE — 물리적 행동/실제 사물 → video_scenario 또는 comparison
+B. ABSTRACT — 개념/수치/관계 → stat 또는 infographic (일반 스톡 금지)
+C. EMOTIONAL — 태도/감정 → title_card 또는 분위기 video_scenario
+
+★ 원칙 2 — 나레이션/비주얼/오버레이는 다른 정보 전달
+caption/overlay_text는 자막 반복 금지. 숫자·기호·핵심 단어 1개 앵커.
+
+★ 5가지 씬 타입
+- title_card: { kicker, title_main, title_sub } — 도입/마무리
+- video_scenario: { narration, video_keywords:[영어 3개], caption, tag, message_type } — 실사 영상
+- infographic: { header_tag, header_title, steps:[3~5개], visual } — 단계/체크리스트
+- stat: { tag, number, unit, context, video_keywords } — 큰 숫자 강조
+- comparison: { left_label, left_text, left_video_keywords, right_label, right_text, right_video_keywords } — BEFORE/AFTER
+
+★ video_keywords 작성 핵심
+- 영어 3개 (1→3 순위 폴백)
+- ★★ 페르소나 주입: 사람 나오는 씬의 첫 키워드에 "${plan.persona}" 관련 시각 맥락 반영
+- ★★ 지역 수식어 필수: "${plan.region}" (asian/korean/vietnamese 중)
+- ★★ 무드 일관: "${plan.mood}" — 같은 색감/분위기로 이어지도록 lighting/setting 단어 포함
+- 구체 동사 + 주체 + 장소 형태 (추상명사 단독 금지)
+- 좋은 예:
+  * "asian kindergarten teacher reading storybook to children warm classroom"
+  * "vietnamese family having dinner together evening home soft light"
+- 나쁜 예:
+  * "education" / "importance" / "teaching" (추상)
+  * "teacher children" (지역/맥락 빠짐)
+
+★ 나레이션
+- ${langInstr}
+- 씬당 2~4문장 (TTS가 읽음, 이모지 금지)
+- 원문 구어를 그대로 복사하지 말고 "학습자에게 친근한 말투"로 재작성
+- 핵심 메시지를 중복 없이 분배
+
+★ 씬 간 연속성 (★중요★)
+- 전 씬에서 다음 씬으로 자연스럽게 이어져야 함
+- 같은 persona가 여러 씬에 등장 가능 (같은 교사/매니저가 여러 상황에서)
+- 같은 mood로 색감/톤 통일
+
+[출력 형식]
+JSON 배열 ${plan.scene_count}개만 출력. 마크다운/설명 금지. 각 씬 객체에 type 필수.
+
+예시 1개:
+{
+  "scene": 1,
+  "type": "title_card",
+  "message_type": "EMOTIONAL",
+  "narration": "오늘은 유아에게 책 읽어주는 5가지 원칙을 함께 알아봅니다",
+  "kicker": "Chapter 01 · Reading Aloud",
+  "title_main": "책 읽어주기 <span class='accent'>5원칙</span>",
+  "title_sub": "Reading Aloud for 4-5 Year Olds"
+}
+
+JSON 배열만 출력:`;
+
+    const raw = await this._callLLM(provider, prompt, {
+      generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
+    });
+    const jsonMatch = raw.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error('Pass 2 JSON 파싱 실패');
+    const scenes = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(scenes) || scenes.length === 0) throw new Error('Pass 2 빈 결과');
+
+    // 공통 정규화 (type 기본값, search_layers→video_keywords, 폴백 등)
+    const VALID_TYPES = ['title_card', 'video_scenario', 'infographic', 'stat', 'comparison'];
+    scenes.forEach((scene, idx) => {
+      if (!scene.scene) scene.scene = idx + 1;
+      if (!scene.type || !VALID_TYPES.includes(scene.type)) {
+        scene.type = idx === 0 || idx === scenes.length - 1 ? 'title_card' : 'video_scenario';
+      }
+      if (Array.isArray(scene.search_layers) && (!Array.isArray(scene.video_keywords) || scene.video_keywords.length === 0)) {
+        scene.video_keywords = scene.search_layers
+          .filter(l => l && typeof l.query === 'string' && l.query.trim())
+          .slice(0, 3)
+          .map(l => l.query.trim());
+      }
+      if (['video_scenario', 'stat'].includes(scene.type) && (!scene.video_keywords || scene.video_keywords.length === 0)) {
+        scene.video_keywords = this._narrationToKeywords(scene.narration || '');
+      }
+      if (scene.type === 'comparison') {
+        if (!scene.left_video_keywords) scene.left_video_keywords = this._narrationToKeywords(scene.left_text || scene.narration || '');
+        if (!scene.right_video_keywords) scene.right_video_keywords = this._narrationToKeywords(scene.right_text || scene.narration || '');
+      }
+      if (scene.type === 'infographic' && (!scene.visual || scene.visual.length < 30)) {
+        scene.visual = window.ScenePrompts
+          ? window.ScenePrompts.narrationToPrompt(scene.narration || '', '', { withCamera: false })
+          : this._narrationToVisual(scene.narration || '', '');
+      }
+      if (scene.type === 'title_card') {
+        if (!scene.kicker) scene.kicker = `Scene ${scene.scene}`;
+        if (!scene.title_main) scene.title_main = (scene.narration || '').slice(0, 30);
+      }
+    });
+    return scenes;
+  },
+
   // --- 퀴즈 생성 ---
   async generateQuiz(sopTitle, sopContent) {
     const provider = AI_CONFIG.quizProvider;
@@ -594,10 +833,11 @@ ${historyText}
   },
 
   // ===== LLM API 호출 (통합) =====
-  async _callLLM(provider, prompt) {
+  async _callLLM(provider, prompt, opts = {}) {
     const key = AI_CONFIG.keys[provider];
     const model = AI_CONFIG.models[provider];
     const useProxy = typeof CONFIG !== 'undefined' && CONFIG.useProxy;
+    const generationConfig = opts.generationConfig || { temperature: 0.7, maxOutputTokens: 8192 };
 
     if (!useProxy && !key) throw new Error(`API key not set for ${provider}`);
 
@@ -607,11 +847,7 @@ ${historyText}
         const res = await fetch('/api/gemini', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt,
-            model,
-            generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
-          })
+          body: JSON.stringify({ prompt, model, generationConfig })
         });
         const data = await res.json();
         if (data.error) throw new Error(data.error.message || data.error);
@@ -630,7 +866,7 @@ ${historyText}
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
+          generationConfig
         })
       });
       const data = await res.json();
