@@ -483,20 +483,28 @@
       existing.push(newEmp);
       EmployeeStore.save(existing);
 
-      // Supabase에도 저장
+      // Supabase Auth + employees 원자적 생성 (서버 API)
       if (SupabaseMode._ready) {
         try {
-          const hashRes = await fetch('/api/auth', {
+          const regRes = await fetch('/api/auth', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'hash', password })
+            body: JSON.stringify({
+              action: 'register',
+              email, password, name, branch, team, role: 'staff'
+            })
           });
-          const hashData = await hashRes.json();
-          if (!hashData.hash) throw new Error('Hash API failed');
-
-          await SupabaseMode.client.from('employees').insert({
-            name, email, password_hash: hashData.hash,
-            branch, team, role: 'staff'
-          });
+          const regData = await regRes.json();
+          if (!regRes.ok || !regData.registered) {
+            throw new Error(regData.error || 'Register API failed');
+          }
+          // 서버에서 생성된 실제 employees.id로 localStorage 업데이트
+          if (regData.employeeId) {
+            newEmp.id = regData.employeeId;
+            const emps = EmployeeStore.getAll();
+            const idx = emps.findIndex(e => e.email === email);
+            if (idx !== -1) emps[idx].id = regData.employeeId;
+            EmployeeStore.save(emps);
+          }
 
           // 초대 모드일 때만 사용 횟수 증가
           if (currentInvite) {
@@ -508,7 +516,8 @@
           console.error('Supabase register error:', e);
           const emps = EmployeeStore.getAll();
           EmployeeStore.save(emps.filter(emp => emp.id !== newEmp.id));
-          document.getElementById('errorMsg').textContent = t.networkError;
+          const msg = /already exists/i.test(e.message) ? t.emailExists : t.networkError;
+          document.getElementById('errorMsg').textContent = msg;
           document.getElementById('errorMsg').style.display = 'block';
           submitBtn.disabled = false;
           submitBtn.textContent = t.submit;

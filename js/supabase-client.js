@@ -62,51 +62,63 @@ const SupabaseMode = {
     return this._client;
   },
 
-  // ===== 로그인 (employees 테이블 조회 + 해시 검증) =====
+  // ===== 로그인 (Supabase Auth 우선, 실패 시 legacy hash 자동 전환) =====
   async login(email, password) {
     if (!this._ready) return null;
     try {
-      // 이메일로 직원 조회 (비밀번호는 서버에서 검증)
-      const { data, error } = await this._retry(() =>
-        this._client.from('employees').select('*').eq('email', email).single()
-      );
-      if (error || !data) return null;
+      // 1차 시도: Supabase Auth로 직접 로그인
+      let { data: authData, error: authError } = await this._client.auth.signInWithPassword({
+        email, password
+      });
 
-      // 비밀번호 검증
-      const storedHash = data.password_hash;
-      let passwordMatch = false;
-
-      if (storedHash && storedHash.includes(':')) {
-        // 해시된 비밀번호 — 서버에서 검증
+      // 실패 → legacy hash 검증 + Supabase Auth 비번 재설정 후 재시도
+      if (authError || !authData?.user) {
+        console.log('[Auth] Supabase Auth 실패 — legacy 마이그레이션 시도');
         try {
-          const res = await fetch('/api/auth', {
+          const migrateRes = await fetch('/api/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'verify', password, storedHash })
+            body: JSON.stringify({ action: 'migrate-to-supabase', email, password })
           });
-          const result = await res.json();
-          passwordMatch = result.match === true;
+          const migrateResult = await migrateRes.json();
+          if (!migrateResult.migrated) {
+            console.warn('[Auth] 마이그레이션 실패:', migrateResult.error);
+            return null;
+          }
+          console.log('[Auth] ✅ legacy → Supabase Auth 마이그레이션 완료');
+
+          // 2차 시도: 마이그레이션 후 signIn
+          const retry = await this._client.auth.signInWithPassword({ email, password });
+          if (retry.error || !retry.data?.user) {
+            console.error('[Auth] 마이그레이션 후 재시도 실패:', retry.error?.message);
+            return null;
+          }
+          authData = retry.data;
         } catch (e) {
-          console.warn('[Auth] 서버 검증 실패, 폴백:', e.message);
-          passwordMatch = (password === storedHash);
-        }
-      } else {
-        // 평문 비밀번호 (마이그레이션 전) — 직접 비교 후 해시로 업데이트
-        passwordMatch = (password === storedHash);
-        if (passwordMatch) {
-          // 자동 마이그레이션: 평문 → 해시
-          this._migratePassword(data.id, password).catch(() => {});
+          console.error('[Auth] 마이그레이션 예외:', e.message);
+          return null;
         }
       }
 
-      if (!passwordMatch) return null;
+      // employees 테이블에서 프로필 조회 (auth_user_id 기반)
+      const authUserId = authData.user.id;
+      const { data: emp, error: empErr } = await this._retry(() =>
+        this._client.from('employees').select('*').eq('auth_user_id', authUserId).single()
+      );
+      if (empErr || !emp) {
+        console.warn('[Auth] employees 프로필 없음:', authUserId);
+        // 프로필 없으면 로그아웃
+        await this._client.auth.signOut();
+        return null;
+      }
 
       return {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        role: data.role,
-        branch: data.branch
+        id: emp.id,
+        name: emp.name,
+        email: emp.email,
+        role: emp.role,
+        branch: emp.branch,
+        authUserId,
       };
     } catch (e) {
       console.error('[Supabase] 로그인 오류:', e);
@@ -114,22 +126,19 @@ const SupabaseMode = {
     }
   },
 
-  // 평문 비밀번호를 해시로 자동 업데이트
-  async _migratePassword(employeeId, plainPassword) {
+  async logout() {
+    if (!this._ready) return;
     try {
-      const res = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'migrate', password: plainPassword })
-      });
-      const { hash } = await res.json();
-      if (hash) {
-        await this._client.from('employees').update({ password_hash: hash }).eq('id', employeeId);
-        console.log('[Auth] ✅ 비밀번호 해시 마이그레이션 완료');
-      }
+      await this._client.auth.signOut();
     } catch (e) {
-      console.warn('[Auth] 마이그레이션 실패:', e.message);
+      console.warn('[Auth] 로그아웃 오류:', e.message);
     }
+  },
+
+  async currentAuthUser() {
+    if (!this._ready) return null;
+    const { data } = await this._client.auth.getUser();
+    return data?.user || null;
   },
 
   // ===== SOP 동기화 =====
@@ -375,19 +384,32 @@ const SupabaseMode = {
     }
   },
 
+  // Supabase Auth + employees 원자적 생성 (서버 API로 위임)
   async addEmployee(emp) {
-    if (!this._ready) return;
+    if (!this._ready) return null;
     try {
-      await this._client.from('employees').insert({
-        name: emp.name,
-        email: emp.email,
-        password_hash: emp.password || null,  // admin이 비밀번호 설정 필수
-        branch: emp.branch || '',
-        team: emp.team || '',
-        role: emp.role || 'staff',
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'register',
+          email: emp.email,
+          password: emp.password || '1234',
+          name: emp.name,
+          branch: emp.branch || '',
+          team: emp.team || '',
+          role: emp.role || 'staff',
+        }),
       });
+      const data = await res.json();
+      if (!res.ok || !data.registered) {
+        console.error('[Supabase] 직원 추가 실패:', data.error);
+        return null;
+      }
+      return { id: data.employeeId, authUserId: data.authUserId };
     } catch (e) {
       console.error('[Supabase] 직원 추가 오류:', e);
+      return null;
     }
   },
 

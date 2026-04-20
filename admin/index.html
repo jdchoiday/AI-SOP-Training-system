@@ -354,8 +354,7 @@
             <button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="sopDeselectAll()">선택 해제</button>
           </div>
           <div style="display:flex; gap:8px;">
-            <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkGenerateVideos()" title="Phase 2: 지역 컨텍스트 자동 주입 + AI 폴백">🎬 영상 생성 (Phase 2)</button>
-            <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkGenerateImages()">🎨 이미지 생성 (레거시)</button>
+            <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkGenerateVideos()" title="Pexels 영상 + AI 폴백 이미지 + 인포그래픽">🎬 영상 일괄 생성</button>
             <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkFixTitles()">🔤 띄어쓰기 교정</button>
             <button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="sopExportSelected()">&#128229; 내보내기</button>
             <button class="btn" style="padding:6px 14px; font-size:13px; background:#dc2626; color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopDeleteSelected()">&#128465; 선택 삭제</button>
@@ -2110,10 +2109,11 @@
         return;
       }
 
-      // 레거시 씬 type 자동 지정
+      // 레거시 씬 type 자동 지정 (누락 또는 인식 불가 타입)
+      const VALID_TYPES = ['title_card', 'video_scenario', 'infographic', 'stat', 'comparison'];
       targets.forEach(s => {
         s.script.forEach(sc => {
-          if (!sc.type) {
+          if (!sc.type || !VALID_TYPES.includes(sc.type)) {
             sc.type = 'video_scenario';
             if (!sc.video_keywords || sc.video_keywords.length === 0) {
               sc.video_keywords = _legacyKeywords(sc.narration || sc.visual || '');
@@ -2130,7 +2130,22 @@
         });
       });
       const total = totalVideo + totalInfo;
-      if (total === 0) { alert('모든 씬에 영상/이미지가 준비되어 있습니다.'); return; }
+      if (total === 0) {
+        const typeCounts = {};
+        let withAsset = 0, totalScenes = 0;
+        targets.forEach(s => s.script.forEach(sc => {
+          totalScenes++;
+          const t = sc.type || '(없음)'; typeCounts[t] = (typeCounts[t] || 0) + 1;
+          if (sc.videoUrl || sc.imageUrl || sc.type === 'title_card') withAsset++;
+        }));
+        if (withAsset === totalScenes) {
+          alert('모든 씬에 영상/이미지가 준비되어 있습니다.');
+        } else {
+          const breakdown = Object.entries(typeCounts).map(([t,c]) => `  • ${t}: ${c}`).join('\n');
+          alert(`⚠️ 생성 가능한 씬이 없습니다.\n\n씬 타입이 인식되지 않습니다. AI 스크립트를 다시 생성해주세요.\n\n현재 타입 분포:\n${breakdown}\n\n기대 타입: title_card, video_scenario, infographic, stat, comparison`);
+        }
+        return;
+      }
 
       if (!confirm(`${targets.length}개 SOP 영상 일괄 생성\n\n• Pexels 영상: ${totalVideo}씬 (무료)\n• 인포그래픽: ${totalInfo}씬 (~$${(totalInfo*0.04).toFixed(2)})\n\n진행하시겠습니까?`)) return;
 
@@ -3412,24 +3427,12 @@ ${text.slice(0, 3000)}`;
           <button onclick="generateQuizOnly()" style="padding:10px 18px; font-size:13px; font-weight:700; background:${hasQuiz ? '#f8fafc; color:#6366f1; border:2px solid #6366f1' : 'linear-gradient(135deg,#f59e0b,#f97316); color:white'}; border:none; border-radius:10px; cursor:pointer;">
             ${hasQuiz ? '&#128260; 퀴즈 다시 생성' : '&#10067; 퀴즈 생성'}
           </button>
-          <button onclick="_generateAllVideos()" title="Phase 2: 지역 컨텍스트 자동 주입 + AI 폴백" style="padding:10px 18px; font-size:13px; font-weight:700; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:10px; cursor:pointer;">
-            &#127916; 영상 생성 (Phase 2)
+          <button onclick="_generateAllVideos()" title="Pexels + AI 폴백 + 인포그래픽 자동 생성" style="padding:10px 18px; font-size:13px; font-weight:700; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:10px; cursor:pointer;">
+            &#127916; 영상 생성
           </button>
-          <button onclick="_generateAllImages()" style="padding:10px 18px; font-size:13px; font-weight:700; background:linear-gradient(135deg,#f59e0b,#ef4444); color:white; border:none; border-radius:10px; cursor:pointer;">
-            &#127912; 이미지 생성 (레거시)
+          <button onclick="_openImageReview()" title="영상 + 폴백 이미지 검토" style="padding:10px 18px; font-size:13px; font-weight:700; background:#10b981; color:white; border:none; border-radius:10px; cursor:pointer;">
+            &#127910; 영상 리뷰
           </button>
-          <button onclick="_openImageReview()" style="padding:10px 18px; font-size:13px; font-weight:700; background:#10b981; color:white; border:none; border-radius:10px; cursor:pointer;">
-            &#128444; 이미지 리뷰
-          </button>
-          ${videoEnabled ? `
-            <button onclick="generateSopVideos()" style="padding:10px 18px; font-size:13px; font-weight:700; background:#F59E0B; color:white; border:none; border-radius:10px; cursor:pointer;">
-              &#127910; AI 영상 생성
-            </button>
-          ` : `
-            <button onclick="showPage('settings')" style="padding:10px 18px; font-size:13px; font-weight:600; background:#1E293B; color:#F59E0B; border:2px solid #F59E0B; border-radius:10px; cursor:pointer;">
-              &#127910; 영상 설정
-            </button>
-          `}
           ${!isPublished ? `
             <button onclick="publishSop()" style="padding:10px 18px; font-size:13px; font-weight:700; background:#059669; color:white; border:none; border-radius:10px; cursor:pointer;">
               &#9989; 배포
@@ -3438,12 +3441,12 @@ ${text.slice(0, 3000)}`;
             <span style="padding:10px 18px; font-size:13px; font-weight:700; background:rgba(16,185,129,0.15); color:#059669; border-radius:10px;">&#9989; 배포됨</span>
           `}
           <button onclick="generateContent()" style="padding:10px 18px; font-size:13px; font-weight:600; background:#1E293B; color:#94A3B8; border:2px solid rgba(148,163,184,0.2); border-radius:10px; cursor:pointer;">
-            &#128260; 슬라이드 다시 생성
+            &#128260; 씬 다시 생성
           </button>
           <div style="font-size:12px; color:var(--gray-500); display:flex; align-items:center; gap:4px;">
             &#128203; ${sop.script.length}씬
             ${hasQuiz ? ` / ${sop.quizzes.length}퀴즈` : ' / 퀴즈 없음'}
-            / 이미지 ${sop.script.filter(s => s.imageUrl).length}/${sop.script.length}
+            / 비주얼 ${sop.script.filter(s => s.videoUrl || s.imageUrl).length}/${sop.script.length}
           </div>
         `;
       }
@@ -3656,11 +3659,11 @@ ${text.slice(0, 3000)}`;
 
           const matchedImgCount = scriptResult.filter(s => s.imageUrl).length;
           const imgMsg = matchedImgCount > 0
-            ? `\n🖼️ Word 원본 이미지: ${matchedImgCount}개 자동 매칭됨\n\n나머지 씬의 이미지를 AI로 생성할까요?`
-            : `\n\n이미지도 바로 생성할까요?`;
-          const autoImage = confirm(`✅ 완료!\n\n📋 슬라이드: ${scriptResult.length}씬 (SOP 원문 기반)\n\n퀴즈는 별도로 "퀴즈 생성" 버튼을 눌러주세요.${imgMsg}`);
-          if (autoImage) {
-            setTimeout(() => _generateAllImages(), 500);
+            ? `\n🖼️ Word 원본 이미지: ${matchedImgCount}개 자동 매칭됨\n\n나머지 씬의 영상을 자동 생성할까요? (Pexels + AI 폴백)`
+            : `\n\n영상도 바로 생성할까요? (Pexels + AI 폴백)`;
+          const autoVideo = confirm(`✅ 완료!\n\n📋 씬: ${scriptResult.length}개 (SOP 원문 기반)\n\n퀴즈는 별도로 "퀴즈 생성" 버튼을 눌러주세요.${imgMsg}`);
+          if (autoVideo) {
+            setTimeout(() => _generateAllVideos(), 500);
           }
         } catch (e) {
           hideLoading();
@@ -4163,9 +4166,10 @@ Output ONLY the prompt, nothing else.`;
         const sopContext = _detectSopContext(sop);
         console.log('[Phase 2] SOP context:', sopContext);
 
-        // 레거시 씬 (type 없음) → video_scenario로 자동 지정 + 나레이션 기반 키워드
+        // 레거시/알 수 없는 type → video_scenario로 자동 지정 + 나레이션 기반 키워드
+        const VALID_TYPES = ['title_card', 'video_scenario', 'infographic', 'stat', 'comparison'];
         sop.script.forEach(sc => {
-          if (!sc.type) {
+          if (!sc.type || !VALID_TYPES.includes(sc.type)) {
             sc.type = 'video_scenario';
             if (!sc.video_keywords || sc.video_keywords.length === 0) {
               sc.video_keywords = _legacyKeywords(sc.narration || sc.visual || '');
@@ -4185,7 +4189,17 @@ Output ONLY the prompt, nothing else.`;
         const totalToGen = videoScenes.length + infographicScenes.length;
 
         if (totalToGen === 0) {
-          alert(`모든 씬에 영상/이미지가 준비되어 있습니다.\n\n총 씬: ${sop.script.length}\n  • 영상: ${sop.script.filter(s=>s.videoUrl).length}\n  • 인포그래픽: ${sop.script.filter(s=>s.imageUrl).length}\n  • 타이틀: ${titleScenes}`);
+          const withVideo = sop.script.filter(s=>s.videoUrl).length;
+          const withImage = sop.script.filter(s=>s.imageUrl).length;
+          const totalReady = withVideo + withImage + titleScenes;
+          if (totalReady === sop.script.length) {
+            alert(`모든 씬에 영상/이미지가 준비되어 있습니다.\n\n총 씬: ${sop.script.length}\n  • 영상: ${withVideo}\n  • 인포그래픽: ${withImage}\n  • 타이틀: ${titleScenes}`);
+          } else {
+            const typeCounts = {};
+            sop.script.forEach(s => { const t = s.type || '(없음)'; typeCounts[t] = (typeCounts[t] || 0) + 1; });
+            const breakdown = Object.entries(typeCounts).map(([t,c]) => `  • ${t}: ${c}`).join('\n');
+            alert(`⚠️ 생성 가능한 씬이 없습니다.\n\n스크립트의 씬 타입이 인식되지 않습니다. AI 스크립트를 다시 생성해주세요.\n\n총 씬: ${sop.script.length}\n현재 타입 분포:\n${breakdown}\n\n기대 타입: title_card, video_scenario, infographic, stat, comparison`);
+          }
           _isGeneratingImages = false;
           return;
         }
@@ -4758,7 +4772,7 @@ Output ONLY the prompt, nothing else.`;
                         ? `<button onclick="_confirmFromReview(${i})" style="font-size:15px;padding:10px 20px;background:#10b981;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;">✅ 확정</button>
                            <button onclick="_regenFromReview(${i})" style="font-size:15px;padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;">🔄 재생성</button>
                            <button onclick="_removeFromReview(${i})" style="font-size:15px;padding:10px 20px;background:none;border:2px solid #ef4444;color:#ef4444;border-radius:8px;cursor:pointer;font-weight:700;">🗑️</button>`
-                        : `<button onclick="_regenFromReview(${i})" style="font-size:15px;padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;width:100%;">🎨 이미지 생성</button>`
+                        : `<button onclick="_regenFromReview(${i})" style="font-size:15px;padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;width:100%;">🎬 비주얼 생성</button>`
                     }
                   </div>
                 </div>
@@ -5639,14 +5653,15 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin:12px 0 16px;">
             <button style="padding:12px 20px; font-size:15px; font-weight:700; background:#6366f1; color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_addScene()">➕ 씬 추가</button>
             <button style="padding:12px 20px; font-size:15px; font-weight:700; background:#3b82f6; color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_saveScripts()">💾 스크립트 저장</button>
-            <button style="padding:12px 20px; font-size:15px; font-weight:700; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_generateAllVideos()" title="Phase 2: 지역 컨텍스트 자동 주입 + AI 폴백">🎬 영상 일괄 생성 (Phase 2)</button>
-            <button style="padding:12px 20px; font-size:15px; font-weight:700; background:linear-gradient(135deg,#f59e0b,#ef4444); color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_generateAllImages()">🎨 이미지 (레거시)</button>
-            <button style="padding:12px 20px; font-size:15px; font-weight:700; background:#10b981; color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_openImageReview()">🖼️ 이미지 리뷰</button>
+            <button style="padding:12px 20px; font-size:15px; font-weight:700; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_generateAllVideos()" title="Pexels + AI 폴백 + 인포그래픽">🎬 영상 일괄 생성</button>
+            <button style="padding:12px 20px; font-size:15px; font-weight:700; background:#10b981; color:white; border:none; border-radius:10px; cursor:pointer;" onclick="_openImageReview()">🎬 영상 리뷰</button>
           </div>
           <div style="display:flex; gap:12px; margin-bottom:12px; padding:10px 16px; background:rgba(30,41,59,0.8); border-radius:8px; font-size:14px; color:#94a3b8; border:1px solid rgba(148,163,184,0.15);">
-            ✅ 확정: <strong style="color:#10b981;">${sop.script.filter(x => x.imageConfirmed).length}</strong> / ${sop.script.length}
+            🎬 영상: <strong style="color:#ef4444;">${sop.script.filter(x => x.videoUrl).length}</strong> / ${sop.script.length}
             &nbsp;&nbsp;|&nbsp;&nbsp;
-            🖼️ 생성됨: <strong style="color:#f59e0b;">${sop.script.filter(x => x.imageUrl).length}</strong> / ${sop.script.length}
+            🎨 폴백 이미지: <strong style="color:#f59e0b;">${sop.script.filter(x => !x.videoUrl && x.imageUrl).length}</strong>
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            ✅ 확정: <strong style="color:#10b981;">${sop.script.filter(x => x.imageConfirmed).length}</strong>
           </div>
           <div class="ai-result-body" id="scriptEditor">
             ${sop.script.map((s, i) => `
@@ -5654,7 +5669,7 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                   <div style="font-size:16px; font-weight:700; color:#F1F5F9;">씬 ${s.scene}</div>
                   <div style="display:flex; gap:6px; align-items:center;">
-                    <button onclick="_openImageManager(${i})" style="background:#6366f1;color:white;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600;">🎨 이미지 관리</button>
+                    <button onclick="_openImageManager(${i})" style="background:#6366f1;color:white;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600;">🎬 비주얼 편집</button>
                     ${i > 0 ? `<button onclick="_moveScene(${i},-1)" style="background:none;border:2px solid rgba(148,163,184,0.2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:14px;font-weight:700;color:#F1F5F9;" title="위로">▲</button>` : ''}
                     ${i < sop.script.length - 1 ? `<button onclick="_moveScene(${i},1)" style="background:none;border:2px solid rgba(148,163,184,0.2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:14px;font-weight:700;color:#F1F5F9;" title="아래로">▼</button>` : ''}
                     <button onclick="_deleteScene(${i})" style="background:none;border:2px solid #ef4444;color:#ef4444;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:14px;font-weight:700;" title="삭제">✕</button>
@@ -5662,14 +5677,17 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
                 </div>
                 <div style="display:flex; gap:14px; align-items:stretch;">
                   <!-- 이미지 미리보기 (왼쪽) -->
-                  <div style="position:relative; flex:0 0 220px; min-height:140px; background:#1E293B; border-radius:10px; overflow:hidden; display:flex; align-items:center; justify-content:center; cursor:pointer; border:2px solid ${s.imageConfirmed ? '#10b981' : s.imageUrl ? '#f59e0b' : '#e2e8f0'};" onclick="${s.imageUrl ? `_renderWizardScene(${i})` : `_openImageManager(${i})`}">
-                    ${s.imageUrl && s.imageUrl.startsWith('data:')
-                      ? `<img src="${s.imageUrl}" style="width:100%;height:100%;object-fit:cover;" alt="씬${s.scene}">
-                         <div style="position:absolute;bottom:4px;left:4px;font-size:10px;padding:2px 6px;border-radius:3px;background:${s.imageConfirmed ? '#10b981' : s.imageSource ? '#3b82f6' : '#f59e0b'};color:white;font-weight:600;">${s.imageConfirmed ? '✅ 확정' : s.imageSource ? '📄 원본' : '미확정'}</div>`
-                      : s.imageUrl && !s.imageUrl.startsWith('data:') && !s.imageUrl.startsWith('idb:')
+                  <div style="position:relative; flex:0 0 220px; min-height:140px; background:#1E293B; border-radius:10px; overflow:hidden; display:flex; align-items:center; justify-content:center; cursor:pointer; border:2px solid ${s.videoUrl ? '#ef4444' : s.imageConfirmed ? '#10b981' : s.imageUrl ? '#f59e0b' : '#e2e8f0'};" onclick="${s.videoUrl || s.imageUrl ? `_renderWizardScene(${i})` : `_openImageManager(${i})`}">
+                    ${s.videoUrl
+                      ? `<video src="${s.videoUrl}" style="width:100%;height:100%;object-fit:cover;" muted playsinline preload="metadata"></video>
+                         <div style="position:absolute;bottom:4px;left:4px;font-size:10px;padding:2px 6px;border-radius:3px;background:#ef4444;color:white;font-weight:600;">🎬 영상</div>`
+                      : s.imageUrl && s.imageUrl.startsWith('data:')
                         ? `<img src="${s.imageUrl}" style="width:100%;height:100%;object-fit:cover;" alt="씬${s.scene}">
-                           <div style="position:absolute;bottom:4px;left:4px;font-size:10px;padding:2px 6px;border-radius:3px;background:${s.imageConfirmed ? '#10b981' : '#f59e0b'};color:white;font-weight:600;">${s.imageConfirmed ? '✅ 확정' : '미확정'}</div>`
-                        : `<div style="text-align:center;color:#94a3b8;"><div style="font-size:32px;">🎨</div><div style="font-size:11px;margin-top:4px;">클릭하여 생성</div></div>`
+                           <div style="position:absolute;bottom:4px;left:4px;font-size:10px;padding:2px 6px;border-radius:3px;background:${s.imageConfirmed ? '#10b981' : s.imageSource ? '#3b82f6' : '#f59e0b'};color:white;font-weight:600;">${s.imageConfirmed ? '✅ 확정' : s.imageSource ? '📄 원본' : 'AI 폴백'}</div>`
+                        : s.imageUrl && !s.imageUrl.startsWith('data:') && !s.imageUrl.startsWith('idb:')
+                          ? `<img src="${s.imageUrl}" style="width:100%;height:100%;object-fit:cover;" alt="씬${s.scene}">
+                             <div style="position:absolute;bottom:4px;left:4px;font-size:10px;padding:2px 6px;border-radius:3px;background:${s.imageConfirmed ? '#10b981' : '#f59e0b'};color:white;font-weight:600;">${s.imageConfirmed ? '✅ 확정' : 'AI 폴백'}</div>`
+                          : `<div style="text-align:center;color:#94a3b8;"><div style="font-size:32px;">🎬</div><div style="font-size:11px;margin-top:4px;">클릭하여 생성</div></div>`
                     }
                   </div>
                   <!-- 나레이션 + 프롬프트 (오른쪽) -->
@@ -6321,41 +6339,57 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
       const csv = document.getElementById('csvInput').value.trim();
       if (!csv) { alert('CSV 데이터를 입력하세요'); return; }
       const emps = EmployeeStore.getAll();
-      let added = 0;
+      let added = 0, failed = 0;
 
-      // 비밀번호 해시 처리 (한 번만 호출)
-      let hashedPassword = '1234';
-      if (SupabaseMode._ready) {
-        try {
-          const res = await fetch('/api/auth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'hash', password: '1234' })
-          });
-          const data = await res.json();
-          if (data.hash) hashedPassword = data.hash;
-        } catch(e) {
-          console.warn('Hash API unavailable, using default');
-        }
-      }
-
-      csv.split('\n').filter(l => l.trim()).forEach(line => {
+      const lines = csv.split('\n').filter(l => l.trim());
+      for (const line of lines) {
         const parts = line.split(',').map(s => s.trim());
         const [name, email, branch, team, role] = parts;
-        if (name && email && !emps.find(e => e.email === email)) {
-          const emp = { id: 'emp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), name, email, branch: branch || '미지정', team: team || '', role: role || 'staff', created: new Date().toISOString().slice(0, 10) };
-          emps.push(emp);
-          if (SupabaseMode._ready) {
-            SupabaseMode.addEmployee({ name, email, password: hashedPassword, branch: emp.branch, team: emp.team, role: emp.role }).catch(e => console.error('Bulk sync:', e));
+        if (!name || !email || emps.find(e => e.email === email)) continue;
+
+        let empId = 'emp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+        if (SupabaseMode._ready) {
+          try {
+            const res = await fetch('/api/auth', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'register',
+                email, password: '1234', name,
+                branch: branch || '미지정',
+                team: team || '',
+                role: role || 'staff'
+              })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.registered) {
+              console.error(`Bulk add failed for ${email}:`, data.error);
+              failed++;
+              continue;
+            }
+            if (data.employeeId) empId = data.employeeId;
+          } catch (e) {
+            console.error(`Bulk add exception for ${email}:`, e);
+            failed++;
+            continue;
           }
-          added++;
         }
-      });
+
+        emps.push({
+          id: empId, name, email,
+          branch: branch || '미지정',
+          team: team || '',
+          role: role || 'staff',
+          created: new Date().toISOString().slice(0, 10)
+        });
+        added++;
+      }
+
       EmployeeStore.save(emps);
-      AuditLog.add('employee', 'bulk_add', `직원 ${added}명 일괄 등록`);
+      AuditLog.add('employee', 'bulk_add', `직원 ${added}명 일괄 등록` + (failed ? ` (${failed}명 실패)` : ''));
       closeModal();
       renderEmployeeManage();
-      alert(added + '명의 직원이 등록되었습니다.');
+      alert(added + '명의 직원이 등록되었습니다.' + (failed ? `\n(${failed}명 실패)` : ''));
     }
 
     async function addEmployee() {
@@ -6368,31 +6402,40 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
 
       const emps = EmployeeStore.getAll();
       if (emps.find(e => e.email === email)) { alert('이미 등록된 이메일입니다'); return; }
+
+      // Supabase Auth + employees 원자적 생성 (기본 비밀번호 '1234')
+      let newEmpId = 'emp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+      if (SupabaseMode._ready) {
+        try {
+          const res = await fetch('/api/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'register',
+              email, password: '1234', name, branch, team, role
+            })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.registered) {
+            alert('직원 등록 실패: ' + (data.error || '알 수 없는 오류'));
+            return;
+          }
+          if (data.employeeId) newEmpId = data.employeeId;
+        } catch (e) {
+          console.error('Register API error:', e);
+          alert('서버 오류로 등록 실패');
+          return;
+        }
+      }
+
       emps.push({
-        id: 'emp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        id: newEmpId,
         name, email, branch, team, role,
         created: new Date().toISOString().slice(0, 10)
       });
       EmployeeStore.save(emps);
 
       AuditLog.add('employee', 'add', `직원 추가: "${name}" (${email}, ${branch}, ${team}, ${role})`);
-
-      // Supabase에도 저장 (비밀번호 해시 처리)
-      if (SupabaseMode._ready) {
-        let hashedPassword = '1234';
-        try {
-          const res = await fetch('/api/auth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'hash', password: '1234' })
-          });
-          const data = await res.json();
-          if (data.hash) hashedPassword = data.hash;
-        } catch(e) {
-          console.warn('Hash API unavailable, using default');
-        }
-        SupabaseMode.addEmployee({ name, email, password: hashedPassword, branch, team, role }).catch(e => console.error('Employee Supabase sync:', e));
-      }
 
       closeModal();
       renderEmployeeManage();
