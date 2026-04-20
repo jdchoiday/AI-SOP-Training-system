@@ -2182,6 +2182,7 @@
           const ctxLabel = sopCtx.locale === 'vietnamese' ? '🇻🇳' : sopCtx.locale === 'korean' ? '🇰🇷' : '🌏';
           document.getElementById('bulkVSopName').textContent = `${ctxLabel} ${sop.title}`;
           const missed = [];
+          const usedUrls = new Set(); // SOP별 중복 방지 (같은 영상 재사용 금지)
           // Pass 1: Pexels (context 주입)
           for (let i = 0; i < sop.script.length; i++) {
             const sc = sop.script[i];
@@ -2189,14 +2190,14 @@
             try {
               if (sc.type === 'comparison') {
                 const [L, R] = await Promise.all([
-                  _searchPexels(sc.left_video_keywords || [], sopCtx),
-                  _searchPexels(sc.right_video_keywords || [], sopCtx),
+                  _searchPexels(sc.left_video_keywords || [], sopCtx, usedUrls),
+                  _searchPexels(sc.right_video_keywords || [], sopCtx, usedUrls),
                 ]);
                 if (L) sc.leftVideoUrl = L.url;
                 if (R) sc.rightVideoUrl = R.url;
                 if (!L && !R) missed.push({ scene: sc, idx: i });
               } else {
-                const r = await _searchPexels(sc.video_keywords || [], sopCtx);
+                const r = await _searchPexels(sc.video_keywords || [], sopCtx, usedUrls);
                 if (r) { sc.videoUrl = r.url; sc.videoThumbnail = r.thumbnail; sc.videoAuthor = r.author; }
                 else missed.push({ scene: sc, idx: i });
               }
@@ -4246,21 +4247,22 @@ Output ONLY the prompt, nothing else.`;
         // === Pass 1: 영상 검색 (Pexels) — Phase 2: context 주입 ===
         document.getElementById('vgenStatus').textContent = `🎥 Pexels 검색 중 (${contextLabel} 컨텍스트)...`;
         const pexelsMissed = []; // AI 폴백 대상
+        const usedUrls = new Set(); // SOP별 중복 방지 (같은 영상 재사용 금지)
         for (const x of videoScenes) {
           try {
             const sc = x.scene;
             // comparison은 left/right 둘 다
             if (sc.type === 'comparison') {
               const [leftR, rightR] = await Promise.all([
-                _searchPexels(sc.left_video_keywords || [], sopContext),
-                _searchPexels(sc.right_video_keywords || [], sopContext),
+                _searchPexels(sc.left_video_keywords || [], sopContext, usedUrls),
+                _searchPexels(sc.right_video_keywords || [], sopContext, usedUrls),
               ]);
               if (leftR) sc.leftVideoUrl = leftR.url;
               if (rightR) sc.rightVideoUrl = rightR.url;
               if (!leftR && !rightR) pexelsMissed.push(x);
             } else {
               // video_scenario, stat
-              const result = await _searchPexels(sc.video_keywords || [], sopContext);
+              const result = await _searchPexels(sc.video_keywords || [], sopContext, usedUrls);
               if (result) {
                 sc.videoUrl = result.url;
                 sc.videoThumbnail = result.thumbnail;
@@ -4428,20 +4430,28 @@ Output ONLY the prompt, nothing else.`;
 
     // Pexels 검색 헬퍼 (여러 검색어 중 첫 매치 반환)
     // Phase 2: context 파라미터 받아 지역 prefix를 자동 앞에 붙임
-    async function _searchPexels(queries, context = null) {
+    async function _searchPexels(queries, context = null, usedUrls = null) {
       if (!queries || queries.length === 0) return null;
       const expanded = context ? _expandWithContext(queries, context) : queries;
+      const used = usedUrls instanceof Set ? usedUrls : null;
       for (const q of expanded) {
         try {
           const res = await fetch('/api/video-search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: q, count: 1, minDuration: 4, maxDuration: 20 })
+            body: JSON.stringify({ query: q, count: 8, minDuration: 4, maxDuration: 20 })
           });
           if (!res.ok) continue;
           const data = await res.json();
-          if (data.results?.[0]) return data.results[0];
-        } catch (e) { /* try next */ }
+          const results = data.results || [];
+          // 이미 사용된 URL 건너뛰고 첫 번째 신규 결과 반환
+          for (const r of results) {
+            if (!r || !r.url) continue;
+            if (used && used.has(r.url)) continue;
+            if (used) used.add(r.url);
+            return r;
+          }
+        } catch (e) { /* try next query */ }
       }
       return null;
     }
