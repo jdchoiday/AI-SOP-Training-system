@@ -165,13 +165,36 @@ const AI = {
       }
 
       const prompt = `당신은 Netflix 다큐멘터리 스타일의 교육 영상 시각 디렉터입니다.
-
-아래 SOP 문서를 영상 다큐멘터리 스크립트로 변환합니다.
-각 씬은 5가지 타입 중 하나로 분류하고, 타입에 맞는 메타데이터를 작성합니다.
+모바일로 6분 보고 "이해되고 기억에 남는" 영상 시퀀스를 설계합니다.
+당신의 일은 "영상을 만드는 것"이 아니라 "영상을 만들기 위한 정확한 지시서"를 쓰는 것입니다.
 
 SOP 제목: ${sopTitle}
 SOP 내용:
 ${plainText}
+
+═══════════════════════════════════════════════
+★ 원칙 1 — 문장 분류 (반드시 먼저 수행) ★
+═══════════════════════════════════════════════
+입력 SOP의 각 의미 단위를 씬으로 나누기 전에, 문장마다 분류하라:
+
+A. CONCRETE — 물리적 행동/실제 사물/구체 상황 (예: "고기를 뒤집는다")
+   → video_scenario 또는 comparison 로 씬 생성
+B. ABSTRACT — 개념/원칙/수치/관계 (예: "70% 재방문율 상승")
+   → stat 또는 infographic 으로 씬 생성 (일반 스톡 금지)
+C. EMOTIONAL — 태도/감정/기억/자부심 (예: "아이가 기억하는 건 감정")
+   → title_card 또는 분위기 video_scenario + 강한 overlay
+
+추상 개념을 일반 미소 스톡으로 때우면 학습 효과 급락. ABSTRACT 는 반드시 stat / infographic 으로.
+
+═══════════════════════════════════════════════
+★ 원칙 2 — 나레이션/비주얼/오버레이 = 3개 다른 정보 ★
+═══════════════════════════════════════════════
+나레이션이 "3초 안에 인사하라"고 말할 때, 영상이 단순 "인사 장면"이면 정보 중복.
+세 레이어는 **다른 각도로 하나의 메시지**에 수렴해야 한다:
+  나레이션: "첫 3초가 결정합니다"
+  비주얼:   시계 바늘 3초 넘어가는 클로즈업
+  오버레이: "3초"
+→ caption / overlay_text 필드는 자막 반복 금지. 숫자·기호·핵심 단어 1개 (앵커).
 
 ═══════════════════════════════════════════════
 ★ 5가지 씬 타입 (반드시 type 필드에 명시) ★
@@ -236,10 +259,20 @@ ${plainText}
 - title_sub: 영문 서브타이틀 (예: "Morning Welcome SOP")
 
 【video_scenario 필드】
-- video_keywords: 영어 검색어 배열 (3개), 구체적이고 다양하게
-   예: ["teacher checking child temperature forehead", "kindergarten health screening", "preschool morning entry"]
-- caption: 화면 자막 (한 줄, <b>로 키워드 강조 가능)
-   예: "도착 즉시 <b>체온 측정</b>. 37.5도 이상이면 격리"
+- message_type: "CONCRETE" | "ABSTRACT" | "EMOTIONAL" (원칙 1 분류 결과)
+- video_keywords: 영어 검색어 3개 (1→3순위 폴백, 필수)
+   ★ 구체 동사 + 주체 + 장소 형태. 추상명사 금지 ("importance", "connection", "education" 같은 단어 단독 사용 X)
+   예: ["asian teacher kneeling eye level with child preschool", "kindergarten greeting morning arrival", "teacher smile child classroom"]
+- search_layers: 4단계 폴백 설계 (선택, 있으면 검색 품질↑)
+   [
+     { layer: 1, query: "정확히 맞는 장면 영어 검색어" },
+     { layer: 2, query: "맥락 유사 / 국가·디테일 다름" },
+     { layer: 3, query: "추상적이지만 분위기 맞음" },
+     { layer: 4, type: "motion_graphic", description: "스톡 실패 시 모션그래픽 설계 — 아이콘/텍스트 애니메이션" }
+   ]
+- caption: 화면 자막 앵커 (자막이 아닌 기호/숫자/핵심 단어 1개, 나레이션 반복 금지)
+   나쁜 예: "첫인상이 중요합니다" (나레이션 반복)
+   좋은 예: "<b>3초</b>" / "<b>×</b> 7초" / "+15% ↑"
 - tag: 작은 영문 라벨 (예: "STEP 01", "ACTION", "MOMENT")
 
 【infographic 필드】
@@ -267,20 +300,42 @@ ${plainText}
 - right_video_keywords: 영어 검색어 (3개)
 
 ═══════════════════════════════════════════════
-★ video_keywords 작성 핵심 ★
+★ video_keywords / search_layers 작성 핵심 ★
 ═══════════════════════════════════════════════
-- 반드시 영어로 작성 (Pexels는 영어 검색이 결과 많음)
-- 구체적이고 다양하게 3개씩 (1순위 → 3순위 폴백)
-- 사람/장소/행동을 명시: "subject + action + setting"
+- 반드시 영어로 작성 (Pexels는 영어 검색 결과가 풍부)
+- 3~5단어 조합: "subject + action + setting + mood"
+- 추상명사 단독 금지 ("importance" / "connection" / "education" 등 금지)
 - ★★ 이 SOP의 지역 맥락: ${regionHint} ★★
 - 사람이 나오는 씬에는 반드시 "asian" / "vietnamese" / "korean" 중 하나의 지역 수식어 포함
-- 좋은 예 (지역 수식어 포함):
+- 좋은 예 (지역 + 구체 동사):
   * "asian teacher kneeling eye level with child preschool"
   * "vietnamese kindergarten morning arrival greeting"
   * "korean woman barbecue restaurant grilling meat"
-- 나쁜 예 (너무 추상적 / 지역 없음):
-  * "education", "training", "morning" (너무 일반적)
+- 나쁜 예:
+  * "education" / "training" / "morning" (너무 일반적)
   * "teacher with child" (지역 수식어 누락)
+  * "first impression importance" (추상명사 단독)
+
+═══════════════════════════════════════════════
+★ 세션 리듬 (참고용, JSON엔 포함 안 함) ★
+═══════════════════════════════════════════════
+[0~15%] 훅 — stat 또는 EMOTIONAL title_card (왜 중요한지)
+[15~30%] 맥락 — video_scenario CONCRETE 위주
+[30~70%] 핵심 학습 — infographic(구조) + stat(근거) + video_scenario 교차
+[70~90%] 사례·실습 — video_scenario 또는 comparison
+[90~100%] 요약·전환 — title_card EMOTIONAL
+리듬 원칙: 같은 타입 3씬 연속 금지. stat/infographic은 전체의 30% 이내.
+
+═══════════════════════════════════════════════
+★ 씬별 자체 검증 (출력 전 체크리스트) ★
+═══════════════════════════════════════════════
+각 씬마다 다음을 확인하고 통과하지 못하면 수정:
+1) message_type 분류가 씬 타입과 일관 (CONCRETE→video_scenario, ABSTRACT→stat/infographic, EMOTIONAL→title_card/분위기)
+2) video_keywords가 영어 3개, 구체 동사+주체, 추상명사 없음
+3) 사람 나오는 씬에 지역 수식어 (asian/vietnamese/korean) 포함
+4) caption/오버레이가 나레이션 반복이 아니고 앵커(숫자/기호/핵심 단어 1개)
+5) 나레이션 길이 2~4문장 (TTS 적정)
+6) 같은 타입 3씬 연속 안 함 (리듬)
 
 ═══════════════════════════════════════════════
 ★ 출력 형식 ★
@@ -294,6 +349,7 @@ type에 맞지 않는 필드는 생략 가능.
   {
     "scene": 1,
     "type": "title_card",
+    "message_type": "EMOTIONAL",
     "narration": "오늘은 등원 맞이 표준 절차를 배워보겠습니다",
     "kicker": "Chapter 01 · Morning Welcome",
     "title_main": "등원 <span class='accent'>맞이</span>",
@@ -302,24 +358,39 @@ type에 맞지 않는 필드는 생략 가능.
   {
     "scene": 2,
     "type": "stat",
+    "message_type": "ABSTRACT",
     "narration": "연구에 따르면 첫 90초가 하루의 정서를 결정합니다",
     "tag": "WHY IT MATTERS",
     "number": "90",
     "unit": "SECONDS",
     "context": "아이가 유치원을 좋아할지<br>결정되는 시간",
-    "video_keywords": ["kindergarten morning entrance", "preschool first day", "child entering school"]
+    "video_keywords": ["asian child entering kindergarten morning", "preschool first day arrival", "parent handoff school entrance"],
+    "search_layers": [
+      { "layer": 1, "query": "asian child entering kindergarten morning" },
+      { "layer": 2, "query": "preschool morning arrival entrance" },
+      { "layer": 3, "query": "school entrance ambient morning" },
+      { "layer": 4, "type": "motion_graphic", "description": "검은 배경에 큰 90 숫자가 카운트업, 뒤에 시계 바늘 천천히 회전" }
+    ]
   },
   {
     "scene": 3,
     "type": "video_scenario",
+    "message_type": "CONCRETE",
     "narration": "도착 즉시 비접촉 체온계로 체온을 측정합니다",
     "tag": "STEP 01",
-    "caption": "도착 즉시 <b>체온 측정</b>. 37.5도 이상이면 격리",
-    "video_keywords": ["teacher checking child temperature forehead", "non-contact thermometer kindergarten", "health screening preschool"]
+    "caption": "<b>37.5°</b>",
+    "video_keywords": ["asian teacher checking child temperature forehead", "non-contact thermometer kindergarten", "health screening preschool asian"],
+    "search_layers": [
+      { "layer": 1, "query": "asian teacher checking child temperature forehead" },
+      { "layer": 2, "query": "non-contact thermometer kindergarten" },
+      { "layer": 3, "query": "health screening preschool" },
+      { "layer": 4, "type": "motion_graphic", "description": "이마 아이콘 + 체온계 아이콘 + 37.5° 숫자 강조 애니메이션" }
+    ]
   },
   {
     "scene": 4,
     "type": "infographic",
+    "message_type": "ABSTRACT",
     "narration": "체온 측정은 3단계로 진행합니다. 이마 중앙 3회 측정, 평균 37.5도 이상이면 격리, 보호자 즉시 연락",
     "header_tag": "Health Screening",
     "header_title": "체온 체크 <span style='color:var(--highlight)'>3단계</span>",
@@ -347,6 +418,16 @@ type에 맞지 않는 필드는 생략 가능.
           } else {
             scene.type = 'video_scenario';
           }
+        }
+
+        // search_layers 가 있고 video_keywords 가 비어있으면 layer 1~3 query를 video_keywords로 추출
+        // (다운스트림 _searchPexels 는 video_keywords 배열 소비. search_layers 는 미래 motion_graphic 폴백용 보존)
+        if (Array.isArray(scene.search_layers) && scene.search_layers.length > 0 &&
+            (!Array.isArray(scene.video_keywords) || scene.video_keywords.length === 0)) {
+          scene.video_keywords = scene.search_layers
+            .filter(l => l && typeof l.query === 'string' && l.query.trim())
+            .slice(0, 3)
+            .map(l => l.query.trim());
         }
 
         // video_scenario / stat / comparison: video_keywords 누락 시 자동 생성
