@@ -29,91 +29,84 @@ module.exports = async (req, res) => {
     const { query, count = 5, minDuration = 3, maxDuration = 20, orientation = 'landscape' } = req.body || {};
     if (!query) return res.status(400).json({ error: 'query required' });
 
-    const results = [];
+    const pexelsResults = [];
+    const pixabayResults = [];
     const warnings = [];
 
-    // 1) Pexels 검색 (1순위)
-    if (pexelsKey) {
+    // Pexels + Pixabay 병렬 요청 (다양성 극대화)
+    const perPage = Math.min(count * 2, 20);
+
+    const pexelsTask = pexelsKey ? (async () => {
       try {
-        const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&per_page=${Math.min(count * 2, 15)}&orientation=${orientation}&size=medium`;
+        const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&per_page=${perPage}&orientation=${orientation}&size=medium`;
         const resp = await fetch(url, { headers: { Authorization: pexelsKey } });
-
-        if (!resp.ok) {
-          warnings.push(`Pexels HTTP ${resp.status}`);
-        } else {
-          const data = await resp.json();
-          const videos = (data.videos || []).filter(v =>
-            v.duration >= minDuration && v.duration <= maxDuration
-          );
-
-          videos.forEach(v => {
-            // 가장 적절한 해상도 파일 선택 (SD 품질, 모바일 친화)
-            const files = (v.video_files || []).filter(f =>
-              f.file_type === 'video/mp4' && f.width <= 1280 && f.width >= 640
-            ).sort((a, b) => b.width - a.width);
-            const best = files[0] || v.video_files?.[0];
-            if (best) {
-              results.push({
-                id: 'pexels-' + v.id,
-                source: 'pexels',
-                url: best.link,
-                duration: v.duration,
-                width: best.width,
-                height: best.height,
-                thumbnail: v.image,
-                author: v.user?.name,
-                sourceUrl: v.url,
-                tags: v.tags || [],
-              });
-            }
-          });
-        }
-      } catch (e) {
-        warnings.push('Pexels error: ' + e.message);
-      }
-    }
-
-    // 2) Pixabay 폴백 (Pexels 부족 시)
-    if (results.length < count && pixabayKey) {
-      try {
-        const url = `https://pixabay.com/api/videos/?key=${pixabayKey}&q=${encodeURIComponent(query)}&per_page=${count * 2}&min_width=640`;
-        const resp = await fetch(url);
-        if (resp.ok) {
-          const data = await resp.json();
-          (data.hits || []).forEach(v => {
-            if (results.find(r => r.id === 'pixabay-' + v.id)) return;
-            if (v.duration < minDuration || v.duration > maxDuration) return;
-            const file = v.videos?.medium || v.videos?.small;
-            if (!file) return;
-            results.push({
-              id: 'pixabay-' + v.id,
-              source: 'pixabay',
-              url: file.url,
+        if (!resp.ok) { warnings.push(`Pexels HTTP ${resp.status}`); return; }
+        const data = await resp.json();
+        (data.videos || []).filter(v =>
+          v.duration >= minDuration && v.duration <= maxDuration
+        ).forEach(v => {
+          const files = (v.video_files || []).filter(f =>
+            f.file_type === 'video/mp4' && f.width <= 1280 && f.width >= 640
+          ).sort((a, b) => b.width - a.width);
+          const best = files[0] || v.video_files?.[0];
+          if (best) {
+            pexelsResults.push({
+              id: 'pexels-' + v.id,
+              source: 'pexels',
+              url: best.link,
               duration: v.duration,
-              width: file.width,
-              height: file.height,
-              thumbnail: v.videos?.medium?.thumbnail || v.userImageURL,
-              author: v.user,
-              sourceUrl: v.pageURL,
-              tags: (v.tags || '').split(',').map(t => t.trim()),
+              width: best.width,
+              height: best.height,
+              thumbnail: v.image,
+              author: v.user?.name,
+              sourceUrl: v.url,
+              tags: v.tags || [],
             });
-          });
-        }
-      } catch (e) {
-        warnings.push('Pixabay error: ' + e.message);
-      }
-    }
+          }
+        });
+      } catch (e) { warnings.push('Pexels error: ' + e.message); }
+    })() : Promise.resolve();
 
-    // 품질 순으로 정렬 (해상도 > 세로형보다 가로형 선호)
-    results.sort((a, b) => {
-      const aScore = (a.width / a.height > 1 ? 100 : 0) + a.width;
-      const bScore = (b.width / b.height > 1 ? 100 : 0) + b.width;
-      return bScore - aScore;
-    });
+    const pixabayTask = pixabayKey ? (async () => {
+      try {
+        const url = `https://pixabay.com/api/videos/?key=${pixabayKey}&q=${encodeURIComponent(query)}&per_page=${perPage}&min_width=640`;
+        const resp = await fetch(url);
+        if (!resp.ok) { warnings.push(`Pixabay HTTP ${resp.status}`); return; }
+        const data = await resp.json();
+        (data.hits || []).forEach(v => {
+          if (v.duration < minDuration || v.duration > maxDuration) return;
+          const file = v.videos?.medium || v.videos?.small;
+          if (!file) return;
+          pixabayResults.push({
+            id: 'pixabay-' + v.id,
+            source: 'pixabay',
+            url: file.url,
+            duration: v.duration,
+            width: file.width,
+            height: file.height,
+            thumbnail: v.videos?.medium?.thumbnail || v.userImageURL,
+            author: v.user,
+            sourceUrl: v.pageURL,
+            tags: (v.tags || '').split(',').map(t => t.trim()),
+          });
+        });
+      } catch (e) { warnings.push('Pixabay error: ' + e.message); }
+    })() : Promise.resolve();
+
+    await Promise.all([pexelsTask, pixabayTask]);
+
+    // 소스별 라운드로빈 믹싱 (다양성 증가: Pexels/Pixabay 번갈아)
+    const results = [];
+    const maxLen = Math.max(pexelsResults.length, pixabayResults.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (pexelsResults[i]) results.push(pexelsResults[i]);
+      if (pixabayResults[i]) results.push(pixabayResults[i]);
+    }
 
     return res.status(200).json({
       query,
       count: results.length,
+      sources: { pexels: pexelsResults.length, pixabay: pixabayResults.length },
       results: results.slice(0, count),
       warnings: warnings.length > 0 ? warnings : undefined,
     });
