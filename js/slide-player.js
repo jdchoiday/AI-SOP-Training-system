@@ -732,7 +732,25 @@ const SlidePlayer = (() => {
       // 6) 폴백: 기존 이미지 또는 신규 생성
       else if (scene.imageUrl) {
         vis.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:auto;max-height:80vh;object-fit:contain;display:block;margin:0 auto;border-radius:8px;" alt="scene">`;
-      } else {
+      }
+      // 7) 비주얼 자산 전혀 없음 — 나레이션 전용 텍스트 카드
+      else if (!scene.visual && !scene.narration) {
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;background:linear-gradient(135deg,#1E293B,#0F172A);text-align:center;padding:32px;min-height:280px;">
+          <div style="font-size:48px;margin-bottom:16px;opacity:0.5;">📄</div>
+          <div style="font-size:14px;color:#94A3B8;">빈 씬</div>
+        </div>`;
+      }
+      else if (scene.visual || (scene.type === 'video_scenario' && !scene.videoUrl && !scene.imageUrl)) {
+        // 비주얼 자산 미생성 상태 — 나레이션 텍스트 카드로 대체
+        const snippet = (scene.narration || scene.visual || '').slice(0, 200);
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;background:linear-gradient(135deg,#1E293B,#0F172A);text-align:center;padding:32px 28px;min-height:280px;">
+          <div style="font-size:40px;margin-bottom:14px;opacity:0.6;">🎬</div>
+          <div style="font-size:10px;font-weight:800;letter-spacing:3px;color:#10B981;margin-bottom:14px;">VISUAL PENDING</div>
+          <div style="font-size:15px;font-weight:500;color:rgba(255,255,255,0.85);line-height:1.5;max-width:420px;">${_escHtml(snippet)}</div>
+          <div style="font-size:11px;color:#64748B;margin-top:16px;">관리자: "🎬 영상 생성" 버튼으로 비주얼을 생성하세요</div>
+        </div>`;
+      }
+      else {
         _currentImagePromise = _loadSceneImage(scene.visual, scene.narration);
         _preloadNextImage();
       }

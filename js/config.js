@@ -40,9 +40,9 @@ const CONFIG = {
     // TTS: 나레이션 음성
     ttsProvider: 'none',        // 'edge' 추천 (무료+고품질)
 
-    // 영상 생성: SOP 스크립트 → 720p AI 영상
-    videoProvider: 'none',      // 슬라이드+TTS 모드 사용 (무료). 영상 필요 시 'wan' 으로 변경
-                                // 'vidu' 대안 ($0.20/클립, 빠름)
+    // 영상 소스: SOP 스크립트 → 다큐멘터리 영상
+    videoProvider: 'pexels',    // Phase 1: Pexels 스톡 영상 (무료, 기본값)
+                                // 'wan' (Wan 2.2, $0.29/클립) 또는 'vidu' ($0.20/클립) 은 AI 생성 경로
 
     // API 키 (사용할 제공자만 입력)
     // API 키는 서버 환경변수(.env)에서만 관리. 클라이언트에 노출하지 않음.

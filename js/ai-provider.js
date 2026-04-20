@@ -93,8 +93,8 @@ window.AI_CONFIG = window.AI_CONFIG || {
   // TTS 제공자: 'none' | 'edge' | 'google' | 'openai'
   ttsProvider: 'none',
 
-  // 영상 생성 제공자: 'none' | 'wan' | 'vidu' | 'sora'
-  videoProvider: 'none',
+  // 영상 소스: 'none' | 'pexels' | 'wan' | 'vidu' | 'sora'
+  videoProvider: 'pexels',
 
   // API 키 (사용할 제공자만 설정)
   keys: {
