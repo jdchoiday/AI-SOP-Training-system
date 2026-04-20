@@ -243,11 +243,14 @@ const SlidePlayer = (() => {
 
         .sp-scene-visual {
           width: 100%;
+          height: 60vh;
+          max-height: 600px;
+          min-height: 320px;
           border-radius: 16px; overflow: hidden;
           position: relative;
-          background: rgba(255,255,255,0.04);
+          background: #0A0A0A;
           border: 1px solid rgba(255,255,255,0.06);
-          min-height: 200px;
+          margin: 0 auto;
         }
         .sp-scene-visual img {
           width: 100%; height: auto; max-height: 70vh;
@@ -668,15 +671,25 @@ const SlidePlayer = (() => {
             </div>` : '');
 
         const posterAttr = scene.videoThumbnail ? ` poster="${scene.videoThumbnail}"` : '';
-        const bgImg = scene.videoThumbnail ? `background-image:url('${scene.videoThumbnail}');background-size:cover;background-position:center;` : '';
-        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;overflow:hidden;background:#000;${bgImg}">
+        const bgImg = scene.videoThumbnail
+          ? `background-image:url('${scene.videoThumbnail}');background-size:cover;background-position:center;`
+          : 'background:linear-gradient(135deg,#1E293B,#0F172A);';
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;overflow:hidden;${bgImg}">
           <video src="${scene.videoUrl}"${posterAttr} autoplay muted playsinline loop preload="auto"
-            onerror="this.style.display='none';console.warn('[Video] load failed:', this.src);"
-            onloadeddata="this.play().catch(e=>console.warn('[Video] play blocked:',e.message));"
+            data-sp-video="1"
             style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;${scene.type === 'stat' ? 'filter:blur(2px);opacity:0.3;' : ''}"></video>
           <div style="position:absolute;inset:0;${dimGrad}pointer-events:none;"></div>
           ${overlayHtml}
         </div>`;
+        // 비디오 에러/재생 핸들러 — 문자열 이스케이핑 대신 JS 핸들러 부착
+        const vid = vis.querySelector('video[data-sp-video="1"]');
+        if (vid) {
+          vid.onerror = () => {
+            console.warn('[Video] load failed:', vid.src);
+            vid.style.display = 'none'; // bgImg(썸네일/그라디언트)가 배경에 남음
+          };
+          vid.onloadeddata = () => vid.play().catch(e => console.warn('[Video] play blocked:', e.message));
+        }
       }
       // 2) 비교 (잘못된 vs 올바른) — 위/아래 분할
       else if (scene.type === 'comparison' && (scene.leftVideoUrl || scene.rightVideoUrl)) {
