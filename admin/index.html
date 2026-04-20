@@ -1748,7 +1748,7 @@
       if (event) event.preventDefault();
       // 현재 페이지를 저장 — 새로고침 시 복원
       try { localStorage.setItem('sop_admin_last_page', page); } catch(e) {}
-      ['sop', 'content', 'dashboard', 'employees', 'learning-path', 'chat-logs', 'notifications', 'reports', 'admin-manage', 'settings', 'audit-log', 'glossary', 'version-mgmt', 'xp-manage', 'praise-manage', 'task-manage', 'team-task-manage', 'quest-manage', 'branch-team'].forEach(p => {
+      ['sop', 'content', 'dashboard', 'employees', 'learning-path', 'chat-logs', 'notifications', 'reports', 'admin-manage', 'settings', 'audit-log', 'glossary', 'version-mgmt', 'xp-manage', 'praise-manage', 'xp-rewards', 'task-manage', 'team-task-manage', 'quest-manage', 'branch-team'].forEach(p => {
         const el = document.getElementById('page-' + p);
         if (el) el.style.display = p === page ? 'block' : 'none';
       });
@@ -1773,6 +1773,7 @@
       if (page === 'version-mgmt') renderVersionDashboard();
       if (page === 'xp-manage') renderXpManage();
       if (page === 'praise-manage') renderPraiseManage();
+      if (page === 'xp-rewards') loadXpRewards();
       if (page === 'task-manage') { renderTaskManage(); loadDailyMissionConfigAdmin(); }
       if (page === 'team-task-manage') renderTeamTaskManage();
       if (page === 'quest-manage') renderQuestManage();
@@ -8565,7 +8566,13 @@ ${text.slice(0, 3000)}
       if (!container) return;
 
       if (xpRewardsList.length === 0) {
-        container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--gray-500);">등록된 혜택이 없습니다. 위의 "혜택 추가" 버튼으로 추가하세요.</div>';
+        container.innerHTML = `
+          <div style="text-align:center;padding:40px 20px;color:var(--gray-500);border:2px dashed var(--gray-200);border-radius:12px;">
+            <div style="font-size:40px;margin-bottom:12px;">🎁</div>
+            <div style="font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text-primary);">등록된 혜택이 없습니다</div>
+            <div style="font-size:13px;margin-bottom:16px;">직원이 XP를 모아 교환할 수 있는 혜택을 추가해보세요<br>(예: 커피 쿠폰 100XP, 조기퇴근 500XP, 식사권 1000XP)</div>
+            <button class="btn btn-primary" onclick="addXpReward()" style="font-size:13px;padding:8px 16px;">+ 첫 혜택 추가</button>
+          </div>`;
         renderXpRewardsPreview();
         return;
       }
@@ -8642,16 +8649,6 @@ ${text.slice(0, 3000)}
       preview.innerHTML = html;
     }
 
-    // 페이지 전환 시 로드
-    const _origShowPage = typeof showPage === 'function' ? showPage : null;
-    if (_origShowPage) {
-      const _realShowPage = showPage;
-      showPage = function(pageId, event) {
-        _realShowPage(pageId, event);
-        if (pageId === 'xp-rewards') loadXpRewards();
-      };
-    }
-
     // ===== 일일 미션 XP 설정 =====
     async function loadDailyMissionConfigAdmin() {
       try {
@@ -8699,7 +8696,16 @@ ${text.slice(0, 3000)}
 
     // ===== 성과제 관리 =====
     async function renderTaskManage() {
-      if (!SupabaseMode._ready) return;
+      const pointsBody = document.getElementById('taskPointsBody');
+      const tmplBody = document.getElementById('taskTemplateBody');
+      const logBody = document.getElementById('taskLogBody');
+      if (!SupabaseMode._ready) {
+        const msg = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gray-500);">Supabase 연결 필요 — 페이지를 새로고침(Ctrl+Shift+R)해주세요</td></tr>';
+        if (pointsBody) pointsBody.innerHTML = msg;
+        if (tmplBody) tmplBody.innerHTML = msg.replace('colspan="5"', 'colspan="8"');
+        if (logBody) logBody.innerHTML = msg;
+        return;
+      }
       try {
         // 1) 직원 포인트 현황
         const { data: emps } = await SupabaseMode._client
@@ -8788,6 +8794,8 @@ ${text.slice(0, 3000)}
         }
       } catch (e) {
         console.error('[TaskManage] 오류:', e);
+        const errMsg = `<tr><td colspan="8" style="text-align:center;padding:20px;color:#ef4444;">오류: ${e.message || e}<br><span style="font-size:11px;color:var(--gray-500);">F12 콘솔에서 상세 내용 확인 가능</span></td></tr>`;
+        if (document.getElementById('taskTemplateBody')) document.getElementById('taskTemplateBody').innerHTML = errMsg;
       }
     }
 
@@ -8946,7 +8954,11 @@ ${text.slice(0, 3000)}
       document.getElementById('pcDailyLimit').value = XP_CONFIG.PRAISE_DAILY_LIMIT;
       document.getElementById('pcSameDaily').value = XP_CONFIG.PRAISE_SAME_PERSON_DAILY;
 
-      if (!SupabaseMode._ready) return;
+      const logBody = document.getElementById('praiseLogBody');
+      if (!SupabaseMode._ready) {
+        if (logBody) logBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gray-500);">Supabase 연결 필요 — 페이지를 새로고침해주세요</td></tr>';
+        return;
+      }
 
       const emps = EmployeeStore.getAll();
       const empMap = {};
@@ -9015,11 +9027,15 @@ ${text.slice(0, 3000)}
     // ===== XP 관리 (게이미피케이션) =====
     async function renderXpManage() {
       if (!SupabaseMode._ready) {
-        document.getElementById('xpEmployeeBody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gray-500);">Supabase 연결 필요</td></tr>';
+        document.getElementById('xpEmployeeBody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gray-500);">Supabase 연결 필요 — 페이지를 새로고침해주세요</td></tr>';
+        document.getElementById('xpHistoryBody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gray-500);">Supabase 연결 필요</td></tr>';
         return;
       }
 
       const emps = EmployeeStore.getAll().filter(e => e.role !== 'admin');
+      if (emps.length === 0) {
+        document.getElementById('xpEmployeeBody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gray-500);">직원이 없습니다.<br><span style="font-size:12px;">"직원 관리" 페이지에서 먼저 직원을 등록해주세요.</span></td></tr>';
+      }
       const gamData = await XpService.getAllGamification();
       const gamMap = {};
       gamData.forEach(g => { gamMap[g.employee_id] = g; });
@@ -9284,14 +9300,14 @@ ${text.slice(0, 3000)}
 
     async function _loadQuestsForTier(tierId) {
       const tbody = document.getElementById('questTableBody');
-      if (!SupabaseMode._ready) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--gray-400);padding:20px;">Supabase 미연결</td></tr>'; return; }
+      if (!SupabaseMode._ready) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--gray-400);padding:20px;">Supabase 미연결 — 새로고침해주세요</td></tr>'; return; }
       try {
         const { data, error } = await SupabaseMode._client.from('quests')
           .select('*').eq('tier_id', tierId).order('sort_order', { ascending: true });
         if (error) throw error;
         _questCache = data || [];
         if (_questCache.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--gray-400);padding:20px;">이 티어에 등록된 퀘스트가 없습니다</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--gray-400);padding:20px;">이 티어에 등록된 퀘스트가 없습니다.<br><span style="font-size:12px;">우측 상단 "+ 퀘스트 추가" 버튼으로 등록하거나, docs/migration-v8-quest-system.sql의 시드 데이터를 실행하세요.</span></td></tr>';
           return;
         }
         tbody.innerHTML = _questCache.map((q, i) => `
