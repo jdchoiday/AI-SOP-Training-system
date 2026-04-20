@@ -644,18 +644,24 @@ caption/overlay_text는 자막 반복 금지. 숫자·기호·핵심 단어 1개
 - stat: { tag, number, unit, context, video_keywords } — 큰 숫자 강조
 - comparison: { left_label, left_text, left_video_keywords, right_label, right_text, right_video_keywords } — BEFORE/AFTER
 
-★ video_keywords 작성 핵심
-- 영어 3개 (1→3 순위 폴백)
-- ★★ 페르소나 주입: 사람 나오는 씬의 첫 키워드에 "${plan.persona}" 관련 시각 맥락 반영
-- ★★ 지역 수식어 필수: "${plan.region}" (asian/korean/vietnamese 중)
-- ★★ 무드 일관: "${plan.mood}" — 같은 색감/분위기로 이어지도록 lighting/setting 단어 포함
+★ video_keywords 작성 핵심 (★★매우 엄격★★)
+- 영어 3개, 각 키워드는 **공백으로 구분된 4~8 단어의 자연어 구문** (camelCase/PascalCase/한 단어 절대 금지)
+- ★★ 반드시 "${plan.region}" 수식어 포함 (${plan.region === 'korean' ? 'korean 또는 asian' : plan.region === 'vietnamese' ? 'vietnamese 또는 asian' : 'asian'})
+- ★★ 페르소나 "${plan.persona}" 반영한 상황/주체/장소
+- ★★ 무드 "${plan.mood}" 반영한 조명/분위기 단어
 - 구체 동사 + 주체 + 장소 형태 (추상명사 단독 금지)
-- 좋은 예:
-  * "asian kindergarten teacher reading storybook to children warm classroom"
-  * "vietnamese family having dinner together evening home soft light"
-- 나쁜 예:
-  * "education" / "importance" / "teaching" (추상)
-  * "teacher children" (지역/맥락 빠짐)
+
+★★ 절대 금지 예시 ★★
+- "EarlyChildhoodEducation" ← camelCase, Pexels에서 0건 매칭
+- "KoreanChildren" ← camelCase 금지
+- "education" / "importance" / "teaching" ← 추상 단어 단독
+- "teacher children" ← 지역 수식어 빠짐
+
+★★ 올바른 예시 ★★
+- "korean kindergarten teacher reading storybook to children warm classroom"
+- "asian mother talking with preschool age child at home soft light"
+- "vietnamese family having dinner together evening home warm light"
+- "korean children playing storytelling game natural daylight classroom"
 
 ★ 나레이션
 - ${langInstr}
@@ -700,6 +706,32 @@ JSON 배열만 출력:`;
 
     // 공통 정규화 (type 기본값, search_layers→video_keywords, 폴백 등)
     const VALID_TYPES = ['title_card', 'video_scenario', 'infographic', 'stat', 'comparison'];
+    const REGION_WORDS = ['asian', 'korean', 'vietnamese', 'east asian', 'southeast asian'];
+    const defaultRegionPrefix = plan.region === 'vietnamese' ? 'vietnamese asian' : plan.region === 'korean' ? 'korean asian' : 'asian';
+
+    // camelCase/PascalCase 단일 토큰 → 공백 분리된 자연어로 분해
+    // "EarlyChildhoodEducation" → "early childhood education"
+    const normalizeKeyword = (kw) => {
+      if (typeof kw !== 'string') return '';
+      let s = kw.trim();
+      // 공백 없고 대소문자 섞인 단어는 camelCase로 판단
+      if (!/\s/.test(s) && /[a-z][A-Z]/.test(s)) {
+        s = s.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
+      }
+      // 언더스코어/하이픈/도트도 공백으로
+      s = s.replace(/[_\-\.]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+      return s;
+    };
+    const ensureRegion = (kw) => {
+      if (!kw) return kw;
+      const hasRegion = REGION_WORDS.some(w => kw.includes(w));
+      return hasRegion ? kw : `${defaultRegionPrefix} ${kw}`;
+    };
+    const normalizeKwArray = (arr) => {
+      if (!Array.isArray(arr)) return arr;
+      return arr.map(kw => ensureRegion(normalizeKeyword(kw))).filter(Boolean);
+    };
+
     scenes.forEach((scene, idx) => {
       if (!scene.scene) scene.scene = idx + 1;
       if (!scene.type || !VALID_TYPES.includes(scene.type)) {
@@ -711,12 +743,17 @@ JSON 배열만 출력:`;
           .slice(0, 3)
           .map(l => l.query.trim());
       }
+      // camelCase → 공백, 지역 수식어 강제 주입
+      if (Array.isArray(scene.video_keywords)) scene.video_keywords = normalizeKwArray(scene.video_keywords);
+      if (Array.isArray(scene.left_video_keywords)) scene.left_video_keywords = normalizeKwArray(scene.left_video_keywords);
+      if (Array.isArray(scene.right_video_keywords)) scene.right_video_keywords = normalizeKwArray(scene.right_video_keywords);
+
       if (['video_scenario', 'stat'].includes(scene.type) && (!scene.video_keywords || scene.video_keywords.length === 0)) {
-        scene.video_keywords = this._narrationToKeywords(scene.narration || '');
+        scene.video_keywords = normalizeKwArray(this._narrationToKeywords(scene.narration || ''));
       }
       if (scene.type === 'comparison') {
-        if (!scene.left_video_keywords) scene.left_video_keywords = this._narrationToKeywords(scene.left_text || scene.narration || '');
-        if (!scene.right_video_keywords) scene.right_video_keywords = this._narrationToKeywords(scene.right_text || scene.narration || '');
+        if (!scene.left_video_keywords) scene.left_video_keywords = normalizeKwArray(this._narrationToKeywords(scene.left_text || scene.narration || ''));
+        if (!scene.right_video_keywords) scene.right_video_keywords = normalizeKwArray(this._narrationToKeywords(scene.right_text || scene.narration || ''));
       }
       if (scene.type === 'infographic' && (!scene.visual || scene.visual.length < 30)) {
         scene.visual = window.ScenePrompts
