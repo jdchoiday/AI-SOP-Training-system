@@ -551,11 +551,18 @@ ${plainText.slice(0, 6000)}
 JSON만 출력, 마크다운/설명 금지.`;
 
     const raw = await this._callLLM(provider, prompt, {
-      generationConfig: { temperature: 0.6, maxOutputTokens: 2000 }
+      generationConfig: { temperature: 0.6, maxOutputTokens: 3500 }
     });
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Pass 1 JSON 파싱 실패');
-    const plan = JSON.parse(jsonMatch[0]);
+    // ```json ... ``` 마크다운 블록 제거, 그 후 첫 { 부터 마지막 } 까지 추출
+    const cleaned = raw.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Pass 1 JSON 파싱 실패 (응답: ' + cleaned.slice(0, 200) + ')');
+    let plan;
+    try {
+      plan = JSON.parse(jsonMatch[0]);
+    } catch (parseErr) {
+      throw new Error('Pass 1 JSON 파싱 오류: ' + parseErr.message + ' (응답 마지막 100자: ' + jsonMatch[0].slice(-100) + ')');
+    }
 
     // 기본값 보강
     if (!plan.persona) plan.persona = '교육자';
@@ -667,9 +674,15 @@ JSON 배열만 출력:`;
     const raw = await this._callLLM(provider, prompt, {
       generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
     });
-    const jsonMatch = raw.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) throw new Error('Pass 2 JSON 파싱 실패');
-    const scenes = JSON.parse(jsonMatch[0]);
+    const cleanedP2 = raw.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
+    const jsonMatch = cleanedP2.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error('Pass 2 JSON 파싱 실패 (응답: ' + cleanedP2.slice(0, 200) + ')');
+    let scenes;
+    try {
+      scenes = JSON.parse(jsonMatch[0]);
+    } catch (parseErr) {
+      throw new Error('Pass 2 JSON 파싱 오류: ' + parseErr.message);
+    }
     if (!Array.isArray(scenes) || scenes.length === 0) throw new Error('Pass 2 빈 결과');
 
     // 공통 정규화 (type 기본값, search_layers→video_keywords, 폴백 등)
