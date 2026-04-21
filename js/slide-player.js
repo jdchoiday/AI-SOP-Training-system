@@ -692,22 +692,24 @@ const SlidePlayer = (() => {
           vid.onloadeddata = () => vid.play().catch(e => console.warn('[Video] play blocked:', e.message));
         }
       }
-      // 2) 비교 (잘못된 vs 올바른) — 위/아래 분할
-      else if (scene.type === 'comparison' && (scene.leftVideoUrl || scene.rightVideoUrl)) {
+      // 2) 비교 (잘못된 vs 올바른) — 위/아래 분할 (비디오 있으면 배경 영상, 없으면 순수 CSS)
+      else if (scene.type === 'comparison') {
+        const hasLeftVideo = !!scene.leftVideoUrl;
+        const hasRightVideo = !!scene.rightVideoUrl;
         vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:grid;grid-template-rows:1fr 1fr;gap:3px;background:#000;">
-          <div style="position:relative;overflow:hidden;background:rgba(239,68,68,0.08);">
-            ${scene.leftVideoUrl ? `<video src="${scene.leftVideoUrl}" autoplay muted playsinline loop style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.55;"></video>` : ''}
-            <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.3),rgba(0,0,0,0.7));"></div>
+          <div style="position:relative;overflow:hidden;background:${hasLeftVideo ? 'rgba(239,68,68,0.08)' : 'linear-gradient(135deg,#7F1D1D,#450A0A)'};">
+            ${hasLeftVideo ? `<video src="${scene.leftVideoUrl}" autoplay muted playsinline loop style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.55;"></video>` : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:88px;opacity:0.18;color:#EF4444;">✕</div>`}
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,${hasLeftVideo ? '0.3' : '0.45'}),rgba(0,0,0,${hasLeftVideo ? '0.7' : '0.8'}));"></div>
             <div style="position:absolute;left:18px;bottom:18px;right:18px;z-index:2;">
-              <div style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:2px;padding:5px 10px;background:rgba(239,68,68,0.2);color:#EF4444;border:1px solid rgba(239,68,68,0.5);border-radius:4px;margin-bottom:10px;">✕ ${scene.left_label || '잘못된 방식'}</div>
+              <div style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:2px;padding:5px 10px;background:rgba(239,68,68,0.25);color:#FCA5A5;border:1px solid rgba(239,68,68,0.55);border-radius:4px;margin-bottom:10px;">✕ ${scene.left_label || '잘못된 방식'}</div>
               <div style="font-size:17px;font-weight:700;line-height:1.3;color:#fff;">${scene.left_text || ''}</div>
             </div>
           </div>
-          <div style="position:relative;overflow:hidden;background:rgba(16,185,129,0.08);">
-            ${scene.rightVideoUrl ? `<video src="${scene.rightVideoUrl}" autoplay muted playsinline loop style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.55;"></video>` : ''}
-            <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.3),rgba(0,0,0,0.7));"></div>
+          <div style="position:relative;overflow:hidden;background:${hasRightVideo ? 'rgba(16,185,129,0.08)' : 'linear-gradient(135deg,#064E3B,#022C22)'};">
+            ${hasRightVideo ? `<video src="${scene.rightVideoUrl}" autoplay muted playsinline loop style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.55;"></video>` : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:88px;opacity:0.18;color:#10B981;">✓</div>`}
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,${hasRightVideo ? '0.3' : '0.45'}),rgba(0,0,0,${hasRightVideo ? '0.7' : '0.8'}));"></div>
             <div style="position:absolute;left:18px;bottom:18px;right:18px;z-index:2;">
-              <div style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:2px;padding:5px 10px;background:rgba(16,185,129,0.2);color:#10B981;border:1px solid rgba(16,185,129,0.5);border-radius:4px;margin-bottom:10px;">✓ ${scene.right_label || '올바른 방식'}</div>
+              <div style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:2px;padding:5px 10px;background:rgba(16,185,129,0.25);color:#6EE7B7;border:1px solid rgba(16,185,129,0.55);border-radius:4px;margin-bottom:10px;">✓ ${scene.right_label || '올바른 방식'}</div>
               <div style="font-size:17px;font-weight:700;line-height:1.3;color:#fff;">${scene.right_text || ''}</div>
             </div>
           </div>
@@ -733,6 +735,20 @@ const SlidePlayer = (() => {
       // 4) 인포그래픽 — steps 없고 이미지만 있는 경우 (기존 방식)
       else if (scene.type === 'infographic' && scene.imageUrl) {
         vis.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:100%;object-fit:contain;background:#0A0A0A;" alt="infographic">`;
+      }
+      // 4b) stat — 비디오/이미지 없을 때 순수 CSS (거대 숫자 + 그라디언트)
+      else if (scene.type === 'stat') {
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;background:radial-gradient(ellipse at center,#1E293B 0%,#0A0A0A 70%);overflow:hidden;">
+          <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(16,185,129,0.08) 0%,transparent 50%,rgba(59,130,246,0.06) 100%);pointer-events:none;"></div>
+          ${scene.tag ? `<div style="font-size:11px;font-weight:800;letter-spacing:4px;color:#10B981;margin-bottom:18px;text-transform:uppercase;animation:fadeIn 0.5s 0.3s both;">${scene.tag}</div>` : ''}
+          <div style="font-size:140px;font-weight:900;line-height:0.85;background:linear-gradient(180deg,#fff,#64748B);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.04em;animation:popIn 0.8s 0.5s both;">${scene.number || ''}</div>
+          ${scene.unit ? `<div style="font-size:24px;font-weight:700;color:#FBBF24;margin-top:8px;animation:fadeIn 0.5s 1.0s both;">${scene.unit}</div>` : ''}
+          <div style="font-size:16px;font-weight:500;color:rgba(255,255,255,0.75);margin-top:22px;max-width:360px;line-height:1.5;animation:fadeIn 0.5s 1.3s both;">${scene.context || ''}</div>
+          <style>
+            @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+            @keyframes popIn { from { opacity:0; transform:scale(0.7); } to { opacity:1; transform:scale(1); } }
+          </style>
+        </div>`;
       }
       // 5) 타이틀 카드 — 텍스트 애니메이션
       else if (scene.type === 'title_card') {

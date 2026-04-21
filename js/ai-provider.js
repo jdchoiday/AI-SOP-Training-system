@@ -522,14 +522,30 @@ type에 맞지 않는 필드는 생략 가능.
     const isEnglish = !hasVietnamese && /^[\x00-\x7F\s.,!?;:'"()\-\d\n]+$/.test(plainText.slice(0, 300));
     const lang = hasVietnamese ? 'Vietnamese' : isEnglish ? 'English' : 'Korean';
 
-    const prompt = `당신은 교육 영상 다큐멘터리 기획자입니다. 어떤 자료든 받아서 "영상 교재로서 효과적인지"를 판단하고 구조를 설계합니다.
+    const prompt = `당신은 교육 영상 다큐멘터리 기획자입니다. 슬라이드 중심의 교육자료를 설계하되, 필요할 때만 실사 영상을 사용합니다.
 
 [자료 제목] ${sopTitle}
 [자료 내용]
 ${plainText.slice(0, 6000)}
 
 [미션]
-이 자료를 보고 영상 다큐멘터리 구조를 설계하세요. 원문 그대로가 아니라 "학습자가 6분 안에 이해하고 기억에 남는" 구조여야 합니다.
+학습자가 6분 안에 이해하고 기억에 남는 "슬라이드 우세 교육 구조"를 설계하세요. 실사 영상(video_scenario)은 오직 사람의 물리적 동작·표정·환경을 직접 보여줘야만 이해 가능한 씬에만 사용합니다.
+
+═══ 씬 타입 선택 기준 (반드시 순서대로 체크) ═══
+
+각 씬마다 다음 순서로 자가질문하여 type 결정:
+
+1. 핵심이 **숫자·%·통계**인가? → \`stat\`
+2. **명시적 2개 대비** (올바른 vs 잘못된, Before vs After)가 있는가? → \`comparison\`
+3. **순서 있는 단계·프로세스·체크리스트**인가? (3~5단계) → \`infographic\`
+4. **오프닝·챕터전환·마무리**인가? → \`title_card\`
+5. **사람의 실제 동작·표정·환경을 직접 보여줘야만** 메시지 전달이 가능한가? (예: "교사가 아이 눈높이에 앉기", "올바른 손 씻기 시연") → \`video_scenario\`
+6. 위 1~5에 해당 없음 → \`title_card\` (기본 폴백)
+
+★ video_scenario 엄격화 ★
+- ✅ 허용: "텍스트로는 전달 불가능한 물리적 동작/환경"
+- ❌ 금지: "영상이 있으면 몰입감 좋겠다" 수준의 판단
+- 교육 콘텐츠 전체에서 video_scenario는 **20~30% 이내** (나머지는 슬라이드)
 
 [출력 규칙]
 반드시 다음 JSON 한 개만 출력 (배열 아님):
@@ -544,22 +560,24 @@ ${plainText.slice(0, 6000)}
   "core_messages": ["핵심 메시지 1", "핵심 메시지 2", "핵심 메시지 3"],
   "scene_count": 7~10 사이 추천 (숫자),
   "story_arc": [
-    { "scene": 1, "purpose": "hook", "type": "title_card", "idea": "이 씬에서 전달할 핵심 한 줄" },
-    { "scene": 2, "purpose": "why_it_matters", "type": "stat", "idea": "..." },
-    { "scene": 3, "purpose": "core_1", "type": "video_scenario", "idea": "..." }
+    { "scene": 1, "purpose": "hook", "type": "title_card", "idea": "이 씬에서 전달할 핵심 한 줄", "why_this_type": "오프닝이므로 title_card" },
+    { "scene": 2, "purpose": "why_it_matters", "type": "stat", "idea": "...", "why_this_type": "핵심이 3세 어휘력 300단어라는 숫자" },
+    { "scene": 3, "purpose": "core_1", "type": "infographic", "idea": "4단계 읽기 방법", "why_this_type": "순서 있는 단계" }
   ],
   "★ type은 반드시 아래 5개 중 하나만 사용 (다른 값 금지) ★": "title_card | video_scenario | infographic | stat | comparison",
+  "★ why_this_type 필수 — 6단계 선택 기준 어느 항목에 해당하는지 ★": true,
   "language": "${lang}",
   "duration_estimate_seconds": 180
 }
 
 [판단 기준]
 - 원문이 200자 미만이거나 내용이 단편적이면 viable: false
-- 원문이 법률/약관 같은 딱딱한 텍스트면 viable: true지만 스토리 아크에 예시/스텟 강화
 - scene_count는 원문 길이에 비례: 200자=5씬, 1000자=8씬, 3000자+=10씬 (최대 10)
 - 원문에서 핵심 메시지 3~5개를 뽑아 story_arc 설계
-- 같은 type 3개 연속 금지 (title→stat→video→infographic→video→comparison→video→title 식으로 다양화)
 - 첫 씬은 반드시 title_card (hook), 마지막 씬은 title_card (요약/전환)
+- **슬라이드 비율 목표: title_card + infographic + stat + comparison = 전체 70~80%**
+- **video_scenario 는 전체 20~30% 이내 (동작·시연이 반드시 필요한 씬만)**
+- 같은 type 3개 연속 금지
 
 JSON만 출력, 마크다운/설명 금지.`;
 
@@ -629,22 +647,25 @@ ${plainText.slice(0, 8000)}
 
 ═══ 작성 규칙 ═══
 
-★ 원칙 1 — 문장 분류
-A. CONCRETE — 물리적 행동/실제 사물 → video_scenario 또는 comparison
-B. ABSTRACT — 개념/수치/관계 → stat 또는 infographic (일반 스톡 금지)
-C. EMOTIONAL — 태도/감정 → title_card 또는 분위기 video_scenario
+★ 원칙 1 — 슬라이드 우세 (title_card/stat/infographic/comparison)
+이 4개 타입은 **순수 CSS로 브라우저가 렌더링**합니다. 외부 이미지·영상 불필요.
+→ video_keywords 필드 작성 금지 (stat/comparison 포함)
 
-★ 원칙 2 — 나레이션/비주얼/오버레이는 다른 정보 전달
+★ 원칙 2 — video_scenario만 실사 영상 사용
+사람의 동작·표정·환경을 직접 보여줘야만 이해 가능한 씬에만 사용.
+→ video_keywords 필드 반드시 작성
+
+★ 원칙 3 — 나레이션/비주얼/오버레이는 다른 정보 전달
 caption/overlay_text는 자막 반복 금지. 숫자·기호·핵심 단어 1개 앵커.
 
-★ 5가지 씬 타입
-- title_card: { kicker, title_main, title_sub } — 도입/마무리
-- video_scenario: { narration, video_keywords:[영어 3개], caption, tag, message_type } — 실사 영상
-- infographic: { header_tag, header_title, steps:[3~5개], visual } — 단계/체크리스트
-- stat: { tag, number, unit, context, video_keywords } — 큰 숫자 강조
-- comparison: { left_label, left_text, left_video_keywords, right_label, right_text, right_video_keywords } — BEFORE/AFTER
+★ 5가지 씬 타입 (각 타입별 필수 필드)
+- title_card: { narration, kicker, title_main, title_sub } — 도입/마무리. 타이포그래피가 주인공.
+- infographic: { narration, header_tag, header_title, steps:[3~5개 문자열] } — 단계/체크리스트. CSS 카드.
+- stat: { narration, tag, number, unit, context } — 거대 숫자. **video_keywords 금지**.
+- comparison: { narration, left_label, left_text, right_label, right_text } — BEFORE/AFTER. CSS 2분할. **video_keywords 금지**.
+- video_scenario: { narration, video_keywords:[영어 3개], caption, tag, message_type } — 실사 영상. **video_keywords 필수**.
 
-★ video_keywords 작성 핵심 (★★매우 엄격★★)
+★ video_keywords 작성 핵심 (★★매우 엄격★★ — video_scenario에만 적용)
 - 영어 3개, 각 키워드는 **공백으로 구분된 4~8 단어의 자연어 구문** (camelCase/PascalCase/한 단어 절대 금지)
 - ★★ 반드시 "${plan.region}" 수식어 포함 (${plan.region === 'korean' ? 'korean 또는 asian' : plan.region === 'vietnamese' ? 'vietnamese 또는 asian' : 'asian'})
 - ★★ 페르소나 "${plan.persona}" 반영한 상황/주체/장소
@@ -748,18 +769,18 @@ JSON 배열만 출력:`;
       if (Array.isArray(scene.left_video_keywords)) scene.left_video_keywords = normalizeKwArray(scene.left_video_keywords);
       if (Array.isArray(scene.right_video_keywords)) scene.right_video_keywords = normalizeKwArray(scene.right_video_keywords);
 
-      if (['video_scenario', 'stat'].includes(scene.type) && (!scene.video_keywords || scene.video_keywords.length === 0)) {
+      // video_scenario만 Pexels 키워드 필요 (slide-dominant 설계)
+      // stat/comparison/infographic/title_card는 순수 CSS 렌더 → 외부 에셋 불필요
+      if (scene.type === 'video_scenario' && (!scene.video_keywords || scene.video_keywords.length === 0)) {
         scene.video_keywords = normalizeKwArray(this._narrationToKeywords(scene.narration || ''));
       }
-      if (scene.type === 'comparison') {
-        if (!scene.left_video_keywords) scene.left_video_keywords = normalizeKwArray(this._narrationToKeywords(scene.left_text || scene.narration || ''));
-        if (!scene.right_video_keywords) scene.right_video_keywords = normalizeKwArray(this._narrationToKeywords(scene.right_text || scene.narration || ''));
+      // stat: 슬라이드 렌더이지만 AI가 video_keywords 줬으면 정규화만 (사용은 admin에서 결정)
+      if (scene.type === 'stat' && Array.isArray(scene.video_keywords)) {
+        scene.video_keywords = normalizeKwArray(scene.video_keywords);
       }
-      if (scene.type === 'infographic' && (!scene.visual || scene.visual.length < 30)) {
-        scene.visual = window.ScenePrompts
-          ? window.ScenePrompts.narrationToPrompt(scene.narration || '', '', { withCamera: false })
-          : this._narrationToVisual(scene.narration || '', '');
-      }
+      // comparison: AI가 명시적으로 left/right_video_keywords 줬을 때만 유지 (자동 주입 안 함)
+      // 기본은 순수 CSS 2분할
+      // infographic은 순수 CSS (steps 배열 기반). visual 필드 자동 생성 불필요.
       if (scene.type === 'title_card') {
         if (!scene.kicker) scene.kicker = `Scene ${scene.scene}`;
         if (!scene.title_main) scene.title_main = (scene.narration || '').slice(0, 30);

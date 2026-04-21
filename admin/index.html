@@ -4283,23 +4283,44 @@ Output ONLY the prompt, nothing else.`;
           }
         });
 
-        // 씬 타입별 분류
+        // 씬 타입별 분류 — Slide-dominant 정책:
+        // • video_scenario: 항상 Pexels 검색
+        // • stat/comparison: AI가 명시적으로 video_keywords 줬을 때만 Pexels (없으면 순수 CSS 렌더)
+        // • infographic: steps 있으면 순수 CSS, 없고 imageUrl 없으면 AI 이미지
+        // • title_card: 항상 순수 CSS
         const videoScenes = sop.script
           .map((s, i) => ({ scene: s, idx: i }))
-          .filter(x => ['video_scenario', 'stat', 'comparison'].includes(x.scene.type) && !x.scene.videoUrl);
+          .filter(x => {
+            const sc = x.scene;
+            if (sc.videoUrl) return false;
+            if (sc.type === 'video_scenario') return true;
+            if (sc.type === 'stat') return Array.isArray(sc.video_keywords) && sc.video_keywords.length > 0;
+            if (sc.type === 'comparison') {
+              const hasL = Array.isArray(sc.left_video_keywords) && sc.left_video_keywords.length > 0;
+              const hasR = Array.isArray(sc.right_video_keywords) && sc.right_video_keywords.length > 0;
+              return hasL || hasR;
+            }
+            return false;
+          });
         const infographicScenes = sop.script
           .map((s, i) => ({ scene: s, idx: i }))
-          .filter(x => x.scene.type === 'infographic' && !x.scene.imageUrl);
+          .filter(x => x.scene.type === 'infographic' && !x.scene.imageUrl && (!Array.isArray(x.scene.steps) || x.scene.steps.length === 0));
         const titleScenes = sop.script.filter(s => s.type === 'title_card').length;
+        const pureSlideScenes = sop.script.filter(s =>
+          s.type === 'title_card' ||
+          (s.type === 'stat' && !(Array.isArray(s.video_keywords) && s.video_keywords.length > 0)) ||
+          (s.type === 'comparison' && !((Array.isArray(s.left_video_keywords) && s.left_video_keywords.length > 0) || (Array.isArray(s.right_video_keywords) && s.right_video_keywords.length > 0))) ||
+          (s.type === 'infographic' && Array.isArray(s.steps) && s.steps.length > 0)
+        ).length;
 
         const totalToGen = videoScenes.length + infographicScenes.length;
 
         if (totalToGen === 0) {
           const withVideo = sop.script.filter(s=>s.videoUrl).length;
           const withImage = sop.script.filter(s=>s.imageUrl).length;
-          const totalReady = withVideo + withImage + titleScenes;
-          if (totalReady === sop.script.length) {
-            alert(`모든 씬에 영상/이미지가 준비되어 있습니다.\n\n총 씬: ${sop.script.length}\n  • 영상: ${withVideo}\n  • 인포그래픽: ${withImage}\n  • 타이틀: ${titleScenes}`);
+          const totalReady = withVideo + withImage + pureSlideScenes;
+          if (totalReady >= sop.script.length) {
+            alert(`모든 씬이 준비되어 있습니다.\n\n총 씬: ${sop.script.length}\n  • 실사 영상: ${withVideo}\n  • 이미지: ${withImage}\n  • 순수 CSS 슬라이드: ${pureSlideScenes}`);
           } else {
             const typeCounts = {};
             sop.script.forEach(s => { const t = s.type || '(없음)'; typeCounts[t] = (typeCounts[t] || 0) + 1; });
@@ -4311,7 +4332,7 @@ Output ONLY the prompt, nothing else.`;
         }
 
         const contextLabel = sopContext.locale === 'vietnamese' ? '🇻🇳 베트남' : sopContext.locale === 'korean' ? '🇰🇷 한국' : '🌏 일반 아시아';
-        console.log(`[Video Gen] 자동 시작 — ${contextLabel} / 영상 ${videoScenes.length}, 인포 ${infographicScenes.length}, 타이틀 ${titleScenes}`);
+        console.log(`[Video Gen] 자동 시작 — ${contextLabel} / Pexels 영상 ${videoScenes.length}씬, AI 이미지 ${infographicScenes.length}씬, 순수 CSS 슬라이드 ${pureSlideScenes}씬`);
 
         // 진행 상태 UI
         const progressId = 'videoGenProgress';
