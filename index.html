@@ -272,14 +272,22 @@
 
       try {
         let user = null;
+        let supabaseAuthOk = false;
 
-        // Supabase 모드: DB에서 직원 조회
+        // 1차: Supabase Auth 로그인 (성공 시 auth 세션 수립됨 → RLS 통과)
         if (SupabaseMode._ready) {
           user = await SupabaseMode.login(email, password);
+          if (user) supabaseAuthOk = true;
         }
 
-        // Supabase에서 못 찾으면 데모 로그인 시도
+        // 2차 폴백: Supabase Auth 실패 시에만 데모 로그인 (세션 없음 → RLS 쓰기 실패)
+        // 관리자 계정은 Supabase Auth 필수 — 데모 폴백 차단
         if (!user) {
+          const isAdminEmail = email === 'admin@test.com' || email === 'manager@test.com';
+          if (isAdminEmail && SupabaseMode._ready) {
+            // 관리자는 반드시 Supabase Auth 통과해야 함. 폴백 금지.
+            throw new Error('admin_auth_required');
+          }
           if (email === 'admin@test.com' && password === '1234') {
             user = { id: 'demo-admin', email, role: 'admin', name: '관리자', adminRole: 'superadmin' };
           } else if (email === 'manager@test.com' && password === '1234') {
@@ -303,6 +311,12 @@
 
         if (!user) throw new Error('invalid');
 
+        // 관리자 로그인 시 Supabase Auth 세션 확인 (RLS 쓰기 보호)
+        if (user.role === 'admin' && SupabaseMode._ready && !supabaseAuthOk) {
+          console.error('[Auth] ❌ 관리자 Supabase Auth 세션 없음 — RLS 쓰기 불가');
+          throw new Error('admin_auth_required');
+        }
+
         // 로그인 성공 → 세션 저장
         localStorage.setItem('sop_user', JSON.stringify(user));
         localStorage.setItem('sop_login_time', Date.now().toString());
@@ -321,9 +335,15 @@
 
       } catch (err) {
         const t = TEXTS[currentLang];
-        errorDiv.textContent = err.message === 'invalid'
-          ? t.errorInvalid
-          : t.errorNetwork;
+        let msg;
+        if (err.message === 'invalid') {
+          msg = t.errorInvalid;
+        } else if (err.message === 'admin_auth_required') {
+          msg = '관리자 계정은 Supabase Auth 로그인이 필요합니다. 비밀번호를 확인하거나 관리자에게 문의하세요.';
+        } else {
+          msg = t.errorNetwork;
+        }
+        errorDiv.textContent = msg;
         errorDiv.style.display = 'block';
       } finally {
         btn.disabled = false;

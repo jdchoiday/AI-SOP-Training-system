@@ -337,6 +337,22 @@ const SupabaseMode = {
 
   async saveAllSops(sops) {
     if (!this._ready) return;
+
+    // Auth 세션 사전 점검 — 세션 없으면 RLS 전량 실패하므로 조기 중단
+    try {
+      const { data: { session } } = await this._client.auth.getSession();
+      if (!session) {
+        console.error('[Supabase] ❌ Auth 세션 없음 — SOP 저장 중단. 관리자 계정으로 다시 로그인하세요.');
+        if (typeof window !== 'undefined' && !window.__sopAuthWarned) {
+          window.__sopAuthWarned = true;
+          alert('⚠️ 로그인 세션이 만료되었습니다.\nSOP가 DB에 저장되지 않습니다.\n다시 로그인해주세요.');
+        }
+        return;
+      }
+    } catch (e) {
+      console.warn('[Supabase] Auth 세션 확인 실패:', e.message);
+    }
+
     let ok = 0, fail = 0;
     for (const sop of sops) {
       try {
