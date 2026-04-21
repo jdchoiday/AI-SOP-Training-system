@@ -895,10 +895,27 @@ const SlidePlayer = (() => {
           </style>
         </div>`;
       }
-      // 11) keypoint — 1문장 풀스크린 강조
-      else if (scene.type === 'keypoint') {
-        const highlight = scene.highlight_text || scene.narration || '';
+      // 11a) keypoint narration-only — 자막이 텍스트 담당, 비주얼은 thematic 아이콘 카드 (중복 방지)
+      else if (scene.type === 'keypoint' && scene._narrationOnly) {
         const icon = scene.icon || '💡';
+        const sceneTag = scene.tag || `포인트 ${scene.scene || ''}`.trim();
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:32px 24px;background:radial-gradient(ellipse at top,#1E3A8A 0%,#0F172A 50%,#000 100%);text-align:center;overflow:hidden;">
+          <div style="position:absolute;inset:0;background:radial-gradient(circle at center,rgba(16,185,129,0.12),transparent 60%);pointer-events:none;"></div>
+          <div style="position:absolute;top:-30px;right:-30px;font-size:260px;opacity:0.06;line-height:1;">${icon}</div>
+          <div style="font-size:11px;font-weight:800;letter-spacing:4px;color:#10B981;margin-bottom:22px;text-transform:uppercase;animation:fadeIn 0.5s 0.3s both;position:relative;z-index:1;">${sceneTag}</div>
+          <div style="font-size:120px;filter:drop-shadow(0 8px 32px rgba(16,185,129,0.5));animation:popIn 0.8s 0.5s both;position:relative;z-index:1;">${icon}</div>
+          <div style="width:48px;height:2px;background:#10B981;margin:26px 0 0;animation:expandLine 0.5s 1.0s both;"></div>
+          <style>
+            @keyframes popIn { from { opacity:0; transform: scale(0.7); } to { opacity:1; transform: scale(1); } }
+            @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+            @keyframes expandLine { from { width:0; } to { width:48px; } }
+          </style>
+        </div>`;
+      }
+      // 11b) keypoint — 1문장 풀스크린 강조
+      else if (scene.type === 'keypoint') {
+        const icon = scene.icon || '💡';
+        const highlight = scene.highlight_text || '';
         vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:32px 24px;background:radial-gradient(ellipse at top,#1E3A8A 0%,#0F172A 50%,#000 100%);text-align:center;overflow:hidden;">
           <div style="position:absolute;inset:0;background:radial-gradient(circle at center,rgba(16,185,129,0.12),transparent 60%);pointer-events:none;"></div>
           <div style="position:absolute;top:-30px;right:-30px;font-size:240px;opacity:0.05;line-height:1;">${icon}</div>
@@ -913,30 +930,21 @@ const SlidePlayer = (() => {
           </style>
         </div>`;
       }
-      // 12) 폴백: 기존 이미지 또는 신규 생성
+      // 12) 폴백: 기존 이미지
       else if (scene.imageUrl) {
         vis.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:auto;max-height:80vh;object-fit:contain;display:block;margin:0 auto;border-radius:8px;" alt="scene">`;
       }
-      // 7) 비주얼 자산 전혀 없음 — 나레이션 전용 텍스트 카드
-      else if (!scene.visual && !scene.narration) {
-        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;background:linear-gradient(135deg,#1E293B,#0F172A);text-align:center;padding:32px;min-height:280px;">
-          <div style="font-size:48px;margin-bottom:16px;opacity:0.5;">📄</div>
-          <div style="font-size:14px;color:#94A3B8;">빈 씬</div>
-        </div>`;
-      }
-      else if (scene.visual || (scene.type === 'video_scenario' && !scene.videoUrl && !scene.imageUrl)) {
-        // 비주얼 자산 미생성 상태 — 나레이션 텍스트 카드로 대체
-        const snippet = (scene.narration || scene.visual || '').slice(0, 200);
-        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;background:linear-gradient(135deg,#1E293B,#0F172A);text-align:center;padding:32px 28px;min-height:280px;">
-          <div style="font-size:40px;margin-bottom:14px;opacity:0.6;">🎬</div>
-          <div style="font-size:10px;font-weight:800;letter-spacing:3px;color:#10B981;margin-bottom:14px;">VISUAL PENDING</div>
-          <div style="font-size:15px;font-weight:500;color:rgba(255,255,255,0.85);line-height:1.5;max-width:420px;">${_escHtml(snippet)}</div>
-          <div style="font-size:11px;color:#64748B;margin-top:16px;">관리자: "🎬 영상 생성" 버튼으로 비주얼을 생성하세요</div>
-        </div>`;
-      }
+      // 13) 최종 폴백 — 정규화 이후 여기 도달하면 빈 씬 또는 예상치 못한 타입
+      // VISUAL PENDING 제거: SceneNormalizer 가 모든 씬을 렌더링 가능한 타입으로 보장
       else {
-        _currentImagePromise = _loadSceneImage(scene.visual, scene.narration);
-        _preloadNextImage();
+        const icon = scene.icon || '📄';
+        const sceneTag = scene.tag || `씬 ${scene.scene || ''}`.trim();
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:32px 24px;background:radial-gradient(ellipse at top,#1E3A8A 0%,#0F172A 50%,#000 100%);text-align:center;overflow:hidden;">
+          <div style="position:absolute;inset:0;background:radial-gradient(circle at center,rgba(16,185,129,0.12),transparent 60%);pointer-events:none;"></div>
+          <div style="font-size:11px;font-weight:800;letter-spacing:4px;color:#10B981;margin-bottom:22px;text-transform:uppercase;">${sceneTag}</div>
+          <div style="font-size:120px;filter:drop-shadow(0 8px 32px rgba(16,185,129,0.5));">${icon}</div>
+          <div style="width:48px;height:2px;background:#10B981;margin:26px 0 0;"></div>
+        </div>`;
       }
     }
 
@@ -1854,6 +1862,10 @@ const SlidePlayer = (() => {
     if (!sop || !sop.script || sop.script.length === 0) {
       console.error('SlidePlayer: No script found for SOP', sopId);
       return;
+    }
+    // 씬 정규화 — 레거시 타입 변환, 필드 자동 보충, 미렌더링 가능 씬 keypoint 로 강등
+    if (typeof SceneNormalizer !== 'undefined') {
+      SceneNormalizer.normalizeScript(sop.script);
     }
     scenes = sop.script;
 

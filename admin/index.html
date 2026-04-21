@@ -1361,6 +1361,7 @@
   <script src="../js/demo-data.js"></script>
   <script src="../js/xp-system.js"></script>
   <script src="../js/xp-ui.js"></script>
+  <script src="../js/scene-normalizer.js"></script>
   <script src="../js/slide-player.js"></script>
   <script>
     // ===== 관리자 확인 =====
@@ -2128,24 +2129,8 @@
         return;
       }
 
-      // 10종 슬라이드 타입 정규화 — 레거시 video_scenario → keypoint
-      const VALID_TYPES = [
-        'title_card', 'stat', 'barchart', 'rankingBoard', 'comparison',
-        'infographic', 'iconGrid', 'conceptExplainer', 'quote', 'keypoint'
-      ];
-      const LEGACY_FALLBACK = { video_scenario: 'keypoint' };
-      targets.forEach(s => {
-        s.script.forEach((sc, idx) => {
-          if (sc.type && LEGACY_FALLBACK[sc.type]) sc.type = LEGACY_FALLBACK[sc.type];
-          if (!sc.type || !VALID_TYPES.includes(sc.type)) {
-            sc.type = (idx === 0 || idx === s.script.length - 1) ? 'title_card' : 'keypoint';
-          }
-          delete sc.video_keywords;
-          delete sc.left_video_keywords;
-          delete sc.right_video_keywords;
-          delete sc.search_layers;
-        });
-      });
+      // SceneNormalizer 로 10종 타입 정규화 + 필드 자동 보충 + 레거시 필드 제거
+      targets.forEach(s => SceneNormalizer.normalizeScript(s.script));
 
       // Pexels 영상 사용 중단 → 전부 순수 CSS 또는 AI 이미지 (infographic 한정)
       let totalVideo = 0, totalInfo = 0;
@@ -4279,26 +4264,8 @@ Output ONLY the prompt, nothing else.`;
         }
         console.log('[Phase 2] SOP context:', sopContext);
 
-        // 10종 슬라이드 타입 정규화 — 레거시 video_scenario → keypoint 로 변환
-        // Pexels 영상은 더 이상 사용하지 않음 (전부 순수 CSS 렌더링)
-        const VALID_TYPES = [
-          'title_card', 'stat', 'barchart', 'rankingBoard', 'comparison',
-          'infographic', 'iconGrid', 'conceptExplainer', 'quote', 'keypoint'
-        ];
-        const LEGACY_FALLBACK = { video_scenario: 'keypoint' };
-        sop.script.forEach((sc, idx) => {
-          if (sc.type && LEGACY_FALLBACK[sc.type]) {
-            sc.type = LEGACY_FALLBACK[sc.type];
-          }
-          if (!sc.type || !VALID_TYPES.includes(sc.type)) {
-            sc.type = (idx === 0 || idx === sop.script.length - 1) ? 'title_card' : 'keypoint';
-          }
-          // Pexels 영상 관련 필드 제거 (더 이상 사용 안 함)
-          delete sc.video_keywords;
-          delete sc.left_video_keywords;
-          delete sc.right_video_keywords;
-          delete sc.search_layers;
-        });
+        // SceneNormalizer 로 10종 타입 정규화 + 필드 자동 보충 + 레거시 필드 제거
+        SceneNormalizer.normalizeScript(sop.script);
 
         // 씬 타입별 분류 — 전부 순수 CSS 렌더링 (Pexels 영상 사용 안 함)
         // • infographic: steps 없고 imageUrl 없으면 AI 이미지 (fallback)

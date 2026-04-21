@@ -1,6 +1,6 @@
 // Service Worker — 오프라인 캐싱 + 자동 업데이트 전략
 // CACHE_NAME은 배포마다 변경되어야 함 (Vercel 배포 시 타임스탬프 주입 권장)
-const CACHE_VERSION = 'v14-20260421-kill-pexels';
+const CACHE_VERSION = 'v15-20260421-scene-normalizer';
 const CACHE_NAME = `sop-training-${CACHE_VERSION}`;
 const HTML_CACHE = `sop-html-${CACHE_VERSION}`;
 
@@ -11,6 +11,7 @@ const STATIC_ASSETS = [
   '/js/supabase-client.js',
   '/js/sop-content-kids.js',
   '/js/demo-data.js',
+  '/js/scene-normalizer.js',
   '/js/slide-player.js',
   '/js/xp-system.js',
   '/js/xp-ui.js',
@@ -64,6 +65,9 @@ self.addEventListener('notificationclick', e => {
 
 self.addEventListener('fetch', e => {
   const url = e.request.url;
+
+  // http(s) 가 아닌 스킴 (chrome-extension:, moz-extension:, data:, blob:) 은 캐시 불가
+  if (!url.startsWith('http://') && !url.startsWith('https://')) return;
 
   // localhost 개발 환경: SW 개입 없음
   if (url.includes('localhost')) return;
