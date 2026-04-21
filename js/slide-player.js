@@ -696,18 +696,20 @@ const SlidePlayer = (() => {
       else if (scene.type === 'comparison') {
         const hasLeftVideo = !!scene.leftVideoUrl;
         const hasRightVideo = !!scene.rightVideoUrl;
+        const leftIcon = scene.left_icon || '🚫';
+        const rightIcon = scene.right_icon || '✨';
         vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:grid;grid-template-rows:1fr 1fr;gap:3px;background:#000;">
           <div style="position:relative;overflow:hidden;background:${hasLeftVideo ? 'rgba(239,68,68,0.08)' : 'linear-gradient(135deg,#7F1D1D,#450A0A)'};">
-            ${hasLeftVideo ? `<video src="${scene.leftVideoUrl}" autoplay muted playsinline loop style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.55;"></video>` : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:88px;opacity:0.18;color:#EF4444;">✕</div>`}
-            <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,${hasLeftVideo ? '0.3' : '0.45'}),rgba(0,0,0,${hasLeftVideo ? '0.7' : '0.8'}));"></div>
+            ${hasLeftVideo ? `<video src="${scene.leftVideoUrl}" autoplay muted playsinline loop style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.55;"></video>` : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:120px;opacity:0.28;">${leftIcon}</div>`}
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,${hasLeftVideo ? '0.3' : '0.4'}),rgba(0,0,0,${hasLeftVideo ? '0.7' : '0.75'}));"></div>
             <div style="position:absolute;left:18px;bottom:18px;right:18px;z-index:2;">
               <div style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:2px;padding:5px 10px;background:rgba(239,68,68,0.25);color:#FCA5A5;border:1px solid rgba(239,68,68,0.55);border-radius:4px;margin-bottom:10px;">✕ ${scene.left_label || '잘못된 방식'}</div>
               <div style="font-size:17px;font-weight:700;line-height:1.3;color:#fff;">${scene.left_text || ''}</div>
             </div>
           </div>
           <div style="position:relative;overflow:hidden;background:${hasRightVideo ? 'rgba(16,185,129,0.08)' : 'linear-gradient(135deg,#064E3B,#022C22)'};">
-            ${hasRightVideo ? `<video src="${scene.rightVideoUrl}" autoplay muted playsinline loop style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.55;"></video>` : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:88px;opacity:0.18;color:#10B981;">✓</div>`}
-            <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,${hasRightVideo ? '0.3' : '0.45'}),rgba(0,0,0,${hasRightVideo ? '0.7' : '0.8'}));"></div>
+            ${hasRightVideo ? `<video src="${scene.rightVideoUrl}" autoplay muted playsinline loop style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.55;"></video>` : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:120px;opacity:0.28;">${rightIcon}</div>`}
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,${hasRightVideo ? '0.3' : '0.4'}),rgba(0,0,0,${hasRightVideo ? '0.7' : '0.75'}));"></div>
             <div style="position:absolute;left:18px;bottom:18px;right:18px;z-index:2;">
               <div style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:2px;padding:5px 10px;background:rgba(16,185,129,0.25);color:#6EE7B7;border:1px solid rgba(16,185,129,0.55);border-radius:4px;margin-bottom:10px;">✓ ${scene.right_label || '올바른 방식'}</div>
               <div style="font-size:17px;font-weight:700;line-height:1.3;color:#fff;">${scene.right_text || ''}</div>
@@ -717,18 +719,23 @@ const SlidePlayer = (() => {
       }
       // 3) 인포그래픽 (steps 배열 기반) — 텍스트 단계 표시 (이미지 있으면 같이)
       else if (scene.type === 'infographic' && scene.steps && scene.steps.length > 0) {
-        const stepsHtml = scene.steps.map((s, i) => `
+        const stepIcons = Array.isArray(scene.step_icons) ? scene.step_icons : [];
+        const stepsHtml = scene.steps.map((s, i) => {
+          const ic = stepIcons[i] || '';
+          return `
           <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-left:4px solid #10B981;border-radius:10px;animation:fadeUp 0.5s ${(i*0.3)+0.4}s both;">
-            <div style="flex-shrink:0;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#10B981,#047857);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#fff;box-shadow:0 4px 12px rgba(16,185,129,0.35);">${i+1}</div>
+            <div style="flex-shrink:0;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#10B981,#047857);display:flex;align-items:center;justify-content:center;font-size:${ic ? '22px' : '17px'};font-weight:900;color:#fff;box-shadow:0 4px 12px rgba(16,185,129,0.35);">${ic || (i+1)}</div>
             <div style="flex:1;font-size:15px;font-weight:600;color:#fff;line-height:1.4;">${s}</div>
-          </div>
-        `).join('');
-        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;padding:32px 20px;background:linear-gradient(135deg,#0A0A0A,#1E293B,#0A0A0A);">
-          <div style="margin-bottom:24px;">
+          </div>`;
+        }).join('');
+        const headerIcon = scene.icon || '📋';
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;padding:32px 20px;background:linear-gradient(135deg,#0A0A0A,#1E293B,#0A0A0A);overflow:hidden;">
+          <div style="position:absolute;top:-20px;right:-20px;font-size:180px;opacity:0.06;line-height:1;pointer-events:none;">${headerIcon}</div>
+          <div style="margin-bottom:24px;position:relative;z-index:1;">
             ${scene.header_tag ? `<div style="font-size:10px;font-weight:800;letter-spacing:3px;color:#10B981;margin-bottom:8px;text-transform:uppercase;">${scene.header_tag}</div>` : ''}
             ${scene.header_title ? `<div style="font-size:24px;font-weight:900;line-height:1.2;color:#fff;">${scene.header_title}</div>` : ''}
           </div>
-          <div style="display:flex;flex-direction:column;gap:10px;">${stepsHtml}</div>
+          <div style="display:flex;flex-direction:column;gap:10px;position:relative;z-index:1;">${stepsHtml}</div>
           <style>@keyframes fadeUp { from { opacity:0; transform: translateX(-20px); } to { opacity:1; transform: translateX(0); } }</style>
         </div>`;
       }
@@ -736,30 +743,34 @@ const SlidePlayer = (() => {
       else if (scene.type === 'infographic' && scene.imageUrl) {
         vis.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:100%;object-fit:contain;background:#0A0A0A;" alt="infographic">`;
       }
-      // 4b) stat — 비디오/이미지 없을 때 순수 CSS (거대 숫자 + 그라디언트)
+      // 4b) stat — 비디오/이미지 없을 때 순수 CSS (거대 숫자 + 그라디언트 + 배경 아이콘)
       else if (scene.type === 'stat') {
+        const bgIcon = scene.icon || '📊';
         vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;background:radial-gradient(ellipse at center,#1E293B 0%,#0A0A0A 70%);overflow:hidden;">
           <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(16,185,129,0.08) 0%,transparent 50%,rgba(59,130,246,0.06) 100%);pointer-events:none;"></div>
-          ${scene.tag ? `<div style="font-size:11px;font-weight:800;letter-spacing:4px;color:#10B981;margin-bottom:18px;text-transform:uppercase;animation:fadeIn 0.5s 0.3s both;">${scene.tag}</div>` : ''}
-          <div style="font-size:140px;font-weight:900;line-height:0.85;background:linear-gradient(180deg,#fff,#64748B);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.04em;animation:popIn 0.8s 0.5s both;">${scene.number || ''}</div>
-          ${scene.unit ? `<div style="font-size:24px;font-weight:700;color:#FBBF24;margin-top:8px;animation:fadeIn 0.5s 1.0s both;">${scene.unit}</div>` : ''}
-          <div style="font-size:16px;font-weight:500;color:rgba(255,255,255,0.75);margin-top:22px;max-width:360px;line-height:1.5;animation:fadeIn 0.5s 1.3s both;">${scene.context || ''}</div>
+          <div style="position:absolute;top:-40px;right:-40px;font-size:260px;opacity:0.07;line-height:1;pointer-events:none;animation:fadeIn 0.8s 0.2s both;">${bgIcon}</div>
+          ${scene.tag ? `<div style="font-size:11px;font-weight:800;letter-spacing:4px;color:#10B981;margin-bottom:18px;text-transform:uppercase;animation:fadeIn 0.5s 0.3s both;position:relative;z-index:1;">${scene.tag}</div>` : ''}
+          <div style="font-size:140px;font-weight:900;line-height:0.85;background:linear-gradient(180deg,#fff,#64748B);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.04em;animation:popIn 0.8s 0.5s both;position:relative;z-index:1;">${scene.number || ''}</div>
+          ${scene.unit ? `<div style="font-size:24px;font-weight:700;color:#FBBF24;margin-top:8px;animation:fadeIn 0.5s 1.0s both;position:relative;z-index:1;">${scene.unit}</div>` : ''}
+          <div style="font-size:16px;font-weight:500;color:rgba(255,255,255,0.75);margin-top:22px;max-width:360px;line-height:1.5;animation:fadeIn 0.5s 1.3s both;position:relative;z-index:1;">${scene.context || ''}</div>
           <style>
             @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
             @keyframes popIn { from { opacity:0; transform:scale(0.7); } to { opacity:1; transform:scale(1); } }
           </style>
         </div>`;
       }
-      // 5) 타이틀 카드 — 텍스트 애니메이션
+      // 5) 타이틀 카드 — 아이콘 + 텍스트 애니메이션
       else if (scene.type === 'title_card') {
-        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;background:#000;text-align:center;padding:32px;">
-          ${scene.kicker ? `<div style="font-size:11px;font-weight:800;letter-spacing:6px;color:#10B981;margin-bottom:24px;text-transform:uppercase;animation:fadeIn 0.6s 0.3s both;">${scene.kicker}</div>` : ''}
-          <div style="font-size:52px;font-weight:900;line-height:1;letter-spacing:-0.04em;color:#fff;margin-bottom:24px;animation:popIn 0.8s 0.6s both;">${scene.title_main || scene.narration || ''}</div>
+        const icon = scene.icon || '';
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;background:radial-gradient(ellipse at center,#0F172A 0%,#000 80%);text-align:center;padding:32px;overflow:hidden;">
+          ${icon ? `<div style="font-size:96px;margin-bottom:28px;animation:popIn 0.8s 0.2s both;filter:drop-shadow(0 6px 24px rgba(16,185,129,0.35));">${icon}</div>` : ''}
+          ${scene.kicker ? `<div style="font-size:11px;font-weight:800;letter-spacing:6px;color:#10B981;margin-bottom:20px;text-transform:uppercase;animation:fadeIn 0.6s 0.5s both;">${scene.kicker}</div>` : ''}
+          <div style="font-size:${icon ? '42px' : '52px'};font-weight:900;line-height:1.05;letter-spacing:-0.03em;color:#fff;margin-bottom:22px;max-width:480px;animation:popIn 0.8s 0.7s both;">${scene.title_main || scene.narration || ''}</div>
           <div style="width:60px;height:2px;background:#10B981;margin-bottom:18px;animation:expandLine 0.6s 1.3s both;"></div>
           ${scene.title_sub ? `<div style="font-size:13px;font-weight:500;letter-spacing:1.5px;color:rgba(255,255,255,0.6);text-transform:uppercase;animation:fadeIn 0.5s 1.5s both;">${scene.title_sub}</div>` : ''}
           <style>
             @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-            @keyframes popIn { from { opacity:0; transform: scale(0.8); } to { opacity:1; transform: scale(1); } }
+            @keyframes popIn { from { opacity:0; transform: scale(0.7); } to { opacity:1; transform: scale(1); } }
             @keyframes expandLine { from { width: 0; } to { width: 60px; } }
           </style>
         </div>`;
@@ -867,6 +878,26 @@ const SlidePlayer = (() => {
     } catch (e) { return { gender: 'female', rate: '+0%', pitch: '+0Hz' }; }
   }
 
+  // 한국어 TTS 정규화 — 영어 차용어를 Edge TTS 가 자연스럽게 읽도록 한글 발음으로 치환
+  function _normalizeKoreanTTS(text) {
+    if (!text) return text;
+    const replacements = [
+      [/\bchapter\b/gi, '챕터'],
+      [/\bSOP\b/g, '에스오피'],
+      [/\bAI\b/g, '에이아이'],
+      [/\bCEO\b/g, '최고경영자'],
+      [/\bKPI\b/g, '케이피아이'],
+      [/\bQR\b/g, '큐알'],
+      [/\bOJT\b/g, '오제이티'],
+      [/\bPDF\b/g, '피디에프'],
+      [/\bURL\b/g, '유알엘'],
+      [/\bHR\b/g, '에이치알'],
+    ];
+    let out = text;
+    for (const [pat, sub] of replacements) out = out.replace(pat, sub);
+    return out;
+  }
+
   async function _fetchTTSAudio(text) {
     if (!text || text.trim().length === 0) return null;
 
@@ -877,12 +908,13 @@ const SlidePlayer = (() => {
 
     try {
       const lang = _ttsLang(text);
+      const normalizedText = (lang === 'ko-KR') ? _normalizeKoreanTTS(text) : text;
       const ttsSettings = _getTtsSettings();
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: text,
+          text: normalizedText,
           lang: lang,
           gender: ttsSettings.gender,
           rate: ttsSettings.rate,

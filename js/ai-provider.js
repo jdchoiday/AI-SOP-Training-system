@@ -659,11 +659,16 @@ ${plainText.slice(0, 8000)}
 caption/overlay_text는 자막 반복 금지. 숫자·기호·핵심 단어 1개 앵커.
 
 ★ 5가지 씬 타입 (각 타입별 필수 필드)
-- title_card: { narration, kicker, title_main, title_sub } — 도입/마무리. 타이포그래피가 주인공.
-- infographic: { narration, header_tag, header_title, steps:[3~5개 문자열] } — 단계/체크리스트. CSS 카드.
-- stat: { narration, tag, number, unit, context } — 거대 숫자. **video_keywords 금지**.
-- comparison: { narration, left_label, left_text, right_label, right_text } — BEFORE/AFTER. CSS 2분할. **video_keywords 금지**.
-- video_scenario: { narration, video_keywords:[영어 3개], caption, tag, message_type } — 실사 영상. **video_keywords 필수**.
+- title_card: { narration, kicker, title_main, title_sub, icon } — 도입/마무리. **icon(이모지 1개) 필수**.
+- infographic: { narration, header_tag, header_title, steps:[3~5개 문자열], step_icons:[각 step에 맞는 이모지 1개씩], icon } — 단계/체크리스트.
+- stat: { narration, tag, number, unit, context, icon } — 거대 숫자. **icon(주제 이모지) 필수**. video_keywords 금지.
+- comparison: { narration, left_label, left_text, right_label, right_text, left_icon, right_icon } — BEFORE/AFTER. **left_icon/right_icon(이모지) 필수**. video_keywords 금지.
+- video_scenario: { narration, video_keywords:[영어 3개], caption, tag, message_type } — 실사 영상. video_keywords 필수.
+
+★ icon 필드 작성 규칙 (슬라이드 4종 공통)
+- 씬의 핵심 개념을 상징하는 이모지 정확히 1개
+- 예: 읽기→📖, 시간→⏰, 아이→👶, 금지→🚫, 좋음→✨, 통계→📊, 주의→⚠️, 하트→❤️, 체크→✅, 교사→👩‍🏫, 가족→👨‍👩‍👧, 식당→🍽️, 돈→💰, 성장→🌱, 아이디어→💡
+- 원문의 주제에 맞게 선택. 일반적인 "📚" 같은 것보다 구체적 이모지 선호.
 
 ★ video_keywords 작성 핵심 (★★매우 엄격★★ — video_scenario에만 적용)
 - 영어 3개, 각 키워드는 **공백으로 구분된 4~8 단어의 자연어 구문** (camelCase/PascalCase/한 단어 절대 금지)
@@ -684,11 +689,16 @@ caption/overlay_text는 자막 반복 금지. 숫자·기호·핵심 단어 1개
 - "vietnamese family having dinner together evening home warm light"
 - "korean children playing storytelling game natural daylight classroom"
 
-★ 나레이션
+★ 나레이션 (TTS가 읽음)
 - ${langInstr}
-- 씬당 2~4문장 (TTS가 읽음, 이모지 금지)
+- 씬당 2~4문장, 이모지·특수기호 금지
 - 원문 구어를 그대로 복사하지 말고 "학습자에게 친근한 말투"로 재작성
 - 핵심 메시지를 중복 없이 분배
+★ 띄어읽기 자연스럽게 — TTS 발음 최적화 (★중요★)
+- 숫자·단위·외래어 뒤에 **쉼표(,)** 를 넣어 휴식점 생성: "3세 아동은, 평균 300단어를 말합니다"
+- 나열할 때 "A, B, C" 처럼 쉼표 사용
+- 긴 문장은 쪼개고, 각 문장은 **짧고 명료하게**
+- ${plan.language === 'Korean' ? '**영어 단어 사용 금지** — "chapter"/"step"/"SOP" 등 영어 단어는 한글로 (챕터→"1장", step→"단계", SOP→"절차"). 특히 kicker 에도 영어 쓰지 말 것.' : ''}
 
 ★ 씬 간 연속성 (★중요★)
 - 전 씬에서 다음 씬으로 자연스럽게 이어져야 함
@@ -698,15 +708,16 @@ caption/overlay_text는 자막 반복 금지. 숫자·기호·핵심 단어 1개
 [출력 형식]
 JSON 배열 ${plan.scene_count}개만 출력. 마크다운/설명 금지. 각 씬 객체에 type 필수.
 
-예시 1개:
+예시 1개 (한국어 나레이션, icon 포함, 영어 금지):
 {
   "scene": 1,
   "type": "title_card",
   "message_type": "EMOTIONAL",
-  "narration": "오늘은 유아에게 책 읽어주는 5가지 원칙을 함께 알아봅니다",
-  "kicker": "Chapter 01 · Reading Aloud",
-  "title_main": "책 읽어주기 <span class='accent'>5원칙</span>",
-  "title_sub": "Reading Aloud for 4-5 Year Olds"
+  "narration": "오늘은, 유아에게 책 읽어주는 다섯 가지 원칙을 함께 알아봅니다.",
+  "icon": "📖",
+  "kicker": "1장 · 책 읽어주기",
+  "title_main": "책 읽어주기 5원칙",
+  "title_sub": "4-5세 아동 대상"
 }
 
 JSON 배열만 출력:`;
