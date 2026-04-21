@@ -775,7 +775,145 @@ const SlidePlayer = (() => {
           </style>
         </div>`;
       }
-      // 6) 폴백: 기존 이미지 또는 신규 생성
+      // 6) barchart — 연도별/카테고리 막대 그래프
+      else if (scene.type === 'barchart' && Array.isArray(scene.labels) && Array.isArray(scene.values)) {
+        const labels = scene.labels;
+        const values = scene.values.map(v => Number(v) || 0);
+        const max = Math.max(...values, 1);
+        const unit = scene.unit || '';
+        const highlightLast = scene.highlight_last !== false;
+        const icon = scene.icon || '📊';
+        const barsHtml = values.map((v, i) => {
+          const h = (v / max) * 68;
+          const isLast = i === values.length - 1;
+          const hl = isLast && highlightLast;
+          const barBg = hl
+            ? 'linear-gradient(180deg,#F97316,#EA580C)'
+            : 'linear-gradient(180deg,#60A5FA,#3B82F6)';
+          const valColor = hl ? '#F97316' : 'rgba(255,255,255,0.9)';
+          const valSize = hl ? '22px' : '17px';
+          return `
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0;animation:barRise 0.6s ${0.3 + i * 0.15}s both;">
+            <div style="font-size:${valSize};font-weight:900;color:${valColor};margin-bottom:6px;white-space:nowrap;">${v}${unit ? `<span style="font-size:12px;margin-left:2px;">${unit}</span>` : ''}</div>
+            <div style="width:70%;height:${h}%;min-height:14px;background:${barBg};border-radius:8px 8px 0 0;box-shadow:0 -4px 12px rgba(${hl ? '249,115,22' : '59,130,246'},0.35);"></div>
+            <div style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.7);margin-top:8px;">${labels[i] || ''}</div>
+          </div>`;
+        }).join('');
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;padding:28px 20px 24px;background:linear-gradient(135deg,#0F172A,#1E293B,#0F172A);overflow:hidden;">
+          <div style="position:absolute;top:-10px;right:-10px;font-size:160px;opacity:0.05;">${icon}</div>
+          <div style="margin-bottom:20px;position:relative;z-index:1;">
+            ${scene.header_tag ? `<div style="font-size:10px;font-weight:800;letter-spacing:3px;color:#60A5FA;margin-bottom:8px;text-transform:uppercase;">${scene.header_tag}</div>` : ''}
+            ${scene.header_title ? `<div style="font-size:22px;font-weight:900;line-height:1.2;color:#fff;">${scene.header_title}</div>` : ''}
+          </div>
+          <div style="flex:1;display:flex;align-items:flex-end;gap:12px;padding:0 8px 8px;border-bottom:2px solid rgba(255,255,255,0.12);position:relative;z-index:1;">${barsHtml}</div>
+          <style>@keyframes barRise { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }</style>
+        </div>`;
+      }
+      // 7) rankingBoard — TOP/순위 카드 스택
+      else if (scene.type === 'rankingBoard' && Array.isArray(scene.cards) && scene.cards.length > 0) {
+        const palette = [
+          { bg: 'linear-gradient(135deg,#FB923C,#F97316)', shadow: 'rgba(249,115,22,0.35)' },
+          { bg: 'linear-gradient(135deg,#60A5FA,#3B82F6)', shadow: 'rgba(59,130,246,0.35)' },
+          { bg: 'linear-gradient(135deg,#34D399,#10B981)', shadow: 'rgba(16,185,129,0.35)' },
+          { bg: 'linear-gradient(135deg,#A78BFA,#8B5CF6)', shadow: 'rgba(139,92,246,0.35)' },
+        ];
+        const cardsHtml = scene.cards.map((c, i) => {
+          const p = palette[i % palette.length];
+          return `
+          <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:${p.bg};border-radius:14px;box-shadow:0 8px 20px ${p.shadow};animation:cardIn 0.5s ${0.3 + i * 0.2}s both;">
+            <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0;">${c.icon || '🏆'}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:15px;font-weight:900;color:#fff;line-height:1.2;">${c.title || ''}</div>
+              <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.85);margin-top:2px;letter-spacing:0.5px;">${c.label || ''}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:22px;font-weight:900;color:#fff;line-height:1;">${c.value || ''}</div>
+              ${c.unit ? `<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.85);margin-top:2px;">${c.unit}</div>` : ''}
+            </div>
+          </div>`;
+        }).join('');
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;padding:28px 20px;background:linear-gradient(135deg,#0F172A,#1E293B,#0F172A);overflow:hidden;">
+          ${scene.header_title ? `<div style="text-align:center;font-size:22px;font-weight:900;color:#fff;margin-bottom:22px;animation:fadeIn 0.5s 0.1s both;">${scene.header_title}</div>` : ''}
+          <div style="display:flex;flex-direction:column;gap:12px;">${cardsHtml}</div>
+          <style>
+            @keyframes cardIn { from { opacity:0; transform: translateX(-30px); } to { opacity:1; transform: translateX(0); } }
+            @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+          </style>
+        </div>`;
+      }
+      // 8) iconGrid — 동등 4~6 항목 병렬 그리드
+      else if (scene.type === 'iconGrid' && Array.isArray(scene.tiles) && scene.tiles.length > 0) {
+        const tiles = scene.tiles;
+        const cols = tiles.length <= 4 ? 2 : 3;
+        const tilesHtml = tiles.map((t, i) => `
+          <div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:14px;backdrop-filter:blur(8px);animation:tileIn 0.5s ${0.2 + i * 0.1}s both;">
+            <div style="font-size:44px;margin-bottom:8px;filter:drop-shadow(0 3px 10px rgba(16,185,129,0.3));">${t.icon || '✨'}</div>
+            <div style="font-size:13px;font-weight:700;color:#fff;text-align:center;line-height:1.25;">${t.label || ''}</div>
+          </div>`).join('');
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;padding:28px 20px;background:linear-gradient(135deg,#0F172A,#1E293B,#0F172A);overflow:hidden;">
+          <div style="margin-bottom:20px;">
+            ${scene.header_tag ? `<div style="font-size:10px;font-weight:800;letter-spacing:3px;color:#10B981;margin-bottom:8px;text-transform:uppercase;">${scene.header_tag}</div>` : ''}
+            ${scene.header_title ? `<div style="font-size:22px;font-weight:900;line-height:1.2;color:#fff;">${scene.header_title}</div>` : ''}
+          </div>
+          <div style="flex:1;display:grid;grid-template-columns:repeat(${cols},1fr);gap:10px;align-content:center;">${tilesHtml}</div>
+          <style>@keyframes tileIn { from { opacity:0; transform: scale(0.85); } to { opacity:1; transform: scale(1); } }</style>
+        </div>`;
+      }
+      // 9) conceptExplainer — 용어 정의 + 예시 타일
+      else if (scene.type === 'conceptExplainer') {
+        const tiles = Array.isArray(scene.tiles) ? scene.tiles : [];
+        const tilesHtml = tiles.map((t, i) => `
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;animation:tileIn 0.4s ${0.6 + i * 0.1}s both;">
+            <div style="font-size:32px;margin-bottom:4px;">${t.icon || '✨'}</div>
+            <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.85);text-align:center;line-height:1.25;">${t.label || ''}</div>
+          </div>`).join('');
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;padding:26px 20px 24px;background:linear-gradient(135deg,#1E293B,#0F172A,#1E293B);overflow:hidden;">
+          ${scene.badge ? `<div style="align-self:flex-start;display:inline-block;font-size:12px;font-weight:900;padding:6px 14px;background:linear-gradient(135deg,#F97316,#EA580C);color:#fff;border-radius:8px;box-shadow:0 4px 12px rgba(249,115,22,0.35);margin-bottom:18px;animation:fadeIn 0.4s both;">${scene.badge}</div>` : ''}
+          ${scene.term ? `<div style="font-size:32px;font-weight:900;color:#fff;line-height:1.1;margin-bottom:14px;letter-spacing:-0.02em;animation:fadeIn 0.5s 0.2s both;">${scene.term}</div>` : ''}
+          ${scene.definition ? `<div style="font-size:14px;font-weight:500;color:rgba(255,255,255,0.8);line-height:1.55;padding:14px 16px;background:rgba(16,185,129,0.1);border-left:3px solid #10B981;border-radius:8px;margin-bottom:${tiles.length ? '18' : '0'}px;animation:fadeIn 0.5s 0.4s both;">${scene.definition}</div>` : ''}
+          ${tiles.length ? `<div style="flex:1;display:flex;gap:8px;align-items:center;">${tilesHtml}</div>` : ''}
+          <style>
+            @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+            @keyframes tileIn { from { opacity:0; transform: scale(0.85); } to { opacity:1; transform: scale(1); } }
+          </style>
+        </div>`;
+      }
+      // 10) quote — 인용구
+      else if (scene.type === 'quote') {
+        const quoteText = scene.quote_text || scene.narration || '';
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:36px 28px;background:radial-gradient(ellipse at center,#1E293B 0%,#0A0A0A 85%);text-align:center;overflow:hidden;">
+          <div style="position:absolute;top:18px;left:24px;font-size:120px;font-family:Georgia,serif;color:rgba(16,185,129,0.25);line-height:0.8;font-weight:900;">"</div>
+          <div style="position:absolute;bottom:40px;right:24px;font-size:120px;font-family:Georgia,serif;color:rgba(16,185,129,0.15);line-height:0.8;font-weight:900;transform:rotate(180deg);">"</div>
+          ${scene.icon ? `<div style="font-size:48px;margin-bottom:18px;opacity:0.6;animation:fadeIn 0.5s 0.2s both;">${scene.icon}</div>` : ''}
+          <div style="font-size:22px;font-weight:700;line-height:1.45;color:#fff;max-width:460px;font-style:italic;letter-spacing:-0.01em;position:relative;z-index:1;animation:fadeIn 0.7s 0.4s both;">${quoteText}</div>
+          ${scene.author ? `<div style="width:44px;height:2px;background:#10B981;margin:20px 0 14px;animation:expandLine 0.5s 1.0s both;"></div>
+            <div style="font-size:14px;font-weight:800;color:#10B981;letter-spacing:1px;animation:fadeIn 0.5s 1.2s both;">${scene.author}</div>
+            ${scene.author_role ? `<div style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.55);margin-top:2px;animation:fadeIn 0.5s 1.4s both;">${scene.author_role}</div>` : ''}` : ''}
+          <style>
+            @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+            @keyframes expandLine { from { width:0; } to { width:44px; } }
+          </style>
+        </div>`;
+      }
+      // 11) keypoint — 1문장 풀스크린 강조
+      else if (scene.type === 'keypoint') {
+        const highlight = scene.highlight_text || scene.narration || '';
+        const icon = scene.icon || '💡';
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:32px 24px;background:radial-gradient(ellipse at top,#1E3A8A 0%,#0F172A 50%,#000 100%);text-align:center;overflow:hidden;">
+          <div style="position:absolute;inset:0;background:radial-gradient(circle at center,rgba(16,185,129,0.12),transparent 60%);pointer-events:none;"></div>
+          <div style="position:absolute;top:-30px;right:-30px;font-size:240px;opacity:0.05;line-height:1;">${icon}</div>
+          <div style="font-size:72px;margin-bottom:24px;filter:drop-shadow(0 6px 24px rgba(16,185,129,0.45));animation:popIn 0.7s 0.2s both;position:relative;z-index:1;">${icon}</div>
+          <div style="font-size:28px;font-weight:900;line-height:1.25;color:#fff;max-width:480px;letter-spacing:-0.02em;background:linear-gradient(135deg,#fff 0%,#A5F3D0 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:popIn 0.8s 0.5s both;position:relative;z-index:1;">${highlight}</div>
+          ${scene.subtext ? `<div style="width:48px;height:2px;background:#10B981;margin:22px 0 16px;animation:expandLine 0.5s 1.2s both;"></div>
+            <div style="font-size:14px;font-weight:500;color:rgba(255,255,255,0.7);max-width:380px;line-height:1.5;animation:fadeIn 0.5s 1.4s both;">${scene.subtext}</div>` : ''}
+          <style>
+            @keyframes popIn { from { opacity:0; transform: scale(0.75); } to { opacity:1; transform: scale(1); } }
+            @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+            @keyframes expandLine { from { width:0; } to { width:48px; } }
+          </style>
+        </div>`;
+      }
+      // 12) 폴백: 기존 이미지 또는 신규 생성
       else if (scene.imageUrl) {
         vis.innerHTML = `<img src="${scene.imageUrl}" style="width:100%;height:auto;max-height:80vh;object-fit:contain;display:block;margin:0 auto;border-radius:8px;" alt="scene">`;
       }

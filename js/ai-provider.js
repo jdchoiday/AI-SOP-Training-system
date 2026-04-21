@@ -522,30 +522,61 @@ type에 맞지 않는 필드는 생략 가능.
     const isEnglish = !hasVietnamese && /^[\x00-\x7F\s.,!?;:'"()\-\d\n]+$/.test(plainText.slice(0, 300));
     const lang = hasVietnamese ? 'Vietnamese' : isEnglish ? 'English' : 'Korean';
 
-    const prompt = `당신은 교육 영상 다큐멘터리 기획자입니다. 슬라이드 중심의 교육자료를 설계하되, 필요할 때만 실사 영상을 사용합니다.
+    const prompt = `당신은 교육 다큐멘터리 시각 디자이너입니다. ★모든 씬을 순수 CSS 슬라이드로 렌더링★ 합니다. 외부 영상·이미지 일절 사용 안 함.
 
 [자료 제목] ${sopTitle}
 [자료 내용]
 ${plainText.slice(0, 6000)}
 
 [미션]
-학습자가 6분 안에 이해하고 기억에 남는 "슬라이드 우세 교육 구조"를 설계하세요. 실사 영상(video_scenario)은 오직 사람의 물리적 동작·표정·환경을 직접 보여줘야만 이해 가능한 씬에만 사용합니다.
+학습자가 6분 안에 이해하고 기억에 남는 "교과서 스타일 슬라이드 시퀀스"를 설계하세요. 10가지 슬라이드 타입 중 원문 맥락에 맞는 것을 선택합니다.
 
-═══ 씬 타입 선택 기준 (반드시 순서대로 체크) ═══
+═══ 10가지 슬라이드 타입 카탈로그 ═══
 
-각 씬마다 다음 순서로 자가질문하여 type 결정:
+1. \`title_card\` — 도입·챕터전환·마무리 (아이콘 + 대제목 + 소제목)
+2. \`stat\` — 단일 임팩트 숫자 강조 (거대 숫자 하나 + 단위 + 맥락)
+3. \`barchart\` — 연도별/카테고리 비교 막대 그래프 (2~5개 값)
+4. \`rankingBoard\` — TOP·순위·베스트 (3~4개 색상 카드 스택)
+5. \`comparison\` — 2원 대비 (Before/After, 옳음/그름)
+6. \`infographic\` — 순서 있는 3~5단계 프로세스
+7. \`iconGrid\` — 동등한 4~6항목 병렬 (순서 없음)
+8. \`conceptExplainer\` — 용어 정의 + 4타일 예시
+9. \`quote\` — 인용구·전문가 어록
+10. \`keypoint\` — 1문장 풀스크린 강조 메시지
 
-1. 핵심이 **숫자·%·통계**인가? → \`stat\`
-2. **명시적 2개 대비** (올바른 vs 잘못된, Before vs After)가 있는가? → \`comparison\`
-3. **순서 있는 단계·프로세스·체크리스트**인가? (3~5단계) → \`infographic\`
-4. **오프닝·챕터전환·마무리**인가? → \`title_card\`
-5. **사람의 실제 동작·표정·환경을 직접 보여줘야만** 메시지 전달이 가능한가? (예: "교사가 아이 눈높이에 앉기", "올바른 손 씻기 시연") → \`video_scenario\`
-6. 위 1~5에 해당 없음 → \`title_card\` (기본 폴백)
+═══ 타입 선택 법칙 — 반드시 Q1~Q11 순서대로 자가질문, 최초 YES에서 확정 ═══
 
-★ video_scenario 엄격화 ★
-- ✅ 허용: "텍스트로는 전달 불가능한 물리적 동작/환경"
-- ❌ 금지: "영상이 있으면 몰입감 좋겠다" 수준의 판단
-- 교육 콘텐츠 전체에서 video_scenario는 **20~30% 이내** (나머지는 슬라이드)
+Q1. 여러 시점/연도별 % 수치 비교 있나? (예: '11=25% → '16=47%)    → \`barchart\`
+Q2. "TOP"·"순위"·"1위"·"베스트" 등 랭킹 언급?                       → \`rankingBoard\`
+Q3. 단일 임팩트 숫자 하나가 메시지 핵심? (예: "300단어", "20초")    → \`stat\`
+Q4. 명시적 2원 대비? (Before/After, 옳음/그름, 좋은 예/나쁜 예)      → \`comparison\`
+Q5. 3~5단계 순서·절차가 있나? (1단계...2단계...)                    → \`infographic\`
+Q6. "~란"·"정의는"·용어 설명 + 예시?                                  → \`conceptExplainer\`
+Q7. 동등 4~6 항목 병렬 (순서 없음)?                                   → \`iconGrid\`
+Q8. 전문가·CEO·저자 인용 어록?                                        → \`quote\`
+Q9. 1문장으로 압축한 핵심 메시지?                                     → \`keypoint\`
+Q10. 오프닝·챕터전환·마무리?                                          → \`title_card\`
+Q11. 위에 다 아님 → \`keypoint\` 또는 \`title_card\` (폴백)
+
+═══ 시퀀스 다양성 법칙 (★엄격★) ═══
+
+- 10씬이면 **최소 6종 다른 타입** 사용 (반복 최소화)
+- **첫 씬 = \`title_card\` 필수** (hook), **마지막 씬 = \`title_card\` 필수** (요약)
+- **같은 타입 2연속까지만** (3연속 금지)
+- **3그룹 균형**:
+  - 🔢 숫자 증거 (stat/barchart/rankingBoard) = 30~40%
+  - 🧩 구조 설명 (infographic/iconGrid/conceptExplainer/comparison) = 30~40%
+  - 💬 강조 도구 (quote/keypoint/title_card) = 20~30%
+
+═══ 페르소나 톤 자동 선택 ═══
+
+persona 필드에 맞게 palette 힌트도 함께 반환:
+- 유아·아동 교육 → palette: "pastel" (파스텔)
+- 식당·F&B → palette: "warm" (주황/빨강)
+- 공공·정책 → palette: "trust" (네이비/파랑)
+- 어학·학습 → palette: "fresh" (연두/파랑)
+- 안전·위생 → palette: "alert" (빨강/노랑)
+- 기본 → palette: "professional" (에메랄드/네이비)
 
 [출력 규칙]
 반드시 다음 JSON 한 개만 출력 (배열 아님):
@@ -558,14 +589,18 @@ ${plainText.slice(0, 6000)}
   "mood": "분위기 한 줄 (예: 'warm classroom, soft natural light, friendly pace')",
   "audience": "누구를 위한 영상인지 (예: '4-5세 자녀를 둔 부모', '신입 직원')",
   "core_messages": ["핵심 메시지 1", "핵심 메시지 2", "핵심 메시지 3"],
+  "palette": "pastel | warm | trust | fresh | alert | professional",
   "scene_count": 7~10 사이 추천 (숫자),
   "story_arc": [
-    { "scene": 1, "purpose": "hook", "type": "title_card", "idea": "이 씬에서 전달할 핵심 한 줄", "why_this_type": "오프닝이므로 title_card" },
-    { "scene": 2, "purpose": "why_it_matters", "type": "stat", "idea": "...", "why_this_type": "핵심이 3세 어휘력 300단어라는 숫자" },
-    { "scene": 3, "purpose": "core_1", "type": "infographic", "idea": "4단계 읽기 방법", "why_this_type": "순서 있는 단계" }
+    { "scene": 1, "purpose": "hook", "type": "title_card", "idea": "이 씬에서 전달할 핵심 한 줄", "why_this_type": "오프닝 Q10" },
+    { "scene": 2, "purpose": "why_it_matters", "type": "stat", "idea": "...", "why_this_type": "단일 숫자 Q3" },
+    { "scene": 3, "purpose": "core_1", "type": "barchart", "idea": "연도별 취업률 상승", "why_this_type": "시점 비교 Q1" },
+    { "scene": 4, "purpose": "core_2", "type": "infographic", "idea": "4단계 방법", "why_this_type": "순서 Q5" },
+    { "scene": 5, "purpose": "core_3", "type": "conceptExplainer", "idea": "용어 정의 + 예시", "why_this_type": "정의+예시 Q6" }
   ],
-  "★ type은 반드시 아래 5개 중 하나만 사용 (다른 값 금지) ★": "title_card | video_scenario | infographic | stat | comparison",
-  "★ why_this_type 필수 — 6단계 선택 기준 어느 항목에 해당하는지 ★": true,
+  "★ type은 반드시 아래 10개 중 하나만 사용 ★": "title_card | stat | barchart | rankingBoard | comparison | infographic | iconGrid | conceptExplainer | quote | keypoint",
+  "★ why_this_type 필수 — Q1~Q11 중 어느 질문에 매칭되는지 ★": true,
+  "★ 같은 타입 3연속 금지, 10씬 기준 최소 6종 다른 타입 사용 ★": true,
   "language": "${lang}",
   "duration_estimate_seconds": 180
 }
@@ -574,10 +609,9 @@ ${plainText.slice(0, 6000)}
 - 원문이 200자 미만이거나 내용이 단편적이면 viable: false
 - scene_count는 원문 길이에 비례: 200자=5씬, 1000자=8씬, 3000자+=10씬 (최대 10)
 - 원문에서 핵심 메시지 3~5개를 뽑아 story_arc 설계
-- 첫 씬은 반드시 title_card (hook), 마지막 씬은 title_card (요약/전환)
-- **슬라이드 비율 목표: title_card + infographic + stat + comparison = 전체 70~80%**
-- **video_scenario 는 전체 20~30% 이내 (동작·시연이 반드시 필요한 씬만)**
-- 같은 type 3개 연속 금지
+- 첫 씬·마지막 씬 반드시 \`title_card\`
+- Q1~Q11 순서 체크 후 최초 YES 타입 확정, why_this_type에 질문 번호 명시
+- **외부 영상/이미지 0개 사용 — 10개 타입 모두 순수 CSS 렌더**
 
 JSON만 출력, 마크다운/설명 금지.`;
 
@@ -647,47 +681,55 @@ ${plainText.slice(0, 8000)}
 
 ═══ 작성 규칙 ═══
 
-★ 원칙 1 — 슬라이드 우세 (title_card/stat/infographic/comparison)
-이 4개 타입은 **순수 CSS로 브라우저가 렌더링**합니다. 외부 이미지·영상 불필요.
-→ video_keywords 필드 작성 금지 (stat/comparison 포함)
+★ 원칙 — 모든 씬 순수 CSS 렌더링, 외부 에셋 0개
+10가지 타입 모두 브라우저가 CSS 만으로 렌더. video_keywords / imageUrl / videoUrl 필드 절대 작성 금지.
 
-★ 원칙 2 — video_scenario만 실사 영상 사용
-사람의 동작·표정·환경을 직접 보여줘야만 이해 가능한 씬에만 사용.
-→ video_keywords 필드 반드시 작성
+★ 10가지 슬라이드 타입 — 각 타입별 필수 필드
 
-★ 원칙 3 — 나레이션/비주얼/오버레이는 다른 정보 전달
-caption/overlay_text는 자막 반복 금지. 숫자·기호·핵심 단어 1개 앵커.
+1. \`title_card\`: { narration, kicker, title_main, title_sub, icon }
+   - 도입·챕터전환·마무리. icon(이모지 1개) 필수.
 
-★ 5가지 씬 타입 (각 타입별 필수 필드)
-- title_card: { narration, kicker, title_main, title_sub, icon } — 도입/마무리. **icon(이모지 1개) 필수**.
-- infographic: { narration, header_tag, header_title, steps:[3~5개 문자열], step_icons:[각 step에 맞는 이모지 1개씩], icon } — 단계/체크리스트.
-- stat: { narration, tag, number, unit, context, icon } — 거대 숫자. **icon(주제 이모지) 필수**. video_keywords 금지.
-- comparison: { narration, left_label, left_text, right_label, right_text, left_icon, right_icon } — BEFORE/AFTER. **left_icon/right_icon(이모지) 필수**. video_keywords 금지.
-- video_scenario: { narration, video_keywords:[영어 3개], caption, tag, message_type } — 실사 영상. video_keywords 필수.
+2. \`stat\`: { narration, tag, number, unit, context, icon }
+   - 거대 숫자. number 는 "47.2" 같은 값. icon 필수.
 
-★ icon 필드 작성 규칙 (슬라이드 4종 공통)
+3. \`barchart\`: { narration, header_tag, header_title, labels:[], values:[], unit, highlight_last:true, icon }
+   - labels/values 는 **같은 길이의 배열** (2~5개). 예: labels:["'11","'12","'15","'16"], values:[25.9, 37.5, 46.6, 47.2]
+   - highlight_last: 마지막 값 강조 여부 (추세 성장 강조 시 true)
+
+4. \`rankingBoard\`: { narration, header_title, cards:[{icon, title, label, value, unit}, ...] }
+   - cards 는 3~4개 배열. 각 카드: icon(이모지), title(예:"독서TOP"), label(예:"Best Reader"), value(숫자), unit(예:"권")
+
+5. \`comparison\`: { narration, left_label, left_text, right_label, right_text, left_icon, right_icon }
+   - BEFORE/AFTER. left_icon/right_icon(이모지) 필수.
+
+6. \`infographic\`: { narration, header_tag, header_title, steps:[3~5개 문자열], step_icons:[각 step 이모지], icon }
+   - 순서 있는 단계. 배열 길이 일치.
+
+7. \`iconGrid\`: { narration, header_tag, header_title, tiles:[{icon, label}, ...] }
+   - tiles 는 4~6개. 동등 병렬 항목.
+
+8. \`conceptExplainer\`: { narration, badge, term, definition, tiles:[{icon, label}, ...], icon }
+   - badge(예:"9월" or "용어 정의"), term(큰 제목 용어), definition(1~2문장), tiles(2~4개 예시)
+
+9. \`quote\`: { narration, quote_text, author, author_role, icon }
+   - quote_text: 인용 본문. author: 인용자 이름. author_role: 직책·소속.
+
+10. \`keypoint\`: { narration, highlight_text, subtext, icon }
+    - highlight_text: 화면 중앙 큰 글씨 한 문장. subtext: 보조 설명.
+
+★ icon 필드 작성 규칙 (모든 타입 공통)
 - 씬의 핵심 개념을 상징하는 이모지 정확히 1개
-- 예: 읽기→📖, 시간→⏰, 아이→👶, 금지→🚫, 좋음→✨, 통계→📊, 주의→⚠️, 하트→❤️, 체크→✅, 교사→👩‍🏫, 가족→👨‍👩‍👧, 식당→🍽️, 돈→💰, 성장→🌱, 아이디어→💡
+- 예: 읽기→📖, 시간→⏰, 아이→👶, 금지→🚫, 좋음→✨, 통계→📊, 주의→⚠️, 하트→❤️, 체크→✅, 교사→👩‍🏫, 가족→👨‍👩‍👧, 식당→🍽️, 돈→💰, 성장→🌱, 아이디어→💡, 랭킹→🏆, 대표→👑
 - 원문의 주제에 맞게 선택. 일반적인 "📚" 같은 것보다 구체적 이모지 선호.
 
-★ video_keywords 작성 핵심 (★★매우 엄격★★ — video_scenario에만 적용)
-- 영어 3개, 각 키워드는 **공백으로 구분된 4~8 단어의 자연어 구문** (camelCase/PascalCase/한 단어 절대 금지)
-- ★★ 반드시 "${plan.region}" 수식어 포함 (${plan.region === 'korean' ? 'korean 또는 asian' : plan.region === 'vietnamese' ? 'vietnamese 또는 asian' : 'asian'})
-- ★★ 페르소나 "${plan.persona}" 반영한 상황/주체/장소
-- ★★ 무드 "${plan.mood}" 반영한 조명/분위기 단어
-- 구체 동사 + 주체 + 장소 형태 (추상명사 단독 금지)
-
-★★ 절대 금지 예시 ★★
-- "EarlyChildhoodEducation" ← camelCase, Pexels에서 0건 매칭
-- "KoreanChildren" ← camelCase 금지
-- "education" / "importance" / "teaching" ← 추상 단어 단독
-- "teacher children" ← 지역 수식어 빠짐
-
-★★ 올바른 예시 ★★
-- "korean kindergarten teacher reading storybook to children warm classroom"
-- "asian mother talking with preschool age child at home soft light"
-- "vietnamese family having dinner together evening home warm light"
-- "korean children playing storytelling game natural daylight classroom"
+★ palette 반영
+Pass 1 palette 값 "${plan.palette || 'professional'}" 에 맞게:
+- pastel: 부드러운 분위기, icon은 동물·별·하트 계열 풍부
+- warm: 식당·F&B, icon은 🍽️🔥⭐🥘
+- trust: 공공·정책, icon은 🏛️📊🇰🇷
+- fresh: 학습·어학, icon은 📚✏️💡🎯
+- alert: 안전·위생, icon은 ⚠️🧤🧼✅
+- professional: 일반 교육·업무
 
 ★ 나레이션 (TTS가 읽음)
 - ${langInstr}
@@ -736,62 +778,29 @@ JSON 배열만 출력:`;
     }
     if (!Array.isArray(scenes) || scenes.length === 0) throw new Error('Pass 2 빈 결과');
 
-    // 공통 정규화 (type 기본값, search_layers→video_keywords, 폴백 등)
-    const VALID_TYPES = ['title_card', 'video_scenario', 'infographic', 'stat', 'comparison'];
-    const REGION_WORDS = ['asian', 'korean', 'vietnamese', 'east asian', 'southeast asian'];
-    const defaultRegionPrefix = plan.region === 'vietnamese' ? 'vietnamese asian' : plan.region === 'korean' ? 'korean asian' : 'asian';
-
-    // camelCase/PascalCase 단일 토큰 → 공백 분리된 자연어로 분해
-    // "EarlyChildhoodEducation" → "early childhood education"
-    const normalizeKeyword = (kw) => {
-      if (typeof kw !== 'string') return '';
-      let s = kw.trim();
-      // 공백 없고 대소문자 섞인 단어는 camelCase로 판단
-      if (!/\s/.test(s) && /[a-z][A-Z]/.test(s)) {
-        s = s.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
-      }
-      // 언더스코어/하이픈/도트도 공백으로
-      s = s.replace(/[_\-\.]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
-      return s;
-    };
-    const ensureRegion = (kw) => {
-      if (!kw) return kw;
-      const hasRegion = REGION_WORDS.some(w => kw.includes(w));
-      return hasRegion ? kw : `${defaultRegionPrefix} ${kw}`;
-    };
-    const normalizeKwArray = (arr) => {
-      if (!Array.isArray(arr)) return arr;
-      return arr.map(kw => ensureRegion(normalizeKeyword(kw))).filter(Boolean);
-    };
+    // 공통 정규화 — 10타입 (v2): video_scenario 제거, 6종 추가
+    const VALID_TYPES = [
+      'title_card', 'stat', 'barchart', 'rankingBoard', 'comparison',
+      'infographic', 'iconGrid', 'conceptExplainer', 'quote', 'keypoint'
+    ];
+    // 레거시 video_scenario는 keypoint로 자동 강등 (외부 영상 사용 안 함)
+    const LEGACY_FALLBACK = { video_scenario: 'keypoint' };
 
     scenes.forEach((scene, idx) => {
       if (!scene.scene) scene.scene = idx + 1;
+      // 레거시 타입 강등
+      if (scene.type && LEGACY_FALLBACK[scene.type]) {
+        scene.type = LEGACY_FALLBACK[scene.type];
+      }
       if (!scene.type || !VALID_TYPES.includes(scene.type)) {
-        scene.type = idx === 0 || idx === scenes.length - 1 ? 'title_card' : 'video_scenario';
+        scene.type = idx === 0 || idx === scenes.length - 1 ? 'title_card' : 'keypoint';
       }
-      if (Array.isArray(scene.search_layers) && (!Array.isArray(scene.video_keywords) || scene.video_keywords.length === 0)) {
-        scene.video_keywords = scene.search_layers
-          .filter(l => l && typeof l.query === 'string' && l.query.trim())
-          .slice(0, 3)
-          .map(l => l.query.trim());
-      }
-      // camelCase → 공백, 지역 수식어 강제 주입
-      if (Array.isArray(scene.video_keywords)) scene.video_keywords = normalizeKwArray(scene.video_keywords);
-      if (Array.isArray(scene.left_video_keywords)) scene.left_video_keywords = normalizeKwArray(scene.left_video_keywords);
-      if (Array.isArray(scene.right_video_keywords)) scene.right_video_keywords = normalizeKwArray(scene.right_video_keywords);
+      // video_keywords / search_layers 등 레거시 필드 제거 (외부 에셋 사용 안 함)
+      delete scene.video_keywords;
+      delete scene.left_video_keywords;
+      delete scene.right_video_keywords;
+      delete scene.search_layers;
 
-      // video_scenario만 Pexels 키워드 필요 (slide-dominant 설계)
-      // stat/comparison/infographic/title_card는 순수 CSS 렌더 → 외부 에셋 불필요
-      if (scene.type === 'video_scenario' && (!scene.video_keywords || scene.video_keywords.length === 0)) {
-        scene.video_keywords = normalizeKwArray(this._narrationToKeywords(scene.narration || ''));
-      }
-      // stat: 슬라이드 렌더이지만 AI가 video_keywords 줬으면 정규화만 (사용은 admin에서 결정)
-      if (scene.type === 'stat' && Array.isArray(scene.video_keywords)) {
-        scene.video_keywords = normalizeKwArray(scene.video_keywords);
-      }
-      // comparison: AI가 명시적으로 left/right_video_keywords 줬을 때만 유지 (자동 주입 안 함)
-      // 기본은 순수 CSS 2분할
-      // infographic은 순수 CSS (steps 배열 기반). visual 필드 자동 생성 불필요.
       if (scene.type === 'title_card') {
         if (!scene.kicker) scene.kicker = `Scene ${scene.scene}`;
         if (!scene.title_main) scene.title_main = (scene.narration || '').slice(0, 30);
