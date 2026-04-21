@@ -1,6 +1,6 @@
 // Service Worker — 오프라인 캐싱 + 자동 업데이트 전략
 // CACHE_NAME은 배포마다 변경되어야 함 (Vercel 배포 시 타임스탬프 주입 권장)
-const CACHE_VERSION = 'v13-20260421-slide-types-10';
+const CACHE_VERSION = 'v14-20260421-kill-pexels';
 const CACHE_NAME = `sop-training-${CACHE_VERSION}`;
 const HTML_CACHE = `sop-html-${CACHE_VERSION}`;
 
