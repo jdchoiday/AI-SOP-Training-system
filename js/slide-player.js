@@ -26,7 +26,8 @@ const SlidePlayer = (() => {
   let playSessionId = 0;  // 재생 세션 ID (씬 이동 시 이전 재생 취소용)
   let _slideCompleted = false;  // 마지막 슬라이드까지 완료 여부
   let _onCloseCallback = null;
-  let _crossfadeTimer = null;   // 인포그래픽 ↔ 참고사진 크로스페이드 타이머
+  let _crossfadeTimer = null;   // 인포그래픽 ↔ 참고사진 크로스페이드 fallback 타이머 (오디오 미로드 시)
+  let _pendingCrossfade = null; // { iframe, refImg, mySession, triggered } — 오디오 50% 지점 동기화용
 
   // --- Audio state ---
   let currentAudio = null;       // HTMLAudioElement currently playing
@@ -644,8 +645,9 @@ const SlidePlayer = (() => {
     if (vis) {
       // === 2-Pass HTML 인포그래픽 우선 렌더링 ===
       // ai-provider.js의 _enrichWithTwoPassHTML 로 _htmlContent 부착된 씬은 iframe 렌더
-      // 이전 씬의 크로스페이드 타이머 정리
+      // 이전 씬의 크로스페이드 상태 정리
       if (_crossfadeTimer) { clearTimeout(_crossfadeTimer); _crossfadeTimer = null; }
+      _pendingCrossfade = null;
 
       if (scene._htmlContent) {
         vis.innerHTML = '';
@@ -695,21 +697,17 @@ const SlidePlayer = (() => {
           refImg.style.pointerEvents = 'none';
           vis.appendChild(refImg);
 
-          // 크로스페이드 타이밍: 나레이션 총 길이의 50% 지점에 전환
-          // 오디오가 이미 재생 중이면 currentAudio 길이 우선, 없으면 추정값
+          // === 1:1 크로스페이드 타이밍 ===
+          // 1차: 오디오 실제 duration 의 50% 지점 (progress RAF 에서 감지 — 가장 정확)
+          // 2차: 오디오가 아예 로드 안 되거나 실패한 경우 → 문자 수 기반 추정 fallback
           const mySession = playSessionId;
+          _pendingCrossfade = { iframe, refImg, mySession, triggered: false };
+
           const estSec = _estimateDuration(scene.narration);
-          const audioSec = (currentAudio && isFinite(currentAudio.duration) && currentAudio.duration > 0)
-            ? currentAudio.duration : estSec;
-          const halfMs = Math.max(2500, Math.round(audioSec * 500)); // duration*1000/2, 최소 2.5초
+          const fallbackMs = Math.max(2500, Math.round(estSec * 500));
           _crossfadeTimer = setTimeout(() => {
-            // 씬이 바뀌었거나 파괴된 경우 중단
-            if (destroyed || mySession !== playSessionId) return;
-            // 현재 씬 컨테이너가 여전히 같은지 확인
-            if (!vis.isConnected) return;
-            iframe.style.opacity = '0';
-            refImg.style.opacity = '1';
-          }, halfMs);
+            _runCrossfade('fallback-timer');
+          }, fallbackMs);
 
           // 디버그 표기 (좌상단)
           const badge = document.createElement('div');
@@ -1511,6 +1509,20 @@ const SlidePlayer = (() => {
     if (el) { el.style.opacity = '0'; }
   }
 
+  // 인포그래픽 → 참고사진 크로스페이드 실행
+  // 오디오 50% 지점 도달 또는 fallback timer 에서 호출
+  function _runCrossfade(source) {
+    const pc = _pendingCrossfade;
+    if (!pc || pc.triggered) return;
+    if (destroyed || pc.mySession !== playSessionId) return;
+    if (!pc.iframe || !pc.iframe.isConnected) return;
+    pc.iframe.style.opacity = '0';
+    pc.refImg.style.opacity = '1';
+    pc.triggered = true;
+    if (_crossfadeTimer) { clearTimeout(_crossfadeTimer); _crossfadeTimer = null; }
+    console.log(`[Crossfade] 인포그래픽 → 참고사진 (${source})`);
+  }
+
   function _playAudioFromUrl(url) {
     return new Promise((resolve, reject) => {
       if (destroyed) return reject(new Error('destroyed'));
@@ -1521,11 +1533,28 @@ const SlidePlayer = (() => {
       currentAudio.playbackRate = 1.0;
 
       // 프로그레스 바 — requestAnimationFrame (60fps 제한, DOM 쿼리 캐시)
+      // 동시에 오디오 50% 지점에서 크로스페이드 트리거 (인포그래픽 → 참고사진 1:1)
       const progressBar = document.getElementById('spAudioProgress');
       let rafId = null;
+      let audioDurationSeen = false;
       const updateProgress = () => {
-        if (currentAudio && currentAudio.duration && progressBar) {
-          progressBar.style.width = (currentAudio.currentTime / currentAudio.duration * 100) + '%';
+        if (currentAudio && currentAudio.duration) {
+          // 오디오 duration 을 처음 확인한 시점 → fallback 타이머를 실제 값 기준으로 재설정
+          // (render 시점부터 추정 fallback 을 쓰면 오디오 fetch 지연 때문에 너무 일찍 터질 수 있음)
+          if (!audioDurationSeen) {
+            audioDurationSeen = true;
+            if (_pendingCrossfade && !_pendingCrossfade.triggered) {
+              if (_crossfadeTimer) clearTimeout(_crossfadeTimer);
+              const audioHalfMs = Math.max(2500, Math.round(currentAudio.duration * 500));
+              _crossfadeTimer = setTimeout(() => _runCrossfade('audio-fallback'), audioHalfMs + 500);
+            }
+          }
+          const ratio = currentAudio.currentTime / currentAudio.duration;
+          if (progressBar) progressBar.style.width = (ratio * 100) + '%';
+          // 오디오 실제 50% 지점에서 크로스페이드 — 가장 정확한 1:1
+          if (ratio >= 0.5 && _pendingCrossfade && !_pendingCrossfade.triggered) {
+            _runCrossfade('audio-50%');
+          }
         }
         if (currentAudio && !currentAudio.paused) rafId = requestAnimationFrame(updateProgress);
       };
@@ -1998,6 +2027,7 @@ const SlidePlayer = (() => {
   function _close() {
     destroyed = true;
     if (_crossfadeTimer) { clearTimeout(_crossfadeTimer); _crossfadeTimer = null; }
+    _pendingCrossfade = null;
     _stopCurrentAudio();
     _stopClipRotation();
     _hideLoading();
