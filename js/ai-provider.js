@@ -772,10 +772,13 @@ Q11. 위에 다 아님 → \`keypoint\` 또는 \`title_card\` (폴백)
 - 10씬이면 **최소 6종 다른 타입** 사용 (반복 최소화)
 - **첫 씬 = \`title_card\` 필수** (hook), **마지막 씬 = \`title_card\` 필수** (요약)
 - **같은 타입 2연속까지만** (3연속 금지)
-- **3그룹 균형**:
-  - 🔢 숫자 증거 (stat/barchart/rankingBoard) = 30~40%
-  - 🧩 구조 설명 (infographic/iconGrid/conceptExplainer/comparison) = 30~40%
-  - 💬 강조 도구 (quote/keypoint/title_card) = 20~30%
+- **3그룹 균형 (★조건부 적용★)**:
+  - 🔢 숫자 증거 (stat/barchart/rankingBoard)
+      · 원문에 **실제로 숫자 데이터(%, 연도별 변화, 순위, 비교 수치)가 있으면** → 20~40% 권장
+      · **없으면 0%도 허용** — 억지로 짜내지 말 것
+  - 🧩 구조 설명 (infographic/iconGrid/conceptExplainer/comparison) = 30~60%
+  - 💬 강조 도구 (quote/keypoint/title_card) = 20~50%
+  - **핵심: 원문에 없는 데이터 타입을 요구하지 말 것.** 서사·격려·철학·매뉴얼·가이드 등 숫자 없는 콘텐츠는 구조 설명 + 강조 도구만으로 충분히 훌륭한 영상 구성 가능.
 
 ═══ 페르소나 톤 자동 선택 ═══
 
@@ -815,7 +818,13 @@ persona 필드에 맞게 palette 힌트도 함께 반환:
 }
 
 [판단 기준]
-- 원문이 200자 미만이거나 내용이 단편적이면 viable: false
+- **viable: false 는 오직 다음 경우에만**:
+  · 원문이 200자 미만
+  · 내용이 완전히 단편적 (한두 문장만 반복)
+  · 의미 있는 메시지 추출 불가능
+- **★ 데이터 타입(숫자/차트) 부족은 viable: false 사유가 아님 ★**
+  · 원문에 숫자 데이터가 없으면 → conceptExplainer, infographic(단계), iconGrid, quote, keypoint 로 구성
+  · 서사·격려·철학·매뉴얼 등도 모두 영상화 가능
 - scene_count는 원문 길이에 비례: 200자=5씬, 1000자=8씬, 3000자+=10씬 (최대 10)
 - 원문에서 핵심 메시지 3~5개를 뽑아 story_arc 설계
 - 첫 씬·마지막 씬 반드시 \`title_card\`
