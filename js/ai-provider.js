@@ -513,7 +513,208 @@ type에 맞지 않는 필드는 생략 가능.
       sc._region = plan.region;
     });
 
+    // === 2-Pass 교과서 HTML 후처리 (선택) ===
+    // useTwoPassHTML=true 이고 Infographic2Pass 모듈이 로드된 경우에만 동작
+    // visual 씬 (비디오 없는 CSS 슬라이드)에 _htmlContent, _analysis 부착
+    try {
+      if (AI_CONFIG.useTwoPassHTML && typeof window !== 'undefined' && window.Infographic2Pass) {
+        await this._enrichWithTwoPassHTML(scenes);
+      }
+    } catch (e) {
+      console.warn('[createVideoScript] 2-Pass HTML 후처리 실패 (무시하고 기존 렌더 유지):', e.message);
+    }
+
     return { scenes, plan };
+  },
+
+  // === 2-Pass HTML 후처리 — visual 씬에 _htmlContent 부착 ===
+  // 씬당 ~$0.02 HTML + $0.03 참고사진 (Gemini Flash Image). 병렬 4 concurrency.
+  // onProgress 콜백 지원: ({ done, total, current }) => void
+  async _enrichWithTwoPassHTML(scenes, onProgress) {
+    const HTML_TARGET_TYPES = new Set([
+      'stat', 'barchart', 'rankingBoard', 'comparison',
+      'infographic', 'iconGrid', 'conceptExplainer',
+      'quote', 'keypoint',
+    ]);
+    const targets = scenes.filter(sc => sc.narration && HTML_TARGET_TYPES.has(sc.type));
+    if (!targets.length) return;
+
+    const model = AI_CONFIG.twoPassHTMLModel || 'gemini-2.5-pro';
+    const pass1Model = AI_CONFIG.twoPassHTMLPass1Model || 'gemini-2.5-flash';
+    console.log(`[2-Pass HTML] ${targets.length}개 씬 처리 시작 (Pass1=${pass1Model}, Pass2=${model})`);
+
+    // Gemini API 는 동시 요청 4-5 안정적. Google 유료 티어 RPM 제한 내.
+    const CONCURRENCY = AI_CONFIG.twoPassHTMLConcurrency || 4;
+    let totalCost = 0;
+    let totalTime = 0;
+    let succeeded = 0;
+    let doneCount = 0;
+    const emit = (cur) => {
+      if (typeof onProgress === 'function') {
+        try { onProgress({ done: doneCount, total: targets.length, current: cur }); } catch (_) {}
+      }
+    };
+    emit(null);
+
+    // 참고사진(Reference Photo) 동시 생성 옵션 — config.enableReferencePhoto=true 시
+    // Gemini 3.1 Flash Image (nano-banana) 로 씬당 1장 생성 (~$0.02-0.05/씬)
+    const enableRefPhoto = AI_CONFIG.enableReferencePhoto !== false; // 기본 on
+    if (enableRefPhoto) {
+      console.log(`[2-Pass HTML] +참고사진 병렬 생성 ON (Gemini Flash Image)`);
+    }
+
+    const run = async (sc) => {
+      const t0 = performance.now();
+      // 인포그래픽 + 참고사진 병렬 생성
+      const htmlTask = (async () => {
+        try {
+          const result = await window.Infographic2Pass.generate(sc.narration, {
+            model,
+            pass1Model,
+            style: 'auto',
+          });
+          sc._htmlContent = result.html;
+          sc._analysis = result.analysis;
+          sc._twoPassCost = result.cost.total;
+          sc._twoPassMs = result.timeMs;
+          totalCost += result.cost.total;
+          console.log(`[2-Pass HTML] 씬 ${sc.scene || '?'} ${sc.type} OK · ${result.elapsedSec}s · $${result.cost.total.toFixed(4)}`);
+        } catch (e) {
+          console.warn(`[2-Pass HTML] 씬 ${sc.scene || '?'} ${sc.type} 실패:`, e.message);
+        }
+      })();
+
+      const photoTask = enableRefPhoto ? (async () => {
+        try {
+          const resp = await fetch('/api/image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'generate',
+              mode: 'photo',
+              narration: sc.narration,
+              sceneIndex: (sc.scene || 1) - 1,
+              totalScenes: scenes.length,
+              portrait: true,
+              sopTitle: sc._sopTitle || '',
+            }),
+          });
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${resp.status}`);
+          }
+          const data = await resp.json();
+          if (data.imageUrl) {
+            sc._referenceImageUrl = data.imageUrl;
+            // Gemini Flash Image 비용 (대략 $0.03/장 — 공식 가격표 없어 추정)
+            sc._referenceImageCost = 0.03;
+            totalCost += 0.03;
+            console.log(`[2-Pass HTML] 씬 ${sc.scene || '?'} 참고사진 OK (${Math.round((data.imageUrl.length * 0.75) / 1024)}KB)`);
+          }
+        } catch (e) {
+          console.warn(`[2-Pass HTML] 씬 ${sc.scene || '?'} 참고사진 실패 (인포그래픽만 사용):`, e.message);
+        }
+      })() : Promise.resolve();
+
+      await Promise.all([htmlTask, photoTask]);
+
+      totalTime += (performance.now() - t0);
+      if (sc._htmlContent) succeeded++;
+      doneCount++;
+      emit(sc);
+    };
+
+    // 간단한 concurrency 큐 — 실시간 스케줄링 (슬라이딩 윈도우)
+    let cursor = 0;
+    const workers = Array.from({ length: Math.min(CONCURRENCY, targets.length) }, async () => {
+      while (true) {
+        const i = cursor++;
+        if (i >= targets.length) return;
+        await run(targets[i]);
+      }
+    });
+    await Promise.all(workers);
+
+    const photoCount = targets.filter(sc => sc._referenceImageUrl).length;
+    console.log(`[2-Pass HTML] 완료 · HTML ${succeeded}/${targets.length} · 참고사진 ${photoCount}/${targets.length} · 총 $${totalCost.toFixed(3)} · ${(totalTime/1000).toFixed(1)}s`);
+  },
+
+  // ============================================
+  // JSON 파서 (truncation 복구 내장)
+  // - 정상 JSON: JSON.parse 로 바로
+  // - 잘린 JSON: 마지막 } 찾거나, { 브래킷 카운트하고 매칭되는 } 채워서 복구
+  // ============================================
+  _parsePlanJson(cleaned) {
+    if (!cleaned) return null;
+    const firstBrace = cleaned.indexOf('{');
+    if (firstBrace < 0) return null;
+    const body = cleaned.slice(firstBrace);
+
+    // Try 1: 마지막 } 까지 그냥 파싱
+    const lastBrace = body.lastIndexOf('}');
+    if (lastBrace > 0) {
+      const slice = body.slice(0, lastBrace + 1);
+      try { return JSON.parse(slice); } catch (_) { /* fallthrough */ }
+      // 후행 쉼표 제거 후 재시도
+      const nocomma = slice.replace(/,(\s*[}\]])/g, '$1');
+      try { return JSON.parse(nocomma); } catch (_) { /* fallthrough */ }
+    }
+
+    // Try 2: 잘린 JSON — 브래킷 균형 맞춰서 복구
+    try {
+      return this._repairAndParse(body);
+    } catch (e) {
+      console.warn('[Pass1 JSON] 복구 실패:', e.message);
+      return null;
+    }
+  },
+
+  // 잘린 JSON 을 복구: 문자열/이스케이프/괄호를 트래킹하며 안전한 끝점까지 자르고, 부족한 닫는 괄호를 채움
+  _repairAndParse(body) {
+    let inStr = false, esc = false;
+    let stack = []; // '{' or '['
+    let lastSafeIdx = -1; // 직전 완결 속성 뒤 (콤마 위치)
+    for (let i = 0; i < body.length; i++) {
+      const ch = body[i];
+      if (esc) { esc = false; continue; }
+      if (inStr) {
+        if (ch === '\\') esc = true;
+        else if (ch === '"') inStr = false;
+        continue;
+      }
+      if (ch === '"') { inStr = true; continue; }
+      if (ch === '{' || ch === '[') stack.push(ch);
+      else if (ch === '}' || ch === ']') stack.pop();
+      else if (ch === ',' && stack.length >= 1) lastSafeIdx = i;
+    }
+    // 문자열 안에서 끊긴 경우 → 직전 완결 콤마 지점까지 자르기
+    let trimmed = body;
+    if (inStr && lastSafeIdx > 0) {
+      trimmed = body.slice(0, lastSafeIdx);
+      // 스택 재계산
+      stack = [];
+      inStr = false; esc = false;
+      for (let i = 0; i < trimmed.length; i++) {
+        const ch = trimmed[i];
+        if (esc) { esc = false; continue; }
+        if (inStr) { if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+        if (ch === '"') inStr = true;
+        else if (ch === '{' || ch === '[') stack.push(ch);
+        else if (ch === '}' || ch === ']') stack.pop();
+      }
+    }
+    // 후행 쉼표 제거
+    trimmed = trimmed.replace(/,\s*$/, '');
+    // 닫는 괄호 채우기
+    while (stack.length > 0) {
+      const top = stack.pop();
+      trimmed += (top === '{') ? '}' : ']';
+    }
+    // 후행 쉼표 한 번 더 (닫기 직전 쉼표)
+    trimmed = trimmed.replace(/,(\s*[}\]])/g, '$1');
+    const parsed = JSON.parse(trimmed);
+    console.log('[Pass1 JSON] truncated 응답 복구 성공 (원본', body.length, '자 → 복구', trimmed.length, '자)');
+    return parsed;
   },
 
   // Pass 1: 구조 설계 — 빠른 호출 (maxTokens 1500)
@@ -616,17 +817,13 @@ persona 필드에 맞게 palette 힌트도 함께 반환:
 JSON만 출력, 마크다운/설명 금지.`;
 
     const raw = await this._callLLM(provider, prompt, {
-      generationConfig: { temperature: 0.6, maxOutputTokens: 3500 }
+      generationConfig: { temperature: 0.6, maxOutputTokens: 6000 }
     });
     // ```json ... ``` 마크다운 블록 제거, 그 후 첫 { 부터 마지막 } 까지 추출
     const cleaned = raw.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Pass 1 JSON 파싱 실패 (응답: ' + cleaned.slice(0, 200) + ')');
-    let plan;
-    try {
-      plan = JSON.parse(jsonMatch[0]);
-    } catch (parseErr) {
-      throw new Error('Pass 1 JSON 파싱 오류: ' + parseErr.message + ' (응답 마지막 100자: ' + jsonMatch[0].slice(-100) + ')');
+    let plan = this._parsePlanJson(cleaned);
+    if (!plan) {
+      throw new Error('Pass 1 JSON 파싱 실패 (응답 앞: ' + cleaned.slice(0, 200) + ' / 뒤: ' + cleaned.slice(-200) + ')');
     }
 
     // 기본값 보강

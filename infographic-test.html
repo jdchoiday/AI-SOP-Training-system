@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 인포그래픽 테스트</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Pretendard',sans-serif; background:#0f172a; color:#e2e8f0; min-height:100vh; padding:16px; }
+  .wrap { max-width:1280px; margin:0 auto; }
+  h1 { font-size:22px; background:linear-gradient(135deg,#6366f1,#a78bfa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:4px; }
+  .subtitle { color:#94a3b8; font-size:13px; margin-bottom:20px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media (max-width:960px){ .grid { grid-template-columns:1fr; } }
+
+  .card { background:#1e293b; border-radius:14px; padding:18px; border:1px solid #334155; }
+  .card h3 { font-size:14px; color:#a78bfa; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; }
+  label { display:block; font-size:12px; color:#94a3b8; margin-bottom:5px; font-weight:600; }
+
+  textarea { width:100%; padding:12px; border-radius:10px; border:2px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px; line-height:1.6; resize:vertical; font-family:inherit; outline:none; min-height:110px; }
+  textarea:focus { border-color:#6366f1; }
+  select { padding:10px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:13px; outline:none; cursor:pointer; }
+
+  .samples { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .sample { padding:6px 11px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:12px; cursor:pointer; transition:all 0.15s; }
+  .sample:hover { background:#334155; border-color:#6366f1; }
+  .sample.active { background:#6366f1; color:white; border-color:#6366f1; }
+
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px; }
+  .btn { padding:11px 20px; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.2s; }
+  .btn:disabled { opacity:0.5; cursor:not-allowed; }
+  .btn-primary { background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; }
+  .btn-primary:hover:not(:disabled) { transform:translateY(-1px); }
+  .btn-ghost { background:#334155; color:#e2e8f0; }
+
+  .status { margin-top:10px; padding:10px 14px; border-radius:8px; font-size:12px; display:none; }
+  .status.loading { display:block; background:#1e3a5f; color:#60a5fa; }
+  .status.success { display:block; background:#14532d; color:#4ade80; }
+  .status.error { display:block; background:#450a0a; color:#f87171; white-space:pre-wrap; }
+
+  .preview-wrap { display:flex; flex-direction:column; align-items:center; gap:12px; }
+  .preview-frame { width:320px; height:569px; border-radius:18px; overflow:hidden; background:#000; border:2px solid #334155; box-shadow:0 20px 40px rgba(0,0,0,0.4); position:relative; }
+  .preview-frame iframe { width:100%; height:100%; border:0; display:block; }
+  .preview-placeholder { width:320px; height:569px; display:flex; align-items:center; justify-content:center; text-align:center; color:#64748b; font-size:13px; border:2px dashed #334155; border-radius:18px; }
+
+  .metrics { display:flex; gap:16px; font-size:12px; color:#94a3b8; }
+  .metrics .val { color:#fbbf24; font-weight:700; }
+
+  details { margin-top:10px; }
+  summary { cursor:pointer; font-size:12px; color:#94a3b8; padding:6px 0; }
+  pre { background:#0f172a; padding:12px; border-radius:8px; font-size:11px; overflow:auto; max-height:220px; color:#94a3b8; font-family:'Consolas','Monaco',monospace; line-height:1.5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎨 AI 인포그래픽 테스트</h1>
+  <p class="subtitle">Gemini 2.5 Pro / Flash가 나레이션 보고 맞춤 HTML+CSS 인포그래픽을 직접 만듭니다 · 9:16 모바일 크기</p>
+
+  <div class="grid">
+    <!-- 입력 -->
+    <div class="card">
+      <h3>📝 나레이션 입력 <span id="tokenCount" style="font-size:11px;color:#64748b;font-weight:500"></span></h3>
+
+      <label>샘플 선택 (클릭)</label>
+      <div class="samples" id="samples"></div>
+
+      <label>나레이션 텍스트</label>
+      <textarea id="narration" placeholder="여기에 씬의 나레이션을 입력하거나 위 샘플을 클릭하세요..."></textarea>
+
+      <div class="row" style="margin-top:12px">
+        <div style="flex:1">
+          <label>AI 모델</label>
+          <select id="model" style="width:100%">
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro (품질 높음)</option>
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash (빠름, 저렴)</option>
+            <option value="claude-opus-4-7">Claude Opus 4.7 (최고 품질, 디자인 감각)</option>
+            <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (균형, 중간 비용)</option>
+          </select>
+        </div>
+        <div style="flex:1">
+          <label>스타일</label>
+          <select id="style" style="width:100%">
+            <option value="auto">자동 (AI 판단)</option>
+            <option value="dramatic">드라마틱 · 강렬</option>
+            <option value="minimal">미니멀 · 세련</option>
+            <option value="warm">따뜻 · 친근</option>
+            <option value="data">데이터 · 수치 중심</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn btn-primary" id="generateBtn">✨ 인포그래픽 생성</button>
+        <button class="btn btn-ghost" id="clearBtn">지우기</button>
+      </div>
+
+      <div class="status" id="status"></div>
+    </div>
+
+    <!-- 결과 -->
+    <div class="card">
+      <h3>📱 결과 (9:16 모바일)
+        <span class="metrics" id="metrics"></span>
+      </h3>
+
+      <div class="preview-wrap">
+        <div id="previewPlaceholder" class="preview-placeholder">
+          ← 왼쪽에서 입력 후<br>[인포그래픽 생성] 버튼 클릭
+        </div>
+        <iframe id="previewFrame" class="preview-frame" style="display:none" sandbox="allow-same-origin"></iframe>
+      </div>
+
+      <details>
+        <summary>🔍 생성된 HTML 보기</summary>
+        <pre id="rawHtml">아직 생성되지 않음</pre>
+      </details>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== 샘플 나레이션 (다양한 유형) =====
+  const SAMPLES = [
+    { label:'📊 수치', text:'올해 저희 매장의 고객 만족도는 98점으로, 작년 대비 12점 상승했습니다. 이는 서비스 품질 개선의 직접적인 결과입니다.' },
+    { label:'🔢 단계', text:'커피 추출 순서는 다음과 같습니다. 첫째, 원두를 미세하게 분쇄합니다. 둘째, 30파운드 압력으로 탬핑합니다. 셋째, 25초 동안 추출합니다.' },
+    { label:'⚖️ 비교', text:'잘못된 응대는 손님을 쳐다보지 않고 인사하는 것입니다. 올바른 응대는 눈을 맞추고 3초간 미소 짓는 것입니다.' },
+    { label:'💬 철학', text:'손님의 첫 3초가 전부입니다. 그 순간 매장의 인상이 결정되고, 재방문 여부가 갈립니다.' },
+    { label:'✅ 체크리스트', text:'오픈 전 점검 항목은 다섯 가지입니다. 조명 밝기, 배경 음악, 실내 온도, 공간의 향기, 그리고 인테리어 정돈 상태입니다.' },
+    { label:'⚠️ 경고', text:'위생 관리는 철저해야 합니다. 조리도구는 매일 살균하고, 냉장고 온도는 반드시 4도 이하로 유지해야 합니다.' },
+    { label:'📖 정의', text:'레지오 에밀리아 접근법이란, 아이를 작은 어른이 아닌 유능한 탐구자로 보는 이탈리아 교육 철학입니다. 환경이 셋째 교사입니다.' },
+    { label:'🎯 팁', text:'김치찌개를 맛있게 끓이는 비법은 간단합니다. 묵은지를 15분간 약불에 볶아 신맛을 날린 후 국물을 부어주세요.' },
+  ];
+
+  const samplesEl = document.getElementById('samples');
+  SAMPLES.forEach((s, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'sample';
+    btn.textContent = s.label;
+    btn.onclick = () => {
+      document.querySelectorAll('.sample').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('narration').value = s.text;
+      updateTokenCount();
+    };
+    samplesEl.appendChild(btn);
+  });
+
+  const narrEl = document.getElementById('narration');
+  const tokenEl = document.getElementById('tokenCount');
+  function updateTokenCount() {
+    const n = narrEl.value.length;
+    tokenEl.textContent = n > 0 ? `${n}자` : '';
+  }
+  narrEl.addEventListener('input', updateTokenCount);
+
+  document.getElementById('clearBtn').onclick = () => {
+    narrEl.value = '';
+    document.querySelectorAll('.sample').forEach(b => b.classList.remove('active'));
+    updateTokenCount();
+  };
+
+  // ===== 스타일 힌트 =====
+  const STYLE_HINTS = {
+    auto: '나레이션 내용을 분석해서 가장 어울리는 스타일을 자유롭게 선택.',
+    dramatic: '드라마틱 — 강렬한 그라디언트, 거대한 타이포, 강한 명암 대비, 극적 레이아웃.',
+    minimal: '미니멀 — 여백 풍부, 단순 색상(2~3개), 세련된 타이포, 절제된 장식.',
+    warm: '따뜻함 — 오렌지·핑크·아이보리, 부드러운 곡선, 친근한 톤.',
+    data: '데이터 — 숫자·차트·통계 강조, 명확한 구조, 정보 위계 극대화.',
+  };
+
+  // ============================================
+  // SCENE STYLE LIBRARY — 8개 씬 스타일 템플릿
+  // Pass 1이 scene_type을 선택하면 Pass 2에 해당 템플릿만 주입
+  // ============================================
+  const STYLE_TEMPLATES = {
+    stat_hero: {
+      name: 'Stat Hero · 수치 강조',
+      guide: '거대한 숫자 하나를 화면 중앙에. 숫자 140~180px · 단위 28~40px · 델타 화살표는 강조색. 원형 링(conic-gradient) 또는 숫자 단독. 상단 CAPTION(13px, letter-spacing 높게, uppercase)과 하단 footer(12px)만 부가 정보로.',
+      example: `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:390px;height:693px;background:#0a0e1a;color:#e5e7eb;font-family:-apple-system,'Pretendard',sans-serif;overflow:hidden;position:relative;word-break:keep-all}
+.caption{position:absolute;top:56px;left:40px;font-size:13px;color:#6b7280;letter-spacing:0.15em;text-transform:uppercase}
+.ring{position:absolute;top:160px;left:50%;transform:translateX(-50%);width:280px;height:280px;border-radius:50%;background:conic-gradient(#60a5fa 0deg 352.8deg,#1f2937 352.8deg);display:flex;align-items:center;justify-content:center}
+.ring::before{content:'';position:absolute;width:244px;height:244px;border-radius:50%;background:#0a0e1a}
+.hero{position:relative;font-size:124px;font-weight:900;color:#fff;letter-spacing:-0.05em;line-height:1}
+.unit{position:relative;font-size:28px;color:#9ca3af;margin-left:4px;align-self:flex-end;margin-bottom:20px}
+.sub{position:absolute;bottom:160px;left:0;right:0;text-align:center;font-size:22px;color:#e5e7eb;font-weight:600}
+.delta{position:absolute;bottom:110px;left:0;right:0;text-align:center;font-size:16px;color:#4ade80;font-weight:700}
+.footer{position:absolute;bottom:48px;left:0;right:0;text-align:center;font-size:12px;color:#6b7280;letter-spacing:0.1em}
+</style></head><body>
+<div class="caption">CUSTOMER SATISFACTION · 2026</div>
+<div class="ring"><span class="hero">98</span><span class="unit">점</span></div>
+<div class="sub">고객 만족도</div>
+<div class="delta">↗ 작년 대비 +12점</div>
+<div class="footer">SERVICE QUALITY INDEX</div>
+</body></html>`
+    },
+
+    step_flow: {
+      name: 'Step Flow · 단계·절차',
+      guide: '1→2→3 번호 배지(48px 원, 강조색 배경). 단계 사이 세로 연결선(2px, 옅은 강조색). 각 단계 = [타이틀 20px weight:700 + 설명 14px + 핵심값 강조색]. 3~4단계가 최적. 상단 제목은 단계 수를 강조(예: "3단계").',
+      example: `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:390px;height:693px;background:#0f1419;color:#e5e7eb;font-family:-apple-system,'Pretendard',sans-serif;padding:60px 40px;word-break:keep-all}
+h1{font-size:34px;font-weight:900;letter-spacing:-0.02em;margin-bottom:48px;color:#fff;line-height:1.2}
+h1 span{color:#fbbf24}
+.step{display:flex;gap:20px;margin-bottom:36px;align-items:flex-start;position:relative}
+.step::after{content:'';position:absolute;left:23px;top:58px;width:2px;height:42px;background:#fbbf24;opacity:0.3}
+.step:last-child::after{display:none}
+.num{width:48px;height:48px;border-radius:50%;background:#fbbf24;color:#0f1419;font-size:22px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.body{padding-top:6px}
+.title{font-size:20px;font-weight:700;color:#fff;margin-bottom:6px}
+.desc{font-size:14px;color:#9ca3af;line-height:1.5}
+.key{color:#fbbf24;font-weight:700}
+</style></head><body>
+<h1>커피 추출<br><span>3단계</span></h1>
+<div class="step"><div class="num">1</div><div class="body"><div class="title">미세 분쇄</div><div class="desc">원두를 <span class="key">에스프레소 굵기</span>로 균일하게</div></div></div>
+<div class="step"><div class="num">2</div><div class="body"><div class="title">탬핑</div><div class="desc"><span class="key">30파운드</span> 압력으로 수평 탬핑</div></div></div>
+<div class="step"><div class="num">3</div><div class="body"><div class="title">추출</div><div class="desc"><span class="key">25초</span>간 크레마 형성</div></div></div>
+</body></html>`
+    },
+
+    manifesto: {
+      name: 'Manifesto · 철학·선언·인용',
+      guide: 'NYT Opinion 스타일. 거대한 장식 따옴표(120~160px, 강조색, Georgia serif, 반투명 0.8). 선언문 헤드라인 60~80px weight:900 · letter-spacing -0.04em. 핵심 단어 1개만 강조색으로. 하단에 속성/출처(11~13px · uppercase · 상단 1px 구분선). 본문 max-width로 집중감 유도.',
+      example: `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:390px;height:693px;background:#0a0a0a;color:#f5f5f5;font-family:-apple-system,'Pretendard',sans-serif;padding:80px 40px;display:flex;flex-direction:column;justify-content:center;word-break:keep-all;position:relative}
+.quote-mark{position:absolute;top:60px;left:32px;font-size:140px;color:#ef4444;line-height:0.6;font-family:Georgia,serif;opacity:0.85}
+.hero{font-size:72px;font-weight:900;line-height:1.05;letter-spacing:-0.04em;color:#fff;margin-bottom:32px}
+.hero em{color:#ef4444;font-style:normal}
+.context{font-size:17px;line-height:1.55;color:#a3a3a3;margin-bottom:48px;max-width:310px}
+.attribute{font-size:11px;color:#525252;letter-spacing:0.2em;text-transform:uppercase;border-top:1px solid #262626;padding-top:16px}
+</style></head><body>
+<div class="quote-mark">"</div>
+<div class="hero">첫 <em>3초</em>가<br>전부입니다</div>
+<div class="context">그 순간 매장의 인상이 결정되고, 재방문 여부가 갈립니다.</div>
+<div class="attribute">— SOP 서비스 철학</div>
+</body></html>`
+    },
+
+    side_by_side: {
+      name: 'Side-by-Side · 비교·대비 (❌ vs ⭕)',
+      guide: '화면을 상하(grid-template-rows:1fr 1fr) 또는 좌우로 분할. 잘못된 쪽은 레드 톤(bg #450a0a~#7f1d1d, text #fca5a5), 올바른 쪽은 그린 톤(bg #14532d~#166534, text #bbf7d0). 각 영역에 아이콘(48px, ❌/⭕) + 라벨(12px uppercase) + 핵심 문구(20~24px weight:800). 두 영역 사이 얇은 구분선.',
+      example: `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:390px;height:693px;font-family:-apple-system,'Pretendard',sans-serif;word-break:keep-all;overflow:hidden;display:grid;grid-template-rows:1fr 1fr;background:#0a0a0a}
+.half{padding:56px 36px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;position:relative}
+.bad{background:linear-gradient(135deg,#450a0a,#7f1d1d);color:#fca5a5}
+.good{background:linear-gradient(135deg,#14532d,#166534);color:#bbf7d0}
+.icon{font-size:48px;margin-bottom:18px}
+.label{font-size:11px;letter-spacing:0.25em;text-transform:uppercase;opacity:0.75;margin-bottom:12px;font-weight:800}
+.msg{font-size:22px;font-weight:800;line-height:1.3;color:#fff}
+.divider{position:absolute;top:50%;left:0;right:0;height:2px;background:#0a0a0a;transform:translateY(-1px);z-index:2}
+</style></head><body>
+<div class="half bad"><div class="icon">❌</div><div class="label">Wrong</div><div class="msg">손님을 쳐다보지 않고 인사</div></div>
+<div class="divider"></div>
+<div class="half good"><div class="icon">⭕</div><div class="label">Right</div><div class="msg">눈을 맞추고<br>3초간 미소</div></div>
+</body></html>`
+    },
+
+    checklist_grid: {
+      name: 'Checklist Grid · 점검표·리스트',
+      guide: '상단 제목(26~32px weight:900) + 서브 라벨(13px uppercase). 5~8개 항목을 세로 리스트(border-bottom 구분) 또는 2×3 그리드. 각 항목 = [번호 배지 32px 정사각 rounded + 아이콘 26px + 이름 17px weight:600]. 번호 배지 배경은 어두운 회색(#1e293b), 번호 문자는 강조색.',
+      example: `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:390px;height:693px;background:#0f172a;color:#e2e8f0;font-family:-apple-system,'Pretendard',sans-serif;padding:60px 40px;word-break:keep-all}
+h1{font-size:28px;font-weight:900;line-height:1.25;margin-bottom:8px;color:#fff}
+.sub{font-size:13px;color:#64748b;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:36px;font-weight:700}
+.item{display:flex;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid #1e293b}
+.item:last-child{border-bottom:none}
+.num{width:32px;height:32px;border-radius:8px;background:#1e293b;color:#60a5fa;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.icon{font-size:26px;width:32px;text-align:center}
+.name{font-size:17px;font-weight:600;color:#e2e8f0}
+</style></head><body>
+<h1>오픈 전 점검</h1>
+<div class="sub">5 Point Checklist</div>
+<div class="item"><div class="num">1</div><div class="icon">💡</div><div class="name">조명 밝기</div></div>
+<div class="item"><div class="num">2</div><div class="icon">🎵</div><div class="name">배경 음악</div></div>
+<div class="item"><div class="num">3</div><div class="icon">🌡️</div><div class="name">실내 온도</div></div>
+<div class="item"><div class="num">4</div><div class="icon">🌸</div><div class="name">공간의 향기</div></div>
+<div class="item"><div class="num">5</div><div class="icon">✨</div><div class="name">인테리어 정돈</div></div>
+</body></html>`
+    },
+
+    warning_callout: {
+      name: 'Warning Callout · 경고·주의',
+      guide: '상단+하단에 경고 스트라이프(repeating-linear-gradient 노랑/다크). ⚠️ 거대한 아이콘(100~130px). 라벨 "WARNING"(12px letter-spacing:0.3em). 헤드라인 36~44px weight:900, 핵심 단어는 노랑/주황 강조. 규칙/수치는 하단에 간결히 (조리도구·온도 등 핵심값 bold로).',
+      example: `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:390px;height:693px;background:#1c1917;color:#fef3c7;font-family:-apple-system,'Pretendard',sans-serif;padding:64px 40px;word-break:keep-all;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;overflow:hidden}
+body::before{content:'';position:absolute;top:0;left:0;right:0;height:12px;background:repeating-linear-gradient(-45deg,#facc15 0 18px,#1c1917 18px 36px)}
+body::after{content:'';position:absolute;bottom:0;left:0;right:0;height:12px;background:repeating-linear-gradient(-45deg,#facc15 0 18px,#1c1917 18px 36px)}
+.warn-icon{font-size:120px;margin-top:20px;margin-bottom:16px}
+.label{font-size:12px;letter-spacing:0.3em;color:#fbbf24;font-weight:800;margin-bottom:18px}
+.headline{font-size:38px;font-weight:900;line-height:1.2;color:#fff;margin-bottom:28px;letter-spacing:-0.02em}
+.headline em{color:#fbbf24;font-style:normal}
+.rules{font-size:16px;color:#fde68a;line-height:1.7;font-weight:500}
+.rules strong{color:#fff;font-weight:700}
+</style></head><body>
+<div class="warn-icon">⚠️</div>
+<div class="label">W A R N I N G</div>
+<div class="headline">위생 관리는<br><em>철저히</em></div>
+<div class="rules">조리도구 <strong>매일 살균</strong><br>냉장고 <strong>4°C 이하</strong> 유지</div>
+</body></html>`
+    },
+
+    definition_card: {
+      name: 'Definition Card · 용어·개념 정의',
+      guide: '사전 페이지·위키 상단 박스 느낌. 카테고리 라벨 상단(11px uppercase, 강조색). 영문/원어(Georgia italic 18px, mid-gray). 용어 한글 52~64px weight:900 (Georgia+Pretendard 믹스). 짧은 구분선(40px × 3px 강조색). "DEFINITION" 라벨 + 정의 본문(19px line-height:1.55). 하단 푸터에 분야(11px uppercase 상단 구분선).',
+      example: `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:390px;height:693px;background:#0a0a0a;color:#e5e5e5;font-family:-apple-system,'Pretendard',sans-serif;padding:80px 40px;word-break:keep-all;position:relative}
+.category{font-size:11px;letter-spacing:0.3em;color:#a78bfa;text-transform:uppercase;font-weight:700;margin-bottom:32px}
+.term-en{font-size:18px;color:#737373;font-family:Georgia,serif;font-style:italic;margin-bottom:6px}
+.term{font-size:52px;font-weight:900;color:#fff;letter-spacing:-0.03em;line-height:1.1;margin-bottom:40px;font-family:Georgia,'Pretendard',serif}
+.divider{width:40px;height:3px;background:#a78bfa;margin-bottom:28px}
+.def-label{font-size:10px;letter-spacing:0.25em;color:#a78bfa;text-transform:uppercase;font-weight:700;margin-bottom:14px}
+.def{font-size:19px;line-height:1.55;color:#d4d4d4;margin-bottom:40px}
+.def strong{color:#fff;font-weight:700}
+.footer{position:absolute;bottom:56px;left:40px;right:40px;padding-top:20px;border-top:1px solid #262626;font-size:11px;color:#525252;letter-spacing:0.15em;text-transform:uppercase}
+</style></head><body>
+<div class="category">교육 철학 · Italy</div>
+<div class="term-en">Reggio Emilia Approach</div>
+<div class="term">레지오<br>에밀리아</div>
+<div class="divider"></div>
+<div class="def-label">Definition</div>
+<div class="def">아이를 작은 어른이 아닌 <strong>유능한 탐구자</strong>로 보는 이탈리아 교육 철학. <strong>환경이 셋째 교사</strong>다.</div>
+<div class="footer">Early Childhood Education</div>
+</body></html>`
+    },
+
+    tip_card: {
+      name: 'Tip Card · 팁·비법·노하우',
+      guide: '포스트잇/힌트박스 느낌. "💡 TIP" pill 배지(강조색 pill, 13px weight:900 uppercase) 상단 좌측. 핵심 비법 문장 36~44px weight:900, 핵심 단어 강조색. 상세 방법(16~18px mid-gray). 하단 시각 블록(border-left 3px 강조색, 어두운 bg)에 핵심 수치/시간 크게 표시.',
+      example: `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:390px;height:693px;background:#0f1419;color:#e5e7eb;font-family:-apple-system,'Pretendard',sans-serif;padding:72px 40px;word-break:keep-all;display:flex;flex-direction:column;justify-content:center}
+.badge{display:inline-flex;align-items:center;gap:8px;background:#fbbf24;color:#0f1419;padding:8px 16px;border-radius:999px;font-size:13px;font-weight:900;letter-spacing:0.1em;align-self:flex-start;margin-bottom:36px;text-transform:uppercase}
+.headline{font-size:42px;font-weight:900;line-height:1.2;letter-spacing:-0.02em;color:#fff;margin-bottom:24px}
+.headline em{color:#fbbf24;font-style:normal}
+.method{font-size:17px;line-height:1.6;color:#9ca3af;margin-bottom:32px}
+.method strong{color:#fbbf24;font-weight:700}
+.visual{background:#1f2937;border-left:3px solid #fbbf24;padding:20px 24px;border-radius:0 12px 12px 0;font-size:15px;color:#e5e7eb;line-height:1.5}
+.visual .time{font-size:28px;font-weight:900;color:#fbbf24;display:block;margin-bottom:4px}
+</style></head><body>
+<div class="badge">💡 TIP</div>
+<div class="headline">김치찌개<br>맛내는 <em>비법</em></div>
+<div class="method">묵은지를 약불에 <strong>15분간</strong> 볶아 신맛을 날린 후 국물을 부어주세요.</div>
+<div class="visual"><span class="time">15분</span>약불 볶기 → 신맛 제거</div>
+</body></html>`
+    },
+  };
+
+  // ============================================
+  // PASS 1 — 핵심 분석 (Chain-of-Thought + JSON 출력)
+  // "이 씬의 본질은 무엇인가?" 추론에 집중
+  // ============================================
+  function buildPass1Prompt(narration, style) {
+    return `당신은 정보 설계 전문가입니다. 아래 SOP 교육 나레이션의 **본질과 시각 구조**를 분석하세요.
+Edward Tufte, Otto Neurath(Isotype), Kurzgesagt, NYT 그래픽팀 수준으로 생각하세요.
+
+[나레이션]
+${narration}
+
+[스타일 방향]
+${STYLE_HINTS[style] || STYLE_HINTS.auto}
+
+[분석 단계 — 순서대로 추론]
+1. **본질 추출**: 이 나레이션이 시청자에게 전달하려는 **단 하나의 핵심 메시지**는?
+2. **씬 유형 판정**: 아래 8개 씬 스타일 중 **정확히 1개** 선택
+   - **stat_hero**: 수치·성과·통계 강조 (예: "98점", "+12%")
+   - **step_flow**: 단계·절차·순서 (예: "3단계", "첫째 둘째 셋째")
+   - **manifesto**: 철학·선언·인용문 (예: "첫 3초가 전부")
+   - **side_by_side**: 비교·대비 (예: "잘못된 vs 올바른", "Before vs After")
+   - **checklist_grid**: 점검표·리스트 (예: "5가지 항목")
+   - **warning_callout**: 경고·주의 (예: "반드시 ~해야")
+   - **definition_card**: 용어·개념 정의 (예: "~란 ~이다")
+   - **tip_card**: 팁·비법·노하우 (예: "맛있게 하는 비법", "꿀팁")
+3. **데이터 추출**: 수치·퍼센트·단위·비교값·시간이 있으면 전부 뽑아내기 (없으면 빈 배열)
+4. **타이포 히어로**: 화면에서 가장 크게 표시할 **1개 단어/숫자/구절**. 시청자 기억에 각인될 것
+5. **보조 키워드**: 2~3개
+6. **감정 톤**: 자신감/긴장/따뜻함/엄숙/경각심/기쁨/친근 중 택 1
+
+⚠️ **길이 제약 (9:16 세로 모바일 390×693px에 반드시 fit 되어야 함 — 절대 규칙)**
+- \`hero_text\`: **최대 8자** (숫자면 숫자, 구절이면 핵심 단어만. 긴 문장 금지)
+- \`hero_unit\`: **최대 4자** (단위/조사)
+- \`core_message\`: **최대 30자** (한 줄로 읽히는 요약)
+- \`sub_keywords\` 각 항목: **최대 8자**
+- \`key_data[].label\`: **최대 10자**
+- \`key_data[].value\`: **최대 6자** (숫자+약간의 단위)
+- \`description_short\` (신규 필드): Pass 2가 쓸 짧은 본문. **최대 50자**, 1~2줄로 압축
+- \`body_items\` (신규 필드, 단계/체크리스트/비교 시만): \`[{title:≤15자, desc:≤40자}]\` 형식, **최대 4개 항목**
+- 원본 나레이션을 그대로 복사 금지. 반드시 **압축/재작성** 할 것
+
+7. **팔레트**: 다크 배경 필수 (씬 유형에 맞게):
+   - stat_hero/step_flow/checklist_grid → 블루/앰버 계열
+   - manifesto/definition_card → 레드/퍼플 포인트
+   - side_by_side → 레드 vs 그린
+   - warning_callout → 노랑/주황 경고색
+   - tip_card → 앰버/골드
+8. **시각 메타포**: 내용과 연결되는 이모지 1~2개
+
+[출력 형식 — 반드시 유효한 JSON만, 설명 금지]
+\`\`\`json
+{
+  "core_message": "고객 만족도 98점 돌파",
+  "scene_type": "stat_hero",
+  "key_data": [{"label":"만족도","value":"98","unit":"점","delta":"+12"}],
+  "hero_text": "98",
+  "hero_unit": "점",
+  "sub_keywords": ["고객 만족","서비스 품질"],
+  "description_short": "3개월간 지속적 개선 결과, 역대 최고치 달성",
+  "body_items": [],
+  "emotional_tone": "자신감",
+  "palette": {"bg":"#0a0e1a","main":"#60a5fa","accent":"#fbbf24"},
+  "visual_metaphor": "📈",
+  "reasoning": "핵심이 수치(98점)이므로 stat_hero, 상승이므로 자신감 톤"
+}
+\`\`\`
+
+scene_type은 반드시 위 8개 중 하나여야 합니다. 반드시 코드블록(\`\`\`json)으로 감싸고 JSON만 출력하세요.`;
+  }
+
+  // ============================================
+  // PASS 2 — 고품질 HTML 디자인
+  // Pass 1 분석 + 12 교과서 원칙 + scene_type 전용 템플릿 1개
+  // ============================================
+  function buildPass2Prompt(analysis, narration, style) {
+    // Pass 1이 고른 scene_type에 맞는 템플릿 1개만 주입
+    const template = STYLE_TEMPLATES[analysis.scene_type] || STYLE_TEMPLATES.stat_hero;
+    const availableTypes = Object.keys(STYLE_TEMPLATES).join(' / ');
+
+    return `당신은 **Kurzgesagt + NYT Graphics + 교과서 편집 디자이너**를 합친 세계 최고의 에디토리얼 디자이너입니다. SOP 교육 영상의 한 씬을 **9:16 세로 모바일** HTML+CSS로 제작하세요.
+
+[Pass 1 분석 결과 — 반드시 반영]
+${JSON.stringify(analysis, null, 2)}
+
+[원본 나레이션 — 참고용, 절대 통째로 복사 금지]
+${narration}
+
+⚠️ **최우선 규칙: 원본 나레이션을 문장 그대로 HTML에 넣지 마세요.**
+반드시 Pass 1의 압축된 필드만 사용:
+- 메인 타이포: \`hero_text\` + \`hero_unit\`
+- 헤드라인: \`core_message\` 또는 \`hero_text\` 파생
+- 본문: \`description_short\` (또는 \`body_items\`가 있으면 그걸 사용)
+- 보조: \`sub_keywords\`
+원본 나레이션의 모든 문장을 담으려 하면 **반드시 오버플로우 발생**합니다.
+
+[전체 스타일 방향]
+${STYLE_HINTS[style] || STYLE_HINTS.auto}
+
+════════════════════════════════════════
+🎬 이 씬의 전용 스타일: ${template.name}
+════════════════════════════════════════
+(Pass 1이 8개 씬 스타일 [${availableTypes}] 중 **${analysis.scene_type}** 를 선택)
+
+**스타일 가이드**
+${template.guide}
+
+**이 스타일 참고 예시 (복붙 금지, 구조만 참고)**
+\`\`\`html
+${template.example}
+\`\`\`
+
+════════════════════════════════════════
+📚 교과서 인포그래픽 공통 12 원칙 (반드시 준수)
+════════════════════════════════════════
+
+**1. Tufte Data-Ink Ratio** — 정보를 돕지 않는 장식 제거. 과도한 그림자/테두리 금지.
+**2. Swiss Grid** — 가상 그리드에 모든 요소 정렬. 임의 배치 금지.
+**3. Typography Hierarchy 3-tier** — 히어로(Pass1.hero_text, 거대) : 서브 : 캡션 = 최소 3배 차이.
+**4. 3+1 Color Rule** — Pass1 팔레트(\`${JSON.stringify(analysis.palette || {})}\`) + 회색/흰색만. 4색 넘지 말기.
+**5. One Screen, One Message** — Pass1.core_message 하나만 전달. 지원 요소는 보조.
+**6. Isotype** — 수치는 반복 아이콘/바/링으로 직관화.
+**7. Kurzgesagt Palette** — 다크 배경 + 미드톤 액센트. 네온 원색 피하기.
+**8. Khan Academy Color Coding** — 같은 개념엔 같은 색. 대비 개념엔 보색.
+**9. NYT Editorial** — 인용/선언 거대, 출처/설명 작게. 대비가 메시지.
+**10. 수치 시각화 의무** — key_data 있으면 반드시 시각화 (단순 나열 금지).
+**11. Negative Space** — 중앙 요소 주변 최소 40px 여백.
+**12. Semantic Emoji** — Pass1.visual_metaphor를 1~2회만 의미 있게. 이모지 벽지 금지.
+
+════════════════════════════════════════
+⚙️ 기술 제약 (절대 규칙)
+════════════════════════════════════════
+- 컨테이너: **width:390px, height:693px, overflow:hidden** (예외 없음)
+- 외부 폰트/이미지/스크립트 금지 (전부 인라인)
+- 시스템 폰트: -apple-system, 'Pretendard', sans-serif
+- 배경은 반드시 다크 (Pass1 팔레트 사용)
+- 한국어 줄바꿈: \`word-break:keep-all\`
+- JavaScript 금지, CSS 애니메이션은 subtle하게만 (필수 아님)
+
+════════════════════════════════════════
+📐 레이아웃 안전 규칙 (오버플로우 방지)
+════════════════════════════════════════
+- **모든 콘텐츠는 693px 안에 완전히 들어가야 함.** 스크롤/잘림 절대 금지
+- 글자 길이 제한 (mobile 9:16 기준):
+  · 히어로 타이포: **최대 12자** (1줄, 폰트 60~160px)
+  · 헤드라인: **최대 30자** (1~2줄, 폰트 28~42px)
+  · 본문/설명: **최대 80자** (3~4줄, 폰트 14~18px)
+  · 단계/체크/비교 아이템: **최대 4개** (각 항목 제목 15자, 본문 40자)
+- 콘텐츠가 많으면 **폰트/여백 축소 우선** (폰트 80→60px, padding 60→40px)
+- 그래도 안 맞으면 **요소 삭제** (sub_keywords 2→1, description 생략 가능)
+
+════════════════════════════════════════
+🎯 자가 검증 체크리스트 (출력 전 반드시 재확인)
+════════════════════════════════════════
+☐ **body가 정확히 width:390px height:693px overflow:hidden인가?**
+☐ **모든 텍스트/요소가 693px 안에 완전히 들어가는가?** (넘치면 폰트·여백 줄이기)
+☐ **원본 나레이션을 문장 그대로 복사하지 않았는가?** (Pass 1 압축 필드만 사용)
+☐ Pass1.hero_text가 가장 크게 표시되었는가?
+☐ 색상 4개 이내? (Pass1 팔레트 + 회색/흰색)
+☐ ${template.name} 스타일 가이드를 따랐는가? (레이아웃·타이포·컬러)
+☐ key_data가 있으면 시각화되었는가?
+☐ 한 화면 한 메시지인가?
+☐ 여백이 충분한가?
+
+════════════════════════════════════════
+📤 출력 — 설명 없이 HTML 코드블록만
+════════════════════════════════════════
+\`\`\`html
+<!DOCTYPE html>
+...
+\`\`\``;
+  }
+
+  // ===== 생성 =====
+  const statusEl = document.getElementById('status');
+  const genBtn = document.getElementById('generateBtn');
+  const frame = document.getElementById('previewFrame');
+  const placeholder = document.getElementById('previewPlaceholder');
+  const metricsEl = document.getElementById('metrics');
+  const rawHtmlEl = document.getElementById('rawHtml');
+
+  function setStatus(type, msg) {
+    statusEl.className = 'status ' + type;
+    statusEl.textContent = msg;
+  }
+
+  // 요금표 (USD per 1M tokens)
+  const RATES = {
+    'gemini-2.5-pro':    { in: 1.25, out: 10 },
+    'gemini-2.5-flash':  { in: 0.30, out: 2.50 },
+    'claude-opus-4-7':   { in: 15, out: 75 },
+    'claude-sonnet-4-6': { in: 3,  out: 15 },
+  };
+
+  // ===== 공통 호출 헬퍼 =====
+  async function callModel({ prompt, model, maxTokens = 8192, temperature = 0.8, thinkingBudget = 0 }) {
+    const isClaude = model.startsWith('claude-');
+    let res, data, raw;
+
+    if (isClaude) {
+      res = await fetch('/api/claude', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ prompt, model, temperature, max_tokens: maxTokens }),
+      });
+      data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.hint || '생성 실패');
+      raw = data.content?.[0]?.text || '';
+    } else {
+      // Gemini Thinking Mode (2.5 시리즈 지원)
+      const genCfg = { temperature, maxOutputTokens: maxTokens };
+      if (thinkingBudget > 0) {
+        genCfg.thinkingConfig = { thinkingBudget };
+      }
+      res = await fetch('/api/gemini', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ prompt, model, generationConfig: genCfg }),
+      });
+      data = await res.json();
+      if (!res.ok) throw new Error(data.error || '생성 실패');
+      raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+    if (!raw) throw new Error('빈 응답');
+
+    // 토큰 집계
+    let inTok = 0, outTok = 0;
+    if (isClaude) {
+      inTok = data.usage?.input_tokens || 0;
+      outTok = data.usage?.output_tokens || 0;
+    } else {
+      inTok = data.usageMetadata?.promptTokenCount || 0;
+      outTok = data.usageMetadata?.candidatesTokenCount || 0;
+    }
+    const rate = RATES[model] || { in: 1, out: 5 };
+    const cost = (inTok * rate.in + outTok * rate.out) / 1_000_000;
+
+    return { raw, inTok, outTok, cost };
+  }
+
+  // ===== 코드블록 추출 =====
+  function extractBlock(raw, lang) {
+    const re = new RegExp('```(?:' + lang + ')?\\s*([\\s\\S]*?)```', 'i');
+    const m = raw.match(re);
+    return m ? m[1].trim() : raw.trim();
+  }
+
+  function extractHtml(raw) {
+    let html = extractBlock(raw, 'html');
+    if (!/^<!DOCTYPE/i.test(html) && !/^<html/i.test(html)) {
+      html = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0">${html}</body></html>`;
+    }
+    return html;
+  }
+
+  function extractJson(raw) {
+    const text = extractBlock(raw, 'json');
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      // JSON 파싱 실패 시 첫 { ... } 블록 추출 시도
+      const m = text.match(/\{[\s\S]*\}/);
+      if (m) return JSON.parse(m[0]);
+      throw new Error('Pass 1 JSON 파싱 실패: ' + e.message);
+    }
+  }
+
+  // ===== 2-Pass 생성 =====
+  genBtn.onclick = async () => {
+    const narration = narrEl.value.trim();
+    if (!narration) { setStatus('error', '나레이션을 입력하세요'); return; }
+
+    const model = document.getElementById('model').value;
+    const style = document.getElementById('style').value;
+
+    genBtn.disabled = true;
+    metricsEl.textContent = '';
+    rawHtmlEl.textContent = '생성 중...';
+
+    const t0 = performance.now();
+    let pass1Tokens = { in:0, out:0, cost:0 }, pass2Tokens = { in:0, out:0, cost:0 };
+
+    try {
+      // ===== Pass 1: 분석 =====
+      // NOTE: Gemini 2.5는 thinkingBudget이 maxOutputTokens에 포함됨.
+      // → Pass1은 JSON이 짧아도 thinking 예산 확보 위해 8192로 둠.
+      setStatus('loading', `🧠 Pass 1/2 · ${model} 핵심 분석 중 (thinking mode)...`);
+      const p1Prompt = buildPass1Prompt(narration, style);
+      const p1 = await callModel({
+        prompt: p1Prompt,
+        model,
+        maxTokens: 8192,
+        temperature: 0.5,  // 분석은 낮은 temp
+        thinkingBudget: 4096,  // Gemini 추론 예산
+      });
+      pass1Tokens = { in: p1.inTok, out: p1.outTok, cost: p1.cost };
+
+      let analysis;
+      try {
+        analysis = extractJson(p1.raw);
+      } catch (e) {
+        console.error('Pass 1 raw:', p1.raw);
+        throw new Error('Pass 1 분석 실패: ' + e.message);
+      }
+      console.log('[Pass 1 분석]', analysis);
+
+      // ===== Pass 2: 디자인 =====
+      // thinkingBudget 낮춰 타임아웃 방지 (분석은 이미 Pass1에서 완료).
+      // Pass2는 템플릿 가이드를 따라 실행하므로 2048이면 충분.
+      const p1Elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+      setStatus('loading', `🎨 Pass 2/2 · ${model} HTML 디자인 중... (Pass1: ${p1Elapsed}s)`);
+      const p2Prompt = buildPass2Prompt(analysis, narration, style);
+      const p2 = await callModel({
+        prompt: p2Prompt,
+        model,
+        maxTokens: 8192,
+        temperature: 0.85,  // 디자인은 약간 창의적
+        thinkingBudget: 2048,
+      });
+      pass2Tokens = { in: p2.inTok, out: p2.outTok, cost: p2.cost };
+
+      const html = extractHtml(p2.raw);
+
+      // 메트릭 집계
+      const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+      const totalIn = pass1Tokens.in + pass2Tokens.in;
+      const totalOut = pass1Tokens.out + pass2Tokens.out;
+      const totalCost = pass1Tokens.cost + pass2Tokens.cost;
+
+      metricsEl.innerHTML = `
+        ⏱ <span class="val">${elapsed}s</span>
+        · 📥 <span class="val">${totalIn}</span> · 📤 <span class="val">${totalOut}</span>
+        · 💰 <span class="val">$${totalCost.toFixed(4)}</span>
+      `;
+
+      // iframe 렌더
+      placeholder.style.display = 'none';
+      frame.style.display = 'block';
+      frame.srcdoc = html;
+
+      // iframe 로드 후 오버플로우 자동 검증 (폰트/레이아웃 안정화 대기)
+      frame.onload = async () => {
+        try {
+          const doc = frame.contentDocument;
+          if (!doc || !doc.body) return;
+          // 폰트 로드 + 2 rAF 대기 (레이아웃 안정화)
+          try { await doc.fonts?.ready; } catch {}
+          await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+          await new Promise(r => setTimeout(r, 80));
+
+          const body = doc.body;
+          // body가 height:693px fixed면 scrollHeight는 항상 693. 실제 콘텐츠 초과는 자식 요소의 bottom으로 측정
+          const allElems = [...body.querySelectorAll('*')];
+          const maxBottom = allElems.reduce((max, el) => {
+            const b = el.getBoundingClientRect().bottom;
+            return b > max ? b : max;
+          }, 0);
+          const scrollH = Math.max(body.scrollHeight, doc.documentElement.scrollHeight);
+          const actualH = Math.max(maxBottom, scrollH);
+          const overflowPx = Math.round(actualH - 693);
+
+          if (overflowPx > 6) {
+            setStatus('error',
+              `⚠️ 오버플로우 감지: 실제 ${Math.round(actualH)}px > 693px (초과 ${overflowPx}px)\n` +
+              `2-Pass 완료는 됐지만 콘텐츠가 693px에 맞지 않음. 재생성하거나 나레이션을 짧게 해 보세요.\n` +
+              `⏱ ${elapsed}초 · 💰 $${totalCost.toFixed(4)}`
+            );
+          } else {
+            setStatus('success',
+              `✅ 2-Pass 완료 · fit OK (${Math.round(actualH)}px) · ${elapsed}초 · Pass1:${pass1Tokens.out}tok · Pass2:${pass2Tokens.out}tok · $${totalCost.toFixed(4)}`
+            );
+          }
+        } catch (e) {
+          // cross-origin 등 예외 시 무시
+        }
+      };
+
+      // 생성된 HTML + 분석 결과 모두 표시
+      rawHtmlEl.textContent =
+        '===== PASS 1 · 분석 =====\n' +
+        JSON.stringify(analysis, null, 2) +
+        '\n\n===== PASS 2 · HTML =====\n' +
+        html;
+
+      setStatus('success',
+        `✅ 2-Pass 완료 (${elapsed}초 · Pass1:${pass1Tokens.out}tok · Pass2:${pass2Tokens.out}tok · $${totalCost.toFixed(4)}) · 레이아웃 검증 중…`
+      );
+    } catch (e) {
+      console.error(e);
+      const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+      setStatus('error', `❌ 오류 (${elapsed}s): ${e.message}`);
+    } finally {
+      genBtn.disabled = false;
+    }
+  };
+
+  // 기본 샘플 선택
+  document.querySelector('.sample').click();
+</script>
+</body>
+</html>

@@ -28,7 +28,8 @@ const I18n = (() => {
         guide: '가이드', settings: '설정',
       },
       nav: {
-        home: '홈', tasks: '미션', boost: '부스트', profile: '내 프로필',
+        home: '홈', learn: '학습', stats: '성과', store: '스토어',
+        tasks: '학습', boost: '성과', profile: '스토어',
       },
       time: {
         day: '일', days: '일', min: '분', sec: '초', hour: '시간',
@@ -64,7 +65,8 @@ const I18n = (() => {
         guide: 'Guide', settings: 'Settings',
       },
       nav: {
-        home: 'Home', tasks: 'Tasks', boost: 'Boost', profile: 'Profile',
+        home: 'Home', learn: 'Learn', stats: 'Stats', store: 'Store',
+        tasks: 'Learn', boost: 'Stats', profile: 'Store',
       },
       time: {
         day: 'day', days: 'days', min: 'min', sec: 'sec', hour: 'hr',
@@ -100,7 +102,8 @@ const I18n = (() => {
         guide: 'Hướng dẫn', settings: 'Cài đặt',
       },
       nav: {
-        home: 'Trang chủ', tasks: 'Nhiệm vụ', boost: 'Boost', profile: 'Hồ sơ',
+        home: 'Trang chủ', learn: 'Học', stats: 'Thành tích', store: 'Cửa hàng',
+        tasks: 'Học', boost: 'Thành tích', profile: 'Cửa hàng',
       },
       time: {
         day: 'ngày', days: 'ngày', min: 'phút', sec: 'giây', hour: 'giờ',

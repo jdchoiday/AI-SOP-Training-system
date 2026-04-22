@@ -237,18 +237,10 @@
 <body>
 
   <div class="bottom-nav">
-    <a href="app.html">
-      <span class="nav-icon">&#127968;</span> <span class="nav-label-home">홈</span>
-    </a>
-    <a href="tasks.html">
-      <span class="nav-icon">&#9989;</span> <span class="nav-label-tasks">미션</span>
-    </a>
-    <a href="praise.html">
-      <span class="nav-icon">&#128588;</span> <span class="nav-label-praise">부스트</span>
-    </a>
-    <a href="my-results.html">
-      <span class="nav-icon">&#128100;</span> <span class="nav-label-results">내 프로필</span>
-    </a>
+    <a href="app.html"><span class="nav-icon">&#127968;</span> <span class="nav-label-home">홈</span></a>
+    <a href="tasks.html"><span class="nav-icon">&#128218;</span> <span class="nav-label-learn">학습</span></a>
+    <a href="my-results.html"><span class="nav-icon">&#128202;</span> <span class="nav-label-results">성과</span></a>
+    <a href="store.html"><span class="nav-icon">&#128722;</span> <span class="nav-label-store">스토어</span></a>
   </div>
 
   <div class="app-container">
@@ -406,6 +398,7 @@
   <script src="js/config.js"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/scene-prompts.js"></script>
+  <script src="js/infographic-2pass.js"></script>
   <script src="js/ai-provider.js"></script>
   <script src="js/sop-content-kids.js"></script>
   <script src="js/demo-data.js"></script>
@@ -621,9 +614,9 @@
 
     // Apply nav labels
     document.querySelector('.nav-label-home').textContent = t.home;
-    if (document.querySelector('.nav-label-tasks')) document.querySelector('.nav-label-tasks').textContent = t.tasks || (lang === 'en' ? 'Tasks' : lang === 'vi' ? 'Nhiệm vụ' : '미션');
-    if (document.querySelector('.nav-label-praise')) document.querySelector('.nav-label-praise').textContent = lang === 'en' ? 'Boost' : lang === 'vi' ? 'Boost' : '부스트';
-    document.querySelector('.nav-label-results').textContent = t.myResults;
+    if (document.querySelector('.nav-label-learn')) document.querySelector('.nav-label-learn').textContent = lang === 'en' ? 'Learn' : lang === 'vi' ? 'Học' : '학습';
+    if (document.querySelector('.nav-label-store')) document.querySelector('.nav-label-store').textContent = lang === 'en' ? 'Store' : lang === 'vi' ? 'Cửa hàng' : '스토어';
+    document.querySelector('.nav-label-results').textContent = lang === 'en' ? 'Stats' : lang === 'vi' ? 'Thành tích' : '성과';
     document.getElementById('backHomeBtn').innerHTML = `&#8592; ${t.backHome}`;
     document.getElementById('backToListLabel').textContent = t.backToList;
     document.getElementById('chapterDesc').textContent = t.chapterDesc;
@@ -1729,7 +1722,7 @@ ${narration.slice(0, 1500)}
     }
     function examNavigate(dir){var ni=examCurrentIndex+dir;if(ni>=0&&ni<examQuestions.length)renderExamQuestion(ni);}
 
-    function submitExam(){
+    async function submitExam(){
       var un=examAnswers.filter(function(a){return a===null;}).length;
       if(un>0&&!confirm(t.examConfirmSubmit)) return;
       var mcC=0,mcT=0,saS=0,saT=0;
@@ -1752,6 +1745,22 @@ ${narration.slice(0, 1500)}
       else os=Math.round(mp*0.7+sp*0.3);
       var gr=calcGrade(os);
       saveExamResult(chapterId,{score:os,mcScore:mp,saScore:sp,answers:da,completedAt:new Date().toISOString(),grade:gr});
+
+      // XP 적립: 종합시험 통과 (F 제외)
+      var empId = user?.id;
+      if (empId && gr !== 'F') {
+        try {
+          var xpResult = await XpService.addXp(empId, XP_CONFIG.CHAPTER_EXAM_PASS, 'chapter_exam', chapterId, '종합시험 ' + gr + '등급');
+          if (xpResult) { showXpToast(XP_CONFIG.CHAPTER_EXAM_PASS); showConfetti(); }
+          if (xpResult?.leveledUp) showLevelUpCelebration(xpResult.oldTier, xpResult.newTier, lang);
+          if (gr === 'S') {
+            var bonus = await XpService.addXp(empId, XP_CONFIG.CHAPTER_EXAM_GRADE_S_BONUS, 'chapter_exam_s_bonus', chapterId, 'S등급 보너스');
+            if (bonus) { showXpToast(XP_CONFIG.CHAPTER_EXAM_GRADE_S_BONUS, true); showConfetti(3000, 50); }
+            if (bonus?.leveledUp) showLevelUpCelebration(bonus.oldTier, bonus.newTier, lang);
+          }
+        } catch (e) { console.warn('[XP] 종합시험 적립 오류:', e); }
+      }
+
       showExamResults(os,mp,sp,gr,da);
     }
 

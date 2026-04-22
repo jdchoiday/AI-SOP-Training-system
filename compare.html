@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Opus vs Gemini 비교</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; padding:16px; background:#0a0a0a; color:#fff; font-family:-apple-system,'Pretendard',sans-serif; }
+  .header { position:sticky; top:0; background:#0a0a0a; z-index:100; padding:12px 0; border-bottom:1px solid #222; margin-bottom:20px; }
+  .header h1 { margin:0 0 4px 0; font-size:18px; }
+  .header .sub { font-size:12px; color:#888; }
+  .row { margin-bottom:32px; padding-bottom:16px; border-bottom:1px solid #1a1a1a; }
+  .row-head { margin-bottom:8px; }
+  .row-title { font-size:15px; font-weight:700; color:#fff; }
+  .row-type { font-size:12px; color:#888; font-weight:400; }
+  .row-meta { font-size:11px; color:#aaa; margin-top:2px; }
+  .pair { display:flex; gap:16px; }
+  .col { flex:0 0 auto; }
+  .col-label { font-size:12px; font-weight:700; margin-bottom:6px; padding:4px 8px; border-radius:4px; display:inline-block; }
+  .opus-label { background:#3a2a1a; color:#fbbf24; }
+  .gemini-label { background:#1a2a3a; color:#60a5fa; }
+  iframe { width:390px; height:693px; border:1px solid #222; background:#000; display:block; }
+  .empty { color:#888; padding:40px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>비고츠키 SOP · Claude Opus vs Gemini Pro</h1>
+  <div class="sub" id="summary">Loading…</div>
+</div>
+<div id="rows" class="empty">데이터 로드 중...</div>
+<script>
+  const enc = s => String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+  const data = JSON.parse(localStorage.getItem('__gemini_comparison') || 'null');
+  const sceneLabels = {
+    1: '씬 2 · 지퍼 올리기 예시', 2: '씬 3 · 스스로 vs 도움받아', 3: '씬 4 · ZPD 정의',
+    4: '씬 5 · 비계 설정', 5: '씬 6 · 4단계 적용', 6: '씬 7 · 함께 성장',
+    7: '씬 8 · 점진적 자립', 8: '씬 9 · 한 걸음 앞', 9: '씬 10 · 마무리 체크리스트',
+  };
+  if (!data) {
+    document.getElementById('rows').innerHTML = '비교 데이터가 없습니다. localStorage[__gemini_comparison] 이 비어있습니다.';
+  } else {
+    const { summary, pairs } = data;
+    document.getElementById('summary').innerHTML = summary || '';
+    const rowsHtml = pairs.map(p => {
+      const label = sceneLabels[p.idx] || ('씬 ' + (p.idx + 1));
+      return `
+      <div class="row">
+        <div class="row-head">
+          <div class="row-title">${enc(label)} <span class="row-type">(${enc(p.type)})</span></div>
+          <div class="row-meta">
+            Opus: <b>$${p.opus.cost.toFixed(3)}</b> · ${Math.round(p.opus.ms/1000)}s · ${enc(p.opus.sceneType)} · hero: ${enc(p.opus.hero)} |
+            Gemini: <b>$${p.gemini.cost.toFixed(3)}</b> · ${Math.round(p.gemini.ms/1000)}s · ${enc(p.gemini.sceneType)} · hero: ${enc(p.gemini.hero)}
+          </div>
+        </div>
+        <div class="pair">
+          <div class="col">
+            <div class="col-label opus-label">① Claude Opus</div>
+            <iframe srcdoc="${enc(p.opus.html)}" sandbox=""></iframe>
+          </div>
+          <div class="col">
+            <div class="col-label gemini-label">② Gemini Pro</div>
+            <iframe srcdoc="${enc(p.gemini.html)}" sandbox=""></iframe>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    const rowsEl = document.getElementById('rows');
+    rowsEl.classList.remove('empty');
+    rowsEl.innerHTML = rowsHtml;
+  }
+</script>
+</body>
+</html>

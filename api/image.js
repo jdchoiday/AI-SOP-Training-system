@@ -24,7 +24,7 @@ module.exports = async (req, res) => {
   if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not set' });
 
   try {
-    const { action = 'generate', visual, narration, sceneIndex, totalScenes, portrait = true } = req.body || {};
+    const { action = 'generate', visual, narration, sceneIndex, totalScenes, portrait = true, mode = 'infographic', sopTitle = '' } = req.body || {};
 
     if (action === 'status') {
       return res.status(200).json({ status: 'Succeed', message: 'Image mode - no polling needed' });
@@ -35,13 +35,19 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: 'visual or narration required' });
       }
 
-      // === 하이브리드 프롬프트 구성 ===
-      // Gemini가 직접 시각 타입을 결정하고 이미지를 생성
-      const smartPrompt = ScenePrompts
-        ? ScenePrompts.buildSmartVisualPrompt(narration || visual, sceneIndex, totalScenes)
-        : buildFallbackPrompt(narration || visual, sceneIndex);
+      // === 프롬프트 구성 ===
+      // mode === 'photo' → 실사 다큐멘터리 참고사진 (새로 추가)
+      // mode === 'infographic' (기본) → 기존 교과서 인포그래픽
+      let smartPrompt;
+      if (mode === 'photo' && ScenePrompts && ScenePrompts.buildReferencePhotoPrompt) {
+        smartPrompt = ScenePrompts.buildReferencePhotoPrompt(narration || visual, sopTitle);
+      } else {
+        smartPrompt = ScenePrompts
+          ? ScenePrompts.buildSmartVisualPrompt(narration || visual, sceneIndex, totalScenes)
+          : buildFallbackPrompt(narration || visual, sceneIndex);
+      }
 
-      console.log(`[Image] Hybrid prompt for scene ${(sceneIndex || 0) + 1}: ${(narration || visual || '').slice(0, 80)}...`);
+      console.log(`[Image] ${mode} prompt for scene ${(sceneIndex || 0) + 1}: ${(narration || visual || '').slice(0, 80)}...`);
 
       try {
         const controller = new AbortController();

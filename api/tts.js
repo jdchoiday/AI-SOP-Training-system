@@ -257,24 +257,44 @@ module.exports = async (req, res) => {
 
     const tmpFile = path.join(os.tmpdir(), `tts_${crypto.randomBytes(8).toString('hex')}.mp3`);
 
-    await enqueueTTS(async () => {
-      const tts = new EdgeTTS({
-        voice: voiceName,
-        lang: lang,
-        outputFormat: 'audio-24khz-96kbitrate-mono-mp3',
-        rate: prosodyRate,
-        pitch: prosodyPitch,
-        volume: '+10%',
-        timeout: 30000,
-      });
-      await tts.ttsPromise(coachText, tmpFile);
-    });
+    // ECONNRESET 재시도: Microsoft Edge TTS 엔드포인트가 가끔 연결을 끊음
+    const MAX_RETRY = 3;
+    let lastErr = null;
+    for (let attempt = 1; attempt <= MAX_RETRY; attempt++) {
+      try {
+        await enqueueTTS(async () => {
+          const tts = new EdgeTTS({
+            voice: voiceName,
+            lang: lang,
+            outputFormat: 'audio-24khz-96kbitrate-mono-mp3',
+            rate: prosodyRate,
+            pitch: prosodyPitch,
+            volume: '+10%',
+            timeout: 30000,
+          });
+          await tts.ttsPromise(coachText, tmpFile);
+        });
+        if (fs.existsSync(tmpFile) && fs.statSync(tmpFile).size > 100) {
+          break; // 성공
+        }
+        lastErr = new Error('Empty or missing output file');
+      } catch (e) {
+        lastErr = e;
+        console.warn(`[TTS Retry] 시도 ${attempt}/${MAX_RETRY} 실패:`, e.message);
+      }
+      if (attempt < MAX_RETRY) await new Promise(r => setTimeout(r, attempt * 800));
+    }
+
+    if (!fs.existsSync(tmpFile)) {
+      console.error('[TTS] 모든 재시도 실패:', lastErr?.message);
+      return res.status(502).json({ error: 'Edge TTS unreachable', message: lastErr?.message || 'Connection reset', retryable: true });
+    }
 
     const audioBuffer = fs.readFileSync(tmpFile);
     try { fs.unlinkSync(tmpFile); } catch (e) {}
 
     if (audioBuffer.length < 100) {
-      return res.status(500).json({ error: 'TTS generated empty audio' });
+      return res.status(502).json({ error: 'TTS generated empty audio', retryable: true });
     }
 
     res.setHeader('Content-Type', 'audio/mpeg');

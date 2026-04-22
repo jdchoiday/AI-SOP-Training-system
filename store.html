@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOP Training - 스토어</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0F172A">
+  <link rel="icon" href="assets/icon-192.svg">
+  <style>
+    .store-hero {
+      background: linear-gradient(135deg, #F59E0B 0%, #EF4444 100%);
+      border-radius: 20px;
+      padding: 20px;
+      color: white;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 30px rgba(245,158,11,0.25);
+    }
+    .store-hero-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .store-hero-left .label { font-size: 12px; opacity: 0.9; letter-spacing: 1px; }
+    .store-hero-left .balance { font-size: 32px; font-weight: 800; margin-top: 2px; }
+    .store-hero-right { text-align: right; font-size: 11px; opacity: 0.85; line-height: 1.4; }
+    .store-hero-right b { font-size: 14px; font-weight: 700; display: block; }
+
+    .tab-bar {
+      display: flex;
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 0;
+      border: none;
+      background: transparent;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-500);
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn.active {
+      background: var(--primary, #6366F1);
+      color: white;
+      box-shadow: 0 2px 6px rgba(99,102,241,0.25);
+    }
+
+    .item-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .item-card {
+      background: var(--bg-card);
+      border-radius: 14px;
+      padding: 14px 12px;
+      text-align: center;
+      border: 1px solid var(--gray-200);
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+    .item-card.affordable { cursor: pointer; }
+    .item-card.affordable:active { transform: scale(0.97); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .item-card.locked { opacity: 0.55; }
+    .item-card .emoji { font-size: 32px; display: block; margin-bottom: 4px; }
+    .item-card .name { font-size: 13px; font-weight: 700; color: var(--gray-700); }
+    .item-card .desc { font-size: 11px; color: var(--gray-500); margin-top: 2px; min-height: 28px; line-height: 1.35; }
+    .item-card .price { font-size: 13px; color: #F59E0B; font-weight: 700; margin-top: 6px; }
+    .item-card .stock { font-size: 10px; color: var(--gray-400); margin-top: 2px; }
+    .item-card .out-of-stock { color: #DC2626; }
+
+    .redeem-list { display: flex; flex-direction: column; gap: 8px; }
+    .redeem-row {
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--gray-200);
+    }
+    .redeem-row .ico { font-size: 26px; }
+    .redeem-row .body { flex: 1; min-width: 0; }
+    .redeem-row .name { font-size: 14px; font-weight: 700; color: var(--gray-700); }
+    .redeem-row .meta { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+    .redeem-row .status {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .status.pending { background: #FEF3C7; color: #92400E; }
+    .status.approved { background: #DBEAFE; color: #1E40AF; }
+    .status.delivered { background: #D1FAE5; color: #065F46; }
+    .status.cancelled { background: #FEE2E2; color: #991B1B; }
+
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--gray-500);
+    }
+    .empty .e { font-size: 48px; margin-bottom: 8px; }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100;
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .modal-sheet {
+      background: var(--bg-card); width: 100%; max-width: 480px;
+      border-radius: 20px 20px 0 0; padding: 24px 20px 28px;
+      animation: slideUp 0.2s ease-out;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-sheet h3 { font-size: 18px; font-weight: 700; margin: 0 0 8px; text-align: center; }
+    .modal-sheet .confirm-icon { font-size: 48px; text-align: center; margin-bottom: 8px; }
+    .modal-sheet .confirm-desc { font-size: 13px; color: var(--gray-500); text-align: center; margin-bottom: 16px; }
+    .modal-sheet .price-row {
+      display: flex; justify-content: space-between; padding: 10px 14px;
+      background: var(--gray-100); border-radius: 10px; font-size: 13px; margin-bottom: 6px;
+    }
+    .modal-sheet .price-row b { color: #F59E0B; }
+    .modal-btns { display: flex; gap: 8px; margin-top: 14px; }
+    .modal-btns button {
+      flex: 1; padding: 13px 0; border-radius: 12px; border: none;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+    }
+    .modal-btns .cancel { background: var(--gray-200); color: var(--gray-700); }
+    .modal-btns .ok { background: var(--primary, #6366F1); color: white; }
+    .modal-btns .ok:disabled { background: var(--gray-300); cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+  <div class="bottom-nav">
+    <a href="app.html"><span class="nav-icon">&#127968;</span> <span class="nav-label-home">홈</span></a>
+    <a href="tasks.html"><span class="nav-icon">&#128218;</span> <span class="nav-label-learn">학습</span></a>
+    <a href="my-results.html"><span class="nav-icon">&#128202;</span> <span class="nav-label-results">성과</span></a>
+    <a href="store.html" class="active"><span class="nav-icon">&#128722;</span> <span class="nav-label-store">스토어</span></a>
+  </div>
+
+  <div class="app-container">
+
+    <div class="app-header">
+      <h2 id="pageTitle">스토어</h2>
+      <a href="profile.html" class="user-avatar" id="userAvatar" style="text-decoration:none; overflow:hidden;">?</a>
+    </div>
+
+    <div class="store-hero">
+      <div class="store-hero-row">
+        <div class="store-hero-left">
+          <div class="label">MY COINS 🪙</div>
+          <div class="balance"><span id="coinBalance">0</span></div>
+        </div>
+        <div class="store-hero-right">
+          <b id="totalXpDisplay">0 XP</b>
+          XP 10당 1코인<br>
+          <span id="spentDisplay">0</span> 사용
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="shop" id="tabShop">🛒 상품</button>
+      <button class="tab-btn" data-tab="history" id="tabHistory">📜 내 교환</button>
+    </div>
+
+    <div id="shopPanel">
+      <div class="item-grid" id="itemGrid"></div>
+      <div id="shopEmpty" class="empty" style="display:none;">
+        <div class="e">🛒</div>
+        <div>등록된 상품이 없어요</div>
+      </div>
+    </div>
+
+    <div id="historyPanel" style="display:none;">
+      <div class="redeem-list" id="redeemList"></div>
+      <div id="historyEmpty" class="empty" style="display:none;">
+        <div class="e">📭</div>
+        <div>아직 교환 내역이 없어요</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Redeem confirmation modal -->
+  <div id="redeemModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-sheet">
+      <div class="confirm-icon" id="modalIcon">🎁</div>
+      <h3 id="modalTitle">교환하시겠어요?</h3>
+      <div class="confirm-desc" id="modalDesc"></div>
+      <div class="price-row"><span>상품 가격</span><b><span id="modalPrice">0</span> 🪙</b></div>
+      <div class="price-row"><span>교환 후 잔액</span><b><span id="modalAfter">0</span> 🪙</b></div>
+      <div class="modal-btns">
+        <button class="cancel" id="modalCancel">취소</button>
+        <button class="ok" id="modalConfirm">교환 신청</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script>
+    const STATUS_LABELS = {
+      pending: '승인 대기',
+      approved: '승인됨',
+      delivered: '수령 완료',
+      cancelled: '취소됨'
+    };
+
+    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    if (!user) { location.href = 'index.html'; }
+
+    let resolvedEmpId = null;
+    let currentEmployee = null;
+    let currentBalance = 0;
+    let currentTotalXp = 0;
+    let currentSpent = 0;
+    let selectedItem = null;
+
+    function fmt(n) { return Number(n || 0).toLocaleString(); }
+    function sb() { return SupabaseMode._client; }
+
+    async function waitSupabase() {
+      for (let i = 0; i < 40; i++) {
+        if (SupabaseMode._ready) return true;
+        await new Promise(r => setTimeout(r, 100));
+      }
+      return SupabaseMode._ready;
+    }
+
+    async function resolveEmpId() {
+      if (resolvedEmpId) return resolvedEmpId;
+      if (!SupabaseMode._ready) return user?.id;
+      const { data: d1 } = await sb().from('employees').select('id').eq('id', user.id).maybeSingle();
+      if (d1) { resolvedEmpId = d1.id; return resolvedEmpId; }
+      if (user.email) {
+        const { data: d2 } = await sb().from('employees').select('id').eq('email', user.email).maybeSingle();
+        if (d2) { resolvedEmpId = d2.id; return resolvedEmpId; }
+      }
+      resolvedEmpId = user.id;
+      return resolvedEmpId;
+    }
+
+    async function loadProfile() {
+      const empId = await resolveEmpId();
+      const { data: emp } = await sb().from('employees')
+        .select('id, name, avatar_url')
+        .eq('id', empId).maybeSingle();
+      currentEmployee = emp;
+      const avatar = document.getElementById('userAvatar');
+      if (user.avatarType === 'photo' && user.avatarData) {
+        avatar.innerHTML = `<img src="${user.avatarData}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
+      } else if (user.avatarType === 'emoji' && user.avatarData) {
+        avatar.textContent = user.avatarData;
+      } else if (emp?.avatar_url) {
+        avatar.innerHTML = `<img src="${emp.avatar_url}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
+      } else if (emp?.name || user.name) {
+        avatar.textContent = (emp?.name || user.name)[0];
+      }
+    }
+
+    async function loadBalance() {
+      const empId = await resolveEmpId();
+
+      const { data: gam } = await sb().from('user_gamification')
+        .select('total_xp').eq('employee_id', empId).maybeSingle();
+      currentTotalXp = gam?.total_xp || 0;
+
+      const { data: reds } = await sb().from('store_redemptions')
+        .select('cost_coins, status')
+        .eq('employee_id', empId);
+      currentSpent = (reds || [])
+        .filter(r => r.status !== 'cancelled')
+        .reduce((s, r) => s + (r.cost_coins || 0), 0);
+
+      currentBalance = Math.max(0, Math.floor(currentTotalXp / 10) - currentSpent);
+
+      document.getElementById('coinBalance').textContent = fmt(currentBalance);
+      document.getElementById('totalXpDisplay').textContent = fmt(currentTotalXp) + ' XP';
+      document.getElementById('spentDisplay').textContent = fmt(currentSpent) + ' 🪙';
+    }
+
+    async function loadItems() {
+      const { data: items, error } = await sb().from('store_items')
+        .select('*').eq('active', true)
+        .order('display_order', { ascending: true });
+
+      const grid = document.getElementById('itemGrid');
+      const empty = document.getElementById('shopEmpty');
+      if (error) { console.error('[store] loadItems', error); return; }
+      if (!items || items.length === 0) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+
+      grid.innerHTML = items.map(it => {
+        const outOfStock = it.stock !== null && it.stock <= 0;
+        const canAfford = currentBalance >= it.price_coins && !outOfStock;
+        const stockLine = outOfStock
+          ? '<div class="stock out-of-stock">품절</div>'
+          : (it.stock !== null ? `<div class="stock">남은 수량: ${it.stock}</div>` : '');
+        return `
+          <div class="item-card ${canAfford ? 'affordable' : 'locked'}" data-id="${it.id}">
+            <span class="emoji">${it.icon || '🎁'}</span>
+            <div class="name">${escapeHtml(it.name)}</div>
+            <div class="desc">${escapeHtml(it.description || '')}</div>
+            <div class="price">${fmt(it.price_coins)} 🪙</div>
+            ${stockLine}
+          </div>
+        `;
+      }).join('');
+
+      grid.querySelectorAll('.item-card.affordable').forEach(card => {
+        card.addEventListener('click', () => {
+          const id = card.dataset.id;
+          const item = items.find(i => i.id === id);
+          if (item) openRedeemModal(item);
+        });
+      });
+
+      grid.querySelectorAll('.item-card.locked').forEach(card => {
+        card.addEventListener('click', () => {
+          const id = card.dataset.id;
+          const item = items.find(i => i.id === id);
+          if (!item) return;
+          if (item.stock !== null && item.stock <= 0) {
+            alert('아쉬워요, 품절이에요 😢');
+          } else {
+            const need = item.price_coins - currentBalance;
+            alert(`코인이 ${fmt(need)} 🪙 더 필요해요.\nXP ${fmt(need * 10)}를 더 모아보세요!`);
+          }
+        });
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    async function loadHistory() {
+      const empId = await resolveEmpId();
+      const { data: reds, error } = await sb().from('store_redemptions')
+        .select('*').eq('employee_id', empId)
+        .order('requested_at', { ascending: false });
+
+      const list = document.getElementById('redeemList');
+      const empty = document.getElementById('historyEmpty');
+      if (error) { console.error('[store] loadHistory', error); return; }
+      if (!reds || reds.length === 0) { list.innerHTML = ''; empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+
+      list.innerHTML = reds.map(r => {
+        const d = new Date(r.requested_at);
+        const ymd = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        const statusCls = r.status;
+        const label = STATUS_LABELS[r.status] || r.status;
+        return `
+          <div class="redeem-row">
+            <div class="ico">${r.item_icon_snapshot || '🎁'}</div>
+            <div class="body">
+              <div class="name">${escapeHtml(r.item_name_snapshot)}</div>
+              <div class="meta">${ymd} · ${fmt(r.cost_coins)} 🪙</div>
+            </div>
+            <span class="status ${statusCls}">${label}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openRedeemModal(item) {
+      selectedItem = item;
+      document.getElementById('modalIcon').textContent = item.icon || '🎁';
+      document.getElementById('modalTitle').textContent = `${item.name} 교환?`;
+      document.getElementById('modalDesc').textContent = item.description || '';
+      document.getElementById('modalPrice').textContent = fmt(item.price_coins);
+      document.getElementById('modalAfter').textContent = fmt(currentBalance - item.price_coins);
+      document.getElementById('redeemModal').style.display = 'flex';
+    }
+    function closeRedeemModal() {
+      selectedItem = null;
+      document.getElementById('redeemModal').style.display = 'none';
+    }
+
+    async function confirmRedeem() {
+      if (!selectedItem) return;
+      const item = selectedItem;
+      const btn = document.getElementById('modalConfirm');
+      btn.disabled = true;
+      btn.textContent = '신청 중...';
+      try {
+        // Re-check balance on server side (defense against double-click)
+        await loadBalance();
+        if (currentBalance < item.price_coins) {
+          alert('잔액이 부족해요 😢');
+          closeRedeemModal();
+          await loadItems();
+          return;
+        }
+
+        const empId = await resolveEmpId();
+        const { error } = await sb().from('store_redemptions').insert({
+          employee_id: empId,
+          item_id: item.id,
+          item_name_snapshot: item.name,
+          item_icon_snapshot: item.icon || '🎁',
+          cost_coins: item.price_coins,
+          status: 'pending'
+        });
+        if (error) throw error;
+
+        if (item.stock !== null && item.stock > 0) {
+          await sb().from('store_items')
+            .update({ stock: item.stock - 1, updated_at: new Date().toISOString() })
+            .eq('id', item.id);
+        }
+
+        closeRedeemModal();
+        await loadBalance();
+        await loadItems();
+        alert('✅ 교환 신청 완료!\n관리자 승인 후 수령하실 수 있어요.');
+      } catch (e) {
+        console.error('[store] redeem error', e);
+        alert('교환 신청 실패: ' + (e.message || e));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '교환 신청';
+      }
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+      document.getElementById('shopPanel').style.display = tab === 'shop' ? '' : 'none';
+      document.getElementById('historyPanel').style.display = tab === 'history' ? '' : 'none';
+      if (tab === 'history') loadHistory();
+    }
+
+    // i18n nav labels
+    (function initI18n() {
+      const lang = localStorage.getItem('sop_lang') || 'ko';
+      const home = document.querySelector('.nav-label-home');
+      const learn = document.querySelector('.nav-label-learn');
+      const results = document.querySelector('.nav-label-results');
+      const store = document.querySelector('.nav-label-store');
+      if (home) home.textContent = lang === 'en' ? 'Home' : lang === 'vi' ? 'Trang chủ' : '홈';
+      if (learn) learn.textContent = lang === 'en' ? 'Learn' : lang === 'vi' ? 'Học' : '학습';
+      if (results) results.textContent = lang === 'en' ? 'Stats' : lang === 'vi' ? 'Thành tích' : '성과';
+      if (store) store.textContent = lang === 'en' ? 'Store' : lang === 'vi' ? 'Cửa hàng' : '스토어';
+      document.getElementById('pageTitle').textContent = lang === 'en' ? 'Store' : lang === 'vi' ? 'Cửa hàng' : '스토어';
+    })();
+
+    (async function init() {
+      if (!user) return;
+      await SupabaseMode.init();
+      const ok = await waitSupabase();
+      if (!ok) {
+        document.getElementById('shopEmpty').style.display = 'block';
+        document.getElementById('shopEmpty').querySelector('div:last-child').textContent = 'Supabase 연결 실패';
+        return;
+      }
+      await loadProfile();
+      await loadBalance();
+      await loadItems();
+
+      document.getElementById('tabShop').addEventListener('click', () => switchTab('shop'));
+      document.getElementById('tabHistory').addEventListener('click', () => switchTab('history'));
+      document.getElementById('modalCancel').addEventListener('click', closeRedeemModal);
+      document.getElementById('modalConfirm').addEventListener('click', confirmRedeem);
+      document.getElementById('redeemModal').addEventListener('click', (e) => {
+        if (e.target.id === 'redeemModal') closeRedeemModal();
+      });
+    })();
+  </script>
+
+</body>
+</html>

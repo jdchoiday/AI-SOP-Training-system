@@ -312,6 +312,7 @@
       <a href="#" onclick="showPage('xp-manage', event)" data-page="xp-manage"><span class="ic">&#127942;</span> XP 관리</a>
       <a href="#" onclick="showPage('praise-manage', event)" data-page="praise-manage"><span class="ic">&#128588;</span> 부스트 관리</a>
       <a href="#" onclick="showPage('xp-rewards', event)" data-page="xp-rewards"><span class="ic">&#127873;</span> XP 혜택 관리</a>
+      <a href="#" onclick="showPage('store-admin', event)" data-page="store-admin"><span class="ic">&#128722;</span> 스토어 관리</a>
       <a href="#" onclick="showPage('task-manage', event)" data-page="task-manage"><span class="ic">&#9989;</span> 성과제 관리</a>
       <a href="#" onclick="showPage('team-task-manage', event)" data-page="team-task-manage"><span class="ic">&#128101;</span> 팀 테스크 관리</a>
       <a href="#" onclick="showPage('quest-manage', event)" data-page="quest-manage"><span class="ic">&#127918;</span> 퀘스트 관리</a>
@@ -1071,6 +1072,35 @@
       </div>
     </div>
 
+    <!-- ========== 스토어 관리 (Phase 2) ========== -->
+    <div id="page-store-admin" style="display:none;">
+      <div class="topbar">
+        <h1>&#128722; 스토어 관리</h1>
+        <p>직원이 코인으로 교환할 수 있는 상품과 교환 신청을 관리합니다 (코인 = XP / 10)</p>
+      </div>
+
+      <!-- 교환 신청 승인 섹션 -->
+      <div class="card" style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <h3 style="font-size:16px;">교환 신청 <span id="storeAdminPendingCount" style="font-size:12px;color:var(--gray-500);font-weight:500;"></span></h3>
+          <div>
+            <button class="btn" id="storeFilterPending" onclick="storeAdminFilter('pending')" style="font-size:12px;padding:6px 12px;">대기중</button>
+            <button class="btn" id="storeFilterAll" onclick="storeAdminFilter('all')" style="font-size:12px;padding:6px 12px;">전체</button>
+          </div>
+        </div>
+        <div id="storeAdminRedemptions" style="overflow-x:auto;"></div>
+      </div>
+
+      <!-- 상품 목록 CRUD -->
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <h3 style="font-size:16px;">상품 목록</h3>
+          <button class="btn btn-primary" onclick="storeAdminAddItem()" style="font-size:13px;padding:8px 16px;">+ 상품 추가</button>
+        </div>
+        <div id="storeAdminItems"></div>
+      </div>
+    </div>
+
     <!-- ========== 성과제 관리 ========== -->
     <div id="page-task-manage" style="display:none;">
       <div class="topbar">
@@ -1356,6 +1386,7 @@
   <script src="../js/scene-prompts.js"></script>
   <script src="../js/config.js"></script>
   <script src="../js/supabase-client.js"></script>
+  <script src="../js/infographic-2pass.js"></script>
   <script src="../js/ai-provider.js"></script>
   <script src="../js/sop-content-kids.js"></script>
   <script src="../js/demo-data.js"></script>
@@ -1585,6 +1616,10 @@
           try { if (typeof renderTeamList === 'function') renderTeamList(); } catch(e) {}
           if (typeof renderTrainingReport === 'function') renderTrainingReport();
           console.log('[Admin] Supabase 전체 동기화 완료 — UI 재렌더링됨');
+
+          // 3단계: 2-Pass HTML 자동 일괄 업그레이드
+          // _htmlContent 없는 published SOP 감지 → 백그라운드 처리 (버튼 없이, 코드로 자동)
+          setTimeout(() => { _autoBulkTwoPassUpgrade(); }, 2000);
         });
       }
     });
@@ -1739,6 +1774,123 @@
     }
 
 
+    // ============================================================
+    // 자동 일괄 2-Pass HTML 업그레이드 — 버튼 없이 코드에서 실행
+    // 관리자가 admin 페이지 진입할 때 _htmlContent 누락된 published SOP 자동 처리
+    // ============================================================
+    const HTML_TARGET_TYPES_ADMIN = new Set([
+      'stat','barchart','rankingBoard','comparison',
+      'infographic','iconGrid','conceptExplainer',
+      'quote','keypoint',
+    ]);
+
+    window.__autoBulkRunning = false;
+    async function _autoBulkTwoPassUpgrade(force = false) {
+      if (window.__autoBulkRunning) return;
+      if (typeof AI_CONFIG === 'undefined' || !AI_CONFIG.useTwoPassHTML) return;
+      if (!window.Infographic2Pass) { console.warn('[2-Pass Auto] Infographic2Pass 모듈 미로드'); return; }
+      if (typeof AI === 'undefined' || typeof AI._enrichWithTwoPassHTML !== 'function') {
+        console.warn('[2-Pass Auto] AI._enrichWithTwoPassHTML 미로드');
+        return;
+      }
+
+      const sops = getSops();
+      // 대상: published SOP 중 _htmlContent 누락 씬이 있는 것
+      const targets = [];
+      sops.forEach(sop => {
+        if (sop.status !== 'published') return;
+        if (!Array.isArray(sop.script) || sop.script.length === 0) return;
+        const missing = sop.script.filter(sc =>
+          sc && sc.narration && HTML_TARGET_TYPES_ADMIN.has(sc.type) && !sc._htmlContent
+        );
+        if (missing.length > 0) {
+          targets.push({ sop, missing });
+        }
+      });
+
+      if (targets.length === 0) {
+        console.log('[2-Pass Auto] 업그레이드 대상 없음 — 모든 published SOP 완료');
+        return;
+      }
+
+      const totalScenes = targets.reduce((s, t) => s + t.missing.length, 0);
+      const estCost = (totalScenes * 0.20).toFixed(2);
+      const estMin = Math.ceil(totalScenes * 37 / 2 / 60); // concurrency=2, ~37s/scene
+
+      // 비용이 $10 이상이면 1회 alert 로 확인 (공격적 비용 방지)
+      if (!force && totalScenes > 50) {
+        const ok = confirm(
+          `🎨 2-Pass HTML 자동 업그레이드\n\n` +
+          `대상: published SOP ${targets.length}개 (${totalScenes}개 씬)\n` +
+          `예상 비용: ~$${estCost}\n` +
+          `예상 시간: ~${estMin}분\n\n` +
+          `지금 백그라운드로 시작할까요?\n(취소해도 이후 SOP 편집 시 개별 실행됩니다)`
+        );
+        if (!ok) {
+          localStorage.setItem('sop_bulk_2pass_skipped', '1');
+          return;
+        }
+      } else if (localStorage.getItem('sop_bulk_2pass_skipped') === '1' && !force) {
+        return;
+      }
+
+      window.__autoBulkRunning = true;
+      console.log(`[2-Pass Auto] ${targets.length}개 SOP / ${totalScenes}개 씬 / ~$${estCost} / ~${estMin}분`);
+
+      // 상단 진행 배너 생성
+      const bar = document.createElement('div');
+      bar.id = 'autoBulk2PassBar';
+      bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10000;padding:12px 20px;background:linear-gradient(135deg,#581c87,#1e1b4b);border-bottom:2px solid #a78bfa;color:#e9d5ff;font-size:13px;font-weight:600;text-align:center;cursor:pointer;';
+      bar.innerHTML = `🎨 AI 인포그래픽 자동 업그레이드 · <span id="autoBulkProgress">0/${totalScenes}</span> 씬 · 클릭으로 최소화`;
+      bar.onclick = () => { bar.style.display = bar.style.display === 'none' ? '' : 'none'; };
+      document.body.appendChild(bar);
+
+      let done = 0;
+      const progress = () => {
+        const el = document.getElementById('autoBulkProgress');
+        if (el) el.textContent = `${done}/${totalScenes}`;
+      };
+
+      try {
+        for (const { sop, missing } of targets) {
+          // SOP 하나씩 순차 처리 (한 SOP 내부는 concurrency=2 병렬)
+          try {
+            const before = missing.length;
+            // 콘솔 로그로 현재 SOP 표시
+            console.log(`[2-Pass Auto] "${sop.title}" 시작 (${before} 씬)`);
+
+            // 진행률 추적을 위해 enrichWithTwoPassHTML 호출 전후 비교
+            // eslint-disable-next-line no-undef
+            await AI._enrichWithTwoPassHTML(missing); // AI는 로컬 스코프 const (window.AI 아님)
+
+            // 해당 SOP 저장 반영 (localStorage 의 script 객체는 in-place 변경되었으므로 동기화만 필요)
+            const currentSops = getSops();
+            const idx = currentSops.findIndex(s => s.id === sop.id);
+            if (idx !== -1) {
+              currentSops[idx] = sop;
+              saveSops(currentSops);
+            }
+
+            done += before;
+            progress();
+          } catch (e) {
+            console.warn(`[2-Pass Auto] "${sop.title}" 실패:`, e.message);
+          }
+        }
+        bar.innerHTML = `✅ 인포그래픽 업그레이드 완료 · ${done}/${totalScenes}개 씬 · 10초 후 닫힘`;
+        setTimeout(() => bar.remove(), 10000);
+        localStorage.setItem('sop_bulk_2pass_last_run', String(Date.now()));
+      } catch (e) {
+        console.error('[2-Pass Auto] 전체 실패:', e);
+        bar.innerHTML = `⚠️ 업그레이드 중단: ${e.message} · 클릭으로 닫기`;
+        bar.onclick = () => bar.remove();
+      } finally {
+        window.__autoBulkRunning = false;
+      }
+    }
+    // 외부에서 수동 트리거 가능 (콘솔에서 _autoBulkTwoPassUpgrade(true) 로 강제 실행)
+    window._autoBulkTwoPassUpgrade = _autoBulkTwoPassUpgrade;
+
     // 초기 데모 SOP: 사용자가 삭제한 적 없을 때만 자동 생성
     if (getSops().length === 0 && localStorage.getItem('sop_user_cleared') !== 'true') {
       if (typeof SopStore !== 'undefined') { SopStore.initDemo(); }
@@ -1752,7 +1904,7 @@
       if (event) event.preventDefault();
       // 현재 페이지를 저장 — 새로고침 시 복원
       try { localStorage.setItem('sop_admin_last_page', page); } catch(e) {}
-      ['sop', 'content', 'dashboard', 'employees', 'learning-path', 'chat-logs', 'notifications', 'reports', 'admin-manage', 'settings', 'audit-log', 'glossary', 'version-mgmt', 'xp-manage', 'praise-manage', 'xp-rewards', 'task-manage', 'team-task-manage', 'quest-manage', 'branch-team'].forEach(p => {
+      ['sop', 'content', 'dashboard', 'employees', 'learning-path', 'chat-logs', 'notifications', 'reports', 'admin-manage', 'settings', 'audit-log', 'glossary', 'version-mgmt', 'xp-manage', 'praise-manage', 'xp-rewards', 'store-admin', 'task-manage', 'team-task-manage', 'quest-manage', 'branch-team'].forEach(p => {
         const el = document.getElementById('page-' + p);
         if (el) el.style.display = p === page ? 'block' : 'none';
       });
@@ -1778,6 +1930,7 @@
       if (page === 'xp-manage') renderXpManage();
       if (page === 'praise-manage') renderPraiseManage();
       if (page === 'xp-rewards') loadXpRewards();
+      if (page === 'store-admin') loadStoreAdmin();
       if (page === 'task-manage') { renderTaskManage(); loadDailyMissionConfigAdmin(); }
       if (page === 'team-task-manage') renderTeamTaskManage();
       if (page === 'quest-manage') renderQuestManage();
@@ -2789,15 +2942,27 @@ ${JSON.stringify({ fields: { title: "교정된 제목", title_en: "fixed title",
     }
 
     // ===== 드래그앤드롭 =====
+    // 브랜드 폴더명 (top-level 폴더가 이 중 하나면 category로 저장)
+    const BRAND_FOLDERS = ['유치원', '키즈카페', 'KBBQ'];
+
     async function handleSopDrop(event) {
       event.preventDefault();
       const items = event.dataTransfer.items;
       const files = [];
       const jsonFiles = [];
 
+      // entry.fullPath 는 "/유치원/subdir/file.txt" 형태 → 첫 세그먼트가 브랜드
       async function traverseEntry(entry) {
         if (entry.isFile) {
           const file = await new Promise(resolve => entry.file(resolve));
+          try {
+            const fp = entry.fullPath || ('/' + file.name);
+            const seg = fp.replace(/^\/+/, '').split('/');
+            if (seg.length > 1 && BRAND_FOLDERS.includes(seg[0])) {
+              file._brand = seg[0];
+            }
+            file._fullPath = fp;
+          } catch(e) {}
           if (/\.json$/i.test(file.name)) jsonFiles.push(file);
           else if (/\.(txt|md|pdf|doc|docx|hwp)$/i.test(file.name)) files.push(file);
         } else if (entry.isDirectory) {
@@ -2854,47 +3019,70 @@ ${JSON.stringify({ fields: { title: "교정된 제목", title_en: "fixed title",
           else if (/\.pdf$/i.test(file.name)) text = await extractPdfText(file);
           else if (/\.(doc|docx)$/i.test(file.name)) text = await extractDocText(file);
           if (text && text.trim().length > 10) {
-            const pathParts = (file.webkitRelativePath || file.name).split('/');
+            const pathParts = (file._fullPath || file.webkitRelativePath || file.name).replace(/^\/+/, '').split('/');
             const folder = pathParts.length > 1 ? pathParts[pathParts.length - 2] : '';
-            fileContents.push({ name: file.name, folder, text: text.slice(0, 2000) });
+            const brand = file._brand || (pathParts.length > 1 && BRAND_FOLDERS.includes(pathParts[0]) ? pathParts[0] : '');
+            fileContents.push({ name: file.name, folder, brand, text: text.slice(0, 2000) });
           }
         } catch(e) { console.error('Extract error:', file.name, e); }
       }
 
       if (!fileContents.length) { hideLoading(); alert('텍스트를 추출할 수 있는 파일이 없습니다.'); return; }
 
+      // ===== 브랜드별로 사전 그룹핑 (유치원/키즈카페/KBBQ 는 절대 합쳐지지 않게) =====
+      const brandBuckets = {};
+      for (const fc of fileContents) {
+        const key = fc.brand || '_noBrand';
+        (brandBuckets[key] = brandBuckets[key] || []).push(fc);
+      }
+
       showLoading(`AI가 ${fileContents.length}개 파일을 챕터별로 분류 중...`);
-      let organized;
-      try {
-        organized = await aiOrganizeFiles(fileContents);
-      } catch(e) {
-        console.error('AI organize error:', e);
-        organized = fallbackOrganize(fileContents);
+      let organized = [];
+      for (const [brand, group] of Object.entries(brandBuckets)) {
+        try {
+          const part = await aiOrganizeFiles(group);
+          // AI 응답에 brand 태깅
+          part.forEach(g => { if (brand !== '_noBrand') g._brand = brand; });
+          organized = organized.concat(part);
+        } catch(e) {
+          console.error('AI organize error:', e);
+          const fb = fallbackOrganize(group);
+          fb.forEach(g => { if (brand !== '_noBrand') g._brand = brand; });
+          organized = organized.concat(fb);
+        }
       }
 
       const sops = getSops();
       const chapterMap = {};
-      sops.filter(s => s.doc_type === 'chapter').forEach(ch => { chapterMap[ch.title] = ch.id; });
+      // 같은 브랜드 내에서만 챕터 중복 체크
+      sops.filter(s => s.doc_type === 'chapter').forEach(ch => {
+        const key = (ch.category || '') + '::' + ch.title;
+        chapterMap[key] = ch.id;
+      });
       let created = 0;
 
       for (const group of organized) {
+        const brandCategory = group._brand || '';
+        const chapterKey = brandCategory + '::' + group.chapter;
         // 대챕터 자동 생성
-        if (!chapterMap[group.chapter]) {
+        if (!chapterMap[chapterKey]) {
           const chId = 'chapter-' + Date.now() + '-' + Math.random().toString(36).substr(2,4);
           sops.push({
-            id: chId, title: group.chapter, category: '', status: 'draft',
+            id: chId, title: group.chapter, category: brandCategory, status: 'draft',
             doc_type: 'chapter', parent_id: null, order_num: Object.keys(chapterMap).length + 1,
             content: '', createdAt: new Date().toISOString().slice(0, 10),
             script: null, quizzes: null, exam_quizzes: null
           });
-          chapterMap[group.chapter] = chId;
+          chapterMap[chapterKey] = chId;
         }
 
         const newSop = {
           id: 'sop-' + Date.now() + '-' + (++created) + Math.random().toString(36).substr(2,3),
-          title: group.title, category: group.category || '기타',
+          title: group.title,
+          // 브랜드 폴더 있으면 우선, 없으면 AI 카테고리 → 최후엔 '기타'
+          category: brandCategory || group.category || '기타',
           status: 'draft', doc_type: 'section',
-          parent_id: chapterMap[group.chapter],
+          parent_id: chapterMap[chapterKey],
           order_num: created,
           content: group.html,
           createdAt: new Date().toISOString().slice(0, 10),
@@ -3398,7 +3586,7 @@ ${text.slice(0, 3000)}`;
           <button onclick="generateContent()" style="padding:10px 20px; font-size:14px; font-weight:700; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:10px; cursor:pointer;">
             &#127916; 영상 생성
           </button>
-          <span style="font-size:13px; color:var(--gray-500); display:flex; align-items:center;">SOP 원문을 영상 다큐멘터리로 변환합니다 (씬 + Pexels 영상 자동)</span>
+          <span style="font-size:13px; color:var(--gray-500); display:flex; align-items:center;">SOP 원문을 AI 인포그래픽 영상으로 변환합니다 (2-Pass HTML 자동)</span>
         `;
       } else {
         // 생성됨 — 모든 핵심 버튼 표시
@@ -4267,6 +4455,61 @@ Output ONLY the prompt, nothing else.`;
         // SceneNormalizer 로 10종 타입 정규화 + 필드 자동 보충 + 레거시 필드 제거
         SceneNormalizer.normalizeScript(sop.script);
 
+        // === 2-Pass HTML 업그레이드 (기존 씬에 _htmlContent 없는 경우) ===
+        // "영상 생성" 버튼으로 기존 SOP 도 교과서 HTML 업그레이드 가능
+        try {
+          if (typeof AI_CONFIG !== 'undefined' && AI_CONFIG.useTwoPassHTML
+              && window.Infographic2Pass && AI && typeof AI._enrichWithTwoPassHTML === 'function') {
+            const HTML_TARGET_TYPES = new Set([
+              'stat','barchart','rankingBoard','comparison',
+              'infographic','iconGrid','conceptExplainer',
+              'quote','keypoint',
+            ]);
+            const missing = sop.script.filter(sc =>
+              sc.narration && HTML_TARGET_TYPES.has(sc.type) && !sc._htmlContent);
+            if (missing.length > 0) {
+              console.log(`[2-Pass HTML] "영상 생성" 훅 — ${missing.length}개 씬 업그레이드 시작`);
+              const upgradeOverlay = document.createElement('div');
+              upgradeOverlay.id = 'twoPassUpgradeOverlay';
+              upgradeOverlay.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:10000; background:linear-gradient(135deg,#581c87,#1e1b4b); border-bottom:2px solid #a78bfa; padding:14px 24px; box-shadow:0 4px 20px rgba(0,0,0,0.5); color:#e9d5ff; font-size:14px; font-weight:600;';
+              upgradeOverlay.innerHTML = `
+                <div style="max-width:700px; margin:0 auto;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span>🎨 AI 인포그래픽 + 참고사진 생성 중 (Gemini 2.5 Pro · 나노바나나)</span>
+                    <span id="twoPassCount" style="color:#fff;">0 / ${missing.length}</span>
+                  </div>
+                  <div style="background:rgba(255,255,255,0.12); border-radius:8px; height:8px; overflow:hidden;">
+                    <div id="twoPassBar" style="background:linear-gradient(90deg,#a78bfa,#60a5fa); height:100%; width:0%; transition:width 0.4s;"></div>
+                  </div>
+                  <div id="twoPassStatus" style="font-size:12px; color:#c4b5fd; margin-top:6px;">병렬 4개 요청 중 · 예상 ${Math.ceil(missing.length / 4) * 50}초</div>
+                </div>`;
+              document.body.appendChild(upgradeOverlay);
+              const tpStart = Date.now();
+              await AI._enrichWithTwoPassHTML(missing, ({ done, total, current }) => {
+                const pct = Math.round(done / total * 100);
+                const countEl = document.getElementById('twoPassCount');
+                const barEl = document.getElementById('twoPassBar');
+                const statusEl = document.getElementById('twoPassStatus');
+                if (countEl) countEl.textContent = `${done} / ${total}`;
+                if (barEl) barEl.style.width = pct + '%';
+                if (statusEl) {
+                  const elapsed = Math.round((Date.now() - tpStart) / 1000);
+                  const narr = (current?.narration || '').slice(0, 50);
+                  statusEl.textContent = current ? `✓ 씬 ${current.scene} 완료 · ${elapsed}초 경과 · ${narr}...` : `병렬 4개 요청 시작...`;
+                }
+              });
+              upgradeOverlay.remove();
+              // 중간 저장 (중복 업그레이드 방지)
+              sops[idx] = sop;
+              saveSops(sops);
+              console.log(`[2-Pass HTML] 업그레이드 완료, 저장됨`);
+            }
+          }
+        } catch (e) {
+          console.warn('[2-Pass HTML] 업그레이드 실패 (기존 렌더 유지):', e.message);
+          document.getElementById('twoPassUpgradeOverlay')?.remove();
+        }
+
         // 씬 타입별 분류 — 전부 순수 CSS 렌더링 (Pexels 영상 사용 안 함)
         // • infographic: steps 없고 imageUrl 없으면 AI 이미지 (fallback)
         // • 나머지 9종: 항상 순수 CSS
@@ -4432,6 +4675,39 @@ Output ONLY the prompt, nothing else.`;
 
         // 검토 화면 열기
         if (typeof renderAiResults === 'function') renderAiResults(sop);
+
+        // === 퀴즈 자동 생성 (최초 영상 생성 시에만) ===
+        // "영상 생성" 1회 클릭으로 퀴즈까지 원스톱 생성
+        try {
+          const hasQuiz = Array.isArray(sop.quizzes) && sop.quizzes.length > 0;
+          if (!hasQuiz && sop.content && sop.content.length >= 50) {
+            console.log('[Quiz Auto] 퀴즈 없음 감지 — 자동 생성 시작');
+            const quizOverlay = document.createElement('div');
+            quizOverlay.id = 'quizAutoOverlay';
+            quizOverlay.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:10000; background:linear-gradient(135deg,#9a3412,#7c2d12); border-bottom:2px solid #fb923c; padding:16px 24px; box-shadow:0 4px 20px rgba(0,0,0,0.5); color:#fed7aa; font-size:14px; font-weight:600; text-align:center;';
+            quizOverlay.innerHTML = `❓ AI 퀴즈 자동 생성 중...`;
+            document.body.appendChild(quizOverlay);
+            try {
+              const quizResult = await AI.generateQuiz(sop.title, sop.content);
+              const sops2 = getSops();
+              const idx2 = sops2.findIndex(s => s.id === currentSopId);
+              if (idx2 !== -1) {
+                sops2[idx2].quizzes = quizResult;
+                saveSops(sops2);
+                if (typeof renderAiResults === 'function') renderAiResults(sops2[idx2]);
+                if (typeof _renderEditorActionBar === 'function') _renderEditorActionBar(sops2[idx2]);
+              }
+              quizOverlay.innerHTML = `✅ 퀴즈 ${quizResult.length}문제 자동 생성 완료`;
+              setTimeout(() => quizOverlay.remove(), 2500);
+            } catch (qe) {
+              console.warn('[Quiz Auto] 실패 (수동 생성 가능):', qe.message);
+              quizOverlay.innerHTML = `⚠️ 퀴즈 자동 생성 실패 — 퀴즈 생성 버튼으로 재시도 가능`;
+              setTimeout(() => quizOverlay.remove(), 4000);
+            }
+          }
+        } catch (e) {
+          console.warn('[Quiz Auto] 훅 오류:', e.message);
+        }
       } catch (err) {
         console.error('[Video Gen] 오류:', err);
         alert('영상 생성 중 오류: ' + err.message);
@@ -8689,6 +8965,209 @@ ${text.slice(0, 3000)}
         </div>`;
       });
       preview.innerHTML = html;
+    }
+
+    // ===== 스토어 관리 (Phase 2) =====
+    let storeAdminItemsCache = [];
+    let storeAdminRedemptionsCache = [];
+    let storeAdminFilterMode = 'pending';
+    let storeAdminEmpMap = {};
+
+    async function loadStoreAdmin() {
+      if (!SupabaseMode._ready) { alert('Supabase 미연결'); return; }
+      await Promise.all([loadStoreAdminItems(), loadStoreAdminRedemptions(), loadStoreAdminEmployees()]);
+      renderStoreAdminItems();
+      renderStoreAdminRedemptions();
+      updateStoreAdminFilterButtons();
+    }
+
+    async function loadStoreAdminEmployees() {
+      const { data } = await SupabaseMode._client.from('employees').select('id, name, branch');
+      storeAdminEmpMap = {};
+      (data || []).forEach(e => { storeAdminEmpMap[e.id] = e; });
+    }
+
+    async function loadStoreAdminItems() {
+      const { data, error } = await SupabaseMode._client.from('store_items')
+        .select('*').order('display_order', { ascending: true });
+      if (error) { console.error('[storeAdmin] items', error); return; }
+      storeAdminItemsCache = data || [];
+    }
+
+    async function loadStoreAdminRedemptions() {
+      const { data, error } = await SupabaseMode._client.from('store_redemptions')
+        .select('*').order('requested_at', { ascending: false }).limit(200);
+      if (error) { console.error('[storeAdmin] redemptions', error); return; }
+      storeAdminRedemptionsCache = data || [];
+    }
+
+    function storeAdminFilter(mode) {
+      storeAdminFilterMode = mode;
+      updateStoreAdminFilterButtons();
+      renderStoreAdminRedemptions();
+    }
+
+    function updateStoreAdminFilterButtons() {
+      const bP = document.getElementById('storeFilterPending');
+      const bA = document.getElementById('storeFilterAll');
+      if (!bP || !bA) return;
+      if (storeAdminFilterMode === 'pending') {
+        bP.classList.add('btn-primary'); bA.classList.remove('btn-primary');
+      } else {
+        bA.classList.add('btn-primary'); bP.classList.remove('btn-primary');
+      }
+    }
+
+    function renderStoreAdminRedemptions() {
+      const box = document.getElementById('storeAdminRedemptions');
+      if (!box) return;
+      const filtered = storeAdminFilterMode === 'pending'
+        ? storeAdminRedemptionsCache.filter(r => r.status === 'pending')
+        : storeAdminRedemptionsCache;
+      const pendingCount = storeAdminRedemptionsCache.filter(r => r.status === 'pending').length;
+      const cnt = document.getElementById('storeAdminPendingCount');
+      if (cnt) cnt.textContent = pendingCount > 0 ? `(대기 ${pendingCount}건)` : '';
+
+      if (filtered.length === 0) {
+        box.innerHTML = `<div style="text-align:center;padding:32px 12px;color:var(--gray-500);font-size:13px;">${storeAdminFilterMode==='pending'?'대기중인 교환 신청이 없습니다':'교환 내역이 없습니다'}</div>`;
+        return;
+      }
+
+      const statusColors = {
+        pending: '#92400E', approved: '#1E40AF', delivered: '#065F46', cancelled: '#991B1B'
+      };
+      const statusBg = {
+        pending: '#FEF3C7', approved: '#DBEAFE', delivered: '#D1FAE5', cancelled: '#FEE2E2'
+      };
+      const statusLabel = { pending: '대기', approved: '승인됨', delivered: '수령완료', cancelled: '취소됨' };
+
+      let html = `<table class="data-table" style="width:100%;font-size:13px;"><thead><tr>
+        <th>신청일</th><th>신청자</th><th>상품</th><th>코인</th><th>상태</th><th style="width:200px;">조작</th>
+      </tr></thead><tbody>`;
+      filtered.forEach(r => {
+        const emp = storeAdminEmpMap[r.employee_id];
+        const empName = emp ? `${emp.name} <span style="color:var(--gray-500);font-size:11px;">${emp.branch || ''}</span>` : `<span style="color:var(--gray-500);">${r.employee_id.slice(0,8)}</span>`;
+        const d = new Date(r.requested_at);
+        const dstr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        let actions = '';
+        if (r.status === 'pending') {
+          actions = `
+            <button class="btn btn-primary" style="font-size:12px;padding:4px 10px;" onclick="storeAdminSetStatus('${r.id}','approved')">승인</button>
+            <button class="btn" style="font-size:12px;padding:4px 10px;background:#FEE2E2;color:#991B1B;" onclick="storeAdminSetStatus('${r.id}','cancelled')">취소</button>
+          `;
+        } else if (r.status === 'approved') {
+          actions = `
+            <button class="btn btn-primary" style="font-size:12px;padding:4px 10px;" onclick="storeAdminSetStatus('${r.id}','delivered')">수령완료</button>
+            <button class="btn" style="font-size:12px;padding:4px 10px;background:#FEE2E2;color:#991B1B;" onclick="storeAdminSetStatus('${r.id}','cancelled')">취소</button>
+          `;
+        } else {
+          actions = '<span style="color:var(--gray-400);font-size:11px;">-</span>';
+        }
+        html += `<tr>
+          <td>${dstr}</td>
+          <td>${empName}</td>
+          <td><span style="font-size:18px;">${r.item_icon_snapshot || '🎁'}</span> ${escapeHtmlAdmin(r.item_name_snapshot)}</td>
+          <td><b>${r.cost_coins.toLocaleString()}</b> 🪙</td>
+          <td><span style="padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:${statusBg[r.status]};color:${statusColors[r.status]};">${statusLabel[r.status] || r.status}</span></td>
+          <td>${actions}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      box.innerHTML = html;
+    }
+
+    function escapeHtmlAdmin(s) {
+      return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    async function storeAdminSetStatus(id, newStatus) {
+      const confirmMsg = newStatus === 'cancelled' ? '정말 취소하시겠어요? (직원에게 코인 환불됩니다)'
+        : newStatus === 'approved' ? '이 신청을 승인하시겠어요?'
+        : newStatus === 'delivered' ? '수령 완료로 표시할까요?' : '상태를 변경하시겠어요?';
+      if (!confirm(confirmMsg)) return;
+      const update = { status: newStatus };
+      if (newStatus === 'approved' || newStatus === 'delivered') {
+        update.approved_at = new Date().toISOString();
+        const currentAdmin = JSON.parse(localStorage.getItem('sop_user') || '{}');
+        update.approver_id = currentAdmin.id || null;
+      }
+      const { error } = await SupabaseMode._client.from('store_redemptions').update(update).eq('id', id);
+      if (error) { alert('실패: ' + error.message); return; }
+      await loadStoreAdminRedemptions();
+      renderStoreAdminRedemptions();
+    }
+
+    function renderStoreAdminItems() {
+      const box = document.getElementById('storeAdminItems');
+      if (!box) return;
+      if (storeAdminItemsCache.length === 0) {
+        box.innerHTML = `<div style="text-align:center;padding:32px 12px;border:2px dashed var(--gray-200);border-radius:12px;color:var(--gray-500);">
+          <div style="font-size:40px;margin-bottom:8px;">🛒</div>
+          <div style="font-size:14px;">등록된 상품이 없습니다</div>
+        </div>`;
+        return;
+      }
+      let html = '';
+      storeAdminItemsCache.forEach(it => {
+        html += `
+          <div style="display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:10px;border-radius:12px;background:var(--bg-surface);border:1px solid var(--gray-200);${it.active ? '' : 'opacity:0.5;'}">
+            <input type="text" value="${escapeHtmlAdmin(it.icon)}" maxlength="4"
+              onchange="storeAdminUpdate('${it.id}','icon',this.value)"
+              style="width:44px;height:44px;text-align:center;font-size:22px;border:1px solid var(--gray-300);border-radius:10px;background:var(--bg-card);flex-shrink:0;">
+            <div style="flex:1;min-width:0;display:grid;grid-template-columns:2fr 3fr;gap:6px;">
+              <input type="text" value="${escapeHtmlAdmin(it.name)}" placeholder="상품명"
+                onchange="storeAdminUpdate('${it.id}','name',this.value)"
+                style="padding:6px 10px;border:1px solid var(--gray-300);border-radius:8px;font-size:13px;">
+              <input type="text" value="${escapeHtmlAdmin(it.description || '')}" placeholder="설명"
+                onchange="storeAdminUpdate('${it.id}','description',this.value)"
+                style="padding:6px 10px;border:1px solid var(--gray-300);border-radius:8px;font-size:13px;">
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+              <input type="number" value="${it.price_coins}" min="0" onchange="storeAdminUpdate('${it.id}','price_coins',parseInt(this.value)||0)"
+                style="width:80px;padding:6px;border:1px solid var(--gray-300);border-radius:8px;font-size:13px;text-align:right;"> 🪙
+              <input type="number" value="${it.stock ?? ''}" placeholder="∞" onchange="storeAdminUpdate('${it.id}','stock',this.value===''?null:parseInt(this.value))"
+                style="width:60px;padding:6px;border:1px solid var(--gray-300);border-radius:8px;font-size:13px;text-align:right;" title="재고 (비워두면 무제한)">
+              <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">
+                <input type="checkbox" ${it.active ? 'checked' : ''} onchange="storeAdminUpdate('${it.id}','active',this.checked)"> 활성
+              </label>
+              <button class="btn" style="font-size:11px;padding:4px 8px;background:#FEE2E2;color:#991B1B;" onclick="storeAdminDelete('${it.id}')">🗑️</button>
+            </div>
+          </div>
+        `;
+      });
+      box.innerHTML = html;
+    }
+
+    async function storeAdminAddItem() {
+      const name = prompt('상품명을 입력하세요:');
+      if (!name) return;
+      const priceStr = prompt('가격(코인)을 입력하세요:', '100');
+      const price = parseInt(priceStr) || 0;
+      if (price < 0) return;
+      const maxOrder = storeAdminItemsCache.reduce((m, it) => Math.max(m, it.display_order || 0), 0);
+      const { error } = await SupabaseMode._client.from('store_items').insert({
+        name, price_coins: price, icon: '🎁', description: '', active: true,
+        display_order: maxOrder + 1
+      });
+      if (error) { alert('실패: ' + error.message); return; }
+      await loadStoreAdminItems();
+      renderStoreAdminItems();
+    }
+
+    async function storeAdminUpdate(id, field, value) {
+      const update = { [field]: value, updated_at: new Date().toISOString() };
+      const { error } = await SupabaseMode._client.from('store_items').update(update).eq('id', id);
+      if (error) { alert('저장 실패: ' + error.message); return; }
+      const it = storeAdminItemsCache.find(x => x.id === id);
+      if (it) it[field] = value;
+    }
+
+    async function storeAdminDelete(id) {
+      if (!confirm('이 상품을 삭제하시겠어요? (기존 교환 이력은 유지됩니다)')) return;
+      const { error } = await SupabaseMode._client.from('store_items').delete().eq('id', id);
+      if (error) { alert('삭제 실패: ' + error.message); return; }
+      await loadStoreAdminItems();
+      renderStoreAdminItems();
     }
 
     // ===== 일일 미션 XP 설정 =====

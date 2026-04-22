@@ -577,12 +577,75 @@ Do NOT create a bottom keyword section. The bottom area is reserved for subtitle
 - Prioritize clarity, sequence, and educational usefulness over beauty`;
 }
 
+/**
+ * 참고사진(Reference Photo) 프롬프트 빌더
+ * - 인포그래픽 옆에 함께 표시될 실사 사진 생성용
+ * - 9:16 세로, 실제 상황을 다큐멘터리 톤으로 보여줌
+ * - 텍스트 금지, 인물 얼굴은 정면 대신 측면/실루엣/뒷모습 위주
+ * @param {string} narration - 나레이션 텍스트
+ * @param {string} sopTitle - SOP 제목 (맥락 힌트용, 예: "비고츠키 근접발달영역")
+ * @returns {string} Gemini 이미지 생성 프롬프트
+ */
+function buildReferencePhotoPrompt(narration, sopTitle) {
+  narration = narration || '';
+  const ctx = sopTitle ? `Course topic context: "${sopTitle}"` : '';
+  return `You are a documentary photographer for an educational course.
+
+Generate a VERTICAL portrait photograph (9:16 aspect ratio, taller than wide — like a smartphone screen).
+
+=== NARRATION TO VISUALIZE ===
+"${narration}"
+${ctx}
+
+=== GOAL ===
+Create ONE realistic reference photograph that captures the REAL-WORLD CONTEXT of what the narration describes.
+This photo pairs with an educational infographic — your job is to ground the abstract lesson in emotional, real life reality.
+
+=== STYLE (NON-NEGOTIABLE) ===
+- Photorealistic, natural lighting, documentary tone (think National Geographic / Magnum Photos educational feature)
+- Shallow depth of field, soft bokeh, genuine candid moment
+- Warm, calm, human-centered
+- NO cartoon, NO illustration, NO infographic, NO 3D render, NO CGI look
+- NO text overlays, NO captions, NO typography, NO logos, NO watermarks
+- Clean composition — rule of thirds, clear subject, uncluttered background
+
+=== SUBJECT RULES ===
+- If narration describes people (teacher, child, parent): show HANDS, SIDE PROFILE, SILHOUETTE, or OVER-THE-SHOULDER view — AVOID direct frontal face shots with detailed facial features
+- Focus on the ACTION or INTERACTION (hands helping, gestures, posture, objects)
+- Natural, authentic moment — not posed or staged
+
+=== VISUAL CONTENT GUIDE (pick what best matches the narration) ===
+- Abstract concept → Close-up of a symbolic object or environment detail (e.g. child's hands on zipper, books on a shelf, classroom light)
+- Teaching moment → Hands guiding, fingers pointing, objects being shared between adult and child
+- Reflection / contemplation → Quiet environment (empty classroom, window light, notebook)
+- Emotional tone → Lighting and color palette match narration mood (warm for encouragement, cool for discipline, soft for care)
+
+=== COMPOSITION ===
+- Portrait 9:16 — taller than wide
+- Main subject occupies center or upper 2/3
+- Lower 1/3 can be soft negative space (bokeh floor/surface) — but the WHOLE image is the photo; the app handles subtitles separately in its own layer below
+- High resolution, sharp focus on primary subject
+
+=== MUST AVOID ===
+- Any readable text, numbers, signs, book titles, subtitles
+- Multiple faces in focus
+- Stylized or cartoon-like rendering
+- Dramatic movie-poster composition
+- Infographic elements (arrows, charts, labeled boxes)
+- Cluttered backgrounds
+- Fantasy or surreal elements
+- Landscape 16:9 format
+
+=== FINAL CHECK ===
+This is a REAL PHOTO of a REAL MOMENT that grounds the lesson in reality. A viewer should recognize the situation instantly without any explanation.`;
+}
+
 // Node.js (api/image.js)에서 사용
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { SCENE_MAP, CAMERA_ANGLES, BASE_SETTING, NEGATIVE_PROMPT, VISUAL_STYLES, narrationToPrompt, extractActions, buildSmartVisualPrompt };
+  module.exports = { SCENE_MAP, CAMERA_ANGLES, BASE_SETTING, NEGATIVE_PROMPT, VISUAL_STYLES, narrationToPrompt, extractActions, buildSmartVisualPrompt, buildReferencePhotoPrompt };
 }
 
 // 브라우저 (admin/index.html, ai-provider.js)에서 사용
 if (typeof window !== 'undefined') {
-  window.ScenePrompts = { SCENE_MAP, CAMERA_ANGLES, BASE_SETTING, NEGATIVE_PROMPT, VISUAL_STYLES, narrationToPrompt, extractActions, buildSmartVisualPrompt };
+  window.ScenePrompts = { SCENE_MAP, CAMERA_ANGLES, BASE_SETTING, NEGATIVE_PROMPT, VISUAL_STYLES, narrationToPrompt, extractActions, buildSmartVisualPrompt, buildReferencePhotoPrompt };
 }

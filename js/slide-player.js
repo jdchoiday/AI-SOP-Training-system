@@ -26,6 +26,7 @@ const SlidePlayer = (() => {
   let playSessionId = 0;  // 재생 세션 ID (씬 이동 시 이전 재생 취소용)
   let _slideCompleted = false;  // 마지막 슬라이드까지 완료 여부
   let _onCloseCallback = null;
+  let _crossfadeTimer = null;   // 인포그래픽 ↔ 참고사진 크로스페이드 타이머
 
   // --- Audio state ---
   let currentAudio = null;       // HTMLAudioElement currently playing
@@ -241,25 +242,41 @@ const SlidePlayer = (() => {
         @keyframes sp-imgReveal { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: scale(1); } }
         @keyframes sp-skeletonPulse { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 
+        /* 9:16 세로 비율 (390×693) 유지 — iframe 컨텐츠가 잘리지 않도록
+           width/height 둘 중 작은 constraint 가 아닌 aspect-ratio 로 sizing.
+           container-type: inline-size 로 내부 iframe 이 cqw 단위로 자동 스케일.
+           55vh 는 자막/badge/dots/controls 공간 확보용 — 3줄 자막도 overflow 없이 표시 */
         .sp-scene-visual {
-          width: 100%;
-          height: 60vh;
-          max-height: 600px;
-          min-height: 320px;
+          width: min(100%, calc(55vh * 390 / 693), 390px);
+          aspect-ratio: 390 / 693;
+          margin: 0 auto;
           border-radius: 16px; overflow: hidden;
           position: relative;
           background: #0A0A0A;
           border: 1px solid rgba(255,255,255,0.06);
-          margin: 0 auto;
+          container-type: inline-size;
+        }
+        /* 2-Pass HTML iframe: 390×693 원본을 container 폭에 맞게 scale
+           calc(100cqw / 390px) = length/length → number, scale() 에 유효 */
+        .sp-scene-visual iframe {
+          width: 390px !important;
+          height: 693px !important;
+          border: 0;
+          display: block;
+          transform-origin: top left;
+          transform: scale(calc(100cqw / 390px));
         }
         .sp-scene-visual img {
-          width: 100%; height: auto; max-height: 70vh;
+          width: 100%; height: 100%;
           object-fit: cover; display: block; margin: 0 auto;
           animation: sp-imgReveal 0.6s ease;
         }
+        .sp-scene-visual video {
+          width: 100%; height: 100%;
+          object-fit: cover; display: block;
+        }
         @media (max-width: 600px) {
           .sp-scene-visual { border-radius: 8px; }
-          .sp-scene-visual img { max-height: 75vh; object-fit: cover; }
         }
         .sp-scene-visual .sp-img-skeleton {
           position: absolute; inset: 0;
@@ -600,38 +617,111 @@ const SlidePlayer = (() => {
       <div class="sp-scene-badge" style="color:${accent.secondary};background:${accent.bg}">
         ${t().slideTitle(num, total)}
       </div>
-      <div style="position:relative; width:100%;">
-        <div class="sp-scene-visual" id="spSceneVisual"></div>
-        <div id="spSubtitleArea" style="
-          position:absolute; bottom:0; left:0; right:0;
-          padding:14px 18px;
-          background:linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 60%, transparent 100%);
-          border-radius:0 0 12px 12px;
-          min-height:48px;
-          display:flex; align-items:flex-end; justify-content:center;
-          pointer-events:none;
-        ">
-          <div id="spSubtitleText" style="
-            color:#F8FAFC; font-weight:500; letter-spacing:0.3px;
-            line-height:1.6; text-align:center; word-break:keep-all;
-            opacity:0; transition:opacity 0.4s ease;
-            padding:4px 8px;
-            font-size:14px;
-            text-shadow:0 1px 4px rgba(0,0,0,0.8);
-          "></div>
-        </div>
+      <div class="sp-scene-visual" id="spSceneVisual"></div>
+      <div id="spSubtitleArea" style="
+        width:100%;
+        margin-top:10px;
+        padding:14px 18px;
+        background:#0A0A0A;
+        border:1px solid rgba(255,255,255,0.08);
+        border-radius:12px;
+        min-height:72px;
+        display:flex; align-items:center; justify-content:center;
+        box-sizing:border-box;
+      ">
+        <div id="spSubtitleText" style="
+          color:#F1F5F9; font-weight:500; letter-spacing:0.2px;
+          line-height:1.55; text-align:center; word-break:keep-all;
+          opacity:0; transition:opacity 0.3s ease;
+          font-size:15px;
+          max-width:520px;
+        "></div>
       </div>
     `;
 
     // === Phase 1/2: 씬 타입별 렌더링 ===
     const vis = document.getElementById('spSceneVisual');
     if (vis) {
+      // === 2-Pass HTML 인포그래픽 우선 렌더링 ===
+      // ai-provider.js의 _enrichWithTwoPassHTML 로 _htmlContent 부착된 씬은 iframe 렌더
+      // 이전 씬의 크로스페이드 타이머 정리
+      if (_crossfadeTimer) { clearTimeout(_crossfadeTimer); _crossfadeTimer = null; }
+
+      if (scene._htmlContent) {
+        vis.innerHTML = '';
+        vis.style.background = '#000';
+        vis.style.position = 'relative';
+
+        // Layer 1: 인포그래픽 iframe (처음에 노출)
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('sandbox', 'allow-same-origin');
+        iframe.srcdoc = scene._htmlContent;
+        iframe.style.background = '#000';
+        iframe.style.position = 'absolute';
+        iframe.style.inset = '0';
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = '0';
+        iframe.style.opacity = '1';
+        iframe.style.transition = 'opacity 0.6s ease';
+        iframe.style.zIndex = '1';
+        iframe.onload = async () => {
+          try {
+            if (window.Infographic2Pass && window.Infographic2Pass.validateOverflow) {
+              const r = await window.Infographic2Pass.validateOverflow(iframe, 693);
+              if (!r.ok) {
+                console.warn(`[2-Pass HTML] 씬 ${scene.scene || '?'} 오버플로우: ${r.actualH}px > 693px (+${r.overPx}px)`);
+              }
+            }
+          } catch (e) {
+            console.warn('[2-Pass HTML] validateOverflow 오류:', e.message);
+          }
+        };
+        vis.appendChild(iframe);
+
+        // Layer 2: 나노바나나 참고 사진 (절반 시점에 페이드 인)
+        if (scene._referenceImageUrl) {
+          const refImg = document.createElement('img');
+          refImg.src = scene._referenceImageUrl;
+          refImg.alt = 'reference';
+          refImg.style.position = 'absolute';
+          refImg.style.inset = '0';
+          refImg.style.width = '100%';
+          refImg.style.height = '100%';
+          refImg.style.objectFit = 'cover';
+          refImg.style.opacity = '0';
+          refImg.style.transition = 'opacity 0.6s ease';
+          refImg.style.zIndex = '2';
+          refImg.style.pointerEvents = 'none';
+          vis.appendChild(refImg);
+
+          // 크로스페이드 타이밍: 나레이션 총 길이의 50% 지점에 전환
+          // 오디오가 이미 재생 중이면 currentAudio 길이 우선, 없으면 추정값
+          const mySession = playSessionId;
+          const estSec = _estimateDuration(scene.narration);
+          const audioSec = (currentAudio && isFinite(currentAudio.duration) && currentAudio.duration > 0)
+            ? currentAudio.duration : estSec;
+          const halfMs = Math.max(2500, Math.round(audioSec * 500)); // duration*1000/2, 최소 2.5초
+          _crossfadeTimer = setTimeout(() => {
+            // 씬이 바뀌었거나 파괴된 경우 중단
+            if (destroyed || mySession !== playSessionId) return;
+            // 현재 씬 컨테이너가 여전히 같은지 확인
+            if (!vis.isConnected) return;
+            iframe.style.opacity = '0';
+            refImg.style.opacity = '1';
+          }, halfMs);
+
+          // 디버그 표기 (좌상단)
+          const badge = document.createElement('div');
+          badge.textContent = 'AI';
+          badge.style.cssText = 'position:absolute;top:10px;left:10px;z-index:3;font-size:9px;font-weight:700;letter-spacing:1px;padding:3px 7px;background:rgba(16,185,129,0.25);color:#10B981;border:1px solid rgba(16,185,129,0.5);border-radius:3px;backdrop-filter:blur(6px);pointer-events:none;';
+          vis.appendChild(badge);
+        }
+      }
       // Phase 2: Pexels 실패 → AI 이미지로 폴백된 씬 (aiFallback + imageUrl 보유)
       // video_scenario / stat 타입인데 videoUrl 없고 imageUrl이 있으면 이미지 전체 배경 + 오버레이
-      const isAiFallbackScene = (scene.type === 'video_scenario' || scene.type === 'stat')
-        && !scene.videoUrl && scene.imageUrl;
-
-      if (isAiFallbackScene) {
+      else if ((scene.type === 'video_scenario' || scene.type === 'stat')
+        && !scene.videoUrl && scene.imageUrl) {
         const dimGrad = scene.type === 'stat'
           ? 'background:linear-gradient(180deg,rgba(0,0,0,0.7),rgba(0,0,0,0.85));'
           : 'background:linear-gradient(180deg,rgba(0,0,0,0.25),rgba(0,0,0,0.55));';
@@ -1907,6 +1997,7 @@ const SlidePlayer = (() => {
 
   function _close() {
     destroyed = true;
+    if (_crossfadeTimer) { clearTimeout(_crossfadeTimer); _crossfadeTimer = null; }
     _stopCurrentAudio();
     _stopClipRotation();
     _hideLoading();

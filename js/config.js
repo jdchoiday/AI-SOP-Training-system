@@ -44,6 +44,17 @@ const CONFIG = {
     videoProvider: 'pexels',    // Phase 1: Pexels 스톡 영상 (무료, 기본값)
                                 // 'wan' (Wan 2.2, $0.29/클립) 또는 'vidu' ($0.20/클립) 은 AI 생성 경로
 
+    // 2-Pass 교과서 HTML 인포그래픽 (false=기존 CSS 렌더, true=씬별 AI 생성 HTML iframe 렌더)
+    // Pass 1 분석 JSON + Pass 2 9:16 HTML (8-스타일 라이브러리 + 12원칙 준수)
+    // 씬당 비용 ~$0.005~0.02 (Gemini 2.5 Pro 기준), 시간 +15~25s/씬
+    // 스크립트 생성 시 visual 타입(stat/comparison/infographic/iconGrid/conceptExplainer/quote/keypoint 등)에만 적용
+    useTwoPassHTML: true,
+
+    // 2-Pass HTML 전용 모델 (useTwoPassHTML=true 일 때만)
+    // A/B 테스트 중: Opus 4.7 → Gemini 2.5 Pro (약 8배 저렴, 품질 검증 필요)
+    twoPassHTMLModel: 'gemini-2.5-pro',         // Pass 2 (HTML 디자인) — Gemini 2.5 Pro ($0.02~0.03/씬, 이전 Opus $0.15/씬)
+    twoPassHTMLPass1Model: 'gemini-2.5-flash',  // Pass 1 (분석 JSON) — Flash 로 비용 절감 ($0.0015/씬)
+
     // API 키 (사용할 제공자만 입력)
     // API 키는 서버 환경변수(.env)에서만 관리. 클라이언트에 노출하지 않음.
     keys: {

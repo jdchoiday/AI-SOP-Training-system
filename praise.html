@@ -162,18 +162,10 @@
 <body>
 
   <div class="bottom-nav">
-    <a href="app.html">
-      <span class="nav-icon">&#127968;</span> <span class="nav-label-home">홈</span>
-    </a>
-    <a href="tasks.html">
-      <span class="nav-icon">&#9989;</span> <span class="nav-label-tasks">미션</span>
-    </a>
-    <a href="praise.html" class="active">
-      <span class="nav-icon">&#128588;</span> <span class="nav-label-praise">부스트</span>
-    </a>
-    <a href="my-results.html">
-      <span class="nav-icon">&#128100;</span> <span class="nav-label-results">내 프로필</span>
-    </a>
+    <a href="app.html"><span class="nav-icon">&#127968;</span> <span class="nav-label-home">홈</span></a>
+    <a href="tasks.html"><span class="nav-icon">&#128218;</span> <span class="nav-label-learn">학습</span></a>
+    <a href="my-results.html" class="active"><span class="nav-icon">&#128202;</span> <span class="nav-label-results">성과</span></a>
+    <a href="store.html"><span class="nav-icon">&#128722;</span> <span class="nav-label-store">스토어</span></a>
   </div>
 
   <div class="app-container">
@@ -360,9 +352,9 @@
     // ===== Apply nav + static i18n =====
     function applyI18n() {
       document.querySelector('.nav-label-home').textContent = t.home;
-      document.querySelector('.nav-label-tasks').textContent = t.tasks;
-      document.querySelector('.nav-label-praise').textContent = t.praise;
-      document.querySelector('.nav-label-results').textContent = t.myResults;
+      document.querySelector('.nav-label-learn').textContent = lang === 'en' ? 'Learn' : lang === 'vi' ? 'Học' : '학습';
+      document.querySelector('.nav-label-store').textContent = lang === 'en' ? 'Store' : lang === 'vi' ? 'Cửa hàng' : '스토어';
+      document.querySelector('.nav-label-results').textContent = lang === 'en' ? 'Stats' : lang === 'vi' ? 'Thành tích' : '성과';
       document.title = `SOP Training - ${t.praise}`;
 
       document.getElementById('pageTitle').textContent = `🙌 ${t.praise}`;
