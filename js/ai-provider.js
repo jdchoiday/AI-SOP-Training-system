@@ -710,8 +710,16 @@ type에 맞지 않는 필드는 생략 가능.
       const top = stack.pop();
       trimmed += (top === '{') ? '}' : ']';
     }
-    // 후행 쉼표 한 번 더 (닫기 직전 쉼표)
-    trimmed = trimmed.replace(/,(\s*[}\]])/g, '$1');
+    // 값 없는 키 ("scene_count":} 같은 것) 제거 + 쉼표 정리 — 안정될 때까지 반복
+    let prev;
+    do {
+      prev = trimmed;
+      trimmed = trimmed
+        .replace(/"[^"]*"\s*:\s*(?=[,}\]])/g, '')  // 값 없는 key: 제거
+        .replace(/,\s*,/g, ',')                     // 이중 쉼표
+        .replace(/,(\s*[}\]])/g, '$1')              // 닫기 직전 쉼표
+        .replace(/([{\[])\s*,/g, '$1');             // 여는 직후 쉼표
+    } while (trimmed !== prev);
     const parsed = JSON.parse(trimmed);
     console.log('[Pass1 JSON] truncated 응답 복구 성공 (원본', body.length, '자 → 복구', trimmed.length, '자)');
     return parsed;
@@ -817,7 +825,7 @@ persona 필드에 맞게 palette 힌트도 함께 반환:
 JSON만 출력, 마크다운/설명 금지.`;
 
     const raw = await this._callLLM(provider, prompt, {
-      generationConfig: { temperature: 0.6, maxOutputTokens: 6000 }
+      generationConfig: { temperature: 0.6, maxOutputTokens: 8000 }
     });
     // ```json ... ``` 마크다운 블록 제거, 그 후 첫 { 부터 마지막 } 까지 추출
     const cleaned = raw.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
