@@ -23,6 +23,98 @@ const VOICES = {
   'vi-VN': { female: 'vi-VN-HoaiMyNeural', male: 'vi-VN-NamMinhNeural' },
 };
 
+// ===== Gemini 2.5 TTS 폴백 =====
+// Edge TTS 502 발생 시 자동 전환. GEMINI_API_KEY 재사용 (별도 키 불필요).
+// 참고: https://ai.google.dev/gemini-api/docs/speech-generation
+const GEMINI_VOICES = {
+  // Gemini TTS 음성은 언어 무관하게 다국어 지원. 톤 느낌에 맞춰 매핑.
+  'ko-KR': { female: 'Kore',  male: 'Charon' },   // 차분·따뜻
+  'en-US': { female: 'Aoede', male: 'Puck'   },   // 밝음·에너지
+  'vi-VN': { female: 'Leda',  male: 'Fenrir' },   // 자연스러움·중저음
+};
+
+// PCM 24kHz 16bit mono → WAV 변환 (Gemini TTS 응답 포맷 처리)
+function pcmToWav(pcmBuffer, sampleRate = 24000) {
+  const header = Buffer.alloc(44);
+  const dataLen = pcmBuffer.length;
+  header.write('RIFF', 0);
+  header.writeUInt32LE(36 + dataLen, 4);
+  header.write('WAVE', 8);
+  header.write('fmt ', 12);
+  header.writeUInt32LE(16, 16);   // PCM fmt chunk size
+  header.writeUInt16LE(1, 20);    // PCM format
+  header.writeUInt16LE(1, 22);    // mono
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(sampleRate * 2, 28); // byte rate (16bit mono)
+  header.writeUInt16LE(2, 32);    // block align
+  header.writeUInt16LE(16, 34);   // bits per sample
+  header.write('data', 36);
+  header.writeUInt32LE(dataLen, 40);
+  return Buffer.concat([header, pcmBuffer]);
+}
+
+async function generateGeminiTTS(coachText, lang, gender) {
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey) throw new Error('GEMINI_API_KEY not set');
+
+  const voiceMap = GEMINI_VOICES[lang] || GEMINI_VOICES['ko-KR'];
+  const voiceName = voiceMap[gender] || voiceMap.female;
+
+  // 코칭 톤 자연어 지시 (Gemini TTS는 텍스트 프리픽스로 스타일 제어)
+  const stylePrefix = {
+    'ko-KR': '따뜻하고 차분한 코칭 강사처럼, 핵심 단어를 살짝 강조하며 천천히 읽어주세요:\n\n',
+    'en-US': 'Read warmly and calmly like a coaching instructor, emphasizing key words slightly:\n\n',
+    'vi-VN': 'Đọc một cách ấm áp và bình tĩnh như giảng viên huấn luyện, nhấn mạnh các từ khóa chính:\n\n',
+  }[lang] || '';
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000); // 25s (Vercel 60s 내)
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${geminiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: stylePrefix + coachText }] }],
+          generationConfig: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName },
+              },
+            },
+          },
+        }),
+        signal: controller.signal,
+      }
+    );
+    clearTimeout(timeout);
+
+    const data = await response.json();
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const audioPart = parts.find(p => p.inlineData);
+
+    if (!audioPart?.inlineData?.data) {
+      const errMsg = data.error?.message || 'No audio in Gemini response';
+      throw new Error(errMsg);
+    }
+
+    const pcmBuffer = Buffer.from(audioPart.inlineData.data, 'base64');
+    // Gemini 응답 mimeType 예: "audio/L16;codec=pcm;rate=24000"
+    const mime = audioPart.inlineData.mimeType || '';
+    const rateMatch = mime.match(/rate=(\d+)/);
+    const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+
+    const wavBuffer = pcmToWav(pcmBuffer, sampleRate);
+    console.log(`[Gemini TTS] ✅ voice=${voiceName} PCM ${Math.round(pcmBuffer.length / 1024)}KB → WAV ${Math.round(wavBuffer.length / 1024)}KB`);
+    return { buffer: wavBuffer, contentType: 'audio/wav' };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 const PRONUNCIATION_DICT = {
   'AION': '아이온', 'Aion': '아이온', 'aion': '아이온',
   'Kiwooza': '키우자', 'kiwooza': '키우자', 'KIWOOZA': '키우자',
@@ -285,21 +377,48 @@ module.exports = async (req, res) => {
       if (attempt < MAX_RETRY) await new Promise(r => setTimeout(r, attempt * 800));
     }
 
+    // === Edge TTS 실패 시 Gemini 2.5 TTS 폴백 ===
     if (!fs.existsSync(tmpFile)) {
-      console.error('[TTS] 모든 재시도 실패:', lastErr?.message);
-      return res.status(502).json({ error: 'Edge TTS unreachable', message: lastErr?.message || 'Connection reset', retryable: true });
+      console.warn(`[TTS] Edge TTS 재시도 모두 실패 (${lastErr?.message}) → Gemini 폴백 시도`);
+      try {
+        const { buffer: wavBuffer, contentType } = await generateGeminiTTS(coachText, lang, gender);
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', wavBuffer.length);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('X-TTS-Engine', 'gemini-fallback');
+        return res.status(200).send(wavBuffer);
+      } catch (geminiErr) {
+        console.error('[TTS] Gemini 폴백도 실패:', geminiErr.message);
+        return res.status(502).json({
+          error: 'All TTS engines failed',
+          message: `Edge: ${lastErr?.message || 'N/A'} | Gemini: ${geminiErr.message}`,
+          retryable: true,
+        });
+      }
     }
 
     const audioBuffer = fs.readFileSync(tmpFile);
     try { fs.unlinkSync(tmpFile); } catch (e) {}
 
     if (audioBuffer.length < 100) {
-      return res.status(502).json({ error: 'TTS generated empty audio', retryable: true });
+      // Edge가 빈 파일 리턴한 경우에도 Gemini 폴백
+      console.warn('[TTS] Edge TTS 빈 파일 반환 → Gemini 폴백 시도');
+      try {
+        const { buffer: wavBuffer, contentType } = await generateGeminiTTS(coachText, lang, gender);
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', wavBuffer.length);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('X-TTS-Engine', 'gemini-fallback');
+        return res.status(200).send(wavBuffer);
+      } catch (geminiErr) {
+        return res.status(502).json({ error: 'TTS generated empty audio, fallback also failed', retryable: true });
+      }
     }
 
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Content-Length', audioBuffer.length);
     res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('X-TTS-Engine', 'edge');
     return res.status(200).send(audioBuffer);
 
   } catch (err) {
