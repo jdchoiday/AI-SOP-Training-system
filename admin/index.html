@@ -865,6 +865,16 @@
         <h4 style="font-size:15px; margin-bottom:4px;">TTS 음성 설정</h4>
         <p style="font-size:13px; color:var(--gray-500); margin-bottom:16px;">영상 씬 나레이션 음성을 테스트하고 설정합니다 (Edge TTS - 무료)</p>
 
+        <!-- 엔진 선택 (음성 일관성 핵심) -->
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>음성 엔진 <span style="color:var(--gray-500);font-weight:400;font-size:12px;">— 씬마다 같은 엔진 사용으로 음성 일관성 보장</span></label>
+          <select id="ttsEngine" style="width:100%;padding:8px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;">
+            <option value="edge">Edge TTS (권장 · 일관된 한국 음성, 실패 시 브라우저 음성)</option>
+            <option value="gemini">Gemini TTS (AI 다국어 음성)</option>
+            <option value="auto">Auto (Edge 실패 시 Gemini 폴백 — ★씬마다 음성 달라질 수 있음★)</option>
+          </select>
+        </div>
+
         <!-- 설정 컨트롤 -->
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
           <div class="form-group" style="margin:0;">
@@ -1385,7 +1395,7 @@
   <script src="../js/image-db.js"></script>
   <script src="../js/scene-prompts.js"></script>
   <script src="../js/config.js"></script>
-  <script src="../js/supabase-client.js"></script>
+  <script src="../js/supabase-client.js?v=20260423d"></script>
   <script src="../js/infographic-2pass.js"></script>
   <script src="../js/ai-provider.js"></script>
   <script src="../js/sop-content-kids.js"></script>
@@ -1393,7 +1403,7 @@
   <script src="../js/xp-system.js"></script>
   <script src="../js/xp-ui.js"></script>
   <script src="../js/scene-normalizer.js"></script>
-  <script src="../js/slide-player.js"></script>
+  <script src="../js/slide-player.js?v=20260423e"></script>
   <script>
     // ===== 관리자 확인 =====
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
@@ -7718,14 +7728,16 @@ Requirements:
     function ttsTestSave() {
       const rateV = parseInt(document.getElementById('ttsRate').value);
       const pitchV = parseInt(document.getElementById('ttsPitch').value);
+      const engineEl = document.getElementById('ttsEngine');
       const settings = {
         ttsRate: (rateV >= 0 ? '+' : '') + rateV + '%',
         ttsPitch: (pitchV >= 0 ? '+' : '') + pitchV + 'Hz',
         ttsGender: document.getElementById('ttsGender').value,
         ttsLang: document.getElementById('ttsLang').value,
+        ttsEngine: engineEl ? engineEl.value : 'edge',
       };
       localStorage.setItem('sop_tts_settings', JSON.stringify(settings));
-      alert('TTS 설정이 저장되었습니다!\n\nRate: ' + settings.ttsRate + '\nPitch: ' + settings.ttsPitch + '\nGender: ' + settings.ttsGender);
+      alert('TTS 설정이 저장되었습니다!\n\n엔진: ' + settings.ttsEngine + '\nRate: ' + settings.ttsRate + '\nPitch: ' + settings.ttsPitch + '\nGender: ' + settings.ttsGender);
     }
 
     function _restoreTtsSettings() {
@@ -7745,6 +7757,8 @@ Requirements:
       }
       if (saved.ttsGender) document.getElementById('ttsGender').value = saved.ttsGender;
       if (saved.ttsLang) document.getElementById('ttsLang').value = saved.ttsLang;
+      const engineEl = document.getElementById('ttsEngine');
+      if (engineEl && saved.ttsEngine) engineEl.value = saved.ttsEngine;
     }
 
     // 저장된 AI 설정 복원

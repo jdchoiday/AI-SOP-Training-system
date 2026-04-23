@@ -323,7 +323,7 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { text, lang = 'ko-KR', gender = 'female', rate, pitch } = req.body || {};
+    const { text, lang = 'ko-KR', gender = 'female', rate, pitch, engine = 'edge' } = req.body || {};
 
     if (!text || text.trim().length === 0) {
       return res.status(400).json({ error: 'text is required' });
@@ -331,6 +331,10 @@ module.exports = async (req, res) => {
     if (text.length > 3000) {
       return res.status(400).json({ error: 'Text too long (max 3000 chars)' });
     }
+
+    // ★ engine: 'edge' (default, 일관성) | 'gemini' (AI 음성) | 'auto' (Edge → Gemini 폴백)
+    // 기본값을 'edge'로 설정 — 씬마다 목소리 변경을 방지 (이전 'auto'는 실패 씬만 Gemini 전환되어 일관성 깨짐)
+    const ttsEngine = ['edge', 'gemini', 'auto'].includes(engine) ? engine : 'edge';
 
     const langVoices = VOICES[lang] || VOICES['ko-KR'];
     const voiceName = langVoices[gender] || langVoices.female;
@@ -343,10 +347,34 @@ module.exports = async (req, res) => {
 
     const coachText = buildCoachingText(text);
 
-    console.log(`[TTS Coach] voice=${voiceName} rate=${prosodyRate} pitch=${prosodyPitch}`);
+    console.log(`[TTS Coach] engine=${ttsEngine} voice=${voiceName} rate=${prosodyRate} pitch=${prosodyPitch}`);
     console.log(`[TTS Coach] original: ${text.slice(0, 60)}...`);
     console.log(`[TTS Coach] coached:  ${coachText.slice(0, 80)}...`);
 
+    // ================================
+    // engine=gemini: Gemini만 사용 (Edge 시도 안 함)
+    // ================================
+    if (ttsEngine === 'gemini') {
+      try {
+        const { buffer: wavBuffer, contentType } = await generateGeminiTTS(coachText, lang, gender);
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', wavBuffer.length);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('X-TTS-Engine', 'gemini');
+        return res.status(200).send(wavBuffer);
+      } catch (geminiErr) {
+        console.error('[TTS] Gemini 실패:', geminiErr.message);
+        return res.status(502).json({
+          error: 'Gemini TTS failed',
+          message: geminiErr.message,
+          retryable: true,
+        });
+      }
+    }
+
+    // ================================
+    // engine=edge 또는 auto: Edge TTS 시도
+    // ================================
     const tmpFile = path.join(os.tmpdir(), `tts_${crypto.randomBytes(8).toString('hex')}.mp3`);
 
     // ECONNRESET 재시도: Microsoft Edge TTS 엔드포인트가 가끔 연결을 끊음
@@ -377,9 +405,25 @@ module.exports = async (req, res) => {
       if (attempt < MAX_RETRY) await new Promise(r => setTimeout(r, attempt * 800));
     }
 
-    // === Edge TTS 실패 시 Gemini 2.5 TTS 폴백 ===
-    if (!fs.existsSync(tmpFile)) {
-      console.warn(`[TTS] Edge TTS 재시도 모두 실패 (${lastErr?.message}) → Gemini 폴백 시도`);
+    // ================================
+    // Edge 실패 시 분기
+    // engine=edge: 폴백 없이 에러 반환 (씬 간 음성 일관성 유지, 클라이언트 Web Speech 폴백 사용)
+    // engine=auto: Gemini 폴백 (기존 동작)
+    // ================================
+    if (!fs.existsSync(tmpFile) || fs.statSync(tmpFile).size < 100) {
+      if (ttsEngine === 'edge') {
+        console.warn(`[TTS] Edge TTS 실패 (${lastErr?.message}) — engine=edge 이므로 폴백 없이 에러 반환 (클라이언트가 Web Speech로 처리)`);
+        try { if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile); } catch (e) {}
+        return res.status(502).json({
+          error: 'Edge TTS failed',
+          message: lastErr?.message || 'N/A',
+          retryable: true,
+        });
+      }
+
+      // engine=auto: Gemini 폴백
+      console.warn(`[TTS] Edge TTS 재시도 모두 실패 (${lastErr?.message}) → Gemini 폴백 시도 (engine=auto)`);
+      try { if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile); } catch (e) {}
       try {
         const { buffer: wavBuffer, contentType } = await generateGeminiTTS(coachText, lang, gender);
         res.setHeader('Content-Type', contentType);
@@ -399,21 +443,6 @@ module.exports = async (req, res) => {
 
     const audioBuffer = fs.readFileSync(tmpFile);
     try { fs.unlinkSync(tmpFile); } catch (e) {}
-
-    if (audioBuffer.length < 100) {
-      // Edge가 빈 파일 리턴한 경우에도 Gemini 폴백
-      console.warn('[TTS] Edge TTS 빈 파일 반환 → Gemini 폴백 시도');
-      try {
-        const { buffer: wavBuffer, contentType } = await generateGeminiTTS(coachText, lang, gender);
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Content-Length', wavBuffer.length);
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-        res.setHeader('X-TTS-Engine', 'gemini-fallback');
-        return res.status(200).send(wavBuffer);
-      } catch (geminiErr) {
-        return res.status(502).json({ error: 'TTS generated empty audio, fallback also failed', retryable: true });
-      }
-    }
 
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Content-Length', audioBuffer.length);

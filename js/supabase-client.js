@@ -290,6 +290,16 @@ const SupabaseMode = {
           } else if (copy.imageUrl && copy.imageUrl.startsWith('__stored__')) {
             copy.imageUrl = ''; // IndexedDB 포인터는 제거
           }
+          // 2-Pass HTML 참고사진 (base64) → Storage 업로드 (씬당 100~150KB 이라 1MB 초과 주요 원인)
+          if (copy._referenceImageUrl && copy._referenceImageUrl.startsWith('data:')) {
+            const refUrl = await this.uploadSceneImage(sop.id, `${i}-ref`, copy._referenceImageUrl);
+            if (refUrl) {
+              copy._referenceImageUrl = refUrl;
+              if (sop.script[i]) sop.script[i]._referenceImageUrl = refUrl;
+            } else {
+              copy._referenceImageUrl = ''; // 업로드 실패 시 제거
+            }
+          }
           // narration, visual 등에 혹시 base64가 섞여있으면 제거
           if (copy.narration) copy.narration = this._stripLargeData(copy.narration);
           return copy;

@@ -26,9 +26,9 @@ const SlidePlayer = (() => {
   let playSessionId = 0;  // 재생 세션 ID (씬 이동 시 이전 재생 취소용)
   let _slideCompleted = false;  // 마지막 슬라이드까지 완료 여부
   let _onCloseCallback = null;
-  let _crossfadeTimer = null;   // 인포그래픽 ↔ 참고사진 주기적 토글 타이머 (5초마다)
-  let _pendingCrossfade = null; // { iframe, refImg, mySession, showingRef } — 현재 씬 토글 상태
-  const CROSSFADE_INTERVAL_MS = 5000; // ★ 5초마다 시각 변화 (사용자 요구) ★
+  let _crossfadeTimer = null;   // 인포그래픽 → 참고사진 단발 전환 타이머 (씬당 1번)
+  let _pendingCrossfade = null; // { iframe, refImg, mySession, showingRef } — 현재 씬 전환 상태
+  const CROSSFADE_INTERVAL_MS = 10000; // ★ 씬 시작 후 10초 뒤 단 1번 인포→사진 전환 (재귀 없음) ★
 
   // --- Audio state ---
   let currentAudio = null;       // HTMLAudioElement currently playing
@@ -647,6 +647,8 @@ const SlidePlayer = (() => {
       // === 2-Pass HTML 인포그래픽 우선 렌더링 ===
       // ai-provider.js의 _enrichWithTwoPassHTML 로 _htmlContent 부착된 씬은 iframe 렌더
       // 이전 씬의 크로스페이드 상태 정리
+      const __rsT = Math.round(performance.now());
+      console.log(`[CF-DEBUG] t=${__rsT} _renderSlide scene=${currentIndex + 1}/${scenes.length} session=${playSessionId} prevTimer=${_crossfadeTimer ? 'EXISTS' : 'null'}`);
       if (_crossfadeTimer) { clearTimeout(_crossfadeTimer); _crossfadeTimer = null; }
       _pendingCrossfade = null;
 
@@ -698,19 +700,17 @@ const SlidePlayer = (() => {
           refImg.style.pointerEvents = 'none';
           vis.appendChild(refImg);
 
-          // === 시간 기반 토글 크로스페이드 (★5초 주기★) ===
-          // 시작: 인포그래픽 표시 → 5초 후 참고사진 → 10초 후 인포그래픽 → ... 씬 종료까지 반복
-          // 오디오 타이밍과 독립 (씬당 20초라면 5/10/15초 3번 토글 발생)
+          // === 시간 기반 단발 크로스페이드 (씬당 1번만) ===
+          // 시작: 인포그래픽 표시 → 10초 후 참고사진으로 전환 → 씬 종료까지 사진 유지
+          // 한 씬 = 인포 1번 + 사진 1번 (재귀 토글 없음)
           const mySession = playSessionId;
           _pendingCrossfade = { iframe, refImg, mySession, showingRef: false };
+          console.log(`[CF-DEBUG] t=${Math.round(performance.now())} schedule ONE toggle in ${CROSSFADE_INTERVAL_MS}ms scene=${currentIndex + 1} mySession=${mySession}`);
 
-          // 5초 뒤 첫 토글 (인포 → 사진)
-          _crossfadeTimer = setTimeout(function tick() {
-            _runCrossfade('interval-' + CROSSFADE_INTERVAL_MS);
-            // 다음 토글 예약
-            if (_pendingCrossfade && _pendingCrossfade.mySession === playSessionId) {
-              _crossfadeTimer = setTimeout(tick, CROSSFADE_INTERVAL_MS);
-            }
+          // 10초 뒤 단 1번 토글 (인포 → 사진), 이후 씬 종료까지 사진 유지
+          _crossfadeTimer = setTimeout(() => {
+            _runCrossfade('once-' + CROSSFADE_INTERVAL_MS);
+            _crossfadeTimer = null;
           }, CROSSFADE_INTERVAL_MS);
 
           // 디버그 표기 (좌상단)
@@ -1101,7 +1101,14 @@ const SlidePlayer = (() => {
   function _hashText(text) {
     const key = text.length + '_' + (text.slice(0, 50));
     if (!_langCache.has(key)) _langCache.set(key, _ttsLang(text));
-    return _langCache.get(key) + '_' + key;
+    // engine/gender/rate/pitch 다르면 캐시 분리 (설정 바꿨을 때 stale 오디오 재생 방지)
+    try {
+      const s = JSON.parse(localStorage.getItem('sop_tts_settings') || 'null') || {};
+      const sig = (s.ttsEngine || 'edge') + '|' + (s.ttsGender || 'female') + '|' + (s.ttsRate || '+0%') + '|' + (s.ttsPitch || '+0Hz');
+      return _langCache.get(key) + '_' + sig + '_' + key;
+    } catch (e) {
+      return _langCache.get(key) + '_' + key;
+    }
   }
 
   // 저장된 TTS 설정 로드
@@ -1112,8 +1119,10 @@ const SlidePlayer = (() => {
         gender: saved?.ttsGender || 'female',
         rate: saved?.ttsRate || '+0%',
         pitch: saved?.ttsPitch || '+0Hz',
+        // engine 기본값 'edge' — 씬마다 음성 변경 방지 (이전 'auto'는 Gemini 폴백으로 음성 달라짐)
+        engine: saved?.ttsEngine || 'edge',
       };
-    } catch (e) { return { gender: 'female', rate: '+0%', pitch: '+0Hz' }; }
+    } catch (e) { return { gender: 'female', rate: '+0%', pitch: '+0Hz', engine: 'edge' }; }
   }
 
   // 한국어 TTS 정규화 — 영어 차용어를 Edge TTS 가 자연스럽게 읽도록 한글 발음으로 치환
@@ -1157,12 +1166,23 @@ const SlidePlayer = (() => {
           gender: ttsSettings.gender,
           rate: ttsSettings.rate,
           pitch: ttsSettings.pitch,
+          engine: ttsSettings.engine, // ★ 씬마다 같은 엔진 사용 → 음성 일관성 유지
         }),
       });
 
       if (!res.ok) {
         console.warn(`TTS API returned ${res.status}`);
         return null;
+      }
+
+      // 음성 일관성 디버그: 씬마다 실제 사용된 엔진 로그 (mid-video 전환 감지)
+      const engineUsed = res.headers.get('X-TTS-Engine');
+      if (engineUsed) {
+        if (!SlidePlayer._lastTtsEngine) SlidePlayer._lastTtsEngine = engineUsed;
+        if (SlidePlayer._lastTtsEngine !== engineUsed) {
+          console.warn(`[TTS] ⚠️ 음성 엔진 변경 감지: ${SlidePlayer._lastTtsEngine} → ${engineUsed} (씬 간 음성이 달라질 수 있음)`);
+          SlidePlayer._lastTtsEngine = engineUsed;
+        }
       }
 
       const blob = await res.blob();
@@ -1513,24 +1533,31 @@ const SlidePlayer = (() => {
     if (el) { el.style.opacity = '0'; }
   }
 
-  // 인포그래픽 ↔ 참고사진 토글 (주기적 호출용)
-  // 5초 타이머 tick 마다 호출되어 두 레이어를 교대로 표시
+  // 인포그래픽 → 참고사진 단발 전환 (씬당 1번만 호출)
+  // 10초 지점에서 인포 → 사진으로 전환, 이후 씬 종료까지 사진 유지
   function _runCrossfade(source) {
     const pc = _pendingCrossfade;
-    if (!pc) return;
-    if (destroyed || pc.mySession !== playSessionId) return;
-    if (!pc.iframe || !pc.iframe.isConnected) return;
+    const t = Math.round(performance.now());
+    if (!pc) { console.log(`[CF-DEBUG] t=${t} SKIP (no pc) source=${source}`); return; }
+    if (destroyed || pc.mySession !== playSessionId) {
+      console.log(`[CF-DEBUG] t=${t} SKIP (session mismatch) pc.mySession=${pc.mySession} playSessionId=${playSessionId} source=${source}`);
+      return;
+    }
+    if (!pc.iframe || !pc.iframe.isConnected) {
+      console.log(`[CF-DEBUG] t=${t} SKIP (iframe disconnected) source=${source}`);
+      return;
+    }
     // 토글: 현재 참고사진 보이는 중이면 인포로, 아니면 참고사진으로
     if (pc.showingRef) {
       pc.iframe.style.opacity = '1';
       pc.refImg.style.opacity = '0';
       pc.showingRef = false;
-      console.log(`[Crossfade] 참고사진 → 인포그래픽 (${source})`);
+      console.log(`[CF-DEBUG] t=${t} 참고사진 → 인포그래픽 (${source}) scene=${currentIndex + 1}`);
     } else {
       pc.iframe.style.opacity = '0';
       pc.refImg.style.opacity = '1';
       pc.showingRef = true;
-      console.log(`[Crossfade] 인포그래픽 → 참고사진 (${source})`);
+      console.log(`[CF-DEBUG] t=${t} 인포그래픽 → 참고사진 (${source}) scene=${currentIndex + 1}`);
     }
   }
 
@@ -1567,6 +1594,9 @@ const SlidePlayer = (() => {
       };
 
       currentAudio.onended = () => {
+        const endT = Math.round(performance.now());
+        const dur = currentAudio ? Math.round(currentAudio.duration * 1000) : -1;
+        console.log(`[CF-DEBUG] t=${endT} audio ENDED scene=${currentIndex + 1} duration=${dur}ms`);
         currentAudio = null;
         _stopSubtitles();
         const bar = document.getElementById('spAudioProgress');
