@@ -313,6 +313,26 @@
       </div>
     </div>
 
+    <!-- 언어 설정 -->
+    <div class="profile-card">
+      <h3>🌍 <span id="lblLanguage">언어</span></h3>
+      <p style="font-size:12px; color:var(--gray-500); margin-bottom:12px;" id="lblLanguageDesc">화면·영상·퀴즈 모두 선택한 언어로 표시됩니다</p>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+        <button type="button" class="lang-btn" data-lang="ko" onclick="changeLang('ko')" style="padding:14px 8px; border-radius:12px; border:2px solid var(--gray-200); background:var(--bg-card); cursor:pointer; transition:all 0.2s; text-align:center;">
+          <div style="font-size:28px; line-height:1;">🇰🇷</div>
+          <div style="font-size:12px; font-weight:600; margin-top:6px; color:var(--text-primary, #F1F5F9);">한국어</div>
+        </button>
+        <button type="button" class="lang-btn" data-lang="en" onclick="changeLang('en')" style="padding:14px 8px; border-radius:12px; border:2px solid var(--gray-200); background:var(--bg-card); cursor:pointer; transition:all 0.2s; text-align:center;">
+          <div style="font-size:28px; line-height:1;">🇺🇸</div>
+          <div style="font-size:12px; font-weight:600; margin-top:6px; color:var(--text-primary, #F1F5F9);">English</div>
+        </button>
+        <button type="button" class="lang-btn" data-lang="vi" onclick="changeLang('vi')" style="padding:14px 8px; border-radius:12px; border:2px solid var(--gray-200); background:var(--bg-card); cursor:pointer; transition:all 0.2s; text-align:center;">
+          <div style="font-size:28px; line-height:1;">🇻🇳</div>
+          <div style="font-size:12px; font-weight:600; margin-top:6px; color:var(--text-primary, #F1F5F9);">Tiếng Việt</div>
+        </button>
+      </div>
+    </div>
+
     <button class="save-btn" id="saveBtn" onclick="saveProfile()">
       💾 저장하기
     </button>
@@ -373,6 +393,9 @@
         workStyle: '업무 스타일', preferStyle: '선호하는 업무 방식',
         goal: '이번 분기 목표', specialAbility: '특별한 능력 / 숨겨진 재능',
         theme: '테마 색상', themeDesc: '내 프로필 카드 색상을 선택하세요',
+        language: '언어', languageDesc: '화면·영상·퀴즈 모두 선택한 언어로 표시됩니다',
+        langChangedTitle: '언어가 변경되었습니다',
+        langChangedDesc: '새 언어가 적용되도록 페이지를 새로고침합니다.',
       },
       en: {
         title: 'My Profile', intro: 'About Me', introText: 'One-liner', bio: 'Bio',
@@ -391,6 +414,9 @@
         workStyle: 'Work Style', preferStyle: 'Preferred work style',
         goal: 'This Quarter Goal', specialAbility: 'Special Ability / Hidden Talent',
         theme: 'Theme Color', themeDesc: 'Choose your profile card color',
+        language: 'Language', languageDesc: 'Screens, videos, and quizzes will all use the selected language',
+        langChangedTitle: 'Language changed',
+        langChangedDesc: 'Reloading to apply the new language.',
       },
       vi: {
         title: 'Hồ sơ', intro: 'Giới thiệu', introText: 'Mô tả ngắn', bio: 'Tiểu sử',
@@ -409,6 +435,9 @@
         workStyle: 'Phong cách làm việc', preferStyle: 'Phong cách ưa thích',
         goal: 'Mục tiêu quý này', specialAbility: 'Năng lực đặc biệt',
         theme: 'Màu chủ đề', themeDesc: 'Chọn màu thẻ hồ sơ',
+        language: 'Ngôn ngữ', languageDesc: 'Màn hình, video và bài kiểm tra sẽ hiển thị bằng ngôn ngữ đã chọn',
+        langChangedTitle: 'Đã thay đổi ngôn ngữ',
+        langChangedDesc: 'Đang tải lại để áp dụng ngôn ngữ mới.',
       }
     };
     const t = T[lang] || T.ko;
@@ -456,6 +485,31 @@
     document.getElementById('lblSpecialAbility').textContent = t.specialAbility;
     document.getElementById('lblTheme').textContent = t.theme;
     document.getElementById('lblThemeDesc').textContent = t.themeDesc;
+    // 언어 카드
+    document.getElementById('lblLanguage').textContent = t.language;
+    document.getElementById('lblLanguageDesc').textContent = t.languageDesc;
+    // 현재 언어 버튼 강조
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      const isActive = btn.dataset.lang === lang;
+      btn.style.borderColor = isActive ? 'var(--primary)' : 'var(--gray-200)';
+      btn.style.background = isActive ? 'var(--primary-light)' : 'var(--bg-card)';
+      btn.style.transform = isActive ? 'scale(1.02)' : 'scale(1)';
+    });
+
+    // 언어 변경 — localStorage 저장 + 페이지 새로고침으로 즉시 반영
+    window.changeLang = function(newLang) {
+      if (newLang === lang) return; // 이미 선택된 언어
+      localStorage.setItem('sop_lang', newLang);
+      if (document.documentElement) document.documentElement.lang = newLang;
+      // 짧은 토스트 표시 후 새로고침 (다른 페이지의 T 객체도 새 언어로 다시 로드)
+      const tNew = T[newLang] || T.ko;
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.style.background = '#10B981';
+      toast.innerHTML = `<strong>${tNew.langChangedTitle}</strong><br><span style="font-size:12px;opacity:0.9;">${tNew.langChangedDesc}</span>`;
+      document.body.appendChild(toast);
+      setTimeout(() => { window.location.reload(); }, 700);
+    };
 
     // MBTI 드롭다운 i18n
     const mbtiNames = {

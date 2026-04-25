@@ -14,6 +14,19 @@
     'claude-sonnet-4-6': { in: 3,  out: 15 },
   };
 
+  // ===== 언어 감지 (나레이션 → ko/en/vi) =====
+  // ai-provider.js / api/image.js 와 동일한 로직 — 한 곳에서 바꾸면 전부 통일되도록 분리
+  const VI_DIACRITICS = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
+  function detectLang(text) {
+    const s = (text || '').slice(0, 300);
+    if (VI_DIACRITICS.test(s)) return 'vi';
+    if (/^[\x00-\x7F\s.,!?;:'"()\-\d\n]+$/.test(s)) return 'en';
+    return 'ko';
+  }
+  function langName(code) {
+    return code === 'vi' ? 'Vietnamese (tiếng Việt)' : code === 'en' ? 'English' : 'Korean (한국어)';
+  }
+
   // ===== 스타일 힌트 =====
   const STYLE_HINTS = {
     auto: '나레이션 내용을 분석해서 가장 어울리는 스타일을 자유롭게 선택.',
@@ -223,9 +236,16 @@ body{width:390px;height:693px;background:#0f1419;color:#e5e7eb;font-family:-appl
   // ============================================
   // PASS 1 프롬프트 — 핵심 분석 (JSON 출력)
   // ============================================
-  function buildPass1Prompt(narration, style) {
+  function buildPass1Prompt(narration, style, lang) {
+    const lcode = lang || detectLang(narration);
+    const lname = langName(lcode);
     return `당신은 정보 설계 전문가입니다. 아래 SOP 교육 나레이션의 **본질과 시각 구조**를 분석하세요.
 Edward Tufte, Otto Neurath(Isotype), Kurzgesagt, NYT 그래픽팀 수준으로 생각하세요.
+
+[CRITICAL · 출력 언어 = ${lname}]
+모든 텍스트 필드(core_message, hero_text, hero_unit, sub_keywords, description_short, body_items[].title, body_items[].desc 등)는 **반드시 ${lname}로만** 작성하세요.
+- 다른 언어 단어를 1개도 섞지 말 것 (예: ${lcode === 'vi' ? '베트남어 결과에 한국어/영어 단어 금지' : lcode === 'en' ? 'English 결과에 한국어/베트남어 단어 금지' : '한국어 결과에 영어/베트남어 단어 금지'})
+- 시스템 키(scene_type, emotional_tone, palette, visual_concept, reasoning) 만 영어 enum 그대로 둘 것
 
 [나레이션]
 ${narration}
@@ -284,11 +304,25 @@ ${STYLE_HINTS[style] || STYLE_HINTS.auto}
   // ============================================
   // PASS 2 프롬프트 — 고품질 HTML 디자인
   // ============================================
-  function buildPass2Prompt(analysis, narration, style) {
+  function buildPass2Prompt(analysis, narration, style, lang) {
     const template = STYLE_TEMPLATES[analysis.scene_type] || STYLE_TEMPLATES.stat_hero;
     const availableTypes = Object.keys(STYLE_TEMPLATES).join(' / ');
+    const lcode = lang || detectLang(narration);
+    const lname = langName(lcode);
+    const wordBreak = lcode === 'vi'
+      ? 'word-break:normal; overflow-wrap:break-word' // 베트남어는 띄어쓰기 단어 분할 OK
+      : lcode === 'en'
+        ? 'word-break:normal; overflow-wrap:break-word'
+        : 'word-break:keep-all'; // 한국어 어절 단위 줄바꿈
 
     return `당신은 **Kurzgesagt + NYT Graphics + 교과서 편집 디자이너**를 합친 세계 최고의 에디토리얼 디자이너입니다. SOP 교육 영상의 한 씬을 **9:16 세로 모바일** HTML+CSS로 제작하세요.
+
+[CRITICAL · 출력 언어 = ${lname}]
+HTML 본문에 표시되는 **모든 텍스트(제목·본문·캡션·라벨·footer)** 는 반드시 ${lname}로만 작성하세요.
+- 예시 템플릿에 한국어 텍스트가 있어도, 실제 출력은 ${lname}로 번역해서 넣을 것
+- 다른 언어 단어를 단 1개도 섞지 마세요
+- font-family / 시스템 폰트 / CSS 속성명은 그대로 영어 유지
+- ${lcode === 'vi' ? '베트남어 성조 마크(diacritics)가 깨지지 않게 charset utf-8 필수' : lcode === 'en' ? 'English text — no foreign characters' : '한국어 — 영어/베트남어 단어 금지'}
 
 [Pass 1 분석 결과 — 반드시 반영]
 ${JSON.stringify(analysis, null, 2)}
@@ -354,7 +388,7 @@ ${template.example}
 - **외부 리소스 완전 금지** — \`@font-face\`, \`@import\`, \`<link rel="stylesheet">\`, \`src: url('https://...')\`, \`<script src>\`, \`<img src="https://...">\` 전부 **절대 금지**. CDN URL 단 하나도 넣지 마세요 (jsdelivr, fonts.googleapis.com 등 포함). 모든 스타일은 \`<style>\` 태그 안 인라인 CSS 로만.
 - 시스템 폰트만 사용: \`font-family: -apple-system, 'Pretendard', sans-serif\` (Pretendard 는 사용자 기기에 있으면 적용되고 없으면 시스템 폰트로 폴백 — @font-face 로 불러오지 말 것)
 - 배경은 반드시 다크
-- 한국어 줄바꿈: \`word-break:keep-all\`
+- 줄바꿈 규칙 (언어별): \`${wordBreak}\`
 - JavaScript 금지
 
 ════════════════════════════════════════
@@ -504,9 +538,12 @@ ${template.example}
     let pass1 = { in: 0, out: 0, cost: 0 };
     let pass2 = { in: 0, out: 0, cost: 0 };
 
+    // 나레이션 언어 1회 감지 → Pass 1/2 양쪽에 전달 (출력 언어 강제)
+    const lang = detectLang(narration);
+
     // --- Pass 1: 분석 ---
-    if (onProgress) onProgress('pass1', `🧠 Pass 1/2 · ${p1Model} 분석 중...`);
-    const p1Prompt = buildPass1Prompt(narration.trim(), style);
+    if (onProgress) onProgress('pass1', `🧠 Pass 1/2 · ${p1Model} 분석 중... (${lang.toUpperCase()})`);
+    const p1Prompt = buildPass1Prompt(narration.trim(), style, lang);
     const p1 = await callModel({
       prompt: p1Prompt,
       model: p1Model,
@@ -522,8 +559,8 @@ ${template.example}
     catch (e) { throw new Error('Pass 1 분석 실패: ' + e.message + ' — raw: ' + p1.raw.slice(0, 200)); }
 
     // --- Pass 2: 디자인 ---
-    if (onProgress) onProgress('pass2', `🎨 Pass 2/2 · ${model} HTML 디자인 중...`);
-    const p2Prompt = buildPass2Prompt(analysis, narration.trim(), style);
+    if (onProgress) onProgress('pass2', `🎨 Pass 2/2 · ${model} HTML 디자인 중... (${lang.toUpperCase()})`);
+    const p2Prompt = buildPass2Prompt(analysis, narration.trim(), style, lang);
     const p2 = await callModel({
       prompt: p2Prompt,
       model,
@@ -601,6 +638,8 @@ ${template.example}
     enforceSafeZone,
     buildPass1Prompt,
     buildPass2Prompt,
+    detectLang,    // 'ko' | 'en' | 'vi'
+    langName,
     STYLE_TEMPLATES,
     STYLE_HINTS,
     RATES,
