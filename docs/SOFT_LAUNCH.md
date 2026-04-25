@@ -160,7 +160,10 @@ curl -s https://your-prod.vercel.app/api/health | jq
 ### 5-3. Cron 작동 확인
 
 - Vercel Dashboard → Project → Settings → Cron Jobs
-- `/api/cron-health` 가 **15분 간격**으로 표시되는지
+- `/api/cron-health` 가 **일 1회 (00:00 UTC = 한국 09:00)** 로 표시되는지
+- Vercel **Hobby 플랜은 일 1회만 허용** — 더 잦은 모니터링이 필요하면:
+  - 옵션 A: Pro 플랜 업그레이드 ($20/월) → `vercel.json` 의 `schedule` 을 `*/15 * * * *` 로 변경
+  - 옵션 B: 외부 cron-job.org / GitHub Actions 에서 `?force=1` 로 호출
 - 첫 실행 후 → "Last Invocation" 에 200 OK 가 떠야 정상
 
 ### 5-4. 강제 알림 테스트
@@ -246,6 +249,7 @@ SOP Training 시스템 내부 베타에 초대됐습니다.
 - [ ] **Gemini API 키 만료 위험** — GCP 청구 계정 연결 + GCP 키로 마이그레이션 권장
 - [ ] **레이트리밋이 인메모리** — Vercel 콜드스타트마다 리셋 (베타 30명은 OK, 정식은 Upstash Redis 로 교체)
 - [ ] **알림 쿨다운도 인메모리** — 콜드스타트 시 30분 쿨다운 리셋 (스팸 위험 작음)
+- [ ] **헬스체크 cron 이 일 1회** — Hobby 플랜 제약. 장애 발생 후 최대 24시간 뒤 알림. Pro 업그레이드 또는 외부 cron 으로 보완 가능
 - [ ] **셀프서비스 비밀번호 재설정 미구현** — 관리자 수동 처리
 - [ ] **Edge TTS 비공식 의존** — Microsoft 가 막으면 즉시 영향, Gemini TTS 폴백 있음
 - [ ] **이미지 Storage 가 Supabase 무료 플랜** (1GB 한계)
@@ -273,6 +277,7 @@ vercel rollback https://your-prod.vercel.app
 
 - [ ] Gemini 키 GCP 마이그레이션
 - [ ] 레이트리밋 → Vercel KV / Upstash Redis
+- [ ] Vercel Pro 업그레이드 + cron 을 `*/15 * * * *` 로 복원 (또는 외부 cron 연결)
 - [ ] beta_feedback RLS 정책 강화 (INSERT 만 anon, SELECT 는 admin only)
 - [ ] 셀프서비스 비밀번호 재설정 추가
 - [ ] feedback-widget 옵션화 (정식 운영 시 노출 끄기)

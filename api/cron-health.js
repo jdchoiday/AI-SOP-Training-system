@@ -1,7 +1,8 @@
 // ============================================
 // /api/cron-health — Vercel Cron 자동 호출
 // ============================================
-// vercel.json 의 crons 설정에 의해 15분마다 실행됨.
+// vercel.json 의 crons 설정에 의해 매일 1회 실행 (Hobby 플랜 제약).
+// 더 잦은 모니터링이 필요하면 외부 cron-job.org 등으로 ?force=1 호출.
 // /api/health 호출 → 실패 시 Resend 로 관리자 이메일 발송.
 //
 // 필요 env:
@@ -15,7 +16,7 @@
 
 // 최근 알림 상태 저장 (콜드 스타트 시 초기화됨 — DB 없이 중복 방지만 목적)
 let lastAlertTime = 0;
-const ALERT_COOLDOWN_MS = 30 * 60 * 1000; // 30분 쿨다운 (연속 알림 방지)
+const ALERT_COOLDOWN_MS = 30 * 60 * 1000; // 30분 쿨다운 (수동 ?force=1 연속 호출 시 스팸 방지)
 
 async function sendAlert(healthData, originUrl) {
   const apiKey = process.env.RESEND_API_KEY;
