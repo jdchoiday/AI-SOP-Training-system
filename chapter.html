@@ -395,6 +395,13 @@
   </div>
 
   <script src="js/image-db.js"></script>
+  <!-- ★ Sentry (에러 트래킹) — DSN 설정 시 자동 초기화, 없으면 스킵 -->
+  <script>
+    window.SENTRY_DSN_BROWSER = localStorage.getItem('sentry_dsn_browser') || '';
+    window.APP_VERSION = '2026-04-23e';
+  </script>
+  <script src="js/sentry-init.js"></script>
+  <script src="js/feedback-widget.js?v=20260423e"></script>
   <script src="js/config.js"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/scene-prompts.js"></script>

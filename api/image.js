@@ -11,6 +11,10 @@
 
 const sharp = (() => { try { return require('sharp'); } catch { return null; } })();
 const ScenePrompts = (() => { try { return require('../js/scene-prompts.js'); } catch { return null; } })();
+const { rateLimit } = require('./_ratelimit');
+
+// 이미지 생성은 가장 비싸므로 분당 20 요청 제한
+const imageGate = rateLimit({ key: 'image', limit: 20, windowMs: 60_000 });
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -19,6 +23,8 @@ module.exports = async (req, res) => {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
+
+  if (!imageGate(req, res)) return;
 
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not set' });

@@ -16,6 +16,10 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const { rateLimit } = require('./_ratelimit');
+
+// 소프트런칭 보호 — IP 당 분당 60 요청 (1초당 1회 이상 허용)
+const ttsGate = rateLimit({ key: 'tts', limit: 60, windowMs: 60_000 });
 
 const VOICES = {
   'ko-KR': { female: 'ko-KR-SunHiNeural', male: 'ko-KR-InJoonNeural' },
@@ -321,6 +325,8 @@ module.exports = async (req, res) => {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  if (!ttsGate(req, res)) return; // 429 자동 응답
 
   try {
     const { text, lang = 'ko-KR', gender = 'female', rate, pitch, engine = 'edge' } = req.body || {};

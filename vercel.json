@@ -9,7 +9,10 @@
     { "source": "/api/quiz", "destination": "/api/quiz" },
     { "source": "/api/siliconflow", "destination": "/api/siliconflow" },
     { "source": "/api/tts", "destination": "/api/tts" },
-    { "source": "/api/video-search", "destination": "/api/video-search" }
+    { "source": "/api/video-search", "destination": "/api/video-search" },
+    { "source": "/api/health", "destination": "/api/health" },
+    { "source": "/api/cron-health", "destination": "/api/cron-health" },
+    { "source": "/api/feedback", "destination": "/api/feedback" }
   ],
   "functions": {
     "api/image.js": {
@@ -26,8 +29,23 @@
     },
     "api/video-search.js": {
       "maxDuration": 15
+    },
+    "api/health.js": {
+      "maxDuration": 15
+    },
+    "api/cron-health.js": {
+      "maxDuration": 20
+    },
+    "api/feedback.js": {
+      "maxDuration": 10
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron-health",
+      "schedule": "*/15 * * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

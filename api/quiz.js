@@ -10,6 +10,9 @@
 //   'exam'    → 챕터 종합시험 30문제
 // ============================================
 
+const { rateLimit } = require('./_ratelimit');
+const quizGate = rateLimit({ key: 'quiz', limit: 30, windowMs: 60_000 });
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -17,6 +20,8 @@ module.exports = async (req, res) => {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
+
+  if (!quizGate(req, res)) return;
 
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not set' });

@@ -3,6 +3,11 @@
 // Keeps GEMINI_API_KEY server-side
 // ============================================
 
+const { rateLimit } = require('./_ratelimit');
+
+// Gemini 는 토큰 비용이 높으므로 분당 40 요청 제한
+const geminiGate = rateLimit({ key: 'gemini', limit: 40, windowMs: 60_000 });
+
 module.exports = async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,6 +22,8 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed. Use POST.' });
   }
+
+  if (!geminiGate(req, res)) return;
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
