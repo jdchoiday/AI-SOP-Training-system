@@ -685,7 +685,9 @@ const SlidePlayer = (() => {
         vis.appendChild(iframe);
 
         // Layer 2: 나노바나나 참고 사진 (씬 시작 10초 뒤 1회 페이드 인)
-        if (scene._referenceImageUrl) {
+        // ★ AI_CONFIG.enableReferencePhoto 가 false 면 기존 SOP 도 사진 스킵
+        const _refPhotoEnabled = (typeof AI_CONFIG !== 'undefined' && AI_CONFIG.enableReferencePhoto !== false);
+        if (scene._referenceImageUrl && _refPhotoEnabled) {
           const refImg = document.createElement('img');
           refImg.src = scene._referenceImageUrl;
           refImg.alt = 'reference';

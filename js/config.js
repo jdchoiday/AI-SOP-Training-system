@@ -50,6 +50,11 @@ const CONFIG = {
     // 스크립트 생성 시 visual 타입(stat/comparison/infographic/iconGrid/conceptExplainer/quote/keypoint 등)에만 적용
     useTwoPassHTML: true,
 
+    // 참고사진(Reference Photo) 생성 — 인포그래픽 위에 10초 뒤 토글되는 다큐멘터리 사진
+    // false: 인포그래픽만 노출 (균일·단순·저렴), true: 인포 + 사진 토글 (다큐 느낌)
+    // 베타 기간: false 권장 (씬마다 길이 달라 토글 시점이 들쑥날쑥, 비용 ~$0.03/씬 절감)
+    enableReferencePhoto: false,
+
     // 2-Pass HTML 전용 모델 (useTwoPassHTML=true 일 때만)
     // A/B 테스트 중: Opus 4.7 → Gemini 2.5 Pro (약 8배 저렴, 품질 검증 필요)
     twoPassHTMLModel: 'gemini-2.5-pro',         // Pass 2 (HTML 디자인) — Gemini 2.5 Pro ($0.02~0.03/씬, 이전 Opus $0.15/씬)
