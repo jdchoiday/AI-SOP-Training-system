@@ -684,7 +684,7 @@ const SlidePlayer = (() => {
         };
         vis.appendChild(iframe);
 
-        // Layer 2: 나노바나나 참고 사진 (절반 시점에 페이드 인)
+        // Layer 2: 나노바나나 참고 사진 (씬 시작 10초 뒤 1회 페이드 인)
         if (scene._referenceImageUrl) {
           const refImg = document.createElement('img');
           refImg.src = scene._referenceImageUrl;
@@ -695,6 +695,10 @@ const SlidePlayer = (() => {
           refImg.style.height = '100%';
           refImg.style.objectFit = 'cover';
           refImg.style.opacity = '0';
+          // ★ .sp-scene-visual img 에 걸린 sp-imgReveal 자동 페이드인 차단
+          //   (자동 페이드인이 inline opacity=0 보다 우선 적용되어 씬 시작 직후
+          //    참고사진이 잠깐 보이는 깜빡임 발생 → animation:none 으로 봉인)
+          refImg.style.animation = 'none';
           refImg.style.transition = 'opacity 0.6s ease';
           refImg.style.zIndex = '2';
           refImg.style.pointerEvents = 'none';
