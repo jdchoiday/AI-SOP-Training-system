@@ -4762,36 +4762,86 @@ Output ONLY the prompt, nothing else.`;
         if (typeof renderAiResults === 'function') renderAiResults(sop);
 
         // === 퀴즈 자동 생성 (최초 영상 생성 시에만) ===
-        // "영상 생성" 1회 클릭으로 퀴즈까지 원스톱 생성
+        // "영상 생성" 1회 클릭으로 씬별 미니퀴즈 + 챕터 종합 퀴즈까지 원스톱 생성
+        // sop.content 가 비어있으면 script 나레이션으로 폴백 (AI 스크립트로 만든 SOP 대응)
         try {
-          const hasQuiz = Array.isArray(sop.quizzes) && sop.quizzes.length > 0;
-          if (!hasQuiz && sop.content && sop.content.length >= 50) {
-            console.log('[Quiz Auto] 퀴즈 없음 감지 — 자동 생성 시작');
+          const hasChapterQuiz = Array.isArray(sop.quizzes) && sop.quizzes.length > 0;
+          // 본문 없으면 스크립트 나레이션 합쳐서 사용
+          const fallbackContent = (sop.script || [])
+            .map(s => s.narration || s.title_full || '')
+            .filter(Boolean)
+            .join('\n');
+          const quizContent = (sop.content && sop.content.length >= 50) ? sop.content : fallbackContent;
+          const canGenerate = quizContent && quizContent.length >= 50;
+
+          if (canGenerate) {
             const quizOverlay = document.createElement('div');
             quizOverlay.id = 'quizAutoOverlay';
             quizOverlay.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:10000; background:linear-gradient(135deg,#9a3412,#7c2d12); border-bottom:2px solid #fb923c; padding:16px 24px; box-shadow:0 4px 20px rgba(0,0,0,0.5); color:#fed7aa; font-size:14px; font-weight:600; text-align:center;';
-            quizOverlay.innerHTML = `❓ AI 퀴즈 자동 생성 중...`;
             document.body.appendChild(quizOverlay);
-            try {
-              const quizResult = await AI.generateQuiz(sop.title, sop.content);
-              const sops2 = getSops();
-              const idx2 = sops2.findIndex(s => s.id === currentSopId);
-              if (idx2 !== -1) {
-                sops2[idx2].quizzes = quizResult;
-                saveSops(sops2);
-                if (typeof renderAiResults === 'function') renderAiResults(sops2[idx2]);
-                if (typeof _renderEditorActionBar === 'function') _renderEditorActionBar(sops2[idx2]);
+
+            // (1) 씬별 미니퀴즈 — 나레이션 있는 씬마다 3문제씩 (씬당 ~2초)
+            const sceneTargets = (sop.script || [])
+              .map((sc, i) => ({ sc, i }))
+              .filter(x => x.sc.narration && (!Array.isArray(x.sc.quizzes) || x.sc.quizzes.length === 0));
+
+            let sceneQuizDone = 0;
+            if (sceneTargets.length > 0) {
+              console.log(`[Quiz Auto] 씬별 미니퀴즈 ${sceneTargets.length}개 씬 자동 생성 시작`);
+              for (const { sc, i } of sceneTargets) {
+                quizOverlay.innerHTML = `❓ 씬 미니퀴즈 생성 중 ${sceneQuizDone}/${sceneTargets.length}`;
+                try {
+                  const qRes = await fetch('/api/quiz', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ narration: sc.narration, count: 3, mode: 'scene', sceneIndex: i })
+                  });
+                  if (qRes.ok) {
+                    const qData = await qRes.json();
+                    if (qData.quizzes?.length > 0) {
+                      sc.quizzes = qData.quizzes;
+                      sceneQuizDone++;
+                    }
+                  }
+                } catch (sqe) { console.warn(`[Quiz Auto] 씬 ${i + 1} 실패:`, sqe.message); }
+                if (i < sceneTargets.length - 1) await new Promise(r => setTimeout(r, 1500));
               }
-              quizOverlay.innerHTML = `✅ 퀴즈 ${quizResult.length}문제 자동 생성 완료`;
-              setTimeout(() => quizOverlay.remove(), 2500);
-            } catch (qe) {
-              console.warn('[Quiz Auto] 실패 (수동 생성 가능):', qe.message);
-              quizOverlay.innerHTML = `⚠️ 퀴즈 자동 생성 실패 — 퀴즈 생성 버튼으로 재시도 가능`;
-              setTimeout(() => quizOverlay.remove(), 4000);
             }
+
+            // (2) 챕터 종합 퀴즈 (이미 있으면 스킵)
+            let chapterQuizDone = 0;
+            if (!hasChapterQuiz) {
+              quizOverlay.innerHTML = `❓ 챕터 종합 퀴즈 생성 중...`;
+              try {
+                const quizResult = await AI.generateQuiz(sop.title, quizContent);
+                if (Array.isArray(quizResult) && quizResult.length > 0) {
+                  sop.quizzes = quizResult;
+                  chapterQuizDone = quizResult.length;
+                }
+              } catch (qe) {
+                console.warn('[Quiz Auto] 챕터 퀴즈 실패:', qe.message);
+              }
+            }
+
+            // 최종 저장
+            const sops2 = getSops();
+            const idx2 = sops2.findIndex(s => s.id === currentSopId);
+            if (idx2 !== -1) {
+              sops2[idx2] = sop;
+              saveSops(sops2);
+              if (typeof renderAiResults === 'function') renderAiResults(sops2[idx2]);
+              if (typeof _renderEditorActionBar === 'function') _renderEditorActionBar(sops2[idx2]);
+            }
+
+            const totalScene = sceneQuizDone * 3;
+            quizOverlay.innerHTML = `✅ 퀴즈 자동 생성 완료 — 씬 ${sceneQuizDone}개(${totalScene}문제)${!hasChapterQuiz ? ` + 챕터 ${chapterQuizDone}문제` : ''}`;
+            setTimeout(() => quizOverlay.remove(), 3500);
+          } else {
+            console.log('[Quiz Auto] 본문/스크립트 부족 → 스킵 (수동 생성 권장)');
           }
         } catch (e) {
           console.warn('[Quiz Auto] 훅 오류:', e.message);
+          document.getElementById('quizAutoOverlay')?.remove();
         }
       } catch (err) {
         console.error('[Video Gen] 오류:', err);
