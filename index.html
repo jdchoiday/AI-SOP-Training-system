@@ -129,11 +129,11 @@
     </div>
   </div>
 
-  <!-- PWA Service Worker -->
-  <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
   <!-- 스크립트 -->
   <script src="js/config.js"></script>
   <script src="js/supabase-client.js"></script>
+  <!-- PWA: Service Worker 등록 + 설치 유도 + iOS 안내 (pwa-install.js 안에서 모두 처리) -->
+  <script src="js/pwa-install.js" defer></script>
   <script>
     // ===== 세션 타임아웃 체크 (24시간) — 미래/음수 타임스탬프 방어 =====
     const SESSION_HOURS = 24;

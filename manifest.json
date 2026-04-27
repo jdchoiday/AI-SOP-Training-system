@@ -23,5 +23,29 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "학습",
+      "short_name": "학습",
+      "description": "오늘의 SOP 학습 시작",
+      "url": "/tasks.html",
+      "icons": [{ "src": "assets/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "칭찬 보내기",
+      "short_name": "칭찬",
+      "description": "동료에게 칭찬 보내기",
+      "url": "/praise.html",
+      "icons": [{ "src": "assets/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "내 성과",
+      "short_name": "성과",
+      "description": "내 점수와 등급 확인",
+      "url": "/my-results.html",
+      "icons": [{ "src": "assets/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+    }
+  ],
+  "prefer_related_applications": false
 }
