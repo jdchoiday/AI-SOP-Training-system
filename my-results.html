@@ -333,6 +333,107 @@
       font-size: 14px;
     }
     .empty-profile .big-emoji { font-size: 40px; margin-bottom: 8px; }
+
+    /* ===== 3파트 통합 점수 카드 ===== */
+    .three-part-score {
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+      border-radius: 20px;
+      padding: 22px 18px 18px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(16,185,129,0.18);
+      position: relative;
+      overflow: hidden;
+    }
+    .three-part-score::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      right: -20%;
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(16,185,129,0.10) 0%, transparent 70%);
+    }
+    .three-part-score > * { position: relative; z-index: 1; }
+    .tps-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .tps-title { font-size: 14px; font-weight: 700; color: #F1F5F9; display: flex; align-items: center; gap: 6px; }
+    .tps-month { font-size: 11px; color: #94A3B8; }
+    .tps-rank-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(16,185,129,0.15);
+      color: #10B981;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .tps-total-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      margin-bottom: 16px;
+      justify-content: center;
+    }
+    .tps-total-num {
+      font-size: 44px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #10B981, #3B82F6);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .tps-total-label { font-size: 14px; color: #94A3B8; font-weight: 600; }
+    .tps-bars { display: flex; flex-direction: column; gap: 10px; }
+    .tps-bar-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+    .tps-bar-icon { font-size: 18px; width: 28px; text-align: center; }
+    .tps-bar-track {
+      height: 24px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    .tps-bar-fill {
+      height: 100%;
+      border-radius: 12px;
+      transition: width 0.6s ease-out;
+      display: flex;
+      align-items: center;
+      padding-left: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      color: white;
+      white-space: nowrap;
+    }
+    .tps-bar-fill.base { background: linear-gradient(90deg, #10B981, #059669); }
+    .tps-bar-fill.special { background: linear-gradient(90deg, #F59E0B, #D97706); }
+    .tps-bar-fill.training { background: linear-gradient(90deg, #3B82F6, #2563EB); }
+    .tps-bar-value {
+      font-size: 13px;
+      font-weight: 700;
+      color: #F1F5F9;
+      min-width: 38px;
+      text-align: right;
+    }
+    .tps-empty {
+      text-align: center;
+      color: #64748B;
+      font-size: 13px;
+      padding: 18px 0;
+    }
   </style>
 </head>
 <body>
@@ -368,6 +469,42 @@
 
       <!-- 능력치 미니 바 -->
       <div class="stats-grid" id="statsGrid"></div>
+    </div>
+
+    <!-- ===== 3파트 통합 점수 (이번 달) ===== -->
+    <div class="three-part-score" id="threePartScoreCard" style="display:none;">
+      <div class="tps-header">
+        <div>
+          <div class="tps-title">📊 <span id="tpsTitle">이번 달 종합 점수</span></div>
+          <div class="tps-month" id="tpsMonth"></div>
+        </div>
+        <div class="tps-rank-badge" id="tpsRankBadge" style="display:none;">
+          <span>🏆</span>
+          <span id="tpsRankText">-</span>
+        </div>
+      </div>
+      <div class="tps-total-row">
+        <div class="tps-total-num" id="tpsTotalNum">0</div>
+        <div class="tps-total-label" id="tpsTotalLabel">XP</div>
+      </div>
+      <div class="tps-bars" id="tpsBars">
+        <div class="tps-bar-row" data-part="base">
+          <div class="tps-bar-icon">📚</div>
+          <div class="tps-bar-track"><div class="tps-bar-fill base" id="tpsBaseFill" style="width:0%"><span id="tpsBaseLabel">기본성과</span></div></div>
+          <div class="tps-bar-value" id="tpsBaseValue">0</div>
+        </div>
+        <div class="tps-bar-row" data-part="special">
+          <div class="tps-bar-icon">🤝</div>
+          <div class="tps-bar-track"><div class="tps-bar-fill special" id="tpsSpecialFill" style="width:0%"><span id="tpsSpecialLabel">특별업무</span></div></div>
+          <div class="tps-bar-value" id="tpsSpecialValue">0</div>
+        </div>
+        <div class="tps-bar-row" data-part="training">
+          <div class="tps-bar-icon">🎓</div>
+          <div class="tps-bar-track"><div class="tps-bar-fill training" id="tpsTrainingFill" style="width:0%"><span id="tpsTrainingLabel">교육</span></div></div>
+          <div class="tps-bar-value" id="tpsTrainingValue">0</div>
+        </div>
+      </div>
+      <div class="tps-empty" id="tpsEmpty" style="display:none;">아직 이번 달 활동이 없어요. 학습·칭찬·팀 태스크를 시작해보세요!</div>
     </div>
 
     <!-- ===== 성과 요약 ===== -->
@@ -451,6 +588,15 @@
         staff: '직원',
         statComm: '소통', statFocus: '집중', statTeam: '팀워크',
         statCreative: '창의', statSpeed: '실행', statService: '서비스',
+        // 3파트 점수
+        tpsTitle: '이번 달 종합 점수',
+        tpsBaseLabel: '기본성과',
+        tpsSpecialLabel: '특별업무',
+        tpsTrainingLabel: '교육',
+        tpsRankFmt: (r, n) => `지점 #${r} / ${n}명`,
+        tpsRankSolo: '내 지점',
+        tpsEmpty: '아직 이번 달 활동이 없어요. 학습·칭찬·팀 태스크를 시작해보세요!',
+        tpsMonthFmt: (y, m) => `${y}년 ${m}월`,
       },
       en: {
         home: 'Home', tasks: 'Tasks', praise: 'Boost', myProfile: 'Profile',
@@ -474,6 +620,15 @@
         staff: 'Staff',
         statComm: 'Comm', statFocus: 'Focus', statTeam: 'Team',
         statCreative: 'Create', statSpeed: 'Action', statService: 'Service',
+        // 3파트 점수
+        tpsTitle: 'This Month Score',
+        tpsBaseLabel: 'Base Performance',
+        tpsSpecialLabel: 'Special Tasks',
+        tpsTrainingLabel: 'Training',
+        tpsRankFmt: (r, n) => `Branch #${r} of ${n}`,
+        tpsRankSolo: 'My branch',
+        tpsEmpty: 'No activity this month yet. Start learning, give praise, or complete team tasks!',
+        tpsMonthFmt: (y, m) => `${y}/${String(m).padStart(2,'0')}`,
       },
       vi: {
         home: 'Trang chủ', tasks: 'Nhiệm vụ', praise: 'Boost', myProfile: 'Hồ sơ',
@@ -497,6 +652,15 @@
         staff: 'Nhân viên',
         statComm: 'Giao tiếp', statFocus: 'Tập trung', statTeam: 'Đồng đội',
         statCreative: 'Sáng tạo', statSpeed: 'Hành động', statService: 'Phục vụ',
+        // 3파트 점수
+        tpsTitle: 'Điểm tháng này',
+        tpsBaseLabel: 'Cơ bản',
+        tpsSpecialLabel: 'Đặc biệt',
+        tpsTrainingLabel: 'Đào tạo',
+        tpsRankFmt: (r, n) => `Chi nhánh #${r}/${n}`,
+        tpsRankSolo: 'Chi nhánh',
+        tpsEmpty: 'Chưa có hoạt động trong tháng. Bắt đầu học, khen ngợi, hoặc hoàn thành nhiệm vụ nhé!',
+        tpsMonthFmt: (y, m) => `${m}/${y}`,
       }
     };
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
@@ -516,6 +680,16 @@
     document.getElementById('tabResults').textContent = t.tabResults;
     document.getElementById('tabCert').textContent = t.tabCert;
     document.getElementById('editBtn').innerHTML = t.editProfile;
+    // 3파트 점수 라벨
+    document.getElementById('tpsTitle').textContent = t.tpsTitle;
+    document.getElementById('tpsBaseLabel').textContent = t.tpsBaseLabel;
+    document.getElementById('tpsSpecialLabel').textContent = t.tpsSpecialLabel;
+    document.getElementById('tpsTrainingLabel').textContent = t.tpsTrainingLabel;
+    document.getElementById('tpsEmpty').textContent = t.tpsEmpty;
+    {
+      const now = new Date();
+      document.getElementById('tpsMonth').textContent = t.tpsMonthFmt(now.getFullYear(), now.getMonth() + 1);
+    }
 
     // ===== Auth =====
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
@@ -885,10 +1059,158 @@
       link.click();
     }
 
+    // ===== 3파트 통합 점수 (이번 달) =====
+    // 기본성과: chapter, quiz, quiz_perfect, daily_mission
+    // 특별업무: team_task, praise_send, praise_stack, admin_special
+    // 교육:     chapter_exam, chapter_exam_s_bonus, course_complete
+    const TPS_BUCKETS = {
+      base:     ['chapter', 'quiz', 'quiz_perfect', 'daily_mission'],
+      special:  ['team_task', 'praise_send', 'praise_stack', 'admin_special'],
+      training: ['chapter_exam', 'chapter_exam_s_bonus', 'course_complete'],
+    };
+    function _tpsBucket(source) {
+      for (const [k, list] of Object.entries(TPS_BUCKETS)) {
+        if (list.includes(source)) return k;
+      }
+      return null; // 미분류 source 는 합산에서 제외
+    }
+
+    async function renderThreePartScore() {
+      const card = document.getElementById('threePartScoreCard');
+      const empId = user.id || user.email;
+      if (!empId) return;
+
+      // 이번 달 1일 00:00 (KST) 을 UTC ISO 로 변환
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+      let baseScore = 0, specialScore = 0, trainingScore = 0;
+
+      try {
+        if (typeof SupabaseMode === 'undefined' || !SupabaseMode._ready) {
+          // DB 연결 없으면 카드 숨김
+          card.style.display = 'none';
+          return;
+        }
+
+        // 내 이번 달 XP 트랜잭션 조회
+        const { data: myTx, error } = await SupabaseMode._client
+          .from('xp_transactions')
+          .select('amount, source')
+          .eq('employee_id', empId)
+          .gte('created_at', monthStart);
+
+        if (error) {
+          console.warn('[TPS] xp_transactions 조회 실패:', error.message);
+          card.style.display = 'none';
+          return;
+        }
+
+        (myTx || []).forEach(tx => {
+          const bucket = _tpsBucket(tx.source);
+          if (bucket === 'base') baseScore += tx.amount;
+          else if (bucket === 'special') specialScore += tx.amount;
+          else if (bucket === 'training') trainingScore += tx.amount;
+        });
+
+      } catch (e) {
+        console.warn('[TPS] 집계 오류:', e);
+        card.style.display = 'none';
+        return;
+      }
+
+      const total = baseScore + specialScore + trainingScore;
+      card.style.display = 'block';
+
+      // 빈 상태 처리
+      if (total === 0) {
+        document.getElementById('tpsTotalNum').textContent = '0';
+        document.getElementById('tpsBars').style.display = 'none';
+        document.getElementById('tpsEmpty').style.display = 'block';
+        document.getElementById('tpsRankBadge').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('tpsBars').style.display = 'flex';
+      document.getElementById('tpsEmpty').style.display = 'none';
+      document.getElementById('tpsTotalNum').textContent = total.toLocaleString();
+
+      // 비율 계산 (각 부분이 전체에서 차지하는 %)
+      const basePct = Math.round((baseScore / total) * 100);
+      const specialPct = Math.round((specialScore / total) * 100);
+      const trainingPct = Math.round((trainingScore / total) * 100);
+
+      // 막대 너비는 전체 대비 비율 (시각적 강조). 단, 최소 12% 보장 → 0이면 0%
+      const minVisible = (v) => v === 0 ? 0 : Math.max(12, v);
+
+      requestAnimationFrame(() => {
+        document.getElementById('tpsBaseFill').style.width = minVisible(basePct) + '%';
+        document.getElementById('tpsSpecialFill').style.width = minVisible(specialPct) + '%';
+        document.getElementById('tpsTrainingFill').style.width = minVisible(trainingPct) + '%';
+      });
+
+      document.getElementById('tpsBaseValue').textContent = baseScore.toLocaleString();
+      document.getElementById('tpsSpecialValue').textContent = specialScore.toLocaleString();
+      document.getElementById('tpsTrainingValue').textContent = trainingScore.toLocaleString();
+
+      // 지점 내 순위 (이번 달 기준)
+      const myBranch = user.branch;
+      if (!myBranch) {
+        document.getElementById('tpsRankBadge').style.display = 'none';
+        return;
+      }
+      try {
+        // 같은 지점 직원 ID 조회
+        const { data: branchEmps } = await SupabaseMode._client
+          .from('employees')
+          .select('id')
+          .eq('branch', myBranch);
+        const branchIds = (branchEmps || []).map(e => e.id).filter(Boolean);
+        if (branchIds.length < 2) {
+          // 지점에 1명뿐이면 솔로 표시
+          document.getElementById('tpsRankBadge').style.display = 'inline-flex';
+          document.getElementById('tpsRankText').textContent = t.tpsRankSolo;
+          return;
+        }
+
+        // 같은 지점 모든 직원의 이번 달 XP 합계 조회
+        const { data: branchTx } = await SupabaseMode._client
+          .from('xp_transactions')
+          .select('employee_id, amount, source')
+          .in('employee_id', branchIds)
+          .gte('created_at', monthStart);
+
+        const totals = {};
+        (branchTx || []).forEach(tx => {
+          if (_tpsBucket(tx.source) == null) return; // 미분류는 제외
+          totals[tx.employee_id] = (totals[tx.employee_id] || 0) + tx.amount;
+        });
+
+        // 활동이 있는 직원만 정렬
+        const sorted = Object.entries(totals)
+          .filter(([, v]) => v > 0)
+          .sort((a, b) => b[1] - a[1]);
+
+        const myRank = sorted.findIndex(([id]) => id === empId) + 1;
+        const totalActive = sorted.length;
+
+        if (myRank > 0 && totalActive > 0) {
+          document.getElementById('tpsRankBadge').style.display = 'inline-flex';
+          document.getElementById('tpsRankText').textContent = t.tpsRankFmt(myRank, totalActive);
+        } else {
+          document.getElementById('tpsRankBadge').style.display = 'none';
+        }
+      } catch (e) {
+        console.warn('[TPS] 지점 순위 조회 실패:', e);
+        document.getElementById('tpsRankBadge').style.display = 'none';
+      }
+    }
+
     // ===== Init =====
     renderHero();
     renderProfileTab();
     renderResults();
+    renderThreePartScore(); // 3파트 점수 (비동기, 실패해도 전체 흐름엔 영향 없음)
   </script>
 </body>
 </html>
