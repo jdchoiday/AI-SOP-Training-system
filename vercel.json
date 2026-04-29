@@ -12,7 +12,8 @@
     { "source": "/api/video-search", "destination": "/api/video-search" },
     { "source": "/api/health", "destination": "/api/health" },
     { "source": "/api/cron-health", "destination": "/api/cron-health" },
-    { "source": "/api/feedback", "destination": "/api/feedback" }
+    { "source": "/api/feedback", "destination": "/api/feedback" },
+    { "source": "/api/error-report", "destination": "/api/error-report" }
   ],
   "functions": {
     "api/image.js": {
@@ -37,6 +38,9 @@
       "maxDuration": 20
     },
     "api/feedback.js": {
+      "maxDuration": 10
+    },
+    "api/error-report.js": {
       "maxDuration": 10
     }
   },
