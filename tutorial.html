@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>테스터 미션 — 키우자 히어로즈</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0F172A">
+  <link rel="icon" href="assets/icon-192.svg">
+  <style>
+    .tutorial-container { max-width: 480px; margin: 0 auto; padding: 16px 16px 100px; }
+
+    .tutorial-hero {
+      background: linear-gradient(135deg, #10B981 0%, #3B82F6 100%);
+      border-radius: 24px;
+      padding: 28px 22px 22px;
+      margin-bottom: 16px;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+    .tutorial-hero::before {
+      content: '';
+      position: absolute;
+      top: -50%; right: -20%;
+      width: 220px; height: 220px;
+      background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .tutorial-hero > * { position: relative; z-index: 1; }
+    .hero-emoji { font-size: 48px; line-height: 1; margin-bottom: 8px; }
+    .hero-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+    .hero-sub { font-size: 13px; opacity: 0.92; line-height: 1.5; margin-bottom: 16px; }
+
+    .progress-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .progress-bar {
+      height: 10px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #FCD34D, #FBBF24);
+      border-radius: 6px;
+      transition: width 0.6s ease-out;
+    }
+
+    .mission-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 10px;
+      transition: all 0.2s;
+    }
+    .mission-card.done {
+      background: linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.04));
+      border-color: rgba(16,185,129,0.25);
+    }
+    .mission-card.next {
+      background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.04));
+      border-color: rgba(59,130,246,0.4);
+      box-shadow: 0 4px 16px rgba(59,130,246,0.12);
+    }
+    .mission-card.skipped {
+      opacity: 0.55;
+    }
+
+    .mission-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .mission-status {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .mission-status.pending {
+      background: rgba(255,255,255,0.06);
+      color: var(--gray-500);
+    }
+    .mission-status.done {
+      background: #10B981;
+      color: white;
+    }
+    .mission-status.skipped {
+      background: rgba(148,163,184,0.18);
+      color: #94A3B8;
+    }
+    .mission-status.next {
+      background: #3B82F6;
+      color: white;
+      box-shadow: 0 0 0 4px rgba(59,130,246,0.2);
+    }
+
+    .mission-info { flex: 1; min-width: 0; }
+    .mission-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary, #F1F5F9);
+      margin-bottom: 2px;
+    }
+    .mission-desc {
+      font-size: 12px;
+      color: var(--gray-500);
+      line-height: 1.4;
+    }
+    .mission-xp {
+      font-size: 11px;
+      font-weight: 700;
+      color: #FBBF24;
+      margin-top: 4px;
+    }
+
+    .mission-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .mission-actions.hidden { display: none; }
+
+    .btn-do, .btn-skip {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+    }
+    .btn-do {
+      background: linear-gradient(135deg, #10B981, #059669);
+      color: white;
+      flex: 2;
+    }
+    .btn-do:active { transform: scale(0.97); }
+    .btn-skip {
+      background: rgba(148,163,184,0.12);
+      color: #94A3B8;
+      border: 1px solid rgba(148,163,184,0.2);
+    }
+    .btn-skip:hover { background: rgba(148,163,184,0.2); color: #CBD5E1; }
+
+    .bonus-card {
+      background: linear-gradient(135deg, #F59E0B 0%, #DC2626 100%);
+      border-radius: 16px;
+      padding: 18px;
+      margin-top: 18px;
+      color: white;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .bonus-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px);
+    }
+    .bonus-card > * { position: relative; }
+    .bonus-emoji { font-size: 32px; margin-bottom: 6px; }
+    .bonus-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+    .bonus-desc { font-size: 12px; opacity: 0.9; }
+    .bonus-card.locked { opacity: 0.5; }
+
+    .footer-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+    }
+    .btn-back, .btn-reset {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid rgba(148,163,184,0.2);
+      background: var(--bg-card);
+      color: var(--text-primary, #F1F5F9);
+      text-align: center;
+      text-decoration: none;
+    }
+    .btn-back:hover { background: rgba(255,255,255,0.05); }
+    .btn-reset { color: #94A3B8; }
+
+    .lang-row {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-top: 14px;
+    }
+    .lang-btn-mini {
+      padding: 4px 10px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.08);
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.1);
+      opacity: 0.7;
+    }
+    .lang-btn-mini.active { opacity: 1; background: rgba(255,255,255,0.18); }
+
+    .empty-state {
+      text-align: center;
+      padding: 30px 20px;
+      color: var(--gray-500);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="tutorial-container">
+
+    <!-- 히어로 -->
+    <div class="tutorial-hero">
+      <div class="hero-emoji">🎯</div>
+      <div class="hero-title" id="heroTitle">테스터 미션</div>
+      <div class="hero-sub" id="heroSub">
+        10개 미션을 완료하면서 앱의 모든 기능을 체험해보세요!<br>
+        못하는 미션은 "넘기기" 로 건너뛸 수 있어요.
+      </div>
+      <div class="progress-row">
+        <span id="progressText">0/10 완료</span>
+        <span id="progressXp">0 XP</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      </div>
+      <div class="lang-row">
+        <span class="lang-btn-mini" data-lang="ko" onclick="switchLang('ko')">🇰🇷 한국어</span>
+        <span class="lang-btn-mini" data-lang="en" onclick="switchLang('en')">🇺🇸 English</span>
+        <span class="lang-btn-mini" data-lang="vi" onclick="switchLang('vi')">🇻🇳 Tiếng Việt</span>
+      </div>
+    </div>
+
+    <!-- 미션 카드들 (JS로 렌더링) -->
+    <div id="missionList"></div>
+
+    <!-- 보너스 -->
+    <div class="bonus-card locked" id="bonusCard">
+      <div class="bonus-emoji" id="bonusEmoji">🔒</div>
+      <div class="bonus-title" id="bonusTitle">전체 완료 보너스</div>
+      <div class="bonus-desc" id="bonusDesc">10개 미션 모두 완료 (또는 넘기기) 시 +100 XP</div>
+    </div>
+
+    <!-- 하단 -->
+    <div class="footer-actions">
+      <a href="app.html" class="btn-back" id="btnBack">← 홈으로</a>
+      <button class="btn-reset" onclick="resetMissions()" id="btnReset">↻ 다시 시작</button>
+    </div>
+
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script src="js/i18n-helper.js"></script>
+  <script src="js/xp-system.js"></script>
+  <script src="js/pwa-install.js" defer></script>
+  <script>
+    // ===== 다국어 =====
+    const T = {
+      ko: {
+        heroTitle: '🎯 테스터 미션',
+        heroSub: '10개 미션을 완료하면서 앱의 모든 기능을 체험해보세요!<br>못하는 미션은 "넘기기" 로 건너뛸 수 있어요.',
+        completeFmt: (n) => `${n}/10 완료`,
+        xpFmt: (xp) => `${xp} XP`,
+        bonusTitle: '전체 완료 보너스',
+        bonusDesc: '10개 미션 모두 완료(또는 넘기기) 시 +100 XP',
+        bonusUnlocked: '🎉 모든 미션 완료!',
+        bonusUnlockedDesc: '훌륭한 테스터입니다! +100 XP 보너스',
+        backHome: '← 홈으로',
+        resetAll: '↻ 다시 시작',
+        confirmReset: '모든 미션 진행 상태를 초기화하시겠습니까?',
+        actionDo: '지금 하기 →',
+        actionSkip: '넘기기',
+        actionDone: '✅ 완료',
+        actionSkipped: '⏭ 넘김',
+        // 미션 라벨
+        m1Name: '🚀 가입하기',
+        m1Desc: '계정을 만들고 로그인하기',
+        m2Name: '🌍 언어 선택',
+        m2Desc: '한국어/영어/베트남어 중 선택',
+        m3Name: '📱 앱 설치',
+        m3Desc: '홈 화면에 앱처럼 설치',
+        m3Action: '설치 가이드 →',
+        m4Name: '📚 첫 영상 시청',
+        m4Desc: 'SOP 영상 1개 끝까지 보기',
+        m4Action: '학습 가기 →',
+        m5Name: '✅ 첫 퀴즈 풀기',
+        m5Desc: '영상 후 미니 퀴즈 1개 풀기',
+        m5Action: '학습 가기 →',
+        m6Name: '🎓 종합시험 응시',
+        m6Desc: '챕터 종합시험 1회 풀기',
+        m6Action: '학습 가기 →',
+        m7Name: '🤝 동료에게 칭찬',
+        m7Desc: '같이 일하는 동료에게 칭찬 보내기',
+        m7Action: '칭찬 보내기 →',
+        m8Name: '👤 프로필 편집',
+        m8Desc: '한줄 소개 또는 좌우명 작성',
+        m8Action: '프로필 편집 →',
+        m9Name: '📊 내 성과 확인',
+        m9Desc: '3파트 점수와 등급 보기',
+        m9Action: '성과 보기 →',
+        m10Name: '💬 AI 챗봇 사용',
+        m10Desc: 'SOP 관련 질문 1개 보내기',
+        m10Action: 'AI 챗봇 →',
+      },
+      en: {
+        heroTitle: '🎯 Tester Missions',
+        heroSub: 'Complete 10 missions to experience all features!<br>Skip any mission you can\'t do right now.',
+        completeFmt: (n) => `${n}/10 done`,
+        xpFmt: (xp) => `${xp} XP`,
+        bonusTitle: 'Completion Bonus',
+        bonusDesc: 'Finish (or skip) all 10 missions for +100 XP',
+        bonusUnlocked: '🎉 All missions done!',
+        bonusUnlockedDesc: 'Great work, tester! +100 XP bonus',
+        backHome: '← Home',
+        resetAll: '↻ Reset',
+        confirmReset: 'Reset all mission progress?',
+        actionDo: 'Do now →',
+        actionSkip: 'Skip',
+        actionDone: '✅ Done',
+        actionSkipped: '⏭ Skipped',
+        m1Name: '🚀 Sign Up',
+        m1Desc: 'Create an account and log in',
+        m2Name: '🌍 Choose Language',
+        m2Desc: 'Pick Korean / English / Vietnamese',
+        m3Name: '📱 Install App',
+        m3Desc: 'Add to home screen like a real app',
+        m3Action: 'Install guide →',
+        m4Name: '📚 Watch a Video',
+        m4Desc: 'Watch one SOP video to the end',
+        m4Action: 'Go to Learn →',
+        m5Name: '✅ First Quiz',
+        m5Desc: 'Take a mini quiz after a video',
+        m5Action: 'Go to Learn →',
+        m6Name: '🎓 Take Final Exam',
+        m6Desc: 'Take a chapter final exam',
+        m6Action: 'Go to Learn →',
+        m7Name: '🤝 Praise a Coworker',
+        m7Desc: 'Send praise to a colleague',
+        m7Action: 'Send praise →',
+        m8Name: '👤 Edit Profile',
+        m8Desc: 'Add a one-liner or motto',
+        m8Action: 'Edit profile →',
+        m9Name: '📊 Check Score',
+        m9Desc: 'See your 3-part score and tier',
+        m9Action: 'View score →',
+        m10Name: '💬 Use AI Chat',
+        m10Desc: 'Ask one SOP-related question',
+        m10Action: 'Open AI chat →',
+      },
+      vi: {
+        heroTitle: '🎯 Nhiệm vụ Tester',
+        heroSub: 'Hoàn thành 10 nhiệm vụ để trải nghiệm toàn bộ tính năng!<br>Có thể "bỏ qua" nhiệm vụ chưa làm được.',
+        completeFmt: (n) => `${n}/10 xong`,
+        xpFmt: (xp) => `${xp} XP`,
+        bonusTitle: 'Thưởng hoàn thành',
+        bonusDesc: 'Hoàn thành (hoặc bỏ qua) cả 10 nhiệm vụ để nhận +100 XP',
+        bonusUnlocked: '🎉 Hoàn thành tất cả!',
+        bonusUnlockedDesc: 'Tester xuất sắc! +100 XP thưởng',
+        backHome: '← Trang chủ',
+        resetAll: '↻ Bắt đầu lại',
+        confirmReset: 'Đặt lại tiến độ nhiệm vụ?',
+        actionDo: 'Làm ngay →',
+        actionSkip: 'Bỏ qua',
+        actionDone: '✅ Xong',
+        actionSkipped: '⏭ Đã bỏ qua',
+        m1Name: '🚀 Đăng ký',
+        m1Desc: 'Tạo tài khoản và đăng nhập',
+        m2Name: '🌍 Chọn ngôn ngữ',
+        m2Desc: 'Tiếng Hàn / Anh / Việt',
+        m3Name: '📱 Cài đặt ứng dụng',
+        m3Desc: 'Thêm vào màn hình chính như ứng dụng',
+        m3Action: 'Hướng dẫn →',
+        m4Name: '📚 Xem video đầu tiên',
+        m4Desc: 'Xem hết 1 video SOP',
+        m4Action: 'Đến học →',
+        m5Name: '✅ Bài kiểm tra đầu',
+        m5Desc: 'Làm bài kiểm tra sau video',
+        m5Action: 'Đến học →',
+        m6Name: '🎓 Thi tổng hợp',
+        m6Desc: 'Làm bài thi tổng hợp 1 chương',
+        m6Action: 'Đến học →',
+        m7Name: '🤝 Khen đồng nghiệp',
+        m7Desc: 'Gửi lời khen đến đồng nghiệp',
+        m7Action: 'Gửi khen →',
+        m8Name: '👤 Sửa hồ sơ',
+        m8Desc: 'Viết mô tả ngắn hoặc phương châm',
+        m8Action: 'Sửa hồ sơ →',
+        m9Name: '📊 Xem điểm',
+        m9Desc: 'Xem điểm 3 phần và xếp hạng',
+        m9Action: 'Xem điểm →',
+        m10Name: '💬 Dùng AI Chat',
+        m10Desc: 'Hỏi 1 câu về SOP',
+        m10Action: 'Mở AI chat →',
+      },
+    };
+
+    let lang = localStorage.getItem('sop_lang') || (typeof CONFIG !== 'undefined' ? CONFIG.DEFAULT_LANG : 'ko');
+    function t() { return T[lang] || T.ko; }
+
+    function switchLang(newLang) {
+      lang = newLang;
+      localStorage.setItem('sop_lang', newLang);
+      if (document.documentElement) document.documentElement.lang = newLang;
+      render();
+    }
+
+    // ===== Auth =====
+    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    if (!user) {
+      window.location.href = 'index.html';
+    }
+
+    // ===== 미션 정의 =====
+    // detect: localStorage / Supabase 데이터 보고 자동으로 완료 판단 (true = 완료)
+    // action: 미션 클릭 시 이동할 경로
+    const MISSIONS = [
+      {
+        id: 1, key: 'm1',
+        detect: () => !!user,    // 로그인 했으면 무조건 OK
+        action: () => 'app.html',
+        xp: 10,
+      },
+      {
+        id: 2, key: 'm2',
+        detect: () => !!localStorage.getItem('sop_lang'),
+        action: () => null, // 위 언어 토글로 이미 가능
+        xp: 5,
+      },
+      {
+        id: 3, key: 'm3',
+        detect: () => {
+          // PWA 설치 = standalone 모드 또는 설치 완료 플래그
+          const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+            || window.navigator.standalone === true;
+          return isStandalone || localStorage.getItem('sop_pwa_installed') === '1';
+        },
+        action: () => 'install.html',
+        xp: 30,
+      },
+      {
+        id: 4, key: 'm4',
+        detect: async () => await hasXpSource(['chapter']),
+        action: () => 'tasks.html',
+        xp: 20,
+      },
+      {
+        id: 5, key: 'm5',
+        detect: async () => await hasXpSource(['quiz', 'quiz_perfect']),
+        action: () => 'tasks.html',
+        xp: 15,
+      },
+      {
+        id: 6, key: 'm6',
+        detect: async () => await hasXpSource(['chapter_exam', 'chapter_exam_s_bonus']),
+        action: () => 'tasks.html',
+        xp: 50,
+      },
+      {
+        id: 7, key: 'm7',
+        detect: async () => await hasXpSource(['praise_send', 'praise_stack']),
+        action: () => 'praise.html',
+        xp: 20,
+      },
+      {
+        id: 8, key: 'm8',
+        detect: async () => await hasProfileEdit(),
+        action: () => 'profile.html',
+        xp: 15,
+      },
+      {
+        id: 9, key: 'm9',
+        detect: () => localStorage.getItem('sop_visited_results') === '1',
+        action: () => {
+          localStorage.setItem('sop_visited_results', '1');
+          return 'my-results.html';
+        },
+        xp: 10,
+      },
+      {
+        id: 10, key: 'm10',
+        detect: () => parseInt(localStorage.getItem('sop_ai_chat_count') || '0') > 0,
+        action: () => 'ai-chat.html',
+        xp: 25,
+      },
+    ];
+
+    // ===== 자동 완료 감지 헬퍼 =====
+    async function hasXpSource(sources) {
+      if (typeof SupabaseMode === 'undefined' || !SupabaseMode._ready || !user?.id) return false;
+      try {
+        const { data, error } = await SupabaseMode._client
+          .from('xp_transactions')
+          .select('source')
+          .eq('employee_id', user.id)
+          .in('source', sources)
+          .limit(1);
+        if (error) return false;
+        return (data || []).length > 0;
+      } catch { return false; }
+    }
+
+    async function hasProfileEdit() {
+      if (typeof SupabaseMode === 'undefined' || !SupabaseMode._ready || !user?.id) return false;
+      try {
+        const { data } = await SupabaseMode._client
+          .from('employees')
+          .select('motto, intro, hobbies, bio')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (!data) return false;
+        // 한 가지라도 채워져 있으면 편집한 것으로 간주
+        return !!(data.motto || data.intro || data.bio || (data.hobbies && data.hobbies.length > 0));
+      } catch { return false; }
+    }
+
+    // ===== 진행 상태 (skipped 만 localStorage 에 저장; completed 는 자동 감지) =====
+    function getStatus() {
+      try {
+        return JSON.parse(localStorage.getItem('sop_tester_missions') || '{}');
+      } catch { return {}; }
+    }
+    function setStatus(obj) {
+      localStorage.setItem('sop_tester_missions', JSON.stringify(obj));
+    }
+    function skipMission(id) {
+      const s = getStatus();
+      s[id] = 'skipped';
+      setStatus(s);
+      render();
+    }
+    function unskipMission(id) {
+      const s = getStatus();
+      delete s[id];
+      setStatus(s);
+      render();
+    }
+    function resetMissions() {
+      if (!confirm(t().confirmReset)) return;
+      localStorage.removeItem('sop_tester_missions');
+      localStorage.removeItem('sop_visited_results');
+      localStorage.removeItem('sop_ai_chat_count');
+      render();
+    }
+
+    // ===== 렌더 =====
+    async function render() {
+      // 다국어 적용
+      const ts = t();
+      document.documentElement.lang = lang;
+      document.title = ts.heroTitle.replace(/^[🎯\s]*/,'') + ' — Kiwooza';
+      document.getElementById('heroTitle').textContent = ts.heroTitle;
+      document.getElementById('heroSub').innerHTML = ts.heroSub;
+      document.getElementById('btnBack').textContent = ts.backHome;
+      document.getElementById('btnReset').textContent = ts.resetAll;
+      document.getElementById('bonusTitle').textContent = ts.bonusTitle;
+      document.getElementById('bonusDesc').textContent = ts.bonusDesc;
+      // 언어 버튼 강조
+      document.querySelectorAll('.lang-btn-mini').forEach(b => {
+        b.classList.toggle('active', b.dataset.lang === lang);
+      });
+
+      // 모든 미션 상태 계산
+      const skippedMap = getStatus();
+      const results = [];
+      for (const m of MISSIONS) {
+        const skipped = skippedMap[m.id] === 'skipped';
+        let done = false;
+        if (!skipped) {
+          try {
+            const r = m.detect();
+            done = (r && typeof r.then === 'function') ? await r : !!r;
+          } catch { done = false; }
+        }
+        results.push({ ...m, done, skipped });
+      }
+
+      // 첫번째 미완료(=다음 미션) 찾기
+      const nextIdx = results.findIndex(r => !r.done && !r.skipped);
+
+      // 카드 렌더
+      const list = document.getElementById('missionList');
+      list.innerHTML = '';
+
+      let doneCount = 0;
+      let earnedXp = 0;
+      results.forEach((m, idx) => {
+        const isNext = idx === nextIdx;
+        let statusClass, statusIcon, statusLabel;
+        if (m.done) { statusClass = 'done'; statusIcon = '✓'; statusLabel = ts.actionDone; doneCount++; earnedXp += m.xp; }
+        else if (m.skipped) { statusClass = 'skipped'; statusIcon = '⏭'; statusLabel = ts.actionSkipped; }
+        else if (isNext) { statusClass = 'next'; statusIcon = m.id; statusLabel = ''; }
+        else { statusClass = 'pending'; statusIcon = m.id; statusLabel = ''; }
+
+        const card = document.createElement('div');
+        card.className = 'mission-card ' + (m.done ? 'done' : m.skipped ? 'skipped' : isNext ? 'next' : '');
+        const actionLabel = ts[m.key + 'Action'] || ts.actionDo;
+
+        card.innerHTML = `
+          <div class="mission-row">
+            <div class="mission-status ${statusClass}">${statusIcon}</div>
+            <div class="mission-info">
+              <div class="mission-name">${ts[m.key + 'Name']}</div>
+              <div class="mission-desc">${ts[m.key + 'Desc']}</div>
+              <div class="mission-xp">+${m.xp} XP</div>
+            </div>
+          </div>
+          <div class="mission-actions ${m.done ? 'hidden' : ''}">
+            ${m.skipped
+              ? `<button class="btn-do" onclick="unskipMission(${m.id})">↻ ${ts.actionDo.replace(' →','')}</button>`
+              : `<button class="btn-do" onclick="goAction(${m.id})">${actionLabel}</button>
+                 <button class="btn-skip" onclick="skipMission(${m.id})">${ts.actionSkip}</button>`
+            }
+          </div>
+        `;
+        list.appendChild(card);
+      });
+
+      // 진행률
+      const closedCount = results.filter(r => r.done || r.skipped).length;
+      const pct = Math.round((closedCount / 10) * 100);
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('progressText').textContent = ts.completeFmt(doneCount);
+      document.getElementById('progressXp').textContent = ts.xpFmt(earnedXp);
+
+      // 보너스
+      const bonus = document.getElementById('bonusCard');
+      if (closedCount === 10) {
+        bonus.classList.remove('locked');
+        document.getElementById('bonusEmoji').textContent = '🏆';
+        document.getElementById('bonusTitle').textContent = ts.bonusUnlocked;
+        document.getElementById('bonusDesc').textContent = ts.bonusUnlockedDesc;
+        // XP 1회만 적립
+        if (closedCount === 10 && doneCount > 0
+            && localStorage.getItem('sop_tutorial_bonus_paid') !== '1'
+            && typeof XpService !== 'undefined' && SupabaseMode?._ready) {
+          try {
+            await XpService.addXp(user.id, 100, 'tutorial_bonus', 'tester_complete', 'Tester missions complete bonus');
+            localStorage.setItem('sop_tutorial_bonus_paid', '1');
+          } catch (e) { console.warn('[Tutorial] bonus xp:', e); }
+        }
+      } else {
+        bonus.classList.add('locked');
+        document.getElementById('bonusEmoji').textContent = '🔒';
+      }
+    }
+
+    // ===== 미션 액션 (이동) =====
+    window.goAction = function(id) {
+      const m = MISSIONS.find(x => x.id === id);
+      if (!m) return;
+      const url = m.action();
+      // 미션 9 (성과 보기) 같은 건 로컬스토리지 체크 후 이동
+      if (m.id === 9) localStorage.setItem('sop_visited_results', '1');
+      if (url) window.location.href = url;
+    };
+
+    // 외부에서 노출 (디버그용)
+    window.skipMission = skipMission;
+    window.unskipMission = unskipMission;
+    window.resetMissions = resetMissions;
+    window.switchLang = switchLang;
+
+    // ===== Init =====
+    render();
+  </script>
+</body>
+</html>

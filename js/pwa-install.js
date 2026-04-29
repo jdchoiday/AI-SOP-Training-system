@@ -28,7 +28,11 @@
   // ===== 2. 이미 설치된 상태면 UI 안 띄우기 =====
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches
     || window.navigator.standalone === true;
-  if (isStandalone) return;
+  if (isStandalone) {
+    // 테스터 미션: 설치된 사용자 플래그 (튜토리얼 자동 감지용)
+    try { localStorage.setItem('sop_pwa_installed', '1'); } catch {}
+    return;
+  }
 
   // ===== 3. 짧은 기간 내 거절했으면 표시 안 함 =====
   const DISMISS_KEY = 'sop_pwa_dismissed_at';
@@ -276,6 +280,8 @@
     const btn = document.getElementById('pwaInstallBtn');
     if (btn) btn.remove();
     localStorage.removeItem(DISMISS_KEY);
+    // 테스터 미션: 설치 완료 플래그 (standalone 모드 진입 전에도 인식)
+    try { localStorage.setItem('sop_pwa_installed', '1'); } catch {}
   });
 
   // 디버그 / 강제 호출용 (콘솔에서 PWAInstall.show() 호출)
