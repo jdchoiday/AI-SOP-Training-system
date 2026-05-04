@@ -32,9 +32,18 @@ module.exports = async function handler(req, res) {
       temperature,
     } = req.body || {};
 
-    if (!prompt) {
-      return res.status(400).json({ error: 'Missing required field: prompt' });
+    // prompt 가 문자열이 아니거나 trim 후 비어있으면 거부
+    // (Claude API 는 "text content blocks must be non-empty" 에러를 반환하므로 사전 차단)
+    const safePrompt = typeof prompt === 'string' ? prompt.trim() : '';
+    if (!safePrompt) {
+      return res.status(400).json({
+        error: '질문 내용이 비어 있습니다. (prompt is empty)',
+        hint: '공백/줄바꿈만 있거나 비어있는 prompt 는 보낼 수 없습니다.',
+      });
     }
+
+    // system 메시지도 공백만 있으면 제외 (빈 system 도 같은 에러 유발 가능)
+    const safeSystem = typeof system === 'string' && system.trim() ? system : null;
 
     // Opus 4.x / Sonnet 4.x 는 thinking 모드 기반이라 temperature 를 거부
     // 명시적으로 숫자가 들어왔을 때만 포함, 모델이 thinking 계열이면 제외
@@ -42,12 +51,12 @@ module.exports = async function handler(req, res) {
     const body = {
       model,
       max_tokens,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: safePrompt }],
     };
     if (!isThinkingModel && typeof temperature === 'number') {
       body.temperature = temperature;
     }
-    if (system) body.system = system;
+    if (safeSystem) body.system = safeSystem;
 
     // 최대 3회 재시도 (429/5xx 대응)
     const MAX_RETRY = 3;
