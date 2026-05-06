@@ -1621,8 +1621,16 @@
     })();
 
     function getFilteredEmployees(allEmps) {
-      if (adminRole === 'superadmin') return allEmps;
-      return allEmps.filter(e => e.branch === adminBranch);
+      // 회사 필터 (멀티 테넌시): 활성 회사로 1차 필터
+      const activeCo = getActiveCompanyId();
+      let filtered = allEmps;
+      if (activeCo) {
+        // super_admin은 NULL company_id (자기 자신) + 활성 회사 직원
+        filtered = allEmps.filter(e => e.company_id === activeCo || (user.role === 'super_admin' && !e.company_id));
+      }
+      // 지점장은 추가로 자기 지점만
+      if (adminRole === 'superadmin') return filtered;
+      return filtered.filter(e => e.branch === adminBranch);
     }
 
     function getFilteredChatLogs(allLogs) {
@@ -1838,8 +1846,13 @@
       if (_imageDBReady) { try { ImageDB.deleteByPrefix(`sop_img_${sopId}_`); } catch(e) {} }
     }
 
+    // 멀티 테넌시: 활성 회사로 필터링 (super_admin이 다른 회사 옷 입었을 때 그 회사 SOP만)
     function getSops() {
-      const sops = JSON.parse(localStorage.getItem('sop_documents') || '[]');
+      let sops = JSON.parse(localStorage.getItem('sop_documents') || '[]');
+      const activeCo = (typeof getActiveCompanyId === 'function') ? getActiveCompanyId() : null;
+      if (activeCo) {
+        sops = sops.filter(s => s.company_id === activeCo);
+      }
       sops.forEach(sop => {
         // doc_type 자동 추론 (Supabase 싱크 시 누락 방지)
         if (!sop.doc_type) {

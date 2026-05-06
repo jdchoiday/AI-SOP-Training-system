@@ -174,6 +174,8 @@ const SupabaseMode = {
             doc_type: d.doc_type || local.doc_type || (d.id.startsWith('chapter-') ? 'chapter' : 'section'),
             parent_id: d.parent_id || local.parent_id || null,
             exam_quizzes: d.exam_quizzes || local.exam_quizzes || null,
+            // 멀티 테넌시
+            company_id: d.company_id || local.company_id || null,
             createdAt: d.created_at || new Date().toISOString(),
           };
         });
@@ -403,6 +405,7 @@ const SupabaseMode = {
           branch: d.branch || '',
           team: d.team || '',
           role: d.role || 'staff',
+          company_id: d.company_id || null,
           created: d.created_at || new Date().toISOString(),
         }));
         localStorage.setItem('sop_employees', JSON.stringify(emps));
