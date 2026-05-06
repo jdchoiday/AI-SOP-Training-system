@@ -1500,11 +1500,25 @@
     }
     let companiesList = [];
     async function loadCompaniesList() {
-      if (!SupabaseMode._ready) return;
+      // SupabaseMode가 준비될 때까지 최대 6초 대기 (init이 비동기)
+      for (let i = 0; i < 30; i++) {
+        if (SupabaseMode._ready) break;
+        await new Promise(r => setTimeout(r, 200));
+      }
+      if (!SupabaseMode._ready) {
+        console.warn('[Admin] SupabaseMode 준비 안됨 — 회사 목록 로드 스킵');
+        return;
+      }
       try {
-        const { data } = await SupabaseMode.client.from('companies').select('id,name,slug,brand_color').order('name');
+        const { data, error } = await SupabaseMode.client
+          .from('companies').select('id,name,slug,brand_color').order('name');
+        if (error) {
+          console.warn('[Admin] 회사 목록 로드 실패:', error.message);
+          return;
+        }
         companiesList = data || [];
-      } catch (e) { console.warn('[Admin] 회사 목록 로드 실패:', e.message); }
+        console.log('[Admin] 회사 목록 로드 완료:', companiesList.length, '개');
+      } catch (e) { console.warn('[Admin] 회사 목록 예외:', e.message); }
     }
     function renderCompanySwitcher() {
       const el = document.getElementById('companySwitcher');
