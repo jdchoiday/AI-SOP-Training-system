@@ -118,6 +118,7 @@ const SupabaseMode = {
         email: emp.email,
         role: emp.role,
         branch: emp.branch,
+        company_id: emp.company_id || null,
         authUserId,
       };
     } catch (e) {

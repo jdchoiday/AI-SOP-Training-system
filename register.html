@@ -486,13 +486,22 @@
       EmployeeStore.save(existing);
 
       // Supabase Auth + employees 원자적 생성 (서버 API)
+      // company_id 결정: 초대 모드면 초대장 회사, 자유가입은 기본 회사 (첫 번째)
+      let targetCompanyId = currentInvite?.company_id || null;
+      if (!targetCompanyId && SupabaseMode._ready) {
+        try {
+          const { data } = await SupabaseMode.client.from('companies').select('id').order('created_at').limit(1);
+          targetCompanyId = data?.[0]?.id || null;
+        } catch {}
+      }
       if (SupabaseMode._ready) {
         try {
           const regRes = await fetch('/api/auth', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               action: 'register',
-              email, password, name, branch, team, role: 'staff'
+              email, password, name, branch, team, role: 'staff',
+              company_id: targetCompanyId
             })
           });
           const regData = await regRes.json();

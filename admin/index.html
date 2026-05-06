@@ -289,7 +289,8 @@
   <div class="admin-sidebar" id="sidebar">
     <h2>SOP Training</h2>
     <p class="sub">관리자 대시보드</p>
-    <div id="sidebarRoleBadge" style="margin-bottom:16px; flex-shrink:0;"></div>
+    <div id="sidebarRoleBadge" style="margin-bottom:8px; flex-shrink:0;"></div>
+    <div id="companySwitcher" style="margin-bottom:16px; flex-shrink:0;"></div>
     <nav>
       <div class="sidebar-section">콘텐츠</div>
       <a href="#" class="active" onclick="showPage('sop', event)" data-page="sop"><span class="ic">&#128221;</span> SOP 관리</a>
@@ -1481,7 +1482,53 @@
   <script>
     // ===== 관리자 확인 =====
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
-    if (!user || user.role !== 'admin') { window.location.href = '../index.html'; }
+    if (!user || !['admin', 'super_admin'].includes(user.role)) { window.location.href = '../index.html'; }
+
+    // ===== 멀티 테넌시: 활성 회사 ID =====
+    // super_admin = 회사 드롭다운으로 선택, admin = 자기 회사 고정
+    const isSuperAdmin = user.role === 'super_admin';
+    let activeCompanyId = isSuperAdmin
+      ? (localStorage.getItem('sop_admin_active_company') || null)  // super_admin이 마지막 선택한 회사
+      : user.company_id;
+    function getActiveCompanyId() { return activeCompanyId; }
+    function setActiveCompanyId(id) {
+      activeCompanyId = id || null;
+      if (isSuperAdmin) {
+        if (id) localStorage.setItem('sop_admin_active_company', id);
+        else localStorage.removeItem('sop_admin_active_company');
+      }
+    }
+    let companiesList = [];
+    async function loadCompaniesList() {
+      if (!SupabaseMode._ready) return;
+      try {
+        const { data } = await SupabaseMode.client.from('companies').select('id,name,slug,brand_color').order('name');
+        companiesList = data || [];
+      } catch (e) { console.warn('[Admin] 회사 목록 로드 실패:', e.message); }
+    }
+    function renderCompanySwitcher() {
+      const el = document.getElementById('companySwitcher');
+      if (!el) return;
+      if (!isSuperAdmin) {
+        const my = companiesList.find(c => c.id === user.company_id);
+        el.innerHTML = my ? `<span style="font-size:13px;color:#94a3b8;">🏢 ${my.name}</span>` : '';
+        return;
+      }
+      const opts = ['<option value="">전체 회사 (super_admin)</option>']
+        .concat(companiesList.map(c =>
+          `<option value="${c.id}" ${c.id === activeCompanyId ? 'selected' : ''}>${c.name}</option>`
+        )).join('');
+      el.innerHTML = `
+        <label style="font-size:12px;color:#94a3b8;margin-right:6px;">🏢 회사:</label>
+        <select id="companySwitcherSelect" onchange="onCompanyChange(this.value)" style="padding:4px 8px;font-size:13px;background:#1E293B;color:#F1F5F9;border:1px solid rgba(148,163,184,0.3);border-radius:6px;">${opts}</select>
+      `;
+    }
+    function onCompanyChange(newId) {
+      setActiveCompanyId(newId);
+      // 회사 변경 시 데이터 다시 로드
+      location.reload();
+    }
+    window.onCompanyChange = onCompanyChange;
 
     // ===== 브라우저 기본 드래그앤드롭 차단 (파일 열기 방지) =====
     document.addEventListener('dragover', e => e.preventDefault());
@@ -1664,6 +1711,17 @@
 
     renderRoleBadge();
     applySidebarPermissions();
+
+    // 회사 목록 로드 + 드롭다운 렌더링 (멀티 테넌시)
+    (async () => {
+      await loadCompaniesList();
+      renderCompanySwitcher();
+      // super_admin이 회사 미선택이면 활성 회사 자동으로 첫 번째
+      if (isSuperAdmin && !activeCompanyId && companiesList.length > 0) {
+        setActiveCompanyId(companiesList[0].id);
+        renderCompanySwitcher();
+      }
+    })();
 
     // ===== 이미지 생성 중 이탈 방지 =====
     let _isGeneratingImages = false;
@@ -6860,6 +6918,11 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
       let added = 0, failed = 0;
 
       const lines = csv.split('\n').filter(l => l.trim());
+      const targetCompanyId = getActiveCompanyId();
+      if (!targetCompanyId) {
+        alert('활성 회사가 없습니다. 회사 드롭다운에서 회사를 먼저 선택하세요.');
+        return;
+      }
       for (const line of lines) {
         const parts = line.split(',').map(s => s.trim());
         const [name, email, branch, team, role] = parts;
@@ -6876,7 +6939,8 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
                 email, password: '1234', name,
                 branch: branch || '미지정',
                 team: team || '',
-                role: role || 'staff'
+                role: role || 'staff',
+                company_id: targetCompanyId
               })
             });
             const data = await res.json();
@@ -6923,6 +6987,11 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
 
       // Supabase Auth + employees 원자적 생성 (기본 비밀번호 '1234')
       let newEmpId = 'emp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+      const targetCompanyId = getActiveCompanyId();
+      if (!targetCompanyId) {
+        alert('활성 회사가 없습니다. 회사 드롭다운에서 회사를 먼저 선택하세요.');
+        return;
+      }
       if (SupabaseMode._ready) {
         try {
           const res = await fetch('/api/auth', {
@@ -6930,7 +6999,8 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               action: 'register',
-              email, password: '1234', name, branch, team, role
+              email, password: '1234', name, branch, team, role,
+              company_id: targetCompanyId
             })
           });
           const data = await res.json();

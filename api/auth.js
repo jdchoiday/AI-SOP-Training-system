@@ -51,9 +51,9 @@ module.exports = async function handler(req, res) {
   }
 
   // register: 신규 회원가입 (auth.users + employees 원자적 생성)
-  // 클라이언트가 email+password+profile 보내면 서버가 admin API로 처리
+  // 클라이언트가 email+password+profile+company_id 보내면 서버가 admin API로 처리
   if (action === 'register') {
-    const { email: regEmail, password: regPassword, name, branch, team, role } = req.body;
+    const { email: regEmail, password: regPassword, name, branch, team, role, company_id } = req.body;
     if (!regEmail || !regPassword || !name) {
       return res.status(400).json({ error: 'email, password, name required' });
     }
@@ -121,6 +121,7 @@ module.exports = async function handler(req, res) {
             team: team || '',
             role: role || 'staff',
             auth_user_id: authUserId,
+            company_id: company_id || null,
           }),
         }
       );
