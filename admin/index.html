@@ -1493,11 +1493,14 @@
     function getActiveCompanyId() { return activeCompanyId; }
     function setActiveCompanyId(id) {
       activeCompanyId = id || null;
+      window.__activeCompanyId = activeCompanyId;  // SupabaseMode가 참조
       if (isSuperAdmin) {
         if (id) localStorage.setItem('sop_admin_active_company', id);
         else localStorage.removeItem('sop_admin_active_company');
       }
     }
+    // 초기 글로벌 노출 (SOP 저장 시 자동 주입용)
+    window.__activeCompanyId = activeCompanyId;
     let companiesList = [];
     async function loadCompaniesList() {
       // SupabaseMode가 준비될 때까지 최대 6초 대기 (init이 비동기)
@@ -1633,9 +1636,16 @@
     function renderRoleBadge() {
       const el = document.getElementById('sidebarRoleBadge');
       if (!el) return;
-      el.innerHTML = adminRole === 'superadmin'
-        ? '<span class="role-badge superadmin">&#127775; 본사 관리자</span>'
-        : '<span class="role-badge branch-manager">&#127978; 지점장: ' + adminBranch + '</span>';
+      // 3계층 배지: super_admin(플랫폼) / admin(브랜드 총괄) / branch_manager(지점장)
+      if (user.role === 'super_admin') {
+        el.innerHTML = '<span class="role-badge superadmin">&#127775; 플랫폼 관리자</span>';
+      } else if (user.role === 'admin') {
+        const myCompany = companiesList.find(c => c.id === user.company_id);
+        const cname = myCompany?.name || '브랜드';
+        el.innerHTML = `<span class="role-badge superadmin">&#127970; ${cname} 브랜드 관리자</span>`;
+      } else {
+        el.innerHTML = '<span class="role-badge branch-manager">&#127978; 지점장: ' + adminBranch + '</span>';
+      }
     }
 
     function applySidebarPermissions() {
@@ -6834,7 +6844,22 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
           <div class="form-group"><label>이메일</label><input type="email" id="newEmpEmail" placeholder="name@company.com"></div>
           <div class="form-group"><label>지점</label><select id="newEmpBranch" ${adminRole==='branch_manager'?'disabled':''}>${adminRole==='branch_manager'?'<option>'+adminBranch+'</option>':getBranches().map(b=>'<option value="'+b+'">'+b+'</option>').join('')}</select></div>
           <div class="form-group"><label>팀</label><input type="text" id="newEmpTeam" placeholder="예: 홀팀, 주방팀, 안내팀"></div>
-          <div class="form-group"><label>역할</label><select id="newEmpRole" ${adminRole==='branch_manager'?'disabled':''}>${adminRole==='branch_manager'?'<option value="staff">직원</option>':'<option value="staff">직원</option><option value="branch_manager">지점장</option>'}</select></div>
+          <div class="form-group"><label>역할</label><select id="newEmpRole">
+            ${(() => {
+              if (user.role === 'super_admin') {
+                return '<option value="staff">직원 (Staff)</option>'
+                     + '<option value="admin">브랜드 관리자 (Brand Admin)</option>'
+                     + '<option value="super_admin">플랫폼 관리자 (Super Admin)</option>'
+                     + '<option value="branch_manager">지점장</option>';
+              }
+              if (user.role === 'admin') {
+                return '<option value="staff">직원 (Staff)</option>'
+                     + '<option value="admin">브랜드 관리자 (Brand Admin)</option>'
+                     + '<option value="branch_manager">지점장</option>';
+              }
+              return '<option value="staff">직원</option>';
+            })()}
+          </select></div>
           <div style="display:flex;gap:8px;margin-top:24px;">
             <button class="btn btn-primary" style="flex:1;" onclick="addEmployee()">추가</button>
             <button class="btn btn-outline" onclick="closeModal()">취소</button>

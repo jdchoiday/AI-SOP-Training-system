@@ -327,6 +327,8 @@ const SupabaseMode = {
         doc_type: sop.doc_type || 'section',
         parent_id: sop.parent_id || null,
         exam_quizzes: sop.exam_quizzes || null,
+        // 멀티 테넌시: SOP가 명시적 company_id 가졌으면 그것, 아니면 admin 활성 회사
+        company_id: sop.company_id || (typeof window !== 'undefined' && window.__activeCompanyId) || null,
         updated_at: new Date().toISOString(),
       };
 
