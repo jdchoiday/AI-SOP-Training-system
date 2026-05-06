@@ -389,28 +389,9 @@
           </div>
         </div>
 
-        <!-- 업종별 필터 탭 -->
+        <!-- 업종별 필터 탭 (활성 회사의 SOP에서 자동 추출) -->
         <div id="sopCategoryTabs" style="display:flex; gap:6px; padding:8px 0; flex-wrap:wrap;">
-          <button class="sop-cat-tab active" data-cat="all" onclick="setSopCategoryFilter('all')"
-            style="padding:8px 16px; border-radius:10px; border:2px solid transparent; background:rgba(255,255,255,0.06); color:var(--text-primary); font-size:13px; font-weight:600; cursor:pointer;">
-            전체
-          </button>
-          <button class="sop-cat-tab" data-cat="유치원" onclick="setSopCategoryFilter('유치원')"
-            style="padding:8px 16px; border-radius:10px; border:2px solid rgba(245,158,11,0.3); background:rgba(245,158,11,0.08); color:#F59E0B; font-size:13px; font-weight:600; cursor:pointer;">
-            🏫 유치원
-          </button>
-          <button class="sop-cat-tab" data-cat="키즈카페" onclick="setSopCategoryFilter('키즈카페')"
-            style="padding:8px 16px; border-radius:10px; border:2px solid rgba(236,72,153,0.3); background:rgba(236,72,153,0.08); color:#EC4899; font-size:13px; font-weight:600; cursor:pointer;">
-            🎪 키즈카페
-          </button>
-          <button class="sop-cat-tab" data-cat="KBBQ" onclick="setSopCategoryFilter('KBBQ')"
-            style="padding:8px 16px; border-radius:10px; border:2px solid rgba(239,68,68,0.3); background:rgba(239,68,68,0.08); color:#EF4444; font-size:13px; font-weight:600; cursor:pointer;">
-            🥩 KBBQ
-          </button>
-          <button class="sop-cat-tab" data-cat="본사" onclick="setSopCategoryFilter('본사')"
-            style="padding:8px 16px; border-radius:10px; border:2px solid rgba(99,102,241,0.3); background:rgba(99,102,241,0.08); color:#6366F1; font-size:13px; font-weight:600; cursor:pointer;">
-            🏢 본사(공통)
-          </button>
+          <!-- renderSopCategoryTabs() 가 동적으로 채움 -->
         </div>
         <style>
           .sop-cat-tab.active {
@@ -2152,6 +2133,21 @@
       renderSopList();
     }
 
+    // 활성 회사의 SOP에서 카테고리 자동 추출 → 탭 동적 렌더
+    function renderSopCategoryTabs() {
+      const wrap = document.getElementById('sopCategoryTabs');
+      if (!wrap) return;
+      const sops = getSops();
+      const cats = Array.from(new Set(sops.map(s => s.category).filter(Boolean)));
+      // 카테고리 0개면 "전체" 만 표시
+      let html = `<button class="sop-cat-tab ${currentSopCategoryFilter==='all'?'active':''}" data-cat="all" onclick="setSopCategoryFilter('all')" style="padding:8px 16px; border-radius:10px; border:2px solid transparent; background:rgba(255,255,255,0.06); color:var(--text-primary); font-size:13px; font-weight:600; cursor:pointer;">전체</button>`;
+      cats.forEach(cat => {
+        const b = BUSINESS_COLORS[cat] || { bg:'rgba(148,163,184,0.08)', color:'#94A3B8', border:'rgba(148,163,184,0.3)', icon:'📁' };
+        html += `<button class="sop-cat-tab ${currentSopCategoryFilter===cat?'active':''}" data-cat="${cat}" onclick="setSopCategoryFilter('${cat}')" style="padding:8px 16px; border-radius:10px; border:2px solid ${b.border}; background:${b.bg}; color:${b.color}; font-size:13px; font-weight:600; cursor:pointer;">${b.icon} ${cat}</button>`;
+      });
+      wrap.innerHTML = html;
+    }
+
     function updateBulkBar() {
       const bar = document.getElementById('sopBulkBar');
       if (selectedSopIds.size > 0) {
@@ -2786,6 +2782,9 @@ ${JSON.stringify({ fields: { title: "교정된 제목", title_en: "fixed title",
     function renderSopList() {
       document.getElementById('sopListView').style.display = 'block';
       document.getElementById('sopEditorView').style.display = 'none';
+
+      // 활성 회사 카테고리 탭 동적 렌더 (회사별로 다른 카테고리)
+      renderSopCategoryTabs();
 
       let sops = getSops();
       if (currentSopFilter !== 'all') {
