@@ -136,12 +136,13 @@
   <script src="js/pwa-install.js" defer></script>
   <script src="js/error-tracker.js" defer></script>
   <script>
-    // ===== 세션 타임아웃 체크 (24시간) — 미래/음수 타임스탬프 방어 =====
-    const SESSION_HOURS = 24;
+    // ===== 세션 타임아웃 체크 (30일) — Supabase Auth refresh token 수명에 맞춤 =====
+    // 베트남 직원 매장 환경에선 매번 로그인 부담 → 30일 유지
+    // (Supabase Auth refresh token이 자동 갱신해주므로 안전)
+    const SESSION_HOURS = 30 * 24;  // 30일
     const loginTime = parseInt(localStorage.getItem('sop_login_time') || '0');
     const now = Date.now();
     const diff = now - loginTime;
-    // loginTime이 미래이거나, 24시간 초과면 무효화
     if (loginTime > 0 && (loginTime > now || diff > SESSION_HOURS * 60 * 60 * 1000)) {
       localStorage.removeItem('sop_user');
       localStorage.removeItem('sop_login_time');

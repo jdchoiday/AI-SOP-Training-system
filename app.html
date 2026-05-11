@@ -483,12 +483,12 @@
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
     const t = T[lang] || T.en || T.ko;
 
-    // ===== 로그인 확인 — 미래/음수 타임스탬프 방어 =====
+    // ===== 로그인 확인 — 미래/음수 타임스탬프 방어 (30일 유지) =====
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
     const loginTime = parseInt(localStorage.getItem('sop_login_time') || '0');
     const nowTs = Date.now();
-    // loginTime이 미래이거나 24시간 초과면 세션 무효
-    if (loginTime > 0 && (loginTime > nowTs || nowTs - loginTime > 24 * 60 * 60 * 1000)) {
+    // loginTime이 미래이거나 30일 초과면 세션 무효 (베트남 직원 매장 환경 배려)
+    if (loginTime > 0 && (loginTime > nowTs || nowTs - loginTime > 30 * 24 * 60 * 60 * 1000)) {
       localStorage.removeItem('sop_user');
       localStorage.removeItem('sop_login_time');
       window.location.href = 'index.html';
