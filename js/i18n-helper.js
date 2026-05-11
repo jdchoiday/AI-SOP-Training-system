@@ -129,8 +129,28 @@ const I18n = (() => {
     },
   };
 
-  // 누락 번역 추적 (중복 경고 방지)
+  // 누락 번역 추적 (중복 경고 방지) — window.__missingI18nKeys 로도 노출
   const _warned = new Set();
+  const _missingByLang = {}; // { vi: Set, en: Set }
+  if (typeof window !== 'undefined') window.__missingI18nKeys = _missingByLang;
+
+  // Fallback 우선순위 (한국어로 떨어지지 않도록)
+  // vi → en → ko (베트남어는 영어가 먼저, 한국어는 최후)
+  // en → ko (영어는 한국어로만)
+  // ko → (없음, 마스터 언어)
+  const FALLBACK_CHAIN = {
+    vi: ['en', 'ko'],
+    en: ['ko'],
+    ko: [],
+  };
+
+  // dev 모드 감지 (localhost / ?dev 쿼리 / file://)
+  const _isDev = (typeof window !== 'undefined') && (
+    location.hostname === 'localhost' ||
+    location.hostname === '127.0.0.1' ||
+    location.protocol === 'file:' ||
+    location.search.includes('dev=1')
+  );
 
   // 키 경로로 dict에서 값 꺼내기 (예: "common.save" → DICT[lang].common.save)
   function _resolve(key, lang) {
@@ -150,18 +170,36 @@ const I18n = (() => {
 
     lang() { return _lang; },
 
-    /** 번역 조회. 누락 시 한국어 폴백 + 콘솔 경고 */
+    /** 번역 조회. 누락 시 fallback 체인 (vi → en → ko) */
     t(key, ...args) {
       let val = _resolve(key, _lang);
+      let usedLang = _lang;
+
+      // 누락 시 fallback 체인 순회
       if (val == null) {
-        if (_lang !== 'ko' && !_warned.has(key)) {
-          _warned.add(key);
-          console.warn(`[i18n] Missing "${_lang}" translation for key: ${key} — falling back to Korean`);
+        // 누락 추적 (런타임 + window 글로벌)
+        if (!_missingByLang[_lang]) _missingByLang[_lang] = new Set();
+        _missingByLang[_lang].add(key);
+
+        if (!_warned.has(_lang + ':' + key)) {
+          _warned.add(_lang + ':' + key);
+          console.warn(`[i18n] Missing "${_lang}" key: ${key} — falling back through ${FALLBACK_CHAIN[_lang] || ['ko']}`);
         }
-        val = _resolve(key, 'ko');
+
+        for (const fbLang of (FALLBACK_CHAIN[_lang] || ['ko'])) {
+          val = _resolve(key, fbLang);
+          if (val != null) { usedLang = fbLang; break; }
+        }
       }
+
       if (typeof val === 'function') return val(...args);
-      return val != null ? val : `[${key}]`;
+      if (val == null) return _isDev ? `🚨 [${key}]` : `[${key}]`;
+
+      // dev 모드: fallback 사용된 키는 화면에 ⚠️ 표시
+      if (_isDev && usedLang !== _lang) {
+        return `⚠️${val}`;
+      }
+      return val;
     },
 
     /** 페이지별 로컬 번역 추가 (기존 dict에 병합) */

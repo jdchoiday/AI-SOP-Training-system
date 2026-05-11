@@ -212,12 +212,9 @@
   <script src="js/pwa-install.js" defer></script>
   <script src="js/error-tracker.js" defer></script>
   <script>
-    const STATUS_LABELS = {
-      pending: '승인 대기',
-      approved: '승인됨',
-      delivered: '수령 완료',
-      cancelled: '취소됨'
-    };
+    // STATUS_LABELS는 initI18n() 안에서 window.STATUS_LABELS로 설정됨 (현재 언어 반영)
+    // 호환성: 기존 STATUS_LABELS 참조는 동적으로 window.STATUS_LABELS 읽음
+    const STATUS_LABELS = new Proxy({}, { get: (_, key) => (window.STATUS_LABELS || {})[key] || key });
 
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
     if (!user) { location.href = 'index.html'; }
@@ -307,8 +304,8 @@
         const outOfStock = it.stock !== null && it.stock <= 0;
         const canAfford = currentBalance >= it.price_coins && !outOfStock;
         const stockLine = outOfStock
-          ? '<div class="stock out-of-stock">품절</div>'
-          : (it.stock !== null ? `<div class="stock">남은 수량: ${it.stock}</div>` : '');
+          ? `<div class="stock out-of-stock">${t.outOfStock}</div>`
+          : (it.stock !== null ? `<div class="stock">${t.stockLeft(it.stock)}</div>` : '');
         return `
           <div class="item-card ${canAfford ? 'affordable' : 'locked'}" data-id="${it.id}">
             <span class="emoji">${it.icon || '🎁'}</span>
@@ -334,10 +331,10 @@
           const item = items.find(i => i.id === id);
           if (!item) return;
           if (item.stock !== null && item.stock <= 0) {
-            alert('아쉬워요, 품절이에요 😢');
+            alert(t.soldOut);
           } else {
             const need = item.price_coins - currentBalance;
-            alert(`코인이 ${fmt(need)} 🪙 더 필요해요.\nXP ${fmt(need * 10)}를 더 모아보세요!`);
+            alert(t.needCoin(fmt(need), fmt(need * 10)));
           }
         });
       });
@@ -380,7 +377,7 @@
     function openRedeemModal(item) {
       selectedItem = item;
       document.getElementById('modalIcon').textContent = item.icon || '🎁';
-      document.getElementById('modalTitle').textContent = `${item.name} 교환?`;
+      document.getElementById('modalTitle').textContent = t.confirmTitle(item.name);
       document.getElementById('modalDesc').textContent = item.description || '';
       document.getElementById('modalPrice').textContent = fmt(item.price_coins);
       document.getElementById('modalAfter').textContent = fmt(currentBalance - item.price_coins);
@@ -396,12 +393,12 @@
       const item = selectedItem;
       const btn = document.getElementById('modalConfirm');
       btn.disabled = true;
-      btn.textContent = '신청 중...';
+      btn.textContent = t.submitting;
       try {
         // Re-check balance on server side (defense against double-click)
         await loadBalance();
         if (currentBalance < item.price_coins) {
-          alert('잔액이 부족해요 😢');
+          alert(t.noBalance);
           closeRedeemModal();
           await loadItems();
           return;
@@ -427,13 +424,13 @@
         closeRedeemModal();
         await loadBalance();
         await loadItems();
-        alert('✅ 교환 신청 완료!\n관리자 승인 후 수령하실 수 있어요.');
+        alert(t.success);
       } catch (e) {
         console.error('[store] redeem error', e);
-        alert('교환 신청 실패: ' + (e.message || e));
+        alert(t.failed(e.message || e));
       } finally {
         btn.disabled = false;
-        btn.textContent = '교환 신청';
+        btn.textContent = t.submitBtn;
       }
     }
 
@@ -444,18 +441,96 @@
       if (tab === 'history') loadHistory();
     }
 
-    // i18n nav labels
+    // ===== i18n =====
+    const T = {
+      ko: {
+        navHome:'홈', navLearn:'학습', navResults:'성과', navStore:'스토어',
+        pageTitle:'스토어', myCoins:'MY COINS', coinHint:'XP 10당 1코인',
+        spent:(n)=>`${n} 사용`,
+        tabShop:'🛒 상품', tabHistory:'📜 내 교환',
+        emptyShop:'등록된 상품이 없어요', emptyHistory:'아직 교환 내역이 없어요',
+        confirmExchange:'교환하시겠어요?', priceLabel:'상품 가격', afterLabel:'교환 후 잔액',
+        cancel:'취소', submitBtn:'교환 신청',
+        statusPending:'승인 대기', statusApproved:'승인됨', statusDelivered:'수령 완료', statusCancelled:'취소됨',
+        outOfStock:'품절', stockLeft:(n)=>`남은 수량: ${n}`,
+        soldOut:'아쉬워요, 품절이에요 😢',
+        needCoin:(need,xp)=>`코인이 ${need} 🪙 더 필요해요.\nXP ${xp}를 더 모아보세요!`,
+        noBalance:'잔액이 부족해요 😢',
+        submitting:'신청 중...', success:'✅ 교환 신청 완료!\n관리자 승인 후 수령하실 수 있어요.',
+        failed:(m)=>`교환 신청 실패: ${m}`,
+        confirmTitle:(name)=>`${name} 교환?`,
+        supabaseFail:'Supabase 연결 실패',
+      },
+      en: {
+        navHome:'Home', navLearn:'Learn', navResults:'Stats', navStore:'Store',
+        pageTitle:'Store', myCoins:'MY COINS', coinHint:'1 coin per 10 XP',
+        spent:(n)=>`${n} spent`,
+        tabShop:'🛒 Items', tabHistory:'📜 My Exchanges',
+        emptyShop:'No items available', emptyHistory:'No exchange history yet',
+        confirmExchange:'Confirm exchange?', priceLabel:'Item price', afterLabel:'Balance after',
+        cancel:'Cancel', submitBtn:'Exchange',
+        statusPending:'Pending', statusApproved:'Approved', statusDelivered:'Delivered', statusCancelled:'Cancelled',
+        outOfStock:'Sold out', stockLeft:(n)=>`${n} left`,
+        soldOut:'Sorry, sold out 😢',
+        needCoin:(need,xp)=>`Need ${need} 🪙 more.\nEarn ${xp} more XP!`,
+        noBalance:'Insufficient balance 😢',
+        submitting:'Submitting...', success:'✅ Exchange requested!\nPickup after admin approval.',
+        failed:(m)=>`Exchange failed: ${m}`,
+        confirmTitle:(name)=>`Exchange ${name}?`,
+        supabaseFail:'Supabase connection failed',
+      },
+      vi: {
+        navHome:'Trang chủ', navLearn:'Học', navResults:'Thành tích', navStore:'Cửa hàng',
+        pageTitle:'Cửa hàng', myCoins:'XU CỦA TÔI', coinHint:'1 xu mỗi 10 XP',
+        spent:(n)=>`Đã dùng ${n}`,
+        tabShop:'🛒 Sản phẩm', tabHistory:'📜 Lịch sử đổi',
+        emptyShop:'Chưa có sản phẩm nào', emptyHistory:'Chưa có lịch sử đổi',
+        confirmExchange:'Xác nhận đổi?', priceLabel:'Giá sản phẩm', afterLabel:'Số dư sau khi đổi',
+        cancel:'Hủy', submitBtn:'Đổi',
+        statusPending:'Chờ duyệt', statusApproved:'Đã duyệt', statusDelivered:'Đã nhận', statusCancelled:'Đã hủy',
+        outOfStock:'Hết hàng', stockLeft:(n)=>`Còn lại: ${n}`,
+        soldOut:'Tiếc quá, đã hết hàng 😢',
+        needCoin:(need,xp)=>`Cần thêm ${need} 🪙.\nKiếm thêm ${xp} XP nhé!`,
+        noBalance:'Không đủ số dư 😢',
+        submitting:'Đang gửi...', success:'✅ Đã gửi yêu cầu đổi!\nNhận hàng sau khi quản trị viên duyệt.',
+        failed:(m)=>`Đổi thất bại: ${m}`,
+        confirmTitle:(name)=>`Đổi ${name}?`,
+        supabaseFail:'Lỗi kết nối Supabase',
+      },
+    };
+    const lang = localStorage.getItem('sop_lang') || 'ko';
+    const t = T[lang] || T.en || T.ko;
+
     (function initI18n() {
-      const lang = localStorage.getItem('sop_lang') || 'ko';
-      const home = document.querySelector('.nav-label-home');
-      const learn = document.querySelector('.nav-label-learn');
-      const results = document.querySelector('.nav-label-results');
-      const store = document.querySelector('.nav-label-store');
-      if (home) home.textContent = lang === 'en' ? 'Home' : lang === 'vi' ? 'Trang chủ' : '홈';
-      if (learn) learn.textContent = lang === 'en' ? 'Learn' : lang === 'vi' ? 'Học' : '학습';
-      if (results) results.textContent = lang === 'en' ? 'Stats' : lang === 'vi' ? 'Thành tích' : '성과';
-      if (store) store.textContent = lang === 'en' ? 'Store' : lang === 'vi' ? 'Cửa hàng' : '스토어';
-      document.getElementById('pageTitle').textContent = lang === 'en' ? 'Store' : lang === 'vi' ? 'Cửa hàng' : '스토어';
+      const setText = (sel, val) => { const el = typeof sel === 'string' ? document.querySelector(sel) : sel; if (el) el.textContent = val; };
+      setText('.nav-label-home', t.navHome);
+      setText('.nav-label-learn', t.navLearn);
+      setText('.nav-label-results', t.navResults);
+      setText('.nav-label-store', t.navStore);
+      setText('#pageTitle', t.pageTitle);
+      setText('#tabShop', t.tabShop);
+      setText('#tabHistory', t.tabHistory);
+      setText('#modalCancel', t.cancel);
+      setText('#modalConfirm', t.submitBtn);
+      // 모달 텍스트
+      const mt = document.getElementById('modalTitle'); if (mt) mt.textContent = t.confirmExchange;
+      // "MY COINS" 라벨
+      document.querySelectorAll('.label').forEach(el => { if (el.textContent.includes('MY COINS')) el.textContent = t.myCoins + ' 🪙'; });
+      // 코인 힌트
+      const hintEl = document.querySelector('#balanceCard .hint, .hint'); if (hintEl) hintEl.innerHTML = t.coinHint + '<br><span id="spentDisplay">0</span> ' + (lang==='ko'?'사용':lang==='vi'?'đã dùng':'spent');
+      // 모달 가격/잔액 라벨
+      document.querySelectorAll('#redeemModal .price-row span:first-child').forEach((el, i) => {
+        if (i === 0) el.textContent = t.priceLabel;
+        if (i === 1) el.textContent = t.afterLabel;
+      });
+      // 빈 상태 메시지
+      const shopEmpty = document.querySelector('#shopEmpty div:last-child'); if (shopEmpty) shopEmpty.textContent = t.emptyShop;
+      const histEmpty = document.querySelector('#historyEmpty div:last-child'); if (histEmpty) histEmpty.textContent = t.emptyHistory;
+      // status mapping 객체도 t 사용
+      window.STATUS_LABELS = {
+        pending: t.statusPending, approved: t.statusApproved,
+        delivered: t.statusDelivered, cancelled: t.statusCancelled
+      };
     })();
 
     (async function init() {
@@ -464,7 +539,7 @@
       const ok = await waitSupabase();
       if (!ok) {
         document.getElementById('shopEmpty').style.display = 'block';
-        document.getElementById('shopEmpty').querySelector('div:last-child').textContent = 'Supabase 연결 실패';
+        document.getElementById('shopEmpty').querySelector('div:last-child').textContent = t.supabaseFail;
         return;
       }
       await loadProfile();

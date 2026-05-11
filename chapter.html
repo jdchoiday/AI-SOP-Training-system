@@ -619,7 +619,7 @@
       }
     };
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
-    const t = T[lang] || T.ko;
+    const t = T[lang] || T.en || T.ko;
 
     // Apply nav labels
     document.querySelector('.nav-label-home').textContent = t.home;

@@ -42,6 +42,30 @@ const SlidePlayer = (() => {
   // --- i18n ---
   function _lang() { return localStorage.getItem('sop_lang') || (typeof CONFIG !== 'undefined' ? CONFIG.DEFAULT_LANG : 'ko'); }
 
+  // 다국어 필드 헬퍼 — scene[field_vn] / scene[field_en] 우선 사용
+  function _localizedField(scene, field, lang) {
+    lang = lang || _lang();
+    if (lang === 'vi' && scene[field + '_vn']) return scene[field + '_vn'];
+    if (lang === 'en' && scene[field + '_en']) return scene[field + '_en'];
+    if (lang === 'vi' && scene[field + '_en']) return scene[field + '_en']; // vi 누락 → en fallback
+    return scene[field] || '';
+  }
+
+  // scene 객체를 현재 언어로 정규화 (narration/title_main/quote_text/heading_text/visual)
+  // render 직전 1회 호출 → 이후 모든 사용처가 자동으로 현재 언어 받음
+  function _localizeScene(scene) {
+    const lang = _lang();
+    if (lang === 'ko') return scene; // 한국어는 원본 그대로
+    const fields = ['narration', 'title_main', 'quote_text', 'heading_text', 'visual', 'cta'];
+    const localized = Object.assign({}, scene);
+    let changed = false;
+    fields.forEach(f => {
+      const v = _localizedField(scene, f, lang);
+      if (v && v !== scene[f]) { localized[f] = v; changed = true; }
+    });
+    return changed ? localized : scene;
+  }
+
   const L = {
     ko: {
       slideOf: (c, t) => `${c} / ${t}`,
@@ -591,7 +615,8 @@ const SlidePlayer = (() => {
   // Render current slide
   // =========================================
   function _renderSlide() {
-    const scene = scenes[currentIndex];
+    // 다국어: 현재 언어로 정규화 (narration_vn → narration 등)
+    const scene = _localizeScene(scenes[currentIndex]);
     if (!scene) return;
 
     const container = document.getElementById('spSlideContainer');
@@ -1209,10 +1234,11 @@ const SlidePlayer = (() => {
   // Preload next slide's audio
   function _preloadNext() {
     const nextIdx = currentIndex + 1;
-    if (nextIdx < scenes.length && scenes[nextIdx]?.narration) {
-      const cacheKey = _hashText(scenes[nextIdx].narration);
+    const nextScene = scenes[nextIdx] ? _localizeScene(scenes[nextIdx]) : null;
+    if (nextScene?.narration) {
+      const cacheKey = _hashText(nextScene.narration);
       if (!audioCache.has(cacheKey)) {
-        _fetchTTSAudio(scenes[nextIdx].narration).catch(() => {});
+        _fetchTTSAudio(nextScene.narration).catch(() => {});
       }
     }
   }
@@ -1765,7 +1791,8 @@ const SlidePlayer = (() => {
     if (destroyed) throw new Error('destroyed');
     const mySession = playSessionId;
 
-    const scene = scenes[currentIndex];
+    // 다국어: 현재 언어로 narration 정규화 → TTS도 자동으로 그 언어 voice 사용
+    const scene = _localizeScene(scenes[currentIndex]);
     if (!scene || !scene.narration) return;
 
     const narrArea = document.getElementById('spNarrationArea');

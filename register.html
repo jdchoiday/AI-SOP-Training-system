@@ -163,7 +163,7 @@
       }
     };
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
-    const t = T[lang] || T.ko;
+    const t = T[lang] || T.en || T.ko;
 
     // Apply static labels
     document.getElementById('regPageTitle').textContent = t.pageTitle;

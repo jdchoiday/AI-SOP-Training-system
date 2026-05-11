@@ -476,7 +476,7 @@
       }
     };
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
-    const t = T[lang] || T.ko;
+    const t = T[lang] || T.en || T.ko;
 
     // ===== 로그인 확인 =====
     const user = JSON.parse(localStorage.getItem('sop_user') || 'null');

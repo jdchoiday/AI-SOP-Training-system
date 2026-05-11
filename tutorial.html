@@ -420,7 +420,7 @@
     };
 
     let lang = localStorage.getItem('sop_lang') || (typeof CONFIG !== 'undefined' ? CONFIG.DEFAULT_LANG : 'ko');
-    function t() { return T[lang] || T.ko; }
+    function t() { return T[lang] || T.en || T.ko; }
 
     function switchLang(newLang) {
       lang = newLang;
