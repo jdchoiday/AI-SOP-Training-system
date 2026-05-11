@@ -519,13 +519,77 @@ type에 맞지 않는 필드는 생략 가능.
 
     if (items.length === 0) return;
 
-    const res = await fetch('/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items, sourceLang, targetLangs })
-    });
-    if (!res.ok) throw new Error('translate API failed: ' + res.status);
-    const { translations } = await res.json();
+    // /api/gemini 직접 호출 (별도 API 신설 안 함 — Vercel Hobby 12개 함수 한도)
+    const langNames = { ko: 'Korean', en: 'English', vi: 'Vietnamese' };
+    const translations = {};
+
+    for (const targetLang of targetLangs) {
+      if (targetLang === sourceLang) {
+        translations[targetLang] = items.slice();
+        continue;
+      }
+
+      const prompt = `You are a professional translator for employee training content.
+Translate the following ${langNames[sourceLang]} sentences to ${langNames[targetLang]}.
+
+Rules:
+- Preserve the original meaning, tone, and pedagogical intent
+- Use natural, fluent ${langNames[targetLang]} as a native speaker would write
+- For technical/SOP terminology, use the most common term in ${langNames[targetLang]} business context
+- Keep brand names (AION, Kiwooza, SLCO, KBBQ) untranslated
+- Keep HTML tags (e.g. <span class='accent'>) intact and translate only the text inside
+- Maintain the same array length and order as input
+- Each output must be a complete translation of the corresponding input
+
+Input array (${items.length} items in ${langNames[sourceLang]}):
+${JSON.stringify(items, null, 2)}
+
+Return ONLY a JSON array of ${items.length} translated strings — no markdown, no wrapper object.`;
+
+      try {
+        const res = await fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt,
+            generationConfig: {
+              temperature: 0.2,
+              responseMimeType: 'application/json',
+              maxOutputTokens: 8192,
+            }
+          })
+        });
+
+        if (!res.ok) {
+          console.warn(`[Translate] /api/gemini ${res.status} for ${targetLang}`);
+          translations[targetLang] = items.map(() => '');
+          continue;
+        }
+
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+        let arr;
+        try {
+          const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+          arr = JSON.parse(cleaned);
+          if (!Array.isArray(arr)) arr = arr.translations || arr.items || arr.results || [];
+        } catch (parseErr) {
+          console.warn(`[Translate] JSON parse fail for ${targetLang}:`, text.slice(0, 200));
+          arr = items.map(() => '');
+        }
+
+        // 길이 안전장치
+        while (arr.length < items.length) arr.push('');
+        if (arr.length > items.length) arr = arr.slice(0, items.length);
+
+        translations[targetLang] = arr;
+        console.log(`[Translate] ${sourceLang} → ${targetLang}: ${arr.filter(Boolean).length}/${items.length}`);
+      } catch (e) {
+        console.warn(`[Translate] ${targetLang} 호출 실패:`, e.message);
+        translations[targetLang] = items.map(() => '');
+      }
+    }
 
     // 결과를 각 씬의 적절한 필드에 저장
     targetLangs.forEach(targetLang => {
