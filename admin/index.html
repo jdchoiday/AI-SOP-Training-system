@@ -361,6 +361,7 @@
           </div>
           <div style="display:flex; gap:8px;">
             <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkGenerateVideos()" title="Pexels 영상 + AI 폴백 이미지 + 인포그래픽">🎬 영상 일괄 생성</button>
+            <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkTranslate()" title="모든 SOP의 narration을 ko/en/vi 3개 언어로 자동 번역 — 베트남 직원 한국어 노출 차단">🌐 다국어 일괄 번역</button>
             <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkFixTitles()">🔤 띄어쓰기 교정</button>
             <button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="sopExportSelected()">&#128229; 내보내기</button>
             <button class="btn" style="padding:6px 14px; font-size:13px; background:#dc2626; color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopDeleteSelected()">&#128465; 선택 삭제</button>
@@ -2444,6 +2445,94 @@
         if (modal) modal.remove();
         renderSopList();
       }
+    }
+
+    // ===== 다국어 일괄 번역 — 기존 SOP들에 narration_vn / narration_en 채우기 =====
+    async function sopBulkTranslate() {
+      const all = getSops();
+      const sectionSops = all.filter(s => s.doc_type !== 'chapter' && s.script && s.script.length > 0);
+
+      // 활성 회사 필터 (super_admin이 다른 회사 옷 입었으면 그 회사만)
+      const targets = sectionSops; // getSops()가 이미 회사 필터링함
+
+      if (targets.length === 0) {
+        alert('번역할 SOP가 없습니다. 스크립트가 있는 섹션이 필요합니다.');
+        return;
+      }
+
+      // 누락된 다국어 카운트
+      let totalScenes = 0, missingVn = 0, missingEn = 0;
+      targets.forEach(s => s.script.forEach(sc => {
+        totalScenes++;
+        if (!sc.narration_vn) missingVn++;
+        if (!sc.narration_en) missingEn++;
+      }));
+
+      const ok = confirm(
+        `📊 다국어 번역 대상\n\n` +
+        `• SOP: ${targets.length}개 섹션\n` +
+        `• 씬: 총 ${totalScenes}개\n` +
+        `• 베트남어 누락: ${missingVn}개 씬\n` +
+        `• 영어 누락: ${missingEn}개 씬\n\n` +
+        `Gemini API로 자동 번역하고 Supabase에 저장합니다.\n` +
+        `예상 시간: ~${Math.ceil(targets.length * 0.5)}분 (SOP당 약 30초)\n` +
+        `예상 비용: 무료 (Gemini 무료 티어)\n\n` +
+        `계속할까요?`
+      );
+      if (!ok) return;
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;';
+      overlay.innerHTML = `
+        <div style="background:#1E293B;padding:32px;border-radius:16px;max-width:500px;width:90%;text-align:center;">
+          <div style="font-size:48px;margin-bottom:16px;">🌐</div>
+          <strong style="color:#10b981;font-size:18px;">다국어 일괄 번역 진행 중</strong>
+          <div id="trProgress" style="margin-top:16px;font-size:14px;color:#94a3b8;">준비 중...</div>
+          <div id="trBar" style="margin-top:16px;height:8px;background:#334155;border-radius:4px;overflow:hidden;">
+            <div id="trFill" style="height:100%;width:0%;background:linear-gradient(90deg,#10b981,#059669);transition:width 0.3s;"></div>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+
+      let done = 0, failed = 0;
+      const updateUI = (msg) => {
+        document.getElementById('trProgress').textContent = msg;
+        const pct = Math.round((done / targets.length) * 100);
+        document.getElementById('trFill').style.width = pct + '%';
+      };
+
+      try {
+        for (const sop of targets) {
+          done++;
+          updateUI(`(${done}/${targets.length}) "${sop.title}" 번역 중...`);
+
+          // 소스 언어 자동 감지 (첫 씬 narration 기반)
+          const sample = (sop.script[0]?.narration || '').slice(0, 200);
+          const hasVie = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(sample);
+          const isEn = !hasVie && /^[\x00-\x7F\s.,!?;:'"()\-\d\n]+$/.test(sample);
+          const sourceLang = hasVie ? 'vi' : isEn ? 'en' : 'ko';
+
+          try {
+            await AI._enrichWithTranslations(sop.script, sourceLang);
+            // localStorage + Supabase 저장
+            saveSops(getSops().map(s => s.id === sop.id ? sop : s));
+            if (SupabaseMode._ready) {
+              await SupabaseMode.saveSop(sop).catch(e => console.warn(`[BulkTranslate] Supabase save fail ${sop.id}:`, e.message));
+            }
+          } catch (e) {
+            failed++;
+            console.error(`[BulkTranslate] ${sop.id} 실패:`, e);
+          }
+        }
+
+        updateUI(`✅ 완료! ${done - failed}개 성공, ${failed}개 실패`);
+        await new Promise(r => setTimeout(r, 1500));
+      } finally {
+        overlay.remove();
+      }
+
+      alert(`🌐 다국어 번역 완료\n\n• 성공: ${done - failed}개 SOP\n• 실패: ${failed}개\n\n베트남 직원이 학습 페이지에 접속하면 자동으로 베트남어 narration이 표시됩니다.`);
+      renderSopList();
     }
 
     // ===== 선택 SOP 영상 일괄 생성 (Phase 1: Pexels + Infographic) =====

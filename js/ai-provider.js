@@ -459,11 +459,93 @@ type에 맞지 않는 필드는 생략 가능.
           if (!scene.title_sub) scene.title_sub = '';
         }
       });
+
+      // ============================================
+      // 다국어 자동 번역 — 근본 해결
+      // 콘텐츠 생성 단계에서 ko/en/vi 모두 채워서 베트남 직원 한국어 노출 차단
+      // ============================================
+      const sourceLang = hasVietnamese ? 'vi' : isEnglish ? 'en' : 'ko';
+      try {
+        await this._enrichWithTranslations(parsed, sourceLang);
+        console.log(`[Script] 다국어 번역 완료 (소스: ${sourceLang})`);
+      } catch (transErr) {
+        // 번역 실패해도 원본은 반환 (호환성)
+        console.warn('[Script] 다국어 번역 실패 (원본만 반환):', transErr.message);
+      }
+
       return parsed;
     } catch (e) {
       console.warn('AI script generation failed, falling back to local:', e.message);
       return this._localGenerateScript(sopTitle, sopContent);
     }
+  },
+
+  // ============================================
+  // 씬 배열에 ko/en/vi 다국어 필드 채우기 (근본 해결)
+  // 호출 후 각 scene 에 narration_en, narration_vn 등 자동 추가됨
+  // sourceLang 외 두 언어로 번역. sourceLang은 원본 narration 유지.
+  // ============================================
+  async _enrichWithTranslations(scenes, sourceLang) {
+    if (!Array.isArray(scenes) || scenes.length === 0) return;
+
+    // 번역 대상 필드 (씬 타입별 다국어 노출 텍스트)
+    const FIELDS = ['narration', 'title_main', 'title_sub', 'kicker',
+                    'header_title', 'header_tag', 'caption', 'context',
+                    'quote_text', 'left_text', 'right_text', 'left_label', 'right_label'];
+
+    const langSuffix = { ko: '', en: '_en', vi: '_vn' };
+    const targetLangs = ['ko', 'en', 'vi'].filter(l => l !== sourceLang);
+
+    // 평탄화 — 모든 씬의 모든 필드를 1차원 배열로 (한 번 API 호출로 처리)
+    const items = [];
+    const ptrs = []; // [{sceneIdx, field}]
+    scenes.forEach((sc, i) => {
+      FIELDS.forEach(f => {
+        if (typeof sc[f] === 'string' && sc[f].trim()) {
+          items.push(sc[f]);
+          ptrs.push({ i, field: f });
+        }
+      });
+      // steps 배열도 (infographic)
+      if (Array.isArray(sc.steps)) {
+        sc.steps.forEach((step, sIdx) => {
+          if (typeof step === 'string' && step.trim()) {
+            items.push(step);
+            ptrs.push({ i, field: 'steps', stepIdx: sIdx });
+          }
+        });
+      }
+    });
+
+    if (items.length === 0) return;
+
+    const res = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items, sourceLang, targetLangs })
+    });
+    if (!res.ok) throw new Error('translate API failed: ' + res.status);
+    const { translations } = await res.json();
+
+    // 결과를 각 씬의 적절한 필드에 저장
+    targetLangs.forEach(targetLang => {
+      const arr = translations[targetLang] || [];
+      const suffix = langSuffix[targetLang];
+      if (!suffix) return; // 안전장치 (ko는 원본)
+
+      arr.forEach((val, idx) => {
+        if (!val) return;
+        const ptr = ptrs[idx];
+        const scene = scenes[ptr.i];
+        if (ptr.field === 'steps') {
+          // steps 배열 처리
+          if (!Array.isArray(scene['steps' + suffix])) scene['steps' + suffix] = [];
+          scene['steps' + suffix][ptr.stepIdx] = val;
+        } else {
+          scene[ptr.field + suffix] = val;
+        }
+      });
+    });
   },
 
   // ============================================
@@ -1059,6 +1141,17 @@ JSON 배열만 출력:`;
         if (!scene.title_main) scene.title_main = (scene.narration || '').slice(0, 30);
       }
     });
+
+    // 다국어 자동 번역 — 근본 해결 (2-pass 파이프라인도 적용)
+    const sourceLang = plan.language === 'Vietnamese' ? 'vi' :
+                       plan.language === 'English' ? 'en' : 'ko';
+    try {
+      await this._enrichWithTranslations(scenes, sourceLang);
+      console.log(`[2-Pass] 다국어 번역 완료 (소스: ${sourceLang})`);
+    } catch (transErr) {
+      console.warn('[2-Pass] 다국어 번역 실패 (원본만 반환):', transErr.message);
+    }
+
     return scenes;
   },
 
