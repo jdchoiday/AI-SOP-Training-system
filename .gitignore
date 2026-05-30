@@ -4,7 +4,8 @@ docs/node_modules/
 .env.*
 .vercel/
 .vercel
-.claude/
+.claude/*
+!.claude/skills/
 test_tts*.mp3
 
 # 보안: API 키/시크릿 파일
