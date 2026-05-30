@@ -360,6 +360,7 @@
             <button class="btn btn-outline" style="padding:6px 14px; font-size:13px;" onclick="sopDeselectAll()">선택 해제</button>
           </div>
           <div style="display:flex; gap:8px;">
+            <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkGenerateScripts()" title="스크립트가 없는(미생성) SOP를 골라 AI 대본 → 슬라이드(영상) → 퀴즈까지 자동 생성">🤖 대본+영상 자동 생성</button>
             <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkGenerateVideos()" title="Pexels 영상 + AI 폴백 이미지 + 인포그래픽">🎬 영상 일괄 생성</button>
             <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkTranslate()" title="모든 SOP의 narration을 ko/en/vi 3개 언어로 자동 번역 — 베트남 직원 한국어 노출 차단">🌐 다국어 일괄 번역</button>
             <button class="btn" style="padding:6px 14px; font-size:13px; background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; border-radius:8px; cursor:pointer;" onclick="sopBulkFixTitles()">🔤 띄어쓰기 교정</button>
@@ -2536,6 +2537,101 @@
     }
 
     // ===== 선택 SOP 영상 일괄 생성 (Phase 1: Pexels + Infographic) =====
+    // ===== 대본+영상 자동 생성 — 스크립트가 없는 SOP를 골라 AI 파이프라인에 태움 =====
+    // SOP 본문(content) → AI.createVideoScript (언어 자동감지: 베트남어 본문이면 베트남어 대본)
+    //   → AI.generateQuiz → 슬라이드(영상) 자산 생성 → 저장. 기존 1-건 파이프라인을 일괄화한 래퍼.
+    async function sopBulkGenerateScripts() {
+      if (!hasPermission('sop_edit')) { alert('SOP 편집 권한이 없습니다.'); return; }
+      if (_isGeneratingImages) { alert('다른 생성 작업이 진행 중입니다.'); return; }
+
+      const sops = getSops();
+      // 선택된 것이 있으면 그 안에서, 없으면 활성 회사 전체에서 — "스크립트가 비어있는" draft/섹션만 대상
+      const pool = selectedSopIds.size > 0
+        ? sops.filter(s => selectedSopIds.has(s.id))
+        : sops;
+      const targets = pool.filter(s =>
+        s.doc_type !== 'chapter' &&
+        (!s.script || s.script.length === 0) &&
+        (s.content && s.content.replace(/<[^>]*>/g, '').trim().length >= 50)
+      );
+
+      // 본문이 너무 짧아 건너뛴 것들 안내
+      const skippedShort = pool.filter(s =>
+        s.doc_type !== 'chapter' &&
+        (!s.script || s.script.length === 0) &&
+        !(s.content && s.content.replace(/<[^>]*>/g, '').trim().length >= 50)
+      );
+
+      if (targets.length === 0) {
+        const extra = skippedShort.length > 0
+          ? `\n\n(본문이 50자 미만이라 제외된 SOP ${skippedShort.length}개 — 먼저 본문을 채워주세요)`
+          : '';
+        alert(`대본을 생성할 미생성 SOP가 없습니다.${extra}\n\n${selectedSopIds.size > 0 ? '선택한 SOP는 모두 이미 스크립트가 있습니다.' : '활성 회사의 모든 SOP에 이미 스크립트가 있습니다.'}`);
+        return;
+      }
+
+      const list = targets.map((s, i) => `  ${i + 1}. ${s.title}`).join('\n');
+      if (!confirm(
+        `🤖 대본+영상 자동 생성\n\n` +
+        `대상 ${targets.length}개 SOP (스크립트 미생성):\n${list}\n\n` +
+        `각 SOP에 대해: AI 대본 → 슬라이드(영상) → 퀴즈를 자동 생성합니다.\n` +
+        `본문 언어를 자동 감지합니다 (베트남어 본문 → 베트남어 대본).\n\n` +
+        `진행하시겠습니까?`
+      )) return;
+
+      _isGeneratingImages = true;
+      let okCount = 0, failCount = 0;
+      const failures = [];
+
+      try {
+        for (let n = 0; n < targets.length; n++) {
+          const sop = targets[n];
+          const liveSops = getSops();
+          const idx = liveSops.findIndex(s => s.id === sop.id);
+          if (idx === -1) continue;
+
+          showLoading(`(${n + 1}/${targets.length}) "${sop.title}" 대본 생성 중...`);
+
+          try {
+            // 1) 대본 (2-pass, 언어 자동감지)
+            const { scenes, plan } = await AI.createVideoScript(sop.title, sop.content);
+            liveSops[idx].script = scenes;
+            if (plan) {
+              liveSops[idx].videoPlan = {
+                persona: plan.persona, mood: plan.mood, region: plan.region,
+                audience: plan.audience, coreMessages: plan.core_messages, language: plan.language,
+              };
+            }
+
+            // 2) 퀴즈 (없을 때만)
+            if (!liveSops[idx].quizzes || liveSops[idx].quizzes.length === 0) {
+              try {
+                showLoading(`(${n + 1}/${targets.length}) "${sop.title}" 퀴즈 생성 중...`);
+                liveSops[idx].quizzes = await AI.generateQuiz(sop.title, sop.content);
+              } catch (qe) {
+                console.warn(`[일괄] 퀴즈 생성 실패 (${sop.title}):`, qe.message);
+              }
+            }
+
+            liveSops[idx].status = 'generated';
+            saveSops(liveSops);
+            okCount++;
+          } catch (e) {
+            failCount++;
+            failures.push(`• ${sop.title}: ${e.plan?.viable === false ? (e.plan.reason || '영상화 어려운 자료') : e.message}`);
+            console.error(`[일괄] 대본 생성 실패 (${sop.title}):`, e);
+          }
+        }
+      } finally {
+        _isGeneratingImages = false;
+        hideLoading();
+      }
+
+      try { renderSopList(); } catch (e) {}
+      const failMsg = failures.length > 0 ? `\n\n⚠️ 실패 ${failCount}개:\n${failures.join('\n')}` : '';
+      alert(`✅ 대본 생성 완료!\n\n성공: ${okCount}개 / 대상 ${targets.length}개${failMsg}\n\n다음 단계: 각 SOP를 열어 미리보기 후 "배포"하면 직원이 학습할 수 있습니다.\n슬라이드(영상)는 학습 시 자동 렌더되며, 베트남어 나레이션 음성은 Vbee/Edge로 재생됩니다.`);
+    }
+
     async function sopBulkGenerateVideos() {
       if (selectedSopIds.size === 0) { alert('SOP를 먼저 선택하세요.'); return; }
       if (_isGeneratingImages) { alert('다른 생성 작업이 진행 중입니다.'); return; }
