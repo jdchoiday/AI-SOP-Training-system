@@ -37,6 +37,83 @@ const GEMINI_VOICES = {
   'vi-VN': { female: 'Leda',  male: 'Fenrir' },   // 자연스러움·중저음
 };
 
+// ===== Vbee TTS (베트남어 고품질 음성 — 남부 여성 등) =====
+// Vercel Hobby 12-함수 한도 때문에 별도 api/vbee.js 를 만들지 않고 이 파일에 통합한다.
+// 필요한 환경변수(Vercel Dashboard):
+//   VBEE_TOKEN            — Bearer 액세스 토큰
+//   VBEE_APP_ID           — 앱 ID
+//   VBEE_VOICE_CODE       — 남부(Sài Gòn/HCM) 여성 voice_code. Vbee Studio 대시보드에서 확인.
+//   VBEE_VOICE_CODE_MALE  — (선택) 남성 voice_code
+// ※ voice_code 는 계정마다 달라 하드코딩하지 않고 env 로 주입한다.
+//   미설정 시 Vbee 경로는 비활성 → Edge(북부)로 자동 폴백하므로 안전(무회귀).
+const VBEE_API_URL = process.env.VBEE_API_URL || 'https://vbee.vn/api/v1/tts';
+const VBEE_VOICES = {
+  'vi-VN': {
+    female: process.env.VBEE_VOICE_CODE || '',
+    male: process.env.VBEE_VOICE_CODE_MALE || '',
+  },
+};
+
+// Vbee 합성: POST(요청) → request_id → 폴링(status SUCCESS) → audio_link 다운로드.
+// 짧은 텍스트는 POST 응답에 audio_link 가 바로 올 수도 있어 둘 다 처리한다.
+async function generateVbeeTTS(inputText, lang, gender) {
+  const token = process.env.VBEE_TOKEN;
+  const appId = process.env.VBEE_APP_ID;
+  if (!token || !appId) throw new Error('VBEE_TOKEN / VBEE_APP_ID not set');
+
+  const voiceMap = VBEE_VOICES[lang] || VBEE_VOICES['vi-VN'];
+  const voiceCode = (gender === 'male' ? voiceMap.male : voiceMap.female) || voiceMap.female;
+  if (!voiceCode) throw new Error('VBEE_VOICE_CODE not set (대시보드에서 남부 여성 voice_code 확인 후 설정)');
+
+  // 1) 합성 요청
+  const submit = await fetch(VBEE_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({
+      app_id: appId,
+      input_text: inputText,
+      voice_code: voiceCode,
+      audio_type: 'mp3',
+      // 필요 시 추가: bitrate, speed_rate 등
+    }),
+  });
+  const submitData = await submit.json().catch(() => ({}));
+  if (!submit.ok) {
+    throw new Error(`Vbee submit ${submit.status}: ${submitData.message || JSON.stringify(submitData).slice(0, 200)}`);
+  }
+
+  const r0 = submitData.result || submitData;
+  let audioLink = r0.audio_link || r0.audio_url || null;
+  const requestId = r0.request_id || r0.id || submitData.request_id;
+  let status = (r0.status || '').toUpperCase();
+
+  // 2) 폴링 (audio_link 가 아직 없으면)
+  if (!audioLink && requestId) {
+    const deadline = Date.now() + 20000; // 20s (Vercel maxDuration 25s 내)
+    while (Date.now() < deadline) {
+      await new Promise(res => setTimeout(res, 800));
+      const poll = await fetch(`${VBEE_API_URL}/${requestId}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const pollData = await poll.json().catch(() => ({}));
+      const pr = pollData.result || pollData;
+      status = (pr.status || '').toUpperCase();
+      if (pr.audio_link || pr.audio_url) { audioLink = pr.audio_link || pr.audio_url; break; }
+      if (['FAILURE', 'FAILED', 'ERROR'].includes(status)) {
+        throw new Error(`Vbee processing failed: ${pr.message || status}`);
+      }
+    }
+  }
+  if (!audioLink) throw new Error('Vbee: no audio_link (timeout 또는 예상치 못한 응답)');
+
+  // 3) 오디오 다운로드 → 버퍼 반환
+  const audioRes = await fetch(audioLink);
+  if (!audioRes.ok) throw new Error(`Vbee audio download ${audioRes.status}`);
+  const arrayBuf = await audioRes.arrayBuffer();
+  console.log(`[Vbee TTS] ✅ voice=${voiceCode} ${Math.round(arrayBuf.byteLength / 1024)}KB`);
+  return { buffer: Buffer.from(arrayBuf), contentType: 'audio/mpeg' };
+}
+
 // PCM 24kHz 16bit mono → WAV 변환 (Gemini TTS 응답 포맷 처리)
 function pcmToWav(pcmBuffer, sampleRate = 24000) {
   const header = Buffer.alloc(44);
@@ -309,6 +386,19 @@ function buildCoachingText(text) {
   return result.trim();
 }
 
+// ===== 비-한국어(베트남어 등) 전용 경량 전처리 =====
+// 한국어 전용 발음치환(PRONUNCIATION_DICT: "Service"→"서비스")/코칭리듬은
+// 베트남어에 한글을 섞어 음성을 망가뜨리므로 적용하지 않는다. 기호 정리만 수행.
+function buildPlainText(text) {
+  let s = String(text || '');
+  s = s.replace(/\s*→\s*/g, ', ');
+  s = s.replace(/\s*\/\s*/g, ', ');
+  s = s.replace(/\s*—\s*/g, '. ');
+  s = s.replace(/\[([^\]]+)\]/g, '$1.');
+  s = s.replace(/\s{3,}/g, ' ');
+  return s.trim();
+}
+
 // TTS 큐
 let ttsQueue = Promise.resolve();
 function enqueueTTS(fn) {
@@ -340,7 +430,7 @@ module.exports = async (req, res) => {
 
     // ★ engine: 'edge' (default, 일관성) | 'gemini' (AI 음성) | 'auto' (Edge → Gemini 폴백)
     // 기본값을 'edge'로 설정 — 씬마다 목소리 변경을 방지 (이전 'auto'는 실패 씬만 Gemini 전환되어 일관성 깨짐)
-    const ttsEngine = ['edge', 'gemini', 'auto'].includes(engine) ? engine : 'edge';
+    const ttsEngine = ['edge', 'gemini', 'auto', 'vbee'].includes(engine) ? engine : 'edge';
 
     const langVoices = VOICES[lang] || VOICES['ko-KR'];
     const voiceName = langVoices[gender] || langVoices.female;
@@ -351,16 +441,45 @@ module.exports = async (req, res) => {
     let prosodyPitch = pitch || '+3Hz';
     if (prosodyPitch === 'default' || prosodyPitch === '+0Hz') prosodyPitch = '+3Hz';
 
-    const coachText = buildCoachingText(text);
+    // 베트남어 등 비-한국어는 한국어 전용 전처리(발음치환/코칭리듬)를 건너뛴다.
+    // (안 그러면 "Service"→"서비스"처럼 베트남어에 한글이 섞임)
+    const _isVietnamese = (lang || '').toLowerCase().startsWith('vi');
+    const coachText = _isVietnamese ? buildPlainText(text) : buildCoachingText(text);
 
-    console.log(`[TTS Coach] engine=${ttsEngine} voice=${voiceName} rate=${prosodyRate} pitch=${prosodyPitch}`);
+    // 베트남어는 Vbee(남부 여성) 우선 — VBEE 자격증명+voice_code 설정 시 자동 사용(클라이언트 변경 불필요).
+    // 미설정 시 effectiveEngine 은 그대로 → 기존 Edge 동작 유지(무회귀).
+    const _vbeeReady = !!(process.env.VBEE_TOKEN && process.env.VBEE_APP_ID &&
+      VBEE_VOICES[lang] && (VBEE_VOICES[lang][gender] || VBEE_VOICES[lang].female));
+    let effectiveEngine = ttsEngine;
+    if (_isVietnamese && _vbeeReady && (ttsEngine === 'edge' || ttsEngine === 'auto')) {
+      effectiveEngine = 'vbee';
+    }
+
+    console.log(`[TTS Coach] engine=${ttsEngine}→${effectiveEngine} voice=${voiceName} rate=${prosodyRate} pitch=${prosodyPitch}`);
     console.log(`[TTS Coach] original: ${text.slice(0, 60)}...`);
     console.log(`[TTS Coach] coached:  ${coachText.slice(0, 80)}...`);
 
     // ================================
+    // engine=vbee: Vbee(베트남어 남부 여성 등) 사용. 실패 시 Edge 로 폴백.
+    // ================================
+    if (effectiveEngine === 'vbee') {
+      try {
+        const { buffer: vbeeBuf, contentType } = await generateVbeeTTS(coachText, lang, gender);
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', vbeeBuf.length);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('X-TTS-Engine', 'vbee');
+        return res.status(200).send(vbeeBuf);
+      } catch (vbeeErr) {
+        console.warn(`[TTS] Vbee 실패 (${vbeeErr.message}) → Edge 폴백`);
+        effectiveEngine = 'edge';
+      }
+    }
+
+    // ================================
     // engine=gemini: Gemini만 사용 (Edge 시도 안 함)
     // ================================
-    if (ttsEngine === 'gemini') {
+    if (effectiveEngine === 'gemini') {
       try {
         const { buffer: wavBuffer, contentType } = await generateGeminiTTS(coachText, lang, gender);
         res.setHeader('Content-Type', contentType);
@@ -417,7 +536,7 @@ module.exports = async (req, res) => {
     // engine=auto: Gemini 폴백 (기존 동작)
     // ================================
     if (!fs.existsSync(tmpFile) || fs.statSync(tmpFile).size < 100) {
-      if (ttsEngine === 'edge') {
+      if (effectiveEngine === 'edge') {
         console.warn(`[TTS] Edge TTS 실패 (${lastErr?.message}) — engine=edge 이므로 폴백 없이 에러 반환 (클라이언트가 Web Speech로 처리)`);
         try { if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile); } catch (e) {}
         return res.status(502).json({
