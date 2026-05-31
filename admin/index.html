@@ -2871,13 +2871,12 @@ ${JSON.stringify({ fields: { title: "교정된 제목", title_en: "fixed title",
         console.error('띄어쓰기 교정 오류:', e);
         alert(`오류: ${e.message}`);
       } finally {
-        saveSops(sops);
+        saveSops(sops);   // ← 이 안에서 Supabase 로 교정본을 push(saveAllSops)한다.
         document.getElementById('bulkTranslateModal')?.remove();
         renderSopList();
-        // Supabase 동기화
-        if (typeof SupabaseMode !== 'undefined' && SupabaseMode._ready) {
-          SupabaseMode.syncAll().catch(() => {});
-        }
+        // ⚠️ 여기서 SupabaseMode.syncAll()(=Supabase→로컬 pull)을 부르면
+        // 위 push 완료 전에 옛 데이터로 로컬을 덮어써 교정이 사라지는 레이스가 발생.
+        // saveSops 가 이미 push 하므로 pull 은 호출하지 않는다.
       }
     }
 
