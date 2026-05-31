@@ -165,13 +165,23 @@ const SopStore = {
     return sop.script.map((scene, i) => {
       const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
       const sceneLabel = lang === 'en' ? 'Scene' : lang === 'vi' ? 'Cảnh' : '씬';
+      // 현재 언어의 나레이션 우선 (없으면 한국어 원문). UI는 베트남어인데
+      // 나레이션만 한국어로 노출되던 문제 수정. (script[i].narration_vn / _en)
+      const narr = (lang === 'en' && scene.narration_en) ? scene.narration_en
+                 : (lang === 'vi' && scene.narration_vn) ? scene.narration_vn
+                 : scene.narration;
+      const narrKo = scene.narration; // 길이 추정용 기준(원문)
       return {
       id: `${sopId}-v${i + 1}`,
-      title: `${sceneLabel} ${scene.scene}: ${scene.narration.slice(0, 30)}...`,
-      title_full: scene.narration,
+      title: `${sceneLabel} ${scene.scene}: ${narr.slice(0, 30)}...`,
+      title_full: narr,
+      // 다국어 필드도 함께 제공 → chapter.html 의 getLocalizedText(video,'title_full') 가
+      // sop_lang 변경 시에도 올바른 언어를 고를 수 있게 한다.
+      title_full_en: scene.narration_en || scene.narration,
+      title_full_vn: scene.narration_vn || scene.narration,
       visual: scene.visual,
       video_url: '', // AI 영상 생성 후 URL 연결
-      duration: 45 + Math.floor(scene.narration.length / 3), // 나레이션 길이 기반 예상
+      duration: 45 + Math.floor((narrKo || '').length / 3), // 나레이션 길이 기반 예상
       order_num: i + 1,
     };});
   },

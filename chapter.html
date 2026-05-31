@@ -1052,12 +1052,23 @@
 
     // ===== 시청 완료 (최소 시청 시간 검증) =====
     let videoStartTime = 0;
-    const MIN_WATCH_SECONDS = 10; // 최소 10초 시청 필요
+    // 최소 학습 시간: 나레이션 길이에 비례(읽기 속도 기준). 짧은 한 줄 씬에 10초 고정은 과함.
+    // 한국어/베트남어 대략 분당 ~300자 → 글자당 0.2초. 하한 4초, 상한 15초.
+    let MIN_WATCH_SECONDS = 6;
+    function _computeMinWatch(videoId) {
+      try {
+        const v = (videos || []).find(x => x.id === videoId);
+        const txt = (v && (getLocalizedText(v, 'title_full') || v.title_full)) || '';
+        const sec = Math.round(txt.length * 0.2);
+        return Math.max(4, Math.min(15, sec || 6));
+      } catch (e) { return 6; }
+    }
 
     // 영상/나레이션 열 때 시작 시간 기록 (래핑)
     const _baseOpenVideo = openVideo;
     openVideo = function(videoId) {
       videoStartTime = Date.now();
+      MIN_WATCH_SECONDS = _computeMinWatch(videoId); // 나레이션 길이에 맞춘 최소 학습 시간
       _baseOpenVideo(videoId);
     };
 
