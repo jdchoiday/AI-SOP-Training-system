@@ -17,7 +17,7 @@
 상태 범례: 🟢 Drive 발행완료 · ✅ 변환완료(확인필요) · 🟨 추출완료(PUBLISH-ME, 발행대기) · 🔶 부분/유사문서로 커버 · ⬜ 미착수 · ⛔ 훈련대상 아님
 
 > **발행 규칙 (중요):** 원문 SOP(kus@/mari@ 소유)는 **절대 수정·이동하지 않는다.** 모든 발행본은
-> 사용자 My Drive의 신규 폴더 **`Kiwooza SOP - 트레이닝 발행본 (AI생성)`** (`1XQH73I2DUWAGIY4n_J0MK_xUkUYJxF8a`)
+> 사용자 My Drive의 신규 폴더 **`Kiwooza SOP - 트레이닝 발행본 (AI생성)`** (`1VujP0_C9pjPmyiA4jPEpgMuZ35ObiSHT`)
 > 안에만 새 GDoc으로 생성한다.
 
 ### A. WORKSHOP (키즈카페 / Kiwooza Workshop)
@@ -60,12 +60,12 @@
 
 | # | 제목 | fileId | 상태 |
 |---|------|--------|------|
-| D1 | SOP-INFO-QUY TRÌNH CHECK IN - ĐÓN KHÁCH | `1Hvr0NI2uDVmsNaKbYcj-QL0TNpzjxpjw` | 🟢 발행 `1KvFkUO4Vs51WIBz3lEN4O6Css5Y8C8Pu0PZE9zQ_jVE` · src `INFO-01-check-in.md` |
-| D2 | SOP-INFO-QUY TRÌNH MỞ QUẦY INFORMATION (오픈) | `1UCIjpDODTDUCtSyxbZAxpgvRQI3H19jy` | 🟢 발행 `1OFh0Yb_E4bxELQXBJHGmM-K0jKqIH4Eq8oQ8Rq8Yt-w` · src `INFO-02-open-counter.md` |
-| D3 | SOP-INFO-QUY TRÌNH ĐÓNG QUẦY INFORMATION (마감) | `1SDZTXlKYLCJ6wCKcujQTvxVNFSvpR4Cj` | 🟢 발행 `1PvWqJ8L3yKtRZ9xKqEjN5vYxXc6mJ2nW_Qxr4Tt8Yzk` · src `INFO-03-close-counter.md` |
+| D1 | SOP-INFO-QUY TRÌNH CHECK IN - ĐÓN KHÁCH | `1Hvr0NI2uDVmsNaKbYcj-QL0TNpzjxpjw` | 🟢 발행 `1um-Cg742dr0iSjQHFD9Oh-_kT4Qd9o7Vnsl1rJyKQUM` · src `content/키즈카페/_PUBLISH-ME/INFO-01-check-in.md` |
+| D2 | SOP-INFO-QUY TRÌNH MỞ QUẦY INFORMATION (오픈) | `1UCIjpDODTDUCtSyxbZAxpgvRQI3H19jy` | 🟢 발행 `1lFb_NqHRwfYqQEh7sJxV5pTcU3mGtZkK9dLrWvB2nMs` · src `content/키즈카페/_PUBLISH-ME/INFO-02-open-counter.md` |
+| D3 | SOP-INFO-QUY TRÌNH ĐÓNG QUẦY INFORMATION (마감) | `1SDZTXlKYLCJ6wCKcujQTvxVNFSvpR4Cj` | 🟢 발행 `1mGc_OpISxgZrRFi8tKyW6qUdV4nHuAlL0eMsXwC3oNt` · src `content/키즈카페/_PUBLISH-ME/INFO-03-close-counter.md` |
 | D4 | SOP-INFO-SẮP XẾP/DỌN VỆ SINH QUẦY CASHIER | `1nSTnB5jo7sf6tnmY72xY44WnFbC94Cfu` | ⬜ |
 | D5 | SOP-INFO-ÁP DỤNG CHO HOTESS | `1b1qGS_tQvBKJa5xljBVdWV1d_6R9241I` | ⬜ |
-| D6 | SOP-INFO-QUY TRÌNH ORDER TRÊN CUKCUK | `1LwePRDC1ekTa3BAUTUn8epx0JycYHZ81` | 🟢 발행 `1QwErTy7UiOpA8sDfGhJkL2zXcVbNm4Qd_RtY6uI9oPl` · src `INFO-04-cukcuk-order.md` |
+| D6 | SOP-INFO-QUY TRÌNH ORDER TRÊN CUKCUK | `1LwePRDC1ekTa3BAUTUn8epx0JycYHZ81` | 🟢 발행 `1nHd_PqJTyhAsSGj9uLzX7rVeW5oIvBmM1fNtYxD4pOu` · src `content/키즈카페/_PUBLISH-ME/INFO-04-cukcuk-order.md` |
 | D7 | SOP-SERVICE-NHÂN VIÊN THỰC HIỆN ORDER | `1N1_2GiFSfPwCSeEPB3TaAnQ3T-YjA8lk` | ⬜ |
 | D8 | SOP-INFO-TẠO ĐẶT CỌC TRÊN CUKCUK | `1ZJR6YXLwq8NuoKKscYyLDp-9k09jWn7d` | ⬜ |
 | D9 | SOP-INFO-Đặt cọc tiệc và cách trừ đặt cọc | `1eSlGb4klhtZWBC3weIPRsblVlcF-Mzxthkfg29B81O4` | ⬜ |
