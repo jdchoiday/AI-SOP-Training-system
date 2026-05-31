@@ -27,10 +27,10 @@
 |---|------|------|--------|------|
 | A1 | SOP - QUY TRÌNH VẬN HÀNH WORKSHOP (2024) | docx 5.7MB | `1zL8yaKJM1E5WvBrv5iCBSy8vFHySD254` | 🔶 |
 | A2 | SOP - QUY TRÌNH VẬN HÀNH WORKSHOP (2021, 중복) | docx 18.9MB | `1p_kleECPxzV9aVgPCjMqiNalzS1P9YDi` | ⛔ 중복 |
-| A3 | WORKSHOP SOP - ART CLASS (8단계) | GDoc | `1d75H7lLJFYqzX34jO0VhP2wFbmgkDhFROZA005eeFLQ` | ⬜ **누락** |
-| A4 | WORKSHOP SOP - CANDLE CLASS (14섹션) | GDoc | `1XlvBgmyabBw1U8EicRDQpB1GZBlr_gZPomf_tbbbbik` | 🔶 |
-| A5 | WORKSHOP SOP - SETUP SLIME CHO TIỆC SINH NHẬT (14섹션) | GDoc | `1aRq1nkwLNvYLHZlf-onuKUgSoRqeAZQwk6xrD2KWuUs` | ✅ |
-| A6 | Workshop - Teaching Class Manual | GDoc | `1mSPwlhpFF9mN4_wPl0xWzfwkYFlKZ24nPZwVV3buR00` | ✅ |
+| A3 | WORKSHOP SOP - ART CLASS (8단계) | GDoc | `1d75H7lLJFYqzX34jO0VhP2wFbmgkDhFROZA005eeFLQ` | 🟢 발행 `1u-DKMxynq_GSbqJho_zGeg2UpIlKt27oBNp3EetFT_I` · src `WS-01-art-class.md` (read 검증) |
+| A4 | WORKSHOP SOP - CANDLE CLASS (14섹션) | GDoc | `1XlvBgmyabBw1U8EicRDQpB1GZBlr_gZPomf_tbbbbik` | 🟢 발행 `1YZPKflDG72PFyytzXjFDB3-MkqLYT1oWP5l8meqB9PY` · src `WS-02-candle-class.md` (read 검증) |
+| A5 | WORKSHOP SOP - SETUP SLIME CHO TIỆC SINH NHẬT (14섹션) | GDoc | `1aRq1nkwLNvYLHZlf-onuKUgSoRqeAZQwk6xrD2KWuUs` | 🟢 발행 `18ffduhp3tpkq47p_rMCGaNy6rJvdrov_ozwWv39wjc0` · src `WS-03-slime-class.md` ⚠️원문 5장~=양초내용(파일오류) · src 갱신본 Drive 재업로드 필요 |
+| A6 | Workshop - Teaching Class Manual | GDoc | `1mSPwlhpFF9mN4_wPl0xWzfwkYFlKZ24nPZwVV3buR00` | 🟢 발행 `1FROZffT8pl1M4ngpaQOK-WRcr2wJs1YOsqrMJtjS1LQ` · src `WS-04-teaching-class.md` (Pizza예시·VN/EN) · src 갱신본 Drive 재업로드 필요 |
 | A7 | Workshop airdry clay manual | 바로가기 | `1c2RPzj-sWy2t1Gml-mTgnri93QC2krnC` | ⬜ |
 | A8 | Workshop cooking manual | 바로가기 | `1zGnyRR65fJD5pk5W2173pJJ2LwbotpH2` | ⬜ |
 | A9 | WORKSHOP SALE SCRIPT 2025 | 바로가기 | `1fFzJxVvFoGikJy_wS--Pbx7RmWx6AIRh` | ⬜ |
