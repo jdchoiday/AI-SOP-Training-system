@@ -95,13 +95,13 @@
 | E6 | SOP-OPEN/SERVE WHITE WINE | `1BOyMCwN82sOZSH2ZSeNerEj8GP3b8hPB` | 🟢 발행 `1p37uIJR59joNvysK5cgcC05riaagXXL60gmCIlsdMqs` · src `BAR-06-white-wine.md` |
 | E7 | SOP-OPEN/SERVE SPARKLING WINE | `1xEfafzTThMMCb6hkS4GHGhWhDS0OjQE2` | 🟢 발행 `19ML_Vjn2PtmBaKOOz3wSOkkuEFQgvsJXr4hZh-jBIh0` · src `BAR-07-sparkling-wine.md` |
 | E8 | SOP-SERVING DRAFT BEER | `1LK9CsZMovGJ0YgwwaUpB2P232j2cXWPN` | 🟢 발행 `1Hw-yYCmMsCgqDL2EtF2Y7f3XLGR2RitQmLzoHcPwsOk` · src `BAR-08-draft-beer.md` |
-| E9 | SOP-CHECKING COOLING EQUIPMENT | `1RvahRn9liRjpNtsmc4cIP9adV6t2DwFm` | 🟨 src `BAR-09-cooling-equipment.md` · 발행대기 |
-| E10 | SOP-RECEIVE AND STOCK STORAGE | `1s6-S7-u5F9qwNlkzt_i-vb2xTFyYl1xt` | 🟨 src `BAR-10-receive-stock-storage.md` · 발행대기 |
-| E11 | SOP-SANITATION / FOOD BORNE ILLNESS | `1j8lZoQnmR4MOzsMJgmubQeZ05x9zR7JO` | 🟨 src `BAR-11-sanitation.md` · 발행대기 |
-| E12 | SOP-SETTING UP COFFEE MACHINE | `1RgMkMupUBMcxxKAUzgiHPS1M9tIe-Ej2` | 🟨 src `BAR-12-coffee-machine-setup.md` · 발행대기 |
-| E13 | SOP-STOCKING REFRIGERATOR | `1F3Sql_17htejnRdz-6xoKXYyx8T4beFQ` | 🟨 src `BAR-13-stocking-refrigerator.md` · 발행대기 |
-| E14 | SOP-CLEANLINESS OF THE KITCHEN | `1yvr-c2nxlDIao08n1Oqxyjn2Ip-JjNvf` | 🟨 src `BAR-14-kitchen-cleanliness.md` · 발행대기 |
-| E15 | SOP PURCHASING | `1CkrN9qDOc3ZSf2pKQslTvBMpjLrsuC9t` | 🟨 src `BAR-15-purchasing.md` · 발행대기 |
+| E9 | SOP-CHECKING COOLING EQUIPMENT | `1RvahRn9liRjpNtsmc4cIP9adV6t2DwFm` | 🟢 발행 `1tkpLiOG9oEQOEF2RLPe-O6CMTiJ_Q7q1JJp9Yz2V5p8` · src `BAR-09-cooling-equipment.md` |
+| E10 | SOP-RECEIVE AND STOCK STORAGE | `1s6-S7-u5F9qwNlkzt_i-vb2xTFyYl1xt` | 🟢 발행 `1gxUqlCSP6VUFUHkFQnUnb__FJ6ym_abjgGPmCztrYgk` · src `BAR-10-receive-stock-storage.md` |
+| E11 | SOP-SANITATION / FOOD BORNE ILLNESS | `1j8lZoQnmR4MOzsMJgmubQeZ05x9zR7JO` | 🟢 발행 `1JaaCyVey-PgO80M0Xi29OqnLpG8_GocorBaKXro7TLI` · src `BAR-11-sanitation.md` |
+| E12 | SOP-SETTING UP COFFEE MACHINE | `1RgMkMupUBMcxxKAUzgiHPS1M9tIe-Ej2` | 🟢 발행 `1Mo5P09YyJfJ7V6cdIbk8B16hQWkouC00ClGGmWafiD8` · src `BAR-12-coffee-machine-setup.md` |
+| E13 | SOP-STOCKING REFRIGERATOR | `1F3Sql_17htejnRdz-6xoKXYyx8T4beFQ` | 🟢 발행 `1UEcYGh_eVb1ebkp48RlQxYsYnWgLGyW8dYAaJXgxbOk` · src `BAR-13-stocking-refrigerator.md` |
+| E14 | SOP-CLEANLINESS OF THE KITCHEN | `1yvr-c2nxlDIao08n1Oqxyjn2Ip-JjNvf` | 🟢 발행 `1BBgGU49stdjCfEqq0SBPCJ0LiosYnyD4n_heKe1RMII` · src `BAR-14-kitchen-cleanliness.md` |
+| E15 | SOP PURCHASING | `1CkrN9qDOc3ZSf2pKQslTvBMpjLrsuC9t` | 🟢 발행 `1xdUvTsS5mrvjpFQKTC7iysehHbNv2r0-XCuKJPMBRFk` · src `BAR-15-purchasing.md` |
 
 ### F. PLAYGROUND / STRONG (레거시 매뉴얼 — 2차 우선순위)
 PLAYGROUND Manual `1eKM0if0b6G17zG7Qj0DTT3anaZslxGkp` (하위: Staff/Areas/Games Manual) · Strong `1uF114phltfPnvGOCGM69B6gR0f0K750A`
