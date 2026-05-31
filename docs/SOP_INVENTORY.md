@@ -63,13 +63,13 @@
 | D1 | SOP-INFO-QUY TRÌNH CHECK IN - ĐÓN KHÁCH | `1Hvr0NI2uDVmsNaKbYcj-QL0TNpzjxpjw` | 🟢 발행 `18yr6lwuNPJl0uH6pIqCUGMN-N3vOeepcBAkbEGoTdKk` · src `content/키즈카페/_PUBLISH-ME/INFO-01-check-in.md` |
 | D2 | SOP-INFO-QUY TRÌNH MỞ QUẦY INFORMATION (오픈) | `1UCIjpDODTDUCtSyxbZAxpgvRQI3H19jy` | 🟢 발행 `1dxewOkJqlCaJ98G92CW7tMGzScVfP3ujlmSr87qV2_o` · src `content/키즈카페/_PUBLISH-ME/INFO-02-open-counter.md` |
 | D3 | SOP-INFO-QUY TRÌNH ĐÓNG QUẦY INFORMATION (마감) | `1SDZTXlKYLCJ6wCKcujQTvxVNFSvpR4Cj` | 🟢 발행 `16lpZ200dzeT1LZS_Um2GtvrSpJTXMs26g_ZWCsDrBmw` · src `content/키즈카페/_PUBLISH-ME/INFO-03-close-counter.md` |
-| D4 | SOP-INFO-SẮP XẾP/DỌN VỆ SINH QUẦY CASHIER | `1nSTnB5jo7sf6tnmY72xY44WnFbC94Cfu` | ⬜ |
-| D5 | SOP-INFO-ÁP DỤNG CHO HOTESS | `1b1qGS_tQvBKJa5xljBVdWV1d_6R9241I` | ⬜ |
+| D4 | SOP-INFO-SẮP XẾP/DỌN VỆ SINH QUẦY CASHIER | `1nSTnB5jo7sf6tnmY72xY44WnFbC94Cfu` | 🟢 발행 `1mcwln1Wj_Qo80nyQHWNmS1V0vR8cJ-m9Fp2hSsUVxV4` · src `INFO-08-cashier-cleanup.md` |
+| D5 | SOP-INFO-ÁP DỤNG CHO HOTESS | `1b1qGS_tQvBKJa5xljBVdWV1d_6R9241I` | 🟢 발행 `1IVtj70eUE8XHO8Lk4Qw_t8R7DtcKWzEZ8Yn6P5cQ3vU` · src `INFO-07-hostess.md` ⚠️INFO-01과 불일치(문서내 명시) |
 | D6 | SOP-INFO-QUY TRÌNH ORDER TRÊN CUKCUK | `1LwePRDC1ekTa3BAUTUn8epx0JycYHZ81` | 🟢 발행 `11H5fKSp0K_EUtnNcJydDlhBD4YKWQ3FJyzAKIriuMAc` · src `content/키즈카페/_PUBLISH-ME/INFO-04-cukcuk-order.md` |
-| D7 | SOP-SERVICE-NHÂN VIÊN THỰC HIỆN ORDER | `1N1_2GiFSfPwCSeEPB3TaAnQ3T-YjA8lk` | ⬜ |
+| D7 | SOP-SERVICE-NHÂN VIÊN THỰC HIỆN ORDER | `1N1_2GiFSfPwCSeEPB3TaAnQ3T-YjA8lk` | 🟢 발행 `1RYBktBYmRrtBn-Lt0Yl9oMyJL9Ja4zHJDFfA-eM4Ueg` · src `INFO-05-staff-take-order.md` |
 | D8 | SOP-INFO-TẠO ĐẶT CỌC TRÊN CUKCUK | `1ZJR6YXLwq8NuoKKscYyLDp-9k09jWn7d` | ⬜ |
 | D9 | SOP-INFO-Đặt cọc tiệc và cách trừ đặt cọc | `1eSlGb4klhtZWBC3weIPRsblVlcF-Mzxthkfg29B81O4` | ⬜ |
-| D10 | SOP-INFO-LÀM BÁO CÁO DOANH THU (매출보고) | `1_Lfagi_l6XELaQ2RNHmEjrpeccz3vA0C` | ⬜ |
+| D10 | SOP-INFO-LÀM BÁO CÁO DOANH THU (매출보고) | `1_Lfagi_l6XELaQ2RNHmEjrpeccz3vA0C` | 🟢 발행 `1eX9Kj-3LJQ2mNbVc7Rty5UoP8aWsDf6gHzZ4iKlMn0` · src `INFO-06-daily-revenue-report.md` |
 | D11 | SOP-INFO-Thanh toán mới cho Cashier 2025 | `1A4f8qmsAwleFsd7rgYc83KlS4SepzRrD` | ⬜ |
 | D12 | SOP-INFO-Xuất hoá đơn VAT | `1buIS-_3vVjRYV1zZrgwBVIY9cGtxw7wJX5ELxdWeYUQ` | ⬜ |
 | D13 | SOP-INFO-Đóng gói bill gửi Cơ quan thuế | `1QrATZHxNbHC09H8ncmNFSAlHcsS6UxBj9H5XldEJgNM` | ⬜ |
