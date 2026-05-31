@@ -3154,8 +3154,21 @@ ${JSON.stringify({ fields: { title: "교정된 제목", title_en: "fixed title",
         .trim();
     }
 
+    // 파일명 → 보기 좋은 제목: 확장자 제거 + 구분자(_,-)를 공백으로 + NFC 정규화 + 공백 정리.
+    // (업로드 파일명에서 공백이 _/- 로 치환돼 'Lý_thuyết...' 처럼 저장되거나, 결합문자가
+    //  깨져 'Lýthuyết...' 로 보이던 문제를 신규 저장 시 최대한 방어한다. 이미 저장된 데이터는
+    //  공백 정보가 소실돼 코드로 복원 불가 — admin 에서 수동 교정 필요.)
+    function _cleanTitleFromFilename(filename) {
+      let s = String(filename || '').replace(/\.[^/.]+$/, ''); // 확장자 제거
+      try { s = s.normalize('NFC'); } catch (e) {}
+      s = s.replace(/[_]+/g, ' ');          // 언더스코어 → 공백
+      s = s.replace(/\s*-\s*/g, ' - ');     // 하이픈 주변 공백 정돈(연결자 보존)
+      s = s.replace(/\s{2,}/g, ' ').trim(); // 다중 공백 정리
+      return s;
+    }
+
     function parseChapterSection(filename) {
-      const name = filename.replace(/\.[^/.]+$/, ''); // 확장자 제거
+      const name = _cleanTitleFromFilename(filename); // 확장자 제거 + 공백 복원 + NFC
       // 패턴 1: Ch02_Sec01_제목... 또는 ch02-sec01-제목...
       const m1 = name.match(/[Cc]h(?:apter)?[_\-\s]*(\d+)[_\-\s]*[Ss]ec(?:tion)?[_\-\s]*(\d+)[_\-\s]*(.*)/);
       if (m1) {
@@ -3207,7 +3220,7 @@ ${JSON.stringify({ fields: { title: "교정된 제목", title_en: "fixed title",
             continue;
           }
 
-          const title = file.name.replace(/\.[^/.]+$/, '');
+          const title = _cleanTitleFromFilename(file.name);
           let rawHtml = '';
           const isDocx = file.name.endsWith('.doc') || file.name.endsWith('.docx');
 
@@ -3496,9 +3509,9 @@ JSON 배열로 응답:
 
       return Object.entries(groups).map(([folder, items]) => ({
         chapter: folder === '일반' ? '교육 자료' : folder,
-        title: items.length === 1 ? items[0].name.replace(/\.[^/.]+$/, '') : `${folder} SOP`,
+        title: items.length === 1 ? _cleanTitleFromFilename(items[0].name) : `${folder} SOP`,
         category: '기타',
-        html: items.map(f => `<h3>${f.name.replace(/\.[^/.]+$/, '')}</h3><p>${f.text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`).join('\n')
+        html: items.map(f => `<h3>${_cleanTitleFromFilename(f.name)}</h3><p>${f.text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`).join('\n')
       }));
     }
 
@@ -3669,7 +3682,7 @@ ${text.slice(0, 3000)}`;
       });
 
       return {
-        title: filename.replace(/\.[^/.]+$/, ''),
+        title: _cleanTitleFromFilename(filename),
         category: '기타',
         html: html || `<p>${text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`
       };
