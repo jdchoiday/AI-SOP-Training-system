@@ -67,11 +67,11 @@
 | D5 | SOP-INFO-ÁP DỤNG CHO HOTESS | `1b1qGS_tQvBKJa5xljBVdWV1d_6R9241I` | 🟢 발행 `1oPBSoLLPzVwHTGivb7hTRMYjN64Wt4VOWe5fwzg6FQ4` · src `content/키즈카페/_PUBLISH-ME/INFO-07-hostess.md` ⚠️INFO-01과 불일치(문서내 명시) |
 | D6 | SOP-INFO-QUY TRÌNH ORDER TRÊN CUKCUK | `1LwePRDC1ekTa3BAUTUn8epx0JycYHZ81` | 🟢 발행 `11H5fKSp0K_EUtnNcJydDlhBD4YKWQ3FJyzAKIriuMAc` · src `content/키즈카페/_PUBLISH-ME/INFO-04-cukcuk-order.md` |
 | D7 | SOP-SERVICE-NHÂN VIÊN THỰC HIỆN ORDER | `1N1_2GiFSfPwCSeEPB3TaAnQ3T-YjA8lk` | 🟢 발행 `1IH158t3Zcbsc-94JPzl7IFwemj7-aguMzgJNKTSFB5w` · src `content/키즈카페/_PUBLISH-ME/INFO-05-staff-take-order.md` |
-| D8 | SOP-INFO-TẠO ĐẶT CỌC TRÊN CUKCUK | `1ZJR6YXLwq8NuoKKscYyLDp-9k09jWn7d` | ⬜ |
-| D9 | SOP-INFO-Đặt cọc tiệc và cách trừ đặt cọc | `1eSlGb4klhtZWBC3weIPRsblVlcF-Mzxthkfg29B81O4` | ⬜ |
+| D8 | SOP-INFO-TẠO ĐẶT CỌC TRÊN CUKCUK | `1ZJR6YXLwq8NuoKKscYyLDp-9k09jWn7d` | 🟢 발행 `14WcZBPqwxdfGh4ypkptkIwxc1dxfvPJ6bqCVg0PC13c` · src `content/키즈카페/_PUBLISH-ME/INFO-09-deposit-create-cukcuk.md` |
+| D9 | SOP-INFO-Đặt cọc tiệc và cách trừ đặt cọc | `1eSlGb4klhtZWBC3weIPRsblVlcF-Mzxthkfg29B81O4` | 🟢 발행 `10_BSv0e7IoIJf5Jw1Z-U-K-pFhmFhm928iTpYEtVnCs` · src `content/키즈카페/_PUBLISH-ME/INFO-10-party-deposit-policy.md` |
 | D10 | SOP-INFO-LÀM BÁO CÁO DOANH THU (매출보고) | `1_Lfagi_l6XELaQ2RNHmEjrpeccz3vA0C` | 🟢 발행 `1FQpyel0C2yXneyX4lPvwPvbYY_AX6nx6S53eEt-7kV4` · src `content/키즈카페/_PUBLISH-ME/INFO-06-daily-revenue-report.md` |
-| D11 | SOP-INFO-Thanh toán mới cho Cashier 2025 | `1A4f8qmsAwleFsd7rgYc83KlS4SepzRrD` | ⬜ |
-| D12 | SOP-INFO-Xuất hoá đơn VAT | `1buIS-_3vVjRYV1zZrgwBVIY9cGtxw7wJX5ELxdWeYUQ` | ⬜ |
+| D11 | SOP-INFO-Thanh toán mới cho Cashier 2025 | `1A4f8qmsAwleFsd7rgYc83KlS4SepzRrD` | 🟢 발행 `1gZvtDOUcAWuhBY064tHTsKWa3rpyQofdA2N69yZl3P0` · src `content/키즈카페/_PUBLISH-ME/INFO-11-cashier-rules-2025.md` |
+| D12 | SOP-INFO-Xuất hoá đơn VAT | `1buIS-_3vVjRYV1zZrgwBVIY9cGtxw7wJX5ELxdWeYUQ` | 🟢 발행 `1r8Rn_h1SJd1OeSNkz7JJ9biKxU_FPhZAOKKBysPKA_Q` · src `content/키즈카페/_PUBLISH-ME/INFO-12-vat-invoice.md` |
 | D13 | SOP-INFO-Đóng gói bill gửi Cơ quan thuế | `1QrATZHxNbHC09H8ncmNFSAlHcsS6UxBj9H5XldEJgNM` | ⬜ |
 | D14 | SOP-INFO-15 LOST AND FOUND REGISTER | `1Na05K5p3yYsk15QfUdtAPz8fpPZblnJw7iDgaBXFnF4` | ⬜ |
 | D15 | THISO-CHECKIN-OUT CHI NHÁNH KIWOOZA THISO | `1PdjhuJd9X5j3fS6tST4l2J8OJodnzBu1mrGdnySAAJM` | ⬜ |
