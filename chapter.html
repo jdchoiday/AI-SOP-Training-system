@@ -980,10 +980,19 @@
         document.getElementById('videoWrapper').style.display = 'block';
         document.getElementById('videoPlayer').src = video.video_url;
       } else {
-        // 나레이션만 (영상 없음) → 기존 텍스트 표시
+        // 나레이션만 (영상 없음) → 텍스트 + 시각 설명(visual) 표시
         document.getElementById('narrationCard').style.display = 'block';
         document.getElementById('narrationText').textContent = narration;
-        document.getElementById('visualNote').textContent = '';
+        // visual(시각 설명)이 있으면 함께 노출해 빈약함을 줄인다. (영상 미생성 fallback 보강)
+        const _vis = (getLocalizedText(video, 'visual') || video.visual || '').trim();
+        const _visEl = document.getElementById('visualNote');
+        if (_vis) {
+          _visEl.textContent = '🎬 ' + _vis;
+          _visEl.style.display = 'block';
+        } else {
+          _visEl.textContent = '';
+          _visEl.style.display = 'none';
+        }
       }
 
       document.getElementById('completeVideoBtn').textContent = t.completeBtn;

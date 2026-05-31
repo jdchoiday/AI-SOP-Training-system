@@ -296,10 +296,10 @@ const SopStore = {
         category: '안전/위생', status: 'published', order_num: 3, createdAt: '2026-03-17',
         content: '<h3>1. 개인 위생</h3><ol><li>손 씻기 최소 20초</li><li>유니폼 청결 유지</li></ol><h3>2. 시설 안전</h3><ol><li>소화기 위치 숙지, 매월 점검</li><li>비상구 확보</li></ol><h3>3. 식품 위생</h3><ol><li>냉장 0~5°C, 냉동 -18°C</li><li>교차오염 방지</li></ol>',
         script: [
-          { scene: 1, narration: '안전 및 위생 관리를 배우겠습니다.', visual: '타이틀' },
-          { scene: 2, narration: '손은 최소 20초간 비누로 씻습니다.', visual: '손 씻기' },
-          { scene: 3, narration: '소화기 위치를 숙지하고 매월 점검합니다.', visual: '소화기 점검' },
-          { scene: 4, narration: '식품은 냉장 0~5도, 냉동 영하 18도 이하로 보관합니다.', visual: '식품 보관' },
+          { scene: 1, narration: '안전 및 위생 관리를 배우겠습니다.', narration_en: 'Let\'s learn about safety and hygiene management.', narration_vn: 'Chúng ta sẽ học về quản lý an toàn và vệ sinh.', visual: '타이틀', visual_en: 'Title', visual_vn: 'Tiêu đề' },
+          { scene: 2, narration: '손은 최소 20초간 비누로 씻습니다.', narration_en: 'Wash your hands with soap for at least 20 seconds.', narration_vn: 'Rửa tay bằng xà phòng ít nhất 20 giây.', visual: '손 씻기', visual_en: 'Hand washing', visual_vn: 'Rửa tay' },
+          { scene: 3, narration: '소화기 위치를 숙지하고 매월 점검합니다.', narration_en: 'Know the location of fire extinguishers and inspect them monthly.', narration_vn: 'Nắm rõ vị trí bình chữa cháy và kiểm tra hàng tháng.', visual: '소화기 점검', visual_en: 'Extinguisher check', visual_vn: 'Kiểm tra bình chữa cháy' },
+          { scene: 4, narration: '식품은 냉장 0~5도, 냉동 영하 18도 이하로 보관합니다.', narration_en: 'Store food refrigerated at 0–5°C and frozen below –18°C.', narration_vn: 'Bảo quản thực phẩm ở ngăn mát 0–5°C, ngăn đông dưới –18°C.', visual: '식품 보관', visual_en: 'Food storage', visual_vn: 'Bảo quản thực phẩm' },
         ],
         quizzes: [
           { question: '손 씻기 최소 시간은?', options: ['5초', '20초', '1분', '10초'], correct: 1 },
