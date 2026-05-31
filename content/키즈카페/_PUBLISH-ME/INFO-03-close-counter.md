@@ -1,81 +1,67 @@
 # SOP - INFO - QUY TRÌNH ĐÓNG QUẦY INFORMATION
 
-> Nguồn: Google Drive gốc (Kiwooza) — `SOP-INFO- QUY TRÌNH ĐÓNG QUẦY INFORMATION.docx`.
-> Bản trích xuất toàn văn + diễn giải chi tiết để đưa vào hệ thống đào tạo (script + hình minh hoạ).
-> Bộ phận: **INFO** · Thực hiện: **cuối ca / cuối ngày**
+> Nguồn gốc: `SOP-INFO- QUY TRÌNH ĐÓNG QUẦY INFORMATION.docx` — Kiwooza SSMC / Kiwooza Thiso · Department: Information · Created by: Kus Thien Ngo · Date: 03/12/2025.
+> Bản trích xuất TOÀN VĂN. Nhiều mục ghi **(Áp dụng chi nhánh Thiso)**.
 
 ---
 
-## 0. Tổng quan & Mục đích
+## 0. Mục đích tài liệu
 
-Đóng quầy Info là bước **chốt sổ & bàn giao** cuối ca: tiền khớp với doanh thu, báo cáo đầy đủ, thiết bị tắt an toàn, bàn giao rõ ràng. Làm đúng giúp:
-- **Tiền mặt khớp** với doanh thu trên CukCuk → không thất thoát.
-- Ca sau / ngày sau bắt đầu suôn sẻ.
-- An toàn điện & tài sản (tắt thiết bị, khoá quầy).
-
-**Nguyên tắc:** *Tiền phải khớp — báo cáo phải đủ — bàn giao phải ký.*
+- Nhân viên nắm rõ **quy trình đóng ca** áp dụng tại Kiwooza Planet.
+- Làm đúng các công tác về **hệ thống, máy móc và thiết bị** trước khi ra ca.
+- **Chụp hình gửi báo cáo** theo đúng quy trình hiện hành.
 
 ---
 
-## 1. Bước 1 — Kiểm kê & đối chiếu tiền mặt
+## 1. Quy trình tắt hệ thống CukCuk bán hàng
 
-- **Kiểm kê tiền mặt cuối ca.**
-- **Đối chiếu với doanh thu trên CukCuk.**
+1. Ở giao diện CUKCUK, **góc phải phía trên** có **biểu tượng hình người (avatar)**.
+2. Nhân viên bấm vào đó và chọn **"Đăng xuất"**.
+3. Hệ thống hiển thị thông báo **"Xác nhận đóng ca"** → nhân viên chọn **"Có"**.
+4. Bảng **"Đóng ca làm việc"** hiện ra → bấm nút **"Đóng ca"** để hoàn tất quá trình.
 
-> ⚠️ Đây là bước QUAN TRỌNG NHẤT. Nếu tiền mặt **không khớp** với CukCuk → kiểm tra lại từng giao dịch, báo quản lý ngay, không tự ý bỏ qua.
+## 2. Thiết bị và dụng cụ
 
-## 2. Bước 2 — Nộp tiền & ký bàn giao
+- Tất cả **tablet** cuối ngày nhân viên **tổng hợp và cắm sạc**.
+- **Bộ đàm** đều được **tắt và sạc pin** cho ca làm việc tiếp theo.
+- > Nhân viên **sắp xếp ngay ngắn** và đảm bảo **sạc đầy đủ** thiết bị trước khi về.
 
-- **Nộp tiền** theo quy định.
-- **Ký bàn giao cuối ca** (xác nhận số tiền nộp).
+## 3. Hoá đơn bán hàng, phiếu kết toán  *(Áp dụng chi nhánh Thiso)*
 
-## 3. Bước 3 — Lập báo cáo doanh thu cuối ngày
+- Hoá đơn bán hàng gồm **card – chuyển khoản – tiền mặt**: **cuộn lại theo đúng phương thức thanh toán**, **buộc thun** gọn gàng chung với nhau, lưu ở **thùng lưu trữ hoá đơn**.
+- Nhân viên **kiểm, đếm tiền** trên hệ thống CukCuk (**kwz.cukcuk.vn**), **ghi doanh thu lên sổ bàn giao**, và **bấm kẹp các giấy kết toán của máy POS ngân hàng** vào **cột doanh thu đóng ca**.
 
-Báo cáo đủ 3 hình thức thanh toán:
-- 💵 Tiền mặt
-- 🏦 Chuyển khoản
-- 💳 Quẹt thẻ
+## 4. Doanh thu tiền mặt trong ngày  *(Áp dụng chi nhánh Thiso)*
 
-## 4. Bước 4 — Vệ sinh & sắp xếp quầy
+- Nhân viên **đếm tiền doanh thu cuối ngày** (đếm đủ trong ngày).
+- Dùng **giấy note** ghi: **Ngày · Doanh thu CukCuk · Doanh thu TT**.
+- Dùng **băng keo giấy niêm phong** gói tiền và giấy note.
+- **Chụp báo cáo** giấy doanh thu đã điền + hình ảnh **két sắt đã đóng**, chung với các hình báo cáo khác của quầy Information.
 
-- Vệ sinh quầy.
-- Sắp xếp lại vật dụng **gọn gàng** cho ca/ngày sau.
+## 5. Chụp hình báo cáo bộ phận Information  *(Áp dụng Kiwooza Thiso)*
 
-## 5. Bước 5 — Kiểm tra & tắt thiết bị
+Các khu vực phải được **TẮT máy, TẮT điện** và **chụp hình báo cáo** trước khi ra về:
 
-Tắt an toàn:
-- 💻 Máy tính
-- 🧾 Máy in
-- 💳 Máy quẹt thẻ
-- 💡 Đèn
-- ❄️ Điều hoà
+| Khu vực | Hạng mục phải tắt & chụp |
+| --- | --- |
+| **Info** | TV · máy POS bán hàng (in-out) · két sắt |
+| **Market** | TV · máy trứng · dây đèn LED wappen |
+| **Omi** | TV |
 
-## 6. Bước 6 — Đăng xuất phần mềm
-
-- **Đăng xuất** tất cả phần mềm (bảo mật tài khoản & dữ liệu).
-
-## 7. Bước 7 — Kiểm tra khu vực locker
-
-- Kiểm tra khu vực **locker**.
-- **Thu hồi chìa khoá thất lạc** (đảm bảo đủ chìa cho ngày sau).
-
-## 8. Bước 8 — Bàn giao / Khoá quầy
-
-- **Bàn giao cho ca sau**, hoặc
-- **Khoá quầy** nếu là ca cuối.
+- Nhân viên **chụp toàn bộ không gian sảnh trước** gồm: **Quầy Market (VBM), Information, Slime** → gửi báo cáo lên group. **Đảm bảo toàn bộ hệ thống đèn đều được tắt** trước khi ra về.
+- ⚠️ **Nhân viên không tắt đèn và không tuân thủ quy trình sẽ bị LẬP BIÊN BẢN và PHẠT TIỀN theo quy định.**
 
 ---
 
-## 9. Checklist cuối ca (Ghi nhớ nhanh)
+## 6. Checklist đóng ca (Ghi nhớ nhanh)
 
-☐ Kiểm kê tiền mặt + **đối chiếu CukCuk** (phải khớp!)
-☐ Nộp tiền + **ký bàn giao**
-☐ Lập **báo cáo doanh thu** (tiền mặt / chuyển khoản / quẹt thẻ)
-☐ Vệ sinh & sắp xếp quầy gọn gàng
-☐ Tắt: máy tính, máy in, máy quẹt thẻ, đèn, điều hoà
-☐ **Đăng xuất** phần mềm
-☐ Kiểm tra locker + thu hồi chìa khoá thất lạc
-☐ **Bàn giao ca sau / khoá quầy**
+☐ Tắt CukCuk: avatar → Đăng xuất → "Xác nhận đóng ca" Có → **Đóng ca**
+☐ Tablet **cắm sạc** · Bộ đàm **tắt + sạc**
+☐ Hoá đơn cuộn theo card/CK/tiền mặt, buộc thun, lưu thùng *(Thiso)*
+☐ Đếm tiền trên **kwz.cukcuk.vn** → ghi sổ bàn giao → kẹp giấy kết toán POS *(Thiso)*
+☐ Đếm tiền mặt → note (Ngày/DT CukCuk/DT TT) → **niêm phong băng keo** → chụp két sắt *(Thiso)*
+☐ TẮT máy/điện & chụp báo cáo: Info/Market/Omi + sảnh trước (Market VBM, Info, Slime)
+☐ **TẮT HẾT ĐÈN** (không tắt = biên bản + phạt tiền)
 
 ---
-*Bản trích xuất phục vụ tạo nội dung đào tạo (script + hình ảnh minh hoạ). Giữ nguyên thuật ngữ gốc tiếng Việt.*
+*Bản trích xuất phục vụ tạo nội dung đào tạo (script + hình ảnh minh hoạ). Giữ nguyên thuật ngữ gốc.*

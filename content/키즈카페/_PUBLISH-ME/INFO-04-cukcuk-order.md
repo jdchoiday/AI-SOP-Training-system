@@ -1,94 +1,63 @@
-# SOP - INFO - QUY TRÌNH ORDER TRÊN CUKCUK
+# SOP - INFO - HOW TO TAKE ORDER ON CUKCUK SYSTEM (Order trên CukCuk)
 
-> Nguồn: Google Drive gốc (Kiwooza) — `SOP - INFO - QUY TRÌNH ORDER TRÊN CUKCUK.docx`.
-> Bản trích xuất toàn văn + diễn giải chi tiết để đưa vào hệ thống đào tạo (script + hình minh hoạ).
-> Bộ phận: **INFO** · Công cụ: **App CukCuk**
-
----
-
-## 0. Tổng quan & Mục đích
-
-CukCuk là phần mềm **order & thanh toán** chính. Order đúng giúp:
-- Bếp/bar làm **đúng món, đúng số lượng** cho đúng bàn.
-- Hoá đơn chính xác → tiền khớp khi đóng ca.
-- Khách hài lòng, không phải chờ nhầm/sai món.
-
-**Nguyên tắc:** *Đúng bàn — đúng món — đúng số lượng — đúng ghi chú.*
+> Nguồn gốc: `SOP - INFO - QUY TRÌNH ORDER TRÊN CUKCUK.docx` — Kiwooza Thiso · Department: Information · Created by: Kus · Updated 15/05/2026.
+> Bản trích xuất TOÀN VĂN (giữ nguyên thao tác UI: nút +, nút 3 chấm, zone A/B/C).
 
 ---
 
-## 1. Bước 1 — Đăng nhập
+## 0. Objective (Mục tiêu)
 
-- Mở **app CukCuk**.
-- **Đăng nhập tài khoản nhân viên** (mỗi người dùng tài khoản riêng để truy vết).
+- **Staff:** nhớ rõ cách **take order** từ khách trên hệ thống CukCuk.
+- **Customer:** cung cấp **món ăn chất lượng & dịch vụ hoàn hảo** (flawless service).
+- **Center:** mọi xử lý **trơn tru, không lỗi** về F&B – Service.
 
-## 2. Bước 2 — Chọn bàn / khu vực
-
-- **Chọn đúng bàn / khu vực** khách đang ngồi.
-
-> ⚠️ Chọn SAI bàn = món giao nhầm bàn + hoá đơn sai. Luôn xác nhận lại số bàn.
-
-## 3. Bước 3 — Chọn món & nhập số lượng
-
-- Chọn **món khách gọi theo menu**.
-- **Nhập đúng số lượng** từng món.
-
-## 4. Bước 4 — Ghi chú yêu cầu đặc biệt
-
-- Ghi chú rõ yêu cầu của khách:
-  - *ít đá*
-  - *không cay*
-  - *... (theo yêu cầu khách)*
-
-> 📝 Ghi chú đặc biệt giúp bếp/bar làm đúng khẩu vị — đừng bỏ qua.
-
-## 5. Bước 5 — Xác nhận & gửi bếp/bar
-
-- **Xác nhận order.**
-- **Gửi order xuống bếp / bar.**
-
-## 6. Bước 6 — In phiếu tạm tính
-
-- Khi khách yêu cầu → **in phiếu tạm tính** để khách kiểm tra trước khi thanh toán.
-
-## 7. Bước 7 — Thu tiền & chọn hình thức thanh toán
-
-- **Thu tiền.**
-- Chọn đúng hình thức:
-  - 💵 Tiền mặt
-  - 🏦 Chuyển khoản
-  - 💳 Thẻ
-
-> ⚠️ Chọn đúng hình thức thanh toán trên CukCuk → để cuối ca đối chiếu tiền khớp.
-
-## 8. Bước 8 — In hoá đơn & cảm ơn khách
-
-- **In hoá đơn** cho khách.
-- **Cảm ơn khách:** *"Cảm ơn quý khách, hẹn gặp lại!"*
+> Cách dùng: **dùng điện thoại** (cukcuk by phone) để take order.
 
 ---
 
-## 9. Lưu ý tránh sai sót
+## 1. Login with staff account (Đăng nhập)
 
-| Lỗi thường gặp | Hậu quả | Cách tránh |
-| --- | --- | --- |
-| Chọn nhầm bàn | Giao nhầm món, sai hoá đơn | Xác nhận số bàn trước khi order |
-| Nhập sai số lượng | Thiếu/thừa món, lệch tiền | Đọc lại order với khách |
-| Quên ghi chú đặc biệt | Sai khẩu vị, khách phàn nàn | Hỏi "Anh/chị cần lưu ý gì không ạ?" |
-| Chọn sai hình thức thanh toán | Cuối ca tiền không khớp | Kiểm tra lại trước khi xác nhận |
+- Nhân viên **có tài khoản riêng** để đăng nhập hệ thống.
+- Sau khi đăng nhập, staff sẽ thấy **alignment** và thông tin liên quan: **số người, thời gian chơi (time to play), và giá theo giờ (price in time)** → ở **nút màu xanh " + " (Blue button +)**.
+
+## 2. Take note and send order (Ghi chú & gửi order)
+
+1. Staff **chọn số bàn** cần order, **chọn các món** khách đã chọn.
+2. **Ghi chú** các món cần lưu ý → **Nhấn giữ nút 3 chấm (three-dot)** để ghi chú (take notes).
+3. **Gửi xuống Kitchen & Bar** → **nút màu xanh ở phía dưới** (blue button below).
+
+## 3. Change table (Đổi bàn)
+
+1. **Nhấn giữ nút 3 chấm** của bàn → chọn **" Change table "**.
+2. Chọn **bàn khớp với khu vực (area)**:
+   - **Zone A** — Bar
+   - **Zone B** — Playground
+   - **Zone C** — Fishing
+3. Click **" OK "** để lưu → bàn sẽ được đổi.
+
+## 4. Cancel order (Huỷ order)
+
+- Khi huỷ một order, **BẮT BUỘC có sự đồng ý của Area Manager**.
+- Phải **giải thích lý do** huỷ.
+- ⚠️ **Nếu không được đồng ý, nhân viên phải tự chịu trách nhiệm về order của mình.**
 
 ---
 
-## 10. Tóm tắt nhanh (Ghi nhớ)
+## 5. NOTE (Lưu ý)
 
-1. Đăng nhập **tài khoản riêng**.
-2. **Chọn đúng bàn.**
-3. Chọn món + **đúng số lượng.**
-4. **Ghi chú đặc biệt** (ít đá / không cay...).
-5. Xác nhận → gửi bếp/bar.
-6. In tạm tính (khi khách yêu cầu).
-7. Thu tiền + **đúng hình thức thanh toán.**
-8. In hoá đơn + **cảm ơn khách.**
+- **Luôn kiểm tra order đã được gửi** xuống Kitchen và Bar (always check order have sent).
+- Đảm bảo **hệ thống không gặp vấn đề gì** (no problem).
+- **Food & drink sẽ được phục vụ đúng giờ** (served on time).
 
 ---
-*Bản trích xuất phục vụ tạo nội dung đào tạo (script + hình ảnh minh hoạ). Giữ nguyên thuật ngữ gốc tiếng Việt.*
+
+## 6. Tóm tắt nhanh (Ghi nhớ)
+
+1. Login **tài khoản riêng** → xem số người / thời gian chơi / giá (nút **+** xanh).
+2. Chọn bàn → chọn món → **nhấn giữ 3 chấm để ghi chú** → **gửi Kitchen & Bar** (nút xanh dưới).
+3. Đổi bàn: **giữ 3 chấm → Change table → Zone A/B/C → OK**.
+4. Huỷ order: **phải có Area Manager đồng ý + nêu lý do**.
+5. Luôn check order đã gửi · hệ thống ổn · phục vụ đúng giờ.
+
+---
+*Bản trích xuất phục vụ tạo nội dung đào tạo (script + hình ảnh minh hoạ). Giữ nguyên thuật ngữ gốc & thao tác UI.*

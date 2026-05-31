@@ -1,87 +1,55 @@
 # SOP - INFO - QUY TRÌNH MỞ QUẦY INFORMATION
 
-> Nguồn: Google Drive gốc (Kiwooza) — `SOP-INFO- QUY TRÌNH MỞ QUẦY INFORMATION.docx`.
-> Bản trích xuất toàn văn + diễn giải chi tiết để đưa vào hệ thống đào tạo (script + hình minh hoạ).
-> Bộ phận: **INFO** · Thực hiện: **đầu ca / trước giờ mở cửa**
+> Nguồn gốc: `SOP-INFO- QUY TRÌNH MỞ QUẦY INFORMATION.docx` — Kiwooza SSMC / Kiwooza Thiso · Department: Information · Created by: Kus · Date: 03/12/2025.
+> Bản trích xuất TOÀN VĂN. Lưu ý: nhiều mục có ghi **(Áp dụng chi nhánh Thiso)**.
 
 ---
 
-## 0. Tổng quan & Mục đích
+## 0. Mục đích tài liệu
 
-Mở quầy Info là bước **chuẩn bị toàn bộ** để quầy sẵn sàng đón khách: thiết bị hoạt động, phần mềm đăng nhập, tiền đầu ca đủ, vật dụng đầy đủ. Làm đúng quy trình giúp:
-- Không bị gián đoạn khi khách đầu tiên đến.
-- Tiền bạc minh bạch ngay từ đầu ca (ký nhận rõ ràng).
-- Quầy sạch sẽ, chuyên nghiệp.
-
-**Nguyên tắc:** *Làm theo đúng thứ tự — kiểm tra đủ trước khi mở cửa.*
+- Nhân viên nắm rõ **quy trình mở ca** áp dụng tại Kiwooza Planet.
+- Làm đúng các công tác về **hệ thống, máy móc và thiết bị** trước khi vào ca.
+- **Chụp hình gửi báo cáo** theo đúng quy trình hiện hành.
 
 ---
 
-## 1. Bước 1 — Vệ sinh quầy & thiết bị
+## 1. Cách mở hệ thống máy chủ & phần mềm bán hàng CukCuk
 
-- Lau dọn **quầy Info** sạch sẽ, gọn gàng.
-- Vệ sinh **máy móc thiết bị:** máy tính, máy in, máy quẹt thẻ, điện thoại bàn.
-
-## 2. Bước 2 — Kiểm tra & mở thiết bị
-
-Bật và kiểm tra hoạt động của:
-- 💻 Máy tính
-- 🧾 Máy in hoá đơn
-- 💳 Máy in thẻ
-- 💳 Máy quẹt thẻ
-- 💡 Đèn
-- ❄️ Điều hoà
-
-## 3. Bước 3 — Đăng nhập phần mềm
-
-Đăng nhập đầy đủ:
-- **CukCuk** (bán hàng / order)
-- **Phần mềm quản lý thẻ**
-- **Zalo OA**
-- **Camera**
-
-> ⚠️ Đăng nhập đủ TẤT CẢ phần mềm trước khi đón khách — thiếu một phần mềm có thể làm tắc nghẽn lúc cao điểm.
-
-## 4. Bước 4 — Kiểm tra tiền mặt đầu ca
-
-- Kiểm tra **tiền mặt trong két**, đặc biệt **tiền lẻ để thối cho khách**.
-- **Ký nhận tiền đầu ca** (xác nhận số tiền nhận bàn giao).
-
-> 💰 Đây là bước **minh bạch tài chính** — phải đếm & ký nhận, không bỏ qua.
-
-## 5. Bước 5 — Kiểm tra vật dụng
-
-Đảm bảo đủ:
-- Vé, thẻ thành viên
-- Vớ, túi
-- Hoá đơn, bút, dây đeo thẻ
-
-## 6. Bước 6 — Kiểm tra khu vực gửi đồ / locker
-
-- Khu gửi đồ & **tủ locker** sạch sẽ.
-- **Đủ chìa khoá** locker.
-
-## 7. Bước 7 — Cập nhật thông báo & khuyến mãi
-
-- Cập nhật **bảng thông báo**.
-- Cập nhật **chương trình khuyến mãi trong ngày**.
-
-## 8. Bước 8 — Sẵn sàng đón khách
-
-- Kiểm tra tổng thể lần cuối → **quầy sẵn sàng đón khách.**
+1. Ở giao diện màn hình CUKCUK, **góc trái phía trên** có phần mềm **" CUKCUK Máy chủ "** → **bấm vào biểu tượng này**.
+2. Sau khi bấm, giao diện **máy chủ** sẽ mở ra.
+3. Bước tiếp theo, trên màn hình bấm chọn **" CUKCUK Bán Hàng "** để đăng nhập vào hệ thống.
+4. Nhân viên **đăng nhập bằng tài khoản được cấp** — và **phải đăng xuất khi hết ca** ra về.
+5. Sau khi đăng nhập thành công, màn hình xuất hiện **giao diện làm việc chính**.
 
 ---
 
-## 9. Checklist đầu ca (Ghi nhớ nhanh)
+## 2. Bàn giao, ghi nhận tiền float đầu ca  *(Áp dụng chi nhánh Thiso)*
 
-☐ Vệ sinh quầy & thiết bị
-☐ Bật: máy tính, máy in hoá đơn, máy in thẻ, máy quẹt thẻ, đèn, điều hoà
-☐ Đăng nhập: CukCuk, phần mềm thẻ, Zalo OA, camera
-☐ Đếm tiền lẻ + **ký nhận tiền đầu ca**
-☐ Đủ vật dụng: vé, thẻ, vớ, túi, hoá đơn, bút, dây đeo
-☐ Locker sạch + đủ chìa khoá
-☐ Cập nhật thông báo & khuyến mãi
-☐ **Sẵn sàng đón khách**
+- Nhân viên **đếm tiền float mỗi sáng** bằng **hệ thống đếm tiền** đã được setup sẵn.
+- **Điền vào sổ bàn giao** số tiền float nhận được, và để lại vào **hộc tiền máy POS bán hàng**.
+- Để tiền float vào máy POS bán hàng, rồi **chụp hình báo cáo** chung với các hình báo cáo mở ca khác.
 
 ---
-*Bản trích xuất phục vụ tạo nội dung đào tạo (script + hình ảnh minh hoạ). Giữ nguyên thuật ngữ gốc tiếng Việt.*
+
+## 3. Chụp hình báo cáo  *(Áp dụng chi nhánh Thiso)*
+
+Các khu vực sau đều phải được **MỞ máy, MỞ điện** và **chụp hình báo cáo gửi lên group** xác nhận:
+
+| Khu vực | Hạng mục phải mở & chụp |
+| --- | --- |
+| **Info** | TV · máy POS bán hàng (in-out) · két sắt · **tiền mặt sẵn sàng** trong máy bán hàng |
+| **Market** | TV · **máy trứng** · **dây đèn LED wappen** |
+| **Omi** | TV (... và các thiết bị khu Omi) |
+
+---
+
+## 4. Checklist mở ca (Ghi nhớ nhanh)
+
+☐ Mở **CUKCUK Máy chủ** → **CUKCUK Bán Hàng** → đăng nhập tài khoản được cấp
+☐ Đếm **tiền float** (máy đếm tiền) → ghi **sổ bàn giao** → để vào hộc POS *(Thiso)*
+☐ MỞ máy/điện & **chụp báo cáo** lên group: Info (TV, POS in-out, két sắt, tiền mặt) · Market (TV, máy trứng, LED wappen) · Omi (TV) *(Thiso)*
+
+> ⚠️ Tài liệu gốc tập trung vào 3 nội dung trên (chủ yếu chi nhánh Thiso). Các thao tác đón khách/bán vé xem SOP **CHECK IN**.
+
+---
+*Bản trích xuất phục vụ tạo nội dung đào tạo (script + hình ảnh minh hoạ). Giữ nguyên thuật ngữ gốc.*

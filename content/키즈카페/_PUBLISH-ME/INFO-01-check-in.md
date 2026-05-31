@@ -1,97 +1,80 @@
-# SOP - INFO - QUY TRÌNH CHECK IN / ĐÓN KHÁCH
+# SOP - INFO - QUY TRÌNH CHECK IN / ĐÓN KHÁCH (CUSTOMER CHECK IN)
 
-> Nguồn: Google Drive gốc (Kiwooza) — `SOP- INFO - QUY TRÌNH CHECK IN - ĐÓN KHÁCH.docx`.
-> Bản trích xuất toàn văn + diễn giải chi tiết để đưa vào hệ thống đào tạo (script + hình minh hoạ).
-> Bộ phận: **INFO** · Người phụ trách: **Nhân viên Info**
-
----
-
-## 0. Tổng quan & Mục đích
-
-Check-in là **ấn tượng đầu tiên** của khách với Kiwooza. Một quy trình đón khách chuẩn giúp:
-- Khách cảm thấy được chào đón, ấm áp ngay từ giây đầu tiên.
-- Bán đúng vé / combo phù hợp nhu cầu → tăng doanh thu & sự hài lòng.
-- Đảm bảo an toàn: đúng khu vực theo độ tuổi, đủ vớ, gửi đồ cá nhân gọn gàng.
-
-**Nguyên tắc vàng:** *Luôn nở nụ cười — chủ động hỏi — phục vụ chu đáo từng khách.*
+> Nguồn gốc: `SOP- INFO - QUY TRÌNH CHECK IN - ĐÓN KHÁCH.docx` — Kiwooza SSMC / Kiwooza Thiso · Department: Information · Created by: Kus · Updated 15/05/2026.
+> Bản trích xuất TOÀN VĂN (giữ nguyên giá, kịch bản VN+EN) để tạo nội dung đào tạo.
 
 ---
 
-## 1. Bước 1 — Đón tiếp & chào khách
+## 0. Objective (Mục tiêu)
 
-- Khi khách bước tới quầy, **nở nụ cười thân thiện**, giao tiếp bằng ánh mắt.
-- Câu chào chuẩn:
-  > **"Kiwooza xin chào quý khách!"**
-- Chủ động hỏi 2 câu để phân loại khách:
-  1. *"Anh/chị đã từng đến Kiwooza chưa ạ?"*
-  2. *"Anh/chị đã có thẻ thành viên chưa ạ?"*
-
-➡️ Hai câu hỏi này quyết định khách đi nhánh **CHƯA có thẻ** hay **ĐÃ có thẻ** ở Bước 2.
+- Đảm bảo cung cấp ĐỦ thông tin: **giá vé, phí overtime, vớ chống trượt, tất cả dịch vụ** trong trung tâm.
+- Giới thiệu **nội quy** trung tâm và những điều khách cần tuân theo.
 
 ---
 
-## 2. Bước 2 — Kiểm tra & Tư vấn
+## 1. Introduce — Chào khách lần đầu đến (First-time Visitor)
 
-### Nhánh A — Khách CHƯA có thẻ
-- Tư vấn **làm thẻ thành viên (MIỄN PHÍ)**.
-- **Nhập thông tin khách hàng vào hệ thống** (tên, SĐT, thông tin bé...).
-- Giới thiệu lợi ích thẻ thành viên (tích buổi, ưu đãi...).
+- **VN:** *"Kiwooza xin chào! Em xin giới thiệu qua về trung tâm mình ạ."*
+- **EN:** *"Hi! Welcome to Kiwooza. Let me quickly introduce our center."*
 
-### Nhánh B — Khách ĐÃ có thẻ
-- **Kiểm tra thông tin thẻ** trên hệ thống.
-- Báo khách **số buổi còn lại** trong thẻ.
+### Nội dung cần giới thiệu
 
-### Cả hai nhánh — Tư vấn vé
-- Tư vấn **các gói vé / combo phù hợp** với nhu cầu (số bé, thời gian chơi, có người lớn đi kèm...).
+**① Vé trẻ em**
+- **VN:** *"Giá vé trẻ em là **150.000 đồng/vé** chơi không giới hạn (vé trong tuần, áp dụng **thứ 2 → thứ 5**) và **250.000 đồng/vé** chơi không giới hạn (vé cuối tuần, áp dụng **thứ 6 → chủ nhật**)."*
+- **EN:** *"The ticket for kids is **150,000 VND/unlimited** (weekday, Mon–Thu) and **250,000 VND/unlimited** (weekend, Fri–Sun)."*
 
----
+**② Vớ chống trượt (non-slip socks)**
+- **VN:** *"Bé cần mang vớ chống trượt để chơi. Nếu nhà mình đã có thì dùng luôn ạ, nếu chưa có thì mình mua thêm với giá **50.000/đôi**."*
+- **EN:** *"Kids must wear non-slip socks. If you already have a pair, feel free to wear them. If not, you can buy one for **50,000 VND**."*
 
-## 3. Bước 3 — Làm thẻ / Bán vé
-
-1. Hướng dẫn khách **quét mã QR** hoặc **điền form thông tin**.
-2. **Thu tiền** theo gói khách chọn.
-3. **Xuất vé** và **giao thẻ** cho khách.
-4. **Hướng dẫn cách sử dụng thẻ** và **quy định giờ chơi**.
-
-> ⚠️ Luôn xác nhận lại số tiền & gói vé với khách trước khi thu tiền, tránh nhầm lẫn.
+**③ Vé người lớn**
+- **VN:** *"Vé người lớn sẽ được tính theo món gọi tại chỗ, đến khi ra về mình chỉ cần thanh toán phần đã dùng + vé chơi của bé thôi ạ."*
+- **EN:** *"Adults just order food or drinks on site. At checkout, you'll only pay for the kid's playtime and what you've ordered."*
 
 ---
 
-## 4. Bước 4 — Hướng dẫn vào khu vui chơi
+## 2. Khi khách đồng ý sử dụng dịch vụ (Customer agrees to enter) — mục 1.1
 
-- Hướng dẫn khách **gửi giày dép & đồ dùng cá nhân** (locker / khu gửi đồ).
-- **Nhắc khách mang vớ.** Nếu bé chưa có vớ → **bán vớ** cho khách (quy định an toàn & vệ sinh).
-- Hướng dẫn **khu vực chơi phù hợp với độ tuổi của bé** (an toàn theo nhóm tuổi).
+- **Lấy thông tin:** *"Cho em xin tên và số điện thoại để đăng ký ạ."* / *"May I have your name and phone number?"*
+- **Đăng ký hộ nếu khách chưa từng đến:** *"Nếu trước giờ mình chưa đến Kiwooza, em sẽ hỗ trợ đăng ký luôn ạ."*
+- **Xác nhận số lượng và vớ:** *"Mình đi mấy người lớn, mấy bé? Bé nhà mình đã có vớ chống trượt chưa ạ?"*
 
----
+## 3. Giao thẻ bàn – vòng tay (Give table number, bracelet) — mục 1.2
 
-## 5. Lưu ý quan trọng (Thái độ & Xử lý)
-
-- Luôn giữ thái độ **niềm nở, kiên nhẫn** — kể cả khi khách hỏi nhiều.
-- **Giờ cao điểm / khách đông:** sắp xếp **thứ tự**, tránh chen lấn, vẫn giữ bình tĩnh.
-- Đảm bảo **mỗi khách đều được phục vụ chu đáo**, không bỏ sót.
+- **Giao vé:** *"Đây là vòng tay và số thẻ bàn của mình ạ. Bàn mình có tổng cộng số người lớn, bé, số lượng vớ,... em ghi đầy đủ ở đây."*
+- **Hướng dẫn vào bàn:** *"Em mời mình vào bàn, bé mình sẽ đeo vòng tay để chơi nhé!"*
 
 ---
 
-## 6. Tình huống thường gặp
+## 4. Tạo bàn cho khách hàng (Create customer table — trên hệ thống)
 
-| Tình huống | Cách xử lý |
+1. **a.** Click **" + "** để tạo bàn (create table)
+2. **b.** Click **số bàn** cho khớp (match table number)
+3. **c.** Chọn **playtime ticket item** (mục vé giờ chơi)
+4. **d.** Điền **số lượng khách** (fill amount of guest)
+5. **e.** Click **" Save check "** để lưu bàn
+6. **g.** Điền **thông tin khách hàng** (số điện thoại, tên) trên hệ thống
+7. **h.** **Giao số bàn** cho khách (give number table to customer)
+
+---
+
+## 5. Bracelets — Màu vòng tay (QUAN TRỌNG)
+
+| Loại khách | Màu vòng tay |
 | --- | --- |
-| Khách quên/mất thẻ | Tra cứu bằng SĐT trên hệ thống, xác minh thông tin |
-| Bé không mang vớ | Giải thích quy định an toàn → bán vớ |
-| Khách phân vân chọn gói | Hỏi nhu cầu (số bé, thời gian) → gợi ý combo phù hợp |
-| Đông khách cùng lúc | Giữ thứ tự, chào "Xin anh/chị chờ một chút ạ", xử lý lần lượt |
+| Khách thường (Normal) | 🟡 **Vàng (Yellow)** |
+| Khách sinh nhật, School trip,... | 🔵 **Xanh (Blue)** |
 
 ---
 
-## 7. Tóm tắt nhanh (Ghi nhớ)
+## 6. NOTE — Lưu ý bắt buộc với Cashier
 
-1. **Chào:** "Kiwooza xin chào quý khách!" + nụ cười.
-2. **Hỏi:** Đã đến chưa? Có thẻ chưa?
-3. **Chưa có thẻ** → làm thẻ miễn phí + nhập hệ thống. **Có thẻ** → kiểm tra số buổi.
-4. Tư vấn gói vé/combo → quét QR/điền form → thu tiền → xuất vé/giao thẻ.
-5. Hướng dẫn gửi đồ, **mang vớ**, vào **khu vực đúng độ tuổi**.
-6. Luôn niềm nở, kiên nhẫn, phục vụ chu đáo từng khách.
+- Cashier **luôn thân thiện và mỉm cười** (always be friendly and smile).
+- Cashier **luôn giới thiệu mọi promotion / discount / event** của trung tâm cho khách vào.
+- Cashier **phải kiểm tra entrance ticket** gồm: **Adult, Kid, Playing time, Sock,...** TRƯỚC khi giao cho khách.
+- **Nhắc khách cởi giày và mang dép (slipper).**
+- **Luôn đeo vòng tay cho bé** (wear bracelet for kid always).
+- Khi khách đã có số bàn → **Hostess sẽ hướng dẫn khách vào bàn**.
 
 ---
-*Bản trích xuất phục vụ tạo nội dung đào tạo (script + hình ảnh minh hoạ). Giữ nguyên thuật ngữ gốc tiếng Việt.*
+*Bản trích xuất phục vụ tạo nội dung đào tạo (script + hình ảnh minh hoạ). Giữ nguyên thuật ngữ gốc & con số.*
