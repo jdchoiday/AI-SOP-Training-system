@@ -72,15 +72,15 @@
 | D10 | SOP-INFO-LÀM BÁO CÁO DOANH THU (매출보고) | `1_Lfagi_l6XELaQ2RNHmEjrpeccz3vA0C` | 🟢 발행 `1FQpyel0C2yXneyX4lPvwPvbYY_AX6nx6S53eEt-7kV4` · src `content/키즈카페/_PUBLISH-ME/INFO-06-daily-revenue-report.md` |
 | D11 | SOP-INFO-Thanh toán mới cho Cashier 2025 | `1A4f8qmsAwleFsd7rgYc83KlS4SepzRrD` | 🟢 발행 `1gZvtDOUcAWuhBY064tHTsKWa3rpyQofdA2N69yZl3P0` · src `content/키즈카페/_PUBLISH-ME/INFO-11-cashier-rules-2025.md` |
 | D12 | SOP-INFO-Xuất hoá đơn VAT | `1buIS-_3vVjRYV1zZrgwBVIY9cGtxw7wJX5ELxdWeYUQ` | 🟢 발행 `1r8Rn_h1SJd1OeSNkz7JJ9biKxU_FPhZAOKKBysPKA_Q` · src `content/키즈카페/_PUBLISH-ME/INFO-12-vat-invoice.md` |
-| D13 | SOP-INFO-Đóng gói bill gửi Cơ quan thuế | `1QrATZHxNbHC09H8ncmNFSAlHcsS6UxBj9H5XldEJgNM` | ⬜ |
-| D14 | SOP-INFO-15 LOST AND FOUND REGISTER | `1Na05K5p3yYsk15QfUdtAPz8fpPZblnJw7iDgaBXFnF4` | ⬜ |
-| D15 | THISO-CHECKIN-OUT CHI NHÁNH KIWOOZA THISO | `1PdjhuJd9X5j3fS6tST4l2J8OJodnzBu1mrGdnySAAJM` | ⬜ |
-| D16 | THISO-ĐĂNG KÝ XNH-THI CÔNG HỆ THỐNG ONLINE | `1-lGPNUTWqa9DU0yrzPpBNzNfs_1F4dOT-hCmPdG3k3Q` | ⬜ |
-| D17 | SOP-TẮT/MỞ HỆ THỐNG ĐIỆN CHI NHÁNH THISO | `1gCgcfGdlrmnATY9oYJvWa_Wcj05BKnvOu45IR16b2vY` | ⬜ |
-| D18 | THISO-BÁO CÁO HÌNH ẢNH ĐÓNG CA | `1kWDswk9ektRJZTXWjUzgbWZQ_JrbyluimCyJ56WWBOI` | ⬜ |
-| D19 | 2025-SOP-CASHIER-NHẬP DATA KHÁCH HÀNG | `1rHaP5tnpwueUJfKMOGRiIqIUH0GUkJ9vPxl9-YyTC98` | ⬜ |
-| D20 | 2025 SOP-CRM-Zalo OA | `1iHN8n0dPKb2pVIVGij0JOOlClWtmqO0kfFm2poNNrsI` | ⬜ |
-| D21 | 2025 SOP-CRM-Misa Lomas | `1Ywf6I6xO0YEfCktdqBZJX51NlJAepydstgt2917wH7k` | ⬜ |
+| D13 | SOP-INFO-Đóng gói bill gửi Cơ quan thuế | `1QrATZHxNbHC09H8ncmNFSAlHcsS6UxBj9H5XldEJgNM` | 🟨 src `content/키즈카페/_PUBLISH-ME/INFO-13-tax-bill-packaging.md` · ⚠️Drive발행 미확정(도구오류, 재시도필요) |
+| D14 | SOP-INFO-15 LOST AND FOUND REGISTER | `1Na05K5p3yYsk15QfUdtAPz8fpPZblnJw7iDgaBXFnF4` | 🟨 src `content/키즈카페/_PUBLISH-ME/INFO-14-lost-and-found.md` · ⚠️Drive발행 미확정(도구오류, 재시도필요) |
+| D15 | THISO-CHECKIN-OUT CHI NHÁNH KIWOOZA THISO | `1PdjhuJd9X5j3fS6tST4l2J8OJodnzBu1mrGdnySAAJM` | 🟨 src `content/키즈카페/_PUBLISH-ME/INFO-15-thiso-checkin-out.md` · ⚠️Drive발행 미확정(도구오류, 재시도필요) |
+| D16 | THISO-ĐĂNG KÝ XNH-THI CÔNG HỆ THỐNG ONLINE | `1-lGPNUTWqa9DU0yrzPpBNzNfs_1F4dOT-hCmPdG3k3Q` | 🟨 src `content/키즈카페/_PUBLISH-ME/INFO-16-thiso-online-registration.md` · ⚠️Drive발행 미확정(도구오류, 재시도필요) |
+| D17 | SOP-TẮT/MỞ HỆ THỐNG ĐIỆN CHI NHÁNH THISO | `1gCgcfGdlrmnATY9oYJvWa_Wcj05BKnvOu45IR16b2vY` | 🟨 src `content/키즈카페/_PUBLISH-ME/INFO-17-thiso-electrical.md` · ⚠️Drive발행 미확정(도구오류, 재시도필요) |
+| D18 | THISO-BÁO CÁO HÌNH ẢNH ĐÓNG CA | `1kWDswk9ektRJZTXWjUzgbWZQ_JrbyluimCyJ56WWBOI` | 🟨 src `content/키즈카페/_PUBLISH-ME/INFO-18-thiso-closing-photo-report.md` · ⚠️Drive발행 미확정(도구오류, 재시도필요) |
+| D19 | 2025-SOP-CASHIER-NHẬP DATA KHÁCH HÀNG | `1rHaP5tnpwueUJfKMOGRiIqIUH0GUkJ9vPxl9-YyTC98` | 🟨 src `content/키즈카페/_PUBLISH-ME/INFO-19-cashier-customer-data.md` (원문=YouTube 링크) · ⚠️Drive발행 미확정 |
+| D20 | 2025 SOP-CRM-Zalo OA | `1iHN8n0dPKb2pVIVGij0JOOlClWtmqO0kfFm2poNNrsI` | 🟨 src `content/키즈카페/_PUBLISH-ME/INFO-20-crm-zalo-oa.md` (원문 제목=Zalo OA지만 내용=Misa편집 7단계) · ⚠️Drive발행 미확정 |
+| D21 | 2025 SOP-CRM-Misa Lomas | `1Ywf6I6xO0YEfCktdqBZJX51NlJAepydstgt2917wH7k` | 🟨 src `content/키즈카페/_PUBLISH-ME/INFO-21-crm-misa-lomas.md` (원문=도움말 링크) · ⚠️Drive발행 미확정 |
 
 ### E. BAR / OMI CAFE (KBBQ 테넌트, 영문 SOP)
 폴더: `10UxiQ898Tk2ZKj8JM1ZBnDTVONyY6mpl` (+ 주방 `1zmZPWp1…`, 구매 `19D7Sdtex…`)
