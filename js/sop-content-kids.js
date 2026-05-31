@@ -449,6 +449,15 @@ const KIDS_SOP_CONTENT = [
 
 <p><strong>⚠️ 핵심:</strong> 아이들은 뭐든 입에 넣습니다. 위생은 아이 건강에 직결됩니다.</p>`,
 
+    script: [
+      { scene: 1, narration: '위생 관리를 배우겠습니다. 아이들은 뭐든 입에 넣기 때문에 위생은 아이 건강과 직결됩니다.', narration_en: 'Let\'s learn hygiene management. Children put everything in their mouths, so hygiene directly affects their health.', narration_vn: 'Chúng ta sẽ học quản lý vệ sinh. Trẻ hay cho mọi thứ vào miệng nên vệ sinh ảnh hưởng trực tiếp đến sức khỏe của trẻ.', visual: '타이틀', visual_vn: 'Tiêu đề' },
+      { scene: 2, narration: '개인 위생: 손은 비누로 최소 20초 씻고, 기침은 팔꿈치 안쪽으로 가립니다. 아프면 출근하지 말고 매니저에게 연락하세요.', narration_en: 'Personal hygiene: wash hands with soap for at least 20 seconds, cover coughs with your elbow. If sick, do not come to work and contact your manager.', narration_vn: 'Vệ sinh cá nhân: rửa tay bằng xà phòng ít nhất 20 giây, che ho bằng khuỷu tay. Nếu bệnh, đừng đi làm và liên hệ quản lý.', visual: '손 씻기', visual_vn: 'Rửa tay' },
+      { scene: 3, narration: '놀이공간 위생: 놀이기구 표면은 2시간마다 소독하고, 볼풀은 매일 이물질을 제거하며 주 1회 세척과 자외선 소독을 합니다.', narration_en: 'Play area hygiene: disinfect equipment surfaces every 2 hours; remove debris from the ball pit daily and wash with UV sterilization weekly.', narration_vn: 'Vệ sinh khu vui chơi: khử trùng bề mặt thiết bị mỗi 2 giờ; loại vật lạ ở hồ bóng hàng ngày, rửa và khử trùng UV mỗi tuần một lần.', visual: '놀이공간 소독', visual_vn: 'Khử trùng khu chơi' },
+      { scene: 4, narration: '식음료 위생: 식품 취급 전 손을 씻고 위생장갑을 착용합니다. 냉장은 0~5도, 냉동은 영하 18도 이하로 보관하고 날것과 조리식품의 도마와 칼을 분리합니다.', narration_en: 'Food hygiene: wash hands and wear gloves before handling food. Refrigerate at 0–5°C, freeze below –18°C, and separate cutting boards and knives for raw and cooked food.', narration_vn: 'Vệ sinh thực phẩm: rửa tay và đeo găng trước khi xử lý thực phẩm. Bảo quản lạnh 0–5°C, đông dưới –18°C, tách thớt và dao cho đồ sống và đồ chín.', visual: '식품 보관', visual_vn: 'Bảo quản thực phẩm' },
+      { scene: 5, narration: '전염병 예방: 아이가 구토하거나 설사하면 해당 구역을 즉시 폐쇄하고 전문 소독합니다. 수족구병 등이 의심되면 매니저에게 보고하고 보호자에게 안내합니다.', narration_en: 'Disease prevention: if a child vomits or has diarrhea, close the area immediately and disinfect professionally. If hand-foot-mouth disease is suspected, report to the manager and inform guardians.', narration_vn: 'Phòng bệnh: nếu trẻ nôn hoặc tiêu chảy, đóng khu vực ngay và khử trùng chuyên dụng. Nghi bệnh tay chân miệng thì báo quản lý và thông báo phụ huynh.', visual: '전염병 대응', visual_vn: 'Ứng phó dịch bệnh' },
+      { scene: 6, narration: '입구, 놀이공간, 화장실에 손 소독제가 비치되어 있는지 확인하세요. 위생은 우리 매장의 신뢰입니다.', narration_en: 'Check that hand sanitizer is available at the entrance, play area, and restrooms. Hygiene is the trust of our store.', narration_vn: 'Kiểm tra dung dịch sát khuẩn ở cổng, khu chơi và nhà vệ sinh. Vệ sinh là niềm tin của cửa hàng chúng ta.', visual: '마무리', visual_vn: 'Kết thúc' },
+    ],
+
     content_vn: `<h3>1. Vệ sinh cá nhân</h3>
 <ol>
 <li>Rửa tay: xà phòng ít nhất 20 giây, thường xuyên (sau WC, sau dọn dẹp, trước/sau xử lý thực phẩm)</li>

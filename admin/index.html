@@ -2594,7 +2594,7 @@
 
           try {
             // 1) 대본 (2-pass, 언어 자동감지)
-            const { scenes, plan } = await AI.createVideoScript(sop.title, sop.content);
+            const { scenes, plan } = await AI.createVideoScript(sop.title, sop.content, sop);
             liveSops[idx].script = scenes;
             if (plan) {
               liveSops[idx].videoPlan = {
@@ -4159,7 +4159,7 @@ ${text.slice(0, 3000)}`;
 
           let result;
           try {
-            result = await AI.createVideoScript(sop.title, sop.content);
+            result = await AI.createVideoScript(sop.title, sop.content, sop);
           } catch (aiErr) {
             hideLoading();
             // viable=false면 사용자에게 명시적 안내
