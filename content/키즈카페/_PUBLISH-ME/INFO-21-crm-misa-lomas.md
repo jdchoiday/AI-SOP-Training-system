@@ -1,34 +1,20 @@
-# SOP - CRM - MISA LOMAS (Sử dụng phần mềm Misa Lomas) — 2025
+# SOP - CRM - MISA LOMAS (2025)
 
 > Nguồn gốc: `2025 SOP - CRM - Misa Lomas` — Owner: wind@kiwooza.com.
 > Bản trích xuất TOÀN VĂN. KHÔNG sửa file gốc.
 
-> Mục đích: Sử dụng phần mềm **Misa Lomas** để quản lý thông tin và chăm sóc khách hàng.
+> ⚠️ **Lưu ý về tài liệu gốc:** Phần văn bản của tài liệu này **chỉ chứa một liên kết trang trợ giúp** (không có nội dung từng bước trong văn bản). Các bước thao tác Misa Lomas thực tế nằm ở SOP **INFO-20** (tài liệu "Zalo OA").
 
 ---
 
-## 1. Đăng nhập Misa Lomas
-- Truy cập phần mềm bằng **tài khoản được cấp**.
-- **Kiểm tra dữ liệu khách hàng**.
+## Nội dung gốc
 
-## 2. Nhập / cập nhật thông tin khách
-- **Nhập thông tin khách hàng mới**.
-- **Cập nhật** thông tin khi có thay đổi.
-- **Kiểm tra trùng lặp** trước khi tạo mới.
-
-## 3. Phân loại & chăm sóc khách
-- **Phân loại khách theo nhóm** (khách mới, khách thân thiết, khách VIP).
-- **Lên lịch chăm sóc** theo nhóm.
-- **Ghi nhận lịch sử tương tác**.
-
-## 4. Báo cáo
-- **Xuất báo cáo** theo yêu cầu.
-- **Theo dõi chỉ số** chăm sóc khách hàng.
+📄 **TỔNG HỢP BÀI VIẾT VÀ VIDEO HƯỚNG DẪN MISA LOMAS:**
+https://lomashelp.misa.vn/
 
 ---
 
-## ⚠️ LƯU Ý
-**Dữ liệu khách hàng phải chính xác và được bảo mật. Tuân thủ quy định về bảo vệ dữ liệu cá nhân.**
+> 👉 Để đào tạo thao tác chỉnh sửa/quản lý KH trên Misa Lomas, dùng **INFO-20** (7 bước: CukCuk → tab Misa Lomas → Danh sách KH → tìm → sửa → lưu) và tham khảo trang trợ giúp chính thức ở trên.
 
 ---
-*Bản trích xuất phục vụ tạo nội dung đào tạo. Giữ nguyên thuật ngữ gốc.*
+*Bản trích xuất phục vụ tạo nội dung đào tạo. Tài liệu gốc dạng liên kết trợ giúp.*

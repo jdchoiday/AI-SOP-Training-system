@@ -1,32 +1,23 @@
-# SOP - CRM - ZALO OA (Chăm sóc khách hàng qua Zalo OA) — 2025
+# SOP - CRM - (Zalo OA) — CHỈNH SỬA THÔNG TIN KH TRÊN MISA LOMAS (2025)
 
 > Nguồn gốc: `2025 SOP - CRM - Zalo OA` — Owner: wind@kiwooza.com.
 > Bản trích xuất TOÀN VĂN. KHÔNG sửa file gốc.
 
-> Mục đích: Sử dụng **Zalo Official Account** để chăm sóc khách hàng, gửi thông báo và xử lý tin nhắn.
+> ⚠️ **Lưu ý về tài liệu gốc:** Tài liệu được đặt tên **"Zalo OA"** nhưng **nội dung văn bản thực tế là các bước chỉnh sửa thông tin khách hàng trên MISA LOMAS** (truy cập từ CukCuk). Giữ nguyên theo bản gốc; cần quản lý xác nhận tên/nội dung.
 
 ---
 
-## 1. Đăng nhập Zalo OA
-- Truy cập Zalo OA bằng **tài khoản được cấp**.
-- **Kiểm tra tin nhắn mới đầu ca**.
-
-## 2. Xử lý tin nhắn khách hàng
-- **Trả lời tin nhắn trong vòng 5–10 phút** (giờ làm việc).
-- Dùng câu chào chuẩn: *"Kiwooza xin chào, em có thể hỗ trợ gì cho mình ạ?"*
-- Trả lời **đúng, đủ** thông tin khách hỏi (giá vé, giờ mở cửa, dịch vụ).
-- Nếu không trả lời được: **chuyển quản lý**.
-
-## 3. Gửi thông báo / tin nhắn hàng loạt
-- Soạn nội dung **theo mẫu được duyệt**.
-- Gửi **đúng tệp khách hàng mục tiêu**.
-- **Thời gian gửi phù hợp** (không gửi quá khuya).
-
-## 4. Lưu ý
-- Luôn giữ thái độ **lịch sự, chuyên nghiệp**.
-- **Không spam** tin nhắn.
-- **Không tiết lộ thông tin nội bộ**.
-- **Lưu lại các phản hồi quan trọng** của khách.
+## Các bước (theo bản gốc)
+- **Bước 1:** MỞ **CUKCUK** → CHỌN **TAB MISA LOMAS**.
+- **Bước 2:** Ở MISA LOMAS → CHỌN **KH** → CHỌN **DANH SÁCH KH**.
+- **Bước 3:** Ở DANH SÁCH KH → BẤM **ICON 3 GẠCH**.
+- **Bước 4:** **TÌM KH** bằng **SĐT / EMAIL / TÊN, …**
+  - *Có nhiều trường hợp data lỗi/miss → vui lòng đối chiếu ở CẢ CukCuk và Lomas bằng cách search tên/SĐT.*
+- **Bước 5:** **CLICK VÀO TÊN KH** để EDIT.
+- **Bước 6:** **CLICK SỬA**.
+- **Bước 7:** **UPDATE ĐẦY ĐỦ THÔNG TIN** → **LƯU LẠI** → DONE.
+  - *Ô GHI CHÚ: dành cho KH có **từ 2 bé trở lên**.*
+  - *Bổ sung thông tin ở ô ghi chú đúng **FORMAT (DD/MM/YY)**.*
 
 ---
-*Bản trích xuất phục vụ tạo nội dung đào tạo. Giữ nguyên thuật ngữ gốc.*
+*Bản trích xuất phục vụ tạo nội dung đào tạo. Giữ nguyên thao tác & format gốc.*

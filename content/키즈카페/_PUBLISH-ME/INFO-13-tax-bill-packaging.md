@@ -1,25 +1,23 @@
-# SOP - INFO - ĐÓNG GÓI BILL GỬI CƠ QUAN THUẾ
+# SOP - INFO - ĐÓNG GÓI BILL GỬI CƠ QUAN THUẾ (Phát hành & gửi HĐ điện tử đến CQT)
 
 > Nguồn gốc: `SOP - INFO - Đóng gói bill gửi Cơ quan thuế` — Department: Information · Owner: wind@kiwooza.com.
-> Bản trích xuất TOÀN VĂN. KHÔNG sửa file gốc.
+> Bản trích xuất TOÀN VĂN (giữ nguyên các nút thao tác). KHÔNG sửa file gốc. (Tài liệu gốc có hình minh hoạ từng bước.)
+
+> Đây là quy trình **phát hành hoá đơn điện tử & gửi dữ liệu máy tính tiền (MTT) đến Cơ quan thuế (CQT)** — KHÔNG phải đóng gói bill giấy.
 
 ---
 
-## Quy trình đóng gói bill
+## Quy trình các bước
 
-1. **Cuối ngày**, nhân viên **in toàn bộ bill trong ngày** (bill bán hàng đã thanh toán).
-2. **Sắp xếp bill theo thứ tự thời gian** từ sáng đến tối.
-3. **Phân loại bill theo phương thức thanh toán:** Tiền mặt / Chuyển khoản / Quẹt thẻ.
-4. Đối với bill **chuyển khoản và quẹt thẻ:** đính kèm **biên lai tương ứng**.
-5. **Kiểm tra tổng số tiền** của bill **khớp với doanh thu** trên hệ thống CukCuk.
-6. Cho toàn bộ bill vào **bao thư / túi đựng theo ngày**.
-7. **Ghi rõ bên ngoài:** Ngày / Tổng doanh thu / Số lượng bill.
-8. **Lưu trữ vào tủ hồ sơ** theo thứ tự ngày để gửi cơ quan thuế.
-
----
-
-## ⚠️ LƯU Ý
-**Không được làm thất lạc bill.** Bill là **chứng từ pháp lý quan trọng**.
+- **Bước 1:** Bấm vào thẻ trang **"List VAT"** trong thư mục **"Đóng gói bill"** trên thanh dấu trang (bookmark).
+  *(Hình ảnh sau khi truy cập trang "List VAT".)*
+- **Bước 2:** **Điền Email** cho tất cả bill chưa có.
+- **Bước 3:** **Tick tất cả các ô** và chọn **"Phát hành"**.
+- **Bước 4:** Chọn **"Phát hành"** (xác nhận).
+- **Bước 5:** Bấm vào thẻ trang **"Đóng gói Bill"** trong thư mục "Đóng gói bill". Chọn **"Hóa đơn"** → chọn **"HĐ từ máy tính tiền"**.
+- **Bước 6:** Bấm **"Gửi dữ liệu MTT đến CQT"**.
+- **Bước 7:** Chọn **"Gửi"** sau đó chọn **"OK"**.
+- **Bước 8:** **Đợi** gửi dữ liệu MTT đến CQT — sau ít phút sẽ báo **"Thành công"**.
 
 ---
-*Bản trích xuất phục vụ tạo nội dung đào tạo. Giữ nguyên thuật ngữ gốc.*
+*Bản trích xuất phục vụ tạo nội dung đào tạo. Giữ nguyên thuật ngữ & nút thao tác gốc.*
