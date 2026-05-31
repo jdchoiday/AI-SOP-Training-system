@@ -31,10 +31,10 @@
 | A4 | WORKSHOP SOP - CANDLE CLASS (14섹션) | GDoc | `1XlvBgmyabBw1U8EicRDQpB1GZBlr_gZPomf_tbbbbik` | 🟢 발행 `1YZPKflDG72PFyytzXjFDB3-MkqLYT1oWP5l8meqB9PY` · src `WS-02-candle-class.md` (read 검증) |
 | A5 | WORKSHOP SOP - SETUP SLIME CHO TIỆC SINH NHẬT (14섹션) | GDoc | `1aRq1nkwLNvYLHZlf-onuKUgSoRqeAZQwk6xrD2KWuUs` | 🟢 발행 **v2** `1OPBIpgXNmafHPozgUjyvhl8y_hAUqhrK1AjSbet2DKQ` · src `WS-03-slime-class.md` ⚠️원문 5장~=양초내용(파일오류) · 구버전 `18ffduhp…`(추출오류) 폐기 |
 | A6 | Workshop - Teaching Class Manual | GDoc | `1mSPwlhpFF9mN4_wPl0xWzfwkYFlKZ24nPZwVV3buR00` | 🟢 발행 **v2** `16QF9JGX3T9ukFn2j827DeF6hnrn7dYESfPvoetj1Xo4` · src `WS-04-teaching-class.md` (Pizza예시·VN/EN) · 구버전 `1FROZf…`(부정확) 폐기 |
-| A7 | Workshop airdry clay manual | 바로가기 | `1c2RPzj-sWy2t1Gml-mTgnri93QC2krnC` | ⬜ |
-| A8 | Workshop cooking manual | 바로가기 | `1zGnyRR65fJD5pk5W2173pJJ2LwbotpH2` | ⬜ |
-| A9 | WORKSHOP SALE SCRIPT 2025 | 바로가기 | `1fFzJxVvFoGikJy_wS--Pbx7RmWx6AIRh` | ⬜ |
-| A10 | Workshop Cleaning Checklist | 바로가기 | `1jHvkFMC6yQBQKgbguiEpnKOajybKGDis` | ⬜ |
+| A7 | Workshop airdry clay manual | 바로가기 | `1c2RPzj-sWy2t1Gml-mTgnri93QC2krnC` | ⛔ 바로가기(본문 0, read=빈값) — 원본 외부링크, 발행불가 |
+| A8 | Workshop cooking manual | 바로가기 | `1zGnyRR65fJD5pk5W2173pJJ2LwbotpH2` | ⛔ 바로가기(본문 0) — 발행불가 |
+| A9 | WORKSHOP SALE SCRIPT 2025 | 바로가기 | `1fFzJxVvFoGikJy_wS--Pbx7RmWx6AIRh` | ⛔ 바로가기(본문 0) — 발행불가 |
+| A10 | Workshop Cleaning Checklist | 바로가기 | `1jHvkFMC6yQBQKgbguiEpnKOajybKGDis` | ⛔ 바로가기(본문 0) — 발행불가 |
 | A11 | WORKSHOP STAFF TRAINING 2024.pdf | 바로가기 | `16rTJjKNTZVX5K4uMFCTleodQfuJKqrNG` | ⬜ |
 | A12 | Workshop slime manual (하위폴더) | 폴더 | `1ac5giTEf6P-VJofxUgkqFCOsZrcw5Wsg` | 🔶 |
 
@@ -108,8 +108,8 @@ PLAYGROUND Manual `1eKM0if0b6G17zG7Qj0DTT3anaZslxGkp` (하위: Staff/Areas/Games
 
 | # | 제목 | fileId | 상태 |
 |---|------|--------|------|
-| F1 | Kiwooza Play Manual - Giới Thiệu Và Mục Đích (VN) | `1ZVqqLuwtKENyB8NELCwbP1e3V2QAz5rcyB8uBYpqLuI` | ⬜ |
-| F2 | Kiwooza Play Manual - Introduce And Purpose (EN) | `1lGJ86v1YfhzI8tA5ldkkJIQ32rRbNOrLo9ezkvh_PGo` | ⬜ |
+| F1 | Kiwooza Play Manual - Giới Thiệu Và Mục Đích (VN) | `1ZVqqLuwtKENyB8NELCwbP1e3V2QAz5rcyB8uBYpqLuI` | 🟨 src `PLAY-01-manual-intro-VN.md` · 발행대기(서문, 6목적) |
+| F2 | Kiwooza Play Manual - Introduce And Purpose (EN) | `1lGJ86v1YfhzI8tA5ldkkJIQ32rRbNOrLo9ezkvh_PGo` | 🟨 src `PLAY-02-manual-intro-EN.md` · 발행대기(서문, 6목적) |
 | F3 | Playground Defect Manual (폴더) | `1VSkrxs0HQxUUAQbSvWigfqx6d5VJ7kw8` | ⬜ |
 | F4 | Staff/Areas/Games Manual (하위폴더, 미열람) | `1gwZW7…/10gGHM2…/17xpejCe…` | ⬜ |
 | F5 | Kiwooza Strong Program Story + Strong Teacher Manual(EN/VN) | `11SWke4Rl8…` / `1uA9BE8sTm…` | ⬜ |
