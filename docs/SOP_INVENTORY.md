@@ -108,11 +108,11 @@ PLAYGROUND Manual `1eKM0if0b6G17zG7Qj0DTT3anaZslxGkp` (하위: Staff/Areas/Games
 
 | # | 제목 | fileId | 상태 |
 |---|------|--------|------|
-| F1 | Kiwooza Play Manual - Giới Thiệu Và Mục Đích (VN) | `1ZVqqLuwtKENyB8NELCwbP1e3V2QAz5rcyB8uBYpqLuI` | 🟨 src `PLAY-01-manual-intro-VN.md` · 발행대기(서문, 6목적) |
-| F2 | Kiwooza Play Manual - Introduce And Purpose (EN) | `1lGJ86v1YfhzI8tA5ldkkJIQ32rRbNOrLo9ezkvh_PGo` | 🟨 src `PLAY-02-manual-intro-EN.md` · 발행대기(서문, 6목적) |
-| F3 | Playground Defect Manual (폴더) | `1VSkrxs0HQxUUAQbSvWigfqx6d5VJ7kw8` | ⬜ |
-| F4 | Staff/Areas/Games Manual (하위폴더, 미열람) | `1gwZW7…/10gGHM2…/17xpejCe…` | ⬜ |
-| F5 | Kiwooza Strong Program Story + Strong Teacher Manual(EN/VN) | `11SWke4Rl8…` / `1uA9BE8sTm…` | ⬜ |
+| F1 | Kiwooza Play Manual - Giới Thiệu Và Mục Đích (VN) | `1ZVqqLuwtKENyB8NELCwbP1e3V2QAz5rcyB8uBYpqLuI` | 🟢 발행 `1fZeaoYo0Pui6a3VyONw6y1PxIwDFzTb53lcGo_EkPrI` · src `PLAY-01-manual-intro-VN.md` (서문) |
+| F2 | Kiwooza Play Manual - Introduce And Purpose (EN) | `1lGJ86v1YfhzI8tA5ldkkJIQ32rRbNOrLo9ezkvh_PGo` | 🟢 발행 `1fTaSWvQSCC3CJEuOzfZCumzUSEFjKDVWbn6SR5w4rXM` · src `PLAY-02-manual-intro-EN.md` (서문) |
+| F3 | Playground Defect Manual (폴더) | `1VSkrxs0HQxUUAQbSvWigfqx6d5VJ7kw8` | ⬜ 폴더(하위 미탐색) — 다음 세션 |
+| F4 | Staff/Areas/Games Manual (하위폴더, 미열람) | `1gwZW7…/10gGHM2…/17xpejCe…` | ⬜ 하위폴더 미탐색 — 다음 세션 |
+| F5 | Kiwooza Strong Program Story + Strong Teacher Manual(EN/VN) | `11SWke4Rl8…`(매니페스트에 ID 축약됨) | ⬜ 정확한 fileId 재탐색 필요 — 다음 세션 |
 
 ---
 
