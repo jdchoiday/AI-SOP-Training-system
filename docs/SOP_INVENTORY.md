@@ -52,7 +52,7 @@
 |---|------|------|--------|------|
 | C1 | SOP - PARTY - Cách sử dụng BEO | GDoc | `1tSqbtfnGQDWQ8vyDoFjxXcQKn7GQtpeGPqp4KloPSN8` | ✅ |
 | C2 | SOP - PARTY - Check list Tiệc | Sheet | `1eS5NvkDS5Lu85w1miRWgNIYexdWJuZTvsMilfgOVomI` | ⛔ 체크리스트 |
-| C3 | SOP - Quy trình trang trí, chuẩn bị tiệc ELIS | GDoc | `1LVRp5qI_gFQMhTV3hNrgrRg_WdknyKzqk1YKFtqX--A` | ⬜ |
+| C3 | SOP - Quy trình trang trí, chuẩn bị tiệc ELIS | GDoc | `1LVRp5qI_gFQMhTV3hNrgrRg_WdknyKzqk1YKFtqX--A` | 🟢 발행 `1NGFtsi0zfvbpx1l2wlu7soHKtABpmGw6i0ynDjgR7Gc` · src `content/키즈카페/_PUBLISH-ME/PARTY-02-elis-setup.md` |
 | C4 | PUBLISH-ME — SOP PARTY BEO (full text extract, 내가 생성) | GDoc | `1Isz4cXhw2ODl0XN1tCjfsMxEBhWw9fTXU-7h60PFl04` | ✅ 추출본 |
 
 ### D. INFO DESK / CASHIER / SERVICE (키즈카페 공통 운영)
@@ -87,21 +87,21 @@
 
 | # | 제목 | fileId | 상태 |
 |---|------|--------|------|
-| E1 | SOP-OPEN and CLOSING THE BAR | `1KawBDSGQm6yC0BdrsOXel5Y8rz8dqkr6` | ⬜ |
-| E2 | SOP-CLEANLINESS OF THE BAR | `19UeyZHCKe7FNWoygENaJkCafPV1IUNrD` | ⬜ |
-| E3 | SOP-HOW TO OPERATE MINI BAR | `1njQx_BOBSDTbji_hDjb-rFVcO2afApfzoSjTuw7a8Wg` | ⬜ |
-| E4 | SOP-INVENTORY CONTROL | `1t3vSqWWh3_wic4U3nRS5tWegO92A8BIK` | ⬜ |
-| E5 | SOP-OPEN/SERVE RED WINE | `1eXBN-PHhXKjaBkr52-UUZqf-8R7Ih3-p` | ⬜ |
-| E6 | SOP-OPEN/SERVE WHITE WINE | `1BOyMCwN82sOZSH2ZSeNerEj8GP3b8hPB` | ⬜ |
-| E7 | SOP-OPEN/SERVE SPARKLING WINE | `1xEfafzTThMMCb6hkS4GHGhWhDS0OjQE2` | ⬜ |
-| E8 | SOP-SERVING DRAFT BEER | `1LK9CsZMovGJ0YgwwaUpB2P232j2cXWPN` | ⬜ |
-| E9 | SOP-CHECKING COOLING EQUIPMENT | `1RvahRn9liRjpNtsmc4cIP9adV6t2DwFm` | ⬜ |
-| E10 | SOP-RECEIVE AND STOCK STORAGE | `1s6-S7-u5F9qwNlkzt_i-vb2xTFyYl1xt` | ⬜ |
-| E11 | SOP-SANITATION / FOOD BORNE ILLNESS | `1j8lZoQnmR4MOzsMJgmubQeZ05x9zR7JO` | ⬜ |
-| E12 | SOP-SETTING UP COFFEE MACHINE | `1RgMkMupUBMcxxKAUzgiHPS1M9tIe-Ej2` | ⬜ |
-| E13 | SOP-STOCKING REFRIGERATOR | `1F3Sql_17htejnRdz-6xoKXYyx8T4beFQ` | ⬜ |
-| E14 | SOP-CLEANLINESS OF THE KITCHEN | `1yvr-c2nxlDIao08n1Oqxyjn2Ip-JjNvf` | ⬜ |
-| E15 | SOP PURCHASING | `1CkrN9qDOc3ZSf2pKQslTvBMpjLrsuC9t` | ⬜ |
+| E1 | SOP-OPEN and CLOSING THE BAR | `1KawBDSGQm6yC0BdrsOXel5Y8rz8dqkr6` | 🟢 발행 `1g2D-rqhFq9w92wPYseu8wZiO7JGB9w6bWsno8g6B-uw` · src `BAR-01-open-close.md` |
+| E2 | SOP-CLEANLINESS OF THE BAR | `19UeyZHCKe7FNWoygENaJkCafPV1IUNrD` | 🟢 발행 `1PCL32AEi3sQg9VWngFpC0Fil2AAOmEtoMbDEVOyEc4w` · src `BAR-02-cleanliness.md` |
+| E3 | SOP-HOW TO OPERATE MINI BAR | `1njQx_BOBSDTbji_hDjb-rFVcO2afApfzoSjTuw7a8Wg` | 🟢 발행 `1v89yzt3IcHy2lRdtZxb4ZHDJYRgvi_47IPsDdzASKcg` · src `BAR-03-mini-bar.md` |
+| E4 | SOP-INVENTORY CONTROL | `1t3vSqWWh3_wic4U3nRS5tWegO92A8BIK` | 🟢 발행 `1ecSiPsmIq455_piro-vHSKXaakj322KXS55l9J1W5jM` · src `BAR-04-inventory-control.md` |
+| E5 | SOP-OPEN/SERVE RED WINE | `1eXBN-PHhXKjaBkr52-UUZqf-8R7Ih3-p` | 🟢 발행 `1v4nfzc4pV6pHpIejzjuDe6VoJRl8luhRtSboJk1RKWs` · src `BAR-05-red-wine.md` |
+| E6 | SOP-OPEN/SERVE WHITE WINE | `1BOyMCwN82sOZSH2ZSeNerEj8GP3b8hPB` | 🟢 발행 `1p37uIJR59joNvysK5cgcC05riaagXXL60gmCIlsdMqs` · src `BAR-06-white-wine.md` |
+| E7 | SOP-OPEN/SERVE SPARKLING WINE | `1xEfafzTThMMCb6hkS4GHGhWhDS0OjQE2` | 🟢 발행 `19ML_Vjn2PtmBaKOOz3wSOkkuEFQgvsJXr4hZh-jBIh0` · src `BAR-07-sparkling-wine.md` |
+| E8 | SOP-SERVING DRAFT BEER | `1LK9CsZMovGJ0YgwwaUpB2P232j2cXWPN` | 🟢 발행 `1Hw-yYCmMsCgqDL2EtF2Y7f3XLGR2RitQmLzoHcPwsOk` · src `BAR-08-draft-beer.md` |
+| E9 | SOP-CHECKING COOLING EQUIPMENT | `1RvahRn9liRjpNtsmc4cIP9adV6t2DwFm` | 🟨 src `BAR-09-cooling-equipment.md` · 발행대기 |
+| E10 | SOP-RECEIVE AND STOCK STORAGE | `1s6-S7-u5F9qwNlkzt_i-vb2xTFyYl1xt` | 🟨 src `BAR-10-receive-stock-storage.md` · 발행대기 |
+| E11 | SOP-SANITATION / FOOD BORNE ILLNESS | `1j8lZoQnmR4MOzsMJgmubQeZ05x9zR7JO` | 🟨 src `BAR-11-sanitation.md` · 발행대기 |
+| E12 | SOP-SETTING UP COFFEE MACHINE | `1RgMkMupUBMcxxKAUzgiHPS1M9tIe-Ej2` | 🟨 src `BAR-12-coffee-machine-setup.md` · 발행대기 |
+| E13 | SOP-STOCKING REFRIGERATOR | `1F3Sql_17htejnRdz-6xoKXYyx8T4beFQ` | 🟨 src `BAR-13-stocking-refrigerator.md` · 발행대기 |
+| E14 | SOP-CLEANLINESS OF THE KITCHEN | `1yvr-c2nxlDIao08n1Oqxyjn2Ip-JjNvf` | 🟨 src `BAR-14-kitchen-cleanliness.md` · 발행대기 |
+| E15 | SOP PURCHASING | `1CkrN9qDOc3ZSf2pKQslTvBMpjLrsuC9t` | 🟨 src `BAR-15-purchasing.md` · 발행대기 |
 
 ### F. PLAYGROUND / STRONG (레거시 매뉴얼 — 2차 우선순위)
 PLAYGROUND Manual `1eKM0if0b6G17zG7Qj0DTT3anaZslxGkp` (하위: Staff/Areas/Games Manual) · Strong `1uF114phltfPnvGOCGM69B6gR0f0K750A`
