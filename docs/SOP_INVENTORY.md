@@ -14,7 +14,7 @@
 
 ## 1. 부서별 SOP 목록 (훈련 대상)
 
-상태 범례: ✅ 변환완료(확인필요) · 🔶 부분/유사문서로 커버 · ⬜ 미착수 · ⛔ 훈련대상 아님
+상태 범례: ✅ 변환완료(확인필요) · 🟨 추출완료(PUBLISH-ME, 발행대기) · 🔶 부분/유사문서로 커버 · ⬜ 미착수 · ⛔ 훈련대상 아님
 
 ### A. WORKSHOP (키즈카페 / Kiwooza Workshop)
 폴더: `1ZlP_6hp0NeVqDnGEs_occHEHgGEF-m5x`
@@ -56,12 +56,12 @@
 
 | # | 제목 | fileId | 상태 |
 |---|------|--------|------|
-| D1 | SOP-INFO-QUY TRÌNH CHECK IN - ĐÓN KHÁCH | `1Hvr0NI2uDVmsNaKbYcj-QL0TNpzjxpjw` | ⬜ |
-| D2 | SOP-INFO-QUY TRÌNH MỞ QUẦY INFORMATION (오픈) | `1UCIjpDODTDUCtSyxbZAxpgvRQI3H19jy` | ⬜ |
-| D3 | SOP-INFO-QUY TRÌNH ĐÓNG QUẦY INFORMATION (마감) | `1SDZTXlKYLCJ6wCKcujQTvxVNFSvpR4Cj` | ⬜ |
+| D1 | SOP-INFO-QUY TRÌNH CHECK IN - ĐÓN KHÁCH | `1Hvr0NI2uDVmsNaKbYcj-QL0TNpzjxpjw` | 🟨 `content/키즈카페/_PUBLISH-ME/INFO-01-check-in.md` |
+| D2 | SOP-INFO-QUY TRÌNH MỞ QUẦY INFORMATION (오픈) | `1UCIjpDODTDUCtSyxbZAxpgvRQI3H19jy` | 🟨 `content/키즈카페/_PUBLISH-ME/INFO-02-open-counter.md` |
+| D3 | SOP-INFO-QUY TRÌNH ĐÓNG QUẦY INFORMATION (마감) | `1SDZTXlKYLCJ6wCKcujQTvxVNFSvpR4Cj` | 🟨 `content/키즈카페/_PUBLISH-ME/INFO-03-close-counter.md` |
 | D4 | SOP-INFO-SẮP XẾP/DỌN VỆ SINH QUẦY CASHIER | `1nSTnB5jo7sf6tnmY72xY44WnFbC94Cfu` | ⬜ |
 | D5 | SOP-INFO-ÁP DỤNG CHO HOTESS | `1b1qGS_tQvBKJa5xljBVdWV1d_6R9241I` | ⬜ |
-| D6 | SOP-INFO-QUY TRÌNH ORDER TRÊN CUKCUK | `1LwePRDC1ekTa3BAUTUn8epx0JycYHZ81` | ⬜ |
+| D6 | SOP-INFO-QUY TRÌNH ORDER TRÊN CUKCUK | `1LwePRDC1ekTa3BAUTUn8epx0JycYHZ81` | 🟨 `content/키즈카페/_PUBLISH-ME/INFO-04-cukcuk-order.md` |
 | D7 | SOP-SERVICE-NHÂN VIÊN THỰC HIỆN ORDER | `1N1_2GiFSfPwCSeEPB3TaAnQ3T-YjA8lk` | ⬜ |
 | D8 | SOP-INFO-TẠO ĐẶT CỌC TRÊN CUKCUK | `1ZJR6YXLwq8NuoKKscYyLDp-9k09jWn7d` | ⬜ |
 | D9 | SOP-INFO-Đặt cọc tiệc và cách trừ đặt cọc | `1eSlGb4klhtZWBC3weIPRsblVlcF-Mzxthkfg29B81O4` | ⬜ |
