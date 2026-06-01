@@ -423,9 +423,12 @@ const SupabaseMode = {
   async addEmployee(emp) {
     if (!this._ready) return null;
     try {
+      // 관리자 세션 토큰 전달 — 서버가 비-staff role 부여 권한을 검증한다
+      const { data: _sess } = await this._client.auth.getSession();
+      const _tok = _sess?.session?.access_token;
       const res = await fetch('/api/auth', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(_tok ? { Authorization: 'Bearer ' + _tok } : {}) },
         body: JSON.stringify({
           action: 'register',
           email: emp.email,

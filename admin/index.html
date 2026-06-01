@@ -7179,9 +7179,12 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
         let empId = 'emp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
         if (SupabaseMode._ready) {
           try {
+            // 관리자 세션 토큰 전달 — 서버가 비-staff role 부여 권한을 검증한다
+            const { data: _sess } = await SupabaseMode.client.auth.getSession();
+            const _tok = _sess?.session?.access_token;
             const res = await fetch('/api/auth', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', ...(_tok ? { Authorization: 'Bearer ' + _tok } : {}) },
               body: JSON.stringify({
                 action: 'register',
                 email, password: '1234', name,
@@ -7242,9 +7245,12 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
       }
       if (SupabaseMode._ready) {
         try {
+          // 관리자 세션 토큰 전달 — 서버가 비-staff role 부여 권한을 검증한다
+          const { data: _sess } = await SupabaseMode.client.auth.getSession();
+          const _tok = _sess?.session?.access_token;
           const res = await fetch('/api/auth', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(_tok ? { Authorization: 'Bearer ' + _tok } : {}) },
             body: JSON.stringify({
               action: 'register',
               email, password: '1234', name, branch, team, role,
