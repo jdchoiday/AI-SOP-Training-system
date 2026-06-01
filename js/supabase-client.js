@@ -270,8 +270,11 @@ const SupabaseMode = {
   async saveSop(sop) {
     if (!this._ready) return;
     try {
-      // Supabase status check constraint에 맞는 값만 허용
-      const validStatuses = ['draft', 'published', 'archived'];
+      // Supabase status check constraint 와 정확히 일치해야 함.
+      // 라이브 DB 제약은 ('draft','published') 만 허용 — 'archived' 를 보내면
+      // upsert 가 통째로 실패(check_violation)하고 SOP 가 조용히 저장 안 됨.
+      // 따라서 'archived'(및 기타값)는 'draft' 로 클램프 — draft 도 비공개라 의도(비노출) 보존.
+      const validStatuses = ['draft', 'published'];
       let status = sop.status || 'draft';
       if (!validStatuses.includes(status)) status = 'draft';
 
@@ -564,21 +567,30 @@ const SupabaseMode = {
   async saveBranchTeamsToSupabase(branches, branchTeams) {
     if (!this._ready) return;
     try {
-      // 기존 데이터 모두 삭제 후 재삽입 (단순하고 확실한 방법)
-      await this._retry(() =>
-        this._client.from('branch_teams').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-      );
+      // 멀티테넌시: 현재 활성 회사 (saveSop 와 동일 소스). 회사 admin 은 이 값이 필수 —
+      // company_id 없이 insert 하면 branch_teams_modify_company RLS(WITH CHECK:
+      // company_id = auth_company_id())가 거부해 저장이 조용히 실패한다.
+      const companyId = (typeof window !== 'undefined' && window.__activeCompanyId) || null;
 
-      // 새 데이터 삽입
+      // 재삽입 전 기존 데이터 삭제 — 현재 회사 범위만 비운다(타 회사 데이터 보존).
+      // companyId 없으면(super_admin 전체선택) 종전처럼 전체 삭제.
+      await this._retry(() => {
+        const q = this._client.from('branch_teams').delete();
+        return companyId
+          ? q.eq('company_id', companyId)
+          : q.neq('id', '00000000-0000-0000-0000-000000000000');
+      });
+
+      // 새 데이터 삽입 (각 행에 company_id 주입 — RLS 통과 + 회사별 격리)
       const rows = [];
       branches.forEach(branch => {
         const teams = (branchTeams && branchTeams[branch]) || [];
         if (teams.length === 0) {
           // 팀 없는 지점도 행으로 표현 (team = null)
-          rows.push({ branch, team: null });
+          rows.push({ branch, team: null, company_id: companyId });
         } else {
           teams.forEach(team => {
-            rows.push({ branch, team });
+            rows.push({ branch, team, company_id: companyId });
           });
         }
       });
