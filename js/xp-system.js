@@ -139,6 +139,8 @@ const XpService = {
           source,
           source_id: sourceId,
           reason,
+          // RLS company_isolation WITH CHECK(company_id = auth_company_id()) 통과 — 없으면 조용히 거부됨
+          company_id: SupabaseMode._currentCompanyId(),
         });
 
       if (error) {
@@ -163,6 +165,7 @@ const XpService = {
           tier_index: newTier.tierIndex,
           sub_level: newTier.subLevel,
           updated_at: new Date().toISOString(),
+          company_id: SupabaseMode._currentCompanyId(),
         }, { onConflict: 'employee_id' });
 
       // 5) 레벨업 감지
@@ -276,6 +279,7 @@ const XpService = {
           tier_index: tier.tierIndex,
           sub_level: tier.subLevel,
           updated_at: new Date().toISOString(),
+          company_id: SupabaseMode._currentCompanyId(),
         }, { onConflict: 'employee_id' });
 
       return total;
@@ -354,6 +358,8 @@ const PraiseService = {
         from_employee_id: fromId,
         to_employee_id: toId,
         category,
+        // RLS company_isolation WITH CHECK(company_id = auth_company_id()) 통과 (발신자=현재 로그인 직원)
+        company_id: SupabaseMode._currentCompanyId(),
       };
       if (reason) insertData.reason = reason;
       const { error } = await SupabaseMode._client
@@ -561,6 +567,7 @@ const StreakService = {
         employee_id: empId, current_streak: data.current,
         best_streak: data.best, last_date: data.lastDate,
         total_days: data.totalDays, updated_at: new Date().toISOString(),
+        company_id: SupabaseMode._currentCompanyId(),
       }, { onConflict: 'employee_id' }).catch(() => {});
     }
 
