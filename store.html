@@ -407,6 +407,8 @@
         const empId = await resolveEmpId();
         const { error } = await sb().from('store_redemptions').insert({
           employee_id: empId,
+          // RLS store_redemptions_company WITH CHECK(company_id = auth_company_id()) 통과 — 없으면 교환이 조용히 거부됨
+          company_id: SupabaseMode._currentCompanyId(),
           item_id: item.id,
           item_name_snapshot: item.name,
           item_icon_snapshot: item.icon || '🎁',
