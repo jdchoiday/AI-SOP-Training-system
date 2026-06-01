@@ -7318,7 +7318,9 @@ function saveInvitation(code) {
   // Supabase에도 저장
   if (SupabaseMode._ready) {
     SupabaseMode.client.from('invitations').insert({
-      code, branch, team, max_uses: maxUses, used_count: 0, expires_at: expiresAt, created_by: user?.id
+      code, branch, team, max_uses: maxUses, used_count: 0, expires_at: expiresAt, created_by: user?.id,
+      // RLS invitations_modify_company WITH CHECK(company_id = auth_company_id()) 통과 + 회사 스코프
+      company_id: window.__activeCompanyId || null
     }).catch(e => console.error('Invitation save error:', e));
   }
 
@@ -7749,7 +7751,7 @@ function saveInvitation(code) {
       localStorage.setItem('sop_deadlines', JSON.stringify(deadlines));
 
       if (SupabaseMode._ready) {
-        SupabaseMode.client.from('deadlines').insert({ sop_id: sopId, branch: branch === 'all' ? '' : branch, deadline_at: date + 'T23:59:59Z' }).catch(e => console.error('Deadline save:', e));
+        SupabaseMode.client.from('deadlines').insert({ sop_id: sopId, branch: branch === 'all' ? '' : branch, deadline_at: date + 'T23:59:59Z', company_id: window.__activeCompanyId || null }).catch(e => console.error('Deadline save:', e));
       }
 
       alert('마감일이 설정되었습니다!');
@@ -9610,7 +9612,8 @@ ${text.slice(0, 3000)}
       const maxOrder = storeAdminItemsCache.reduce((m, it) => Math.max(m, it.display_order || 0), 0);
       const { error } = await SupabaseMode._client.from('store_items').insert({
         name, price_coins: price, icon: '🎁', description: '', active: true,
-        display_order: maxOrder + 1
+        display_order: maxOrder + 1,
+        company_id: window.__activeCompanyId || null
       });
       if (error) { alert('실패: ' + error.message); return; }
       await loadStoreAdminItems();
@@ -9865,6 +9868,7 @@ ${text.slice(0, 3000)}
         sort_order: parseInt(document.getElementById('newTaskSort')?.value) || 0,
         branch: document.getElementById('newTaskBranch')?.value.trim() || '',
         is_active: true,
+        company_id: window.__activeCompanyId || null,
       };
 
       console.log('[성과제 추가] 시도:', payload);
@@ -10661,7 +10665,7 @@ ${text.slice(0, 3000)}
         if (questId) {
           await SupabaseMode._client.from('quests').update(data).eq('id', questId);
         } else {
-          await SupabaseMode._client.from('quests').insert(data);
+          await SupabaseMode._client.from('quests').insert({ ...data, company_id: window.__activeCompanyId || null });
         }
         closeModal();
         _questCurrentTier = data.tier_id;

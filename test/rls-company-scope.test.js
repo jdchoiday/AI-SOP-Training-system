@@ -35,14 +35,22 @@ function payloadAfter(src, tableMarker) {
   return rest.slice(start, j - 1);
 }
 
-const CASES = [
-  { file: 'profile.html',    marker: "from('employee_profiles')",  table: 'employee_profiles' },
-  { file: 'store.html',      marker: "from('store_redemptions')",  table: 'store_redemptions' },
-  { file: 'team-tasks.html', marker: "from('team_tasks')",         table: 'team_tasks' },
+// 직원-facing: 로그인 직원 본인 회사(_currentCompanyId) 로 해석
+const EMPLOYEE_CASES = [
+  { file: 'profile.html',    marker: "from('employee_profiles').upsert({", table: 'employee_profiles' },
+  { file: 'store.html',      marker: "from('store_redemptions').insert({", table: 'store_redemptions' },
+  { file: 'team-tasks.html', marker: "from('team_tasks')",                 table: 'team_tasks' },
+];
+// admin-facing: 관리 대상 회사(window.__activeCompanyId) 로 해석
+const ADMIN_CASES = [
+  { marker: "from('invitations').insert({", table: 'invitations' },
+  { marker: "from('deadlines').insert({",   table: 'deadlines' },
+  { marker: "from('store_items').insert({", table: 'store_items' },
+  { marker: "from('quests').insert({",      table: 'quests' },
 ];
 
-console.log('=== HTML 인라인 회사-스코프 쓰기 — company_id 주입 정적 검증 ===');
-for (const c of CASES) {
+console.log('=== 직원-facing 회사-스코프 쓰기 — _currentCompanyId() 주입 ===');
+for (const c of EMPLOYEE_CASES) {
   const src = read(c.file);
   const body = payloadAfter(src, c.marker);
   ok(`${c.file}: ${c.table} insert/upsert 블록 발견`, body !== null, c.marker);
@@ -52,6 +60,21 @@ for (const c of CASES) {
   ok(`${c.file}: company_id 가 _currentCompanyId() 로 해석됨`,
      body !== null && /company_id\s*:\s*SupabaseMode\._currentCompanyId\(\)/.test(body),
      body !== null ? body.replace(/\s+/g, ' ').slice(0, 160) : null);
+}
+
+console.log('\n=== admin 회사-스코프 쓰기 — window.__activeCompanyId 주입 ===');
+{
+  const adminSrc = read('admin/index.html');
+  for (const c of ADMIN_CASES) {
+    const body = payloadAfter(adminSrc, c.marker);
+    ok(`admin: ${c.table} insert 블록 발견`, body !== null, c.marker);
+    ok(`admin: ${c.table} 페이로드에 company_id=window.__activeCompanyId 주입`,
+       body !== null && /company_id\s*:\s*window\.__activeCompanyId/.test(body),
+       body !== null ? body.replace(/\s+/g, ' ').slice(0, 160) : null);
+  }
+  // basic_task_templates 는 변수 payload 라 직접 인접 검증
+  ok('admin: basic_task_templates payload 에 company_id=window.__activeCompanyId 주입',
+     /is_active:\s*true,\s*company_id:\s*window\.__activeCompanyId/.test(adminSrc));
 }
 
 // supabase-client.js 의 진행률 저장 경로도 같은 가드 (behavioral 테스트와 별개의 이중 안전망)
