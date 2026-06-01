@@ -21,10 +21,54 @@ function verifyPassword(password, storedHash) {
   return check === hash;
 }
 
-module.exports = async function handler(req, res) {
+// ── 권한: 누가 어떤 role 을 부여할 수 있는가 (순수 함수 — 단위테스트 대상) ──
+// staff 는 누구나(자가가입 포함) 부여 가능. 비-staff(admin/branch_manager/super_admin)는
+// 인증된 관리자만, super_admin 생성은 오직 super_admin 만.
+function authorizeRoleAssignment(callerRole, requestedRole) {
+  const VALID = ['staff', 'admin', 'branch_manager', 'super_admin'];
+  if (!VALID.includes(requestedRole)) return { ok: false, reason: 'invalid_role' };
+  if (requestedRole === 'staff') return { ok: true };
+  if (!callerRole) return { ok: false, reason: 'auth_required' };
+  if (callerRole === 'super_admin') return { ok: true };
+  if (callerRole === 'admin') {
+    return requestedRole === 'super_admin'
+      ? { ok: false, reason: 'cannot_create_super_admin' }
+      : { ok: true };
+  }
+  return { ok: false, reason: 'insufficient_privilege' };
+}
+
+// 요청의 Bearer 토큰(=관리자 세션 access_token)을 검증해 employees 의 role/company_id 를 반환.
+// 토큰이 없거나 검증 실패면 null → 자가가입자로 취급(= staff 만 허용).
+async function verifyCaller(req, supabaseUrl, serviceKey) {
+  const authz = req.headers['authorization'] || req.headers['Authorization'];
+  if (!authz || !authz.startsWith('Bearer ')) return null;
+  const token = authz.slice(7);
+  try {
+    const uRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { apikey: serviceKey, Authorization: `Bearer ${token}` },
+    });
+    if (!uRes.ok) return null;
+    const u = await uRes.json();
+    const uid = u && (u.id || (u.user && u.user.id));
+    if (!uid) return null;
+    const eRes = await fetch(
+      `${supabaseUrl}/rest/v1/employees?auth_user_id=eq.${uid}&select=role,company_id`,
+      { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+    );
+    if (!eRes.ok) return null;
+    const rows = await eRes.json();
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    return { role: rows[0].role, company_id: rows[0].company_id };
+  } catch (e) {
+    return null;
+  }
+}
+
+async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
@@ -65,6 +109,28 @@ module.exports = async function handler(req, res) {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceKey) return res.status(500).json({ error: 'SUPABASE_SERVICE_ROLE_KEY not configured' });
 
+    // ── 권한상승 차단 ──
+    // 이 엔드포인트는 service key(RLS 우회)로 동작하고 공개(CORS *)이므로, 클라이언트가 보낸
+    // role 을 그대로 쓰면 자가가입자가 role:'super_admin' 으로 슈퍼관리자를 만들 수 있다.
+    // → 비-staff role 은 인증된 관리자(Bearer 토큰)만 부여 가능하도록 검증한다.
+    const requestedRole = role || 'staff';
+    let caller = null;
+    if (requestedRole !== 'staff') {
+      caller = await verifyCaller(req, supabaseUrl, serviceKey);
+    }
+    const decision = authorizeRoleAssignment(caller ? caller.role : null, requestedRole);
+    if (!decision.ok) {
+      return res.status(decision.reason === 'invalid_role' ? 400 : 403)
+        .json({ error: 'role assignment denied: ' + decision.reason });
+    }
+    const finalRole = requestedRole;
+    // 크로스테넌트 차단: super_admin 이 아닌 관리자가 만든 계정은 그 관리자의 회사로 강제.
+    // (staff 자가가입은 종전대로 클라이언트 company_id 사용 — 초대/기본회사 흐름 보존)
+    let finalCompanyId = company_id || null;
+    if (caller && caller.role !== 'super_admin') {
+      finalCompanyId = caller.company_id || null;
+    }
+
     try {
       // 1. 이메일 중복 체크 (employees)
       const dupRes = await fetch(
@@ -90,7 +156,7 @@ module.exports = async function handler(req, res) {
             email: regEmail,
             password: regPassword,
             email_confirm: true,
-            user_metadata: { name, role: role || 'staff' },
+            user_metadata: { name, role: finalRole },
           }),
         }
       );
@@ -119,9 +185,9 @@ module.exports = async function handler(req, res) {
             email: regEmail,
             branch: branch || '',
             team: team || '',
-            role: role || 'staff',
+            role: finalRole,
             auth_user_id: authUserId,
-            company_id: company_id || null,
+            company_id: finalCompanyId,
           }),
         }
       );
@@ -257,4 +323,7 @@ module.exports = async function handler(req, res) {
   }
 
   return res.status(400).json({ error: 'Invalid action. Use: hash, verify, migrate, register, migrate-to-supabase, update-password' });
-};
+}
+
+module.exports = handler;
+module.exports.authorizeRoleAssignment = authorizeRoleAssignment;

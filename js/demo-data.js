@@ -165,13 +165,23 @@ const SopStore = {
     return sop.script.map((scene, i) => {
       const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
       const sceneLabel = lang === 'en' ? 'Scene' : lang === 'vi' ? 'Cảnh' : '씬';
+      // 현재 언어의 나레이션 우선 (없으면 한국어 원문). UI는 베트남어인데
+      // 나레이션만 한국어로 노출되던 문제 수정. (script[i].narration_vn / _en)
+      const narr = (lang === 'en' && scene.narration_en) ? scene.narration_en
+                 : (lang === 'vi' && scene.narration_vn) ? scene.narration_vn
+                 : scene.narration;
+      const narrKo = scene.narration; // 길이 추정용 기준(원문)
       return {
       id: `${sopId}-v${i + 1}`,
-      title: `${sceneLabel} ${scene.scene}: ${scene.narration.slice(0, 30)}...`,
-      title_full: scene.narration,
+      title: `${sceneLabel} ${scene.scene}: ${narr.slice(0, 30)}...`,
+      title_full: narr,
+      // 다국어 필드도 함께 제공 → chapter.html 의 getLocalizedText(video,'title_full') 가
+      // sop_lang 변경 시에도 올바른 언어를 고를 수 있게 한다.
+      title_full_en: scene.narration_en || scene.narration,
+      title_full_vn: scene.narration_vn || scene.narration,
       visual: scene.visual,
       video_url: '', // AI 영상 생성 후 URL 연결
-      duration: 45 + Math.floor(scene.narration.length / 3), // 나레이션 길이 기반 예상
+      duration: 45 + Math.floor((narrKo || '').length / 3), // 나레이션 길이 기반 예상
       order_num: i + 1,
     };});
   },
@@ -286,10 +296,10 @@ const SopStore = {
         category: '안전/위생', status: 'published', order_num: 3, createdAt: '2026-03-17',
         content: '<h3>1. 개인 위생</h3><ol><li>손 씻기 최소 20초</li><li>유니폼 청결 유지</li></ol><h3>2. 시설 안전</h3><ol><li>소화기 위치 숙지, 매월 점검</li><li>비상구 확보</li></ol><h3>3. 식품 위생</h3><ol><li>냉장 0~5°C, 냉동 -18°C</li><li>교차오염 방지</li></ol>',
         script: [
-          { scene: 1, narration: '안전 및 위생 관리를 배우겠습니다.', visual: '타이틀' },
-          { scene: 2, narration: '손은 최소 20초간 비누로 씻습니다.', visual: '손 씻기' },
-          { scene: 3, narration: '소화기 위치를 숙지하고 매월 점검합니다.', visual: '소화기 점검' },
-          { scene: 4, narration: '식품은 냉장 0~5도, 냉동 영하 18도 이하로 보관합니다.', visual: '식품 보관' },
+          { scene: 1, narration: '안전 및 위생 관리를 배우겠습니다.', narration_en: 'Let\'s learn about safety and hygiene management.', narration_vn: 'Chúng ta sẽ học về quản lý an toàn và vệ sinh.', visual: '타이틀', visual_en: 'Title', visual_vn: 'Tiêu đề' },
+          { scene: 2, narration: '손은 최소 20초간 비누로 씻습니다.', narration_en: 'Wash your hands with soap for at least 20 seconds.', narration_vn: 'Rửa tay bằng xà phòng ít nhất 20 giây.', visual: '손 씻기', visual_en: 'Hand washing', visual_vn: 'Rửa tay' },
+          { scene: 3, narration: '소화기 위치를 숙지하고 매월 점검합니다.', narration_en: 'Know the location of fire extinguishers and inspect them monthly.', narration_vn: 'Nắm rõ vị trí bình chữa cháy và kiểm tra hàng tháng.', visual: '소화기 점검', visual_en: 'Extinguisher check', visual_vn: 'Kiểm tra bình chữa cháy' },
+          { scene: 4, narration: '식품은 냉장 0~5도, 냉동 영하 18도 이하로 보관합니다.', narration_en: 'Store food refrigerated at 0–5°C and frozen below –18°C.', narration_vn: 'Bảo quản thực phẩm ở ngăn mát 0–5°C, ngăn đông dưới –18°C.', visual: '식품 보관', visual_en: 'Food storage', visual_vn: 'Bảo quản thực phẩm' },
         ],
         quizzes: [
           { question: '손 씻기 최소 시간은?', options: ['5초', '20초', '1분', '10초'], correct: 1 },

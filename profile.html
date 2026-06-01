@@ -830,6 +830,8 @@
           }
           await SupabaseMode._client.from('employee_profiles').upsert({
             employee_id: user.id,
+            // RLS company_isolation WITH CHECK(company_id = auth_company_id()) 통과 — 없으면 저장이 조용히 거부됨
+            company_id: SupabaseMode._currentCompanyId(),
             avatar: avatarUrl,
             avatar_type: profile.avatarType,
             avatar_emoji: profile.avatarType === 'emoji' ? profile.avatar : '',

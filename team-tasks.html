@@ -802,6 +802,8 @@
           .from('team_tasks')
           .insert({
             title,
+            // RLS company_isolation WITH CHECK(company_id = auth_company_id()) 통과 — 없으면 팀업무 생성이 조용히 거부됨
+            company_id: SupabaseMode._currentCompanyId(),
             description: document.getElementById('newDesc').value.trim(),
             creator_id: empId,
             branch: myBranch,

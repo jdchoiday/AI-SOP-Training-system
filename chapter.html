@@ -425,6 +425,7 @@
         chapterDesc: '동영상을 순서대로 시청하고 퀴즈를 풀어주세요',
         videoProgress: '비디오 진행률', completed: '완료',
         scene: '씬', aiScript: 'AI 생성 스크립트',
+        readingTitle: '📖 본문 읽기', noScriptNotice: '이 SOP는 아직 영상/슬라이드가 생성되지 않았습니다. 아래 본문으로 학습하세요.', noContentNotice: '표시할 내용이 아직 준비되지 않았습니다. 관리자에게 문의해 주세요.',
         readThenClick: '내용을 읽은 후 아래 버튼을 눌러주세요',
         completeBtn: '✅ 학습 완료', videoQuiz: '비디오 퀴즈',
         ttsPlay: '🔊 읽어주기', ttsStop: '⏹ 멈추기',
@@ -491,6 +492,7 @@
         chapterDesc: 'Watch the videos in order and take the quiz',
         videoProgress: 'Video progress', completed: 'completed',
         scene: 'Scene', aiScript: 'AI-Generated Script',
+        readingTitle: '📖 Read the document', noScriptNotice: 'Videos/slides for this SOP have not been generated yet. Please study the text below.', noContentNotice: 'No content is available yet. Please contact your administrator.',
         readThenClick: 'After reading, press the button below',
         completeBtn: '✅ Mark as Complete', videoQuiz: 'Video Quiz',
         ttsPlay: '🔊 Read Aloud', ttsStop: '⏹ Stop',
@@ -557,6 +559,7 @@
         chapterDesc: 'Xem video theo thứ tự và làm bài kiểm tra',
         videoProgress: 'Tiến độ video', completed: 'hoàn thành',
         scene: 'Cảnh', aiScript: 'Kịch bản do AI tạo',
+        readingTitle: '📖 Đọc tài liệu', noScriptNotice: 'SOP này chưa được tạo video/slide. Vui lòng học theo nội dung bên dưới.', noContentNotice: 'Chưa có nội dung để hiển thị. Vui lòng liên hệ quản lý.',
         readThenClick: 'Đọc xong nội dung rồi nhấn nút bên dưới',
         completeBtn: '✅ Hoàn thành bài học', videoQuiz: 'Kiểm tra video',
         ttsPlay: '🔊 Đọc to', ttsStop: '⏹ Dừng',
@@ -780,6 +783,37 @@
       const container = document.getElementById('videoList');
       container.innerHTML = '';
 
+      // ===== Fallback: script(영상/슬라이드) 미생성 SOP =====
+      // videos 가 비면 화면에 아무 파트도 안 떠서 "열리지 않는" 것처럼 보인다.
+      // 이 경우 SOP 본문(content)을 읽기 카드로 표시해 최소한의 학습이 가능하게 한다.
+      if (!videos || videos.length === 0) {
+        const _bodyHtml = (getLocalizedText(sop, 'content') || sop.content || '').trim();
+        if (_bodyHtml) {
+          container.innerHTML = `
+            <div style="margin-bottom:14px; padding:12px 14px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:10px; font-size:13px; color:#B45309;">
+              ⚠️ ${t.noScriptNotice}
+            </div>
+            <div style="padding:18px; background:var(--white,#fff); border:1px solid var(--gray-200,#e5e7eb); border-radius:12px;">
+              <h3 style="margin:0 0 12px; font-size:16px; color:var(--primary,#10B981);">${t.readingTitle}</h3>
+              <div class="sop-reading-body" style="font-size:14px; line-height:1.7; color:var(--gray-700,#374151);">${_bodyHtml}</div>
+            </div>
+          `;
+        } else {
+          container.innerHTML = `
+            <div style="padding:18px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:10px; font-size:14px; color:#B45309;">
+              ⚠️ ${t.noContentNotice}
+            </div>
+          `;
+        }
+        // 진행률 0 표기 + 챕터 테스트 영역은 그대로 렌더 (퀴즈가 따로 있을 수 있음)
+        try {
+          document.getElementById('videoProgressText').textContent = `0/0 ${t.completed}`;
+          document.getElementById('videoProgressBar').style.width = '0%';
+        } catch (e) {}
+        try { renderChapterTestArea(false); } catch (e) {}
+        return;
+      }
+
       // "Play All Slides" button at top
       if (videos.length > 0) {
         container.innerHTML += `
@@ -946,10 +980,19 @@
         document.getElementById('videoWrapper').style.display = 'block';
         document.getElementById('videoPlayer').src = video.video_url;
       } else {
-        // 나레이션만 (영상 없음) → 기존 텍스트 표시
+        // 나레이션만 (영상 없음) → 텍스트 + 시각 설명(visual) 표시
         document.getElementById('narrationCard').style.display = 'block';
         document.getElementById('narrationText').textContent = narration;
-        document.getElementById('visualNote').textContent = '';
+        // visual(시각 설명)이 있으면 함께 노출해 빈약함을 줄인다. (영상 미생성 fallback 보강)
+        const _vis = (getLocalizedText(video, 'visual') || video.visual || '').trim();
+        const _visEl = document.getElementById('visualNote');
+        if (_vis) {
+          _visEl.textContent = '🎬 ' + _vis;
+          _visEl.style.display = 'block';
+        } else {
+          _visEl.textContent = '';
+          _visEl.style.display = 'none';
+        }
       }
 
       document.getElementById('completeVideoBtn').textContent = t.completeBtn;
@@ -1018,12 +1061,23 @@
 
     // ===== 시청 완료 (최소 시청 시간 검증) =====
     let videoStartTime = 0;
-    const MIN_WATCH_SECONDS = 10; // 최소 10초 시청 필요
+    // 최소 학습 시간: 나레이션 길이에 비례(읽기 속도 기준). 짧은 한 줄 씬에 10초 고정은 과함.
+    // 한국어/베트남어 대략 분당 ~300자 → 글자당 0.2초. 하한 4초, 상한 15초.
+    let MIN_WATCH_SECONDS = 6;
+    function _computeMinWatch(videoId) {
+      try {
+        const v = (videos || []).find(x => x.id === videoId);
+        const txt = (v && (getLocalizedText(v, 'title_full') || v.title_full)) || '';
+        const sec = Math.round(txt.length * 0.2);
+        return Math.max(4, Math.min(15, sec || 6));
+      } catch (e) { return 6; }
+    }
 
     // 영상/나레이션 열 때 시작 시간 기록 (래핑)
     const _baseOpenVideo = openVideo;
     openVideo = function(videoId) {
       videoStartTime = Date.now();
+      MIN_WATCH_SECONDS = _computeMinWatch(videoId); // 나레이션 길이에 맞춘 최소 학습 시간
       _baseOpenVideo(videoId);
     };
 

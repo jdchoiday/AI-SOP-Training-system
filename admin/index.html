@@ -2594,7 +2594,7 @@
 
           try {
             // 1) 대본 (2-pass, 언어 자동감지)
-            const { scenes, plan } = await AI.createVideoScript(sop.title, sop.content);
+            const { scenes, plan } = await AI.createVideoScript(sop.title, sop.content, sop);
             liveSops[idx].script = scenes;
             if (plan) {
               liveSops[idx].videoPlan = {
@@ -2871,13 +2871,12 @@ ${JSON.stringify({ fields: { title: "교정된 제목", title_en: "fixed title",
         console.error('띄어쓰기 교정 오류:', e);
         alert(`오류: ${e.message}`);
       } finally {
-        saveSops(sops);
+        saveSops(sops);   // ← 이 안에서 Supabase 로 교정본을 push(saveAllSops)한다.
         document.getElementById('bulkTranslateModal')?.remove();
         renderSopList();
-        // Supabase 동기화
-        if (typeof SupabaseMode !== 'undefined' && SupabaseMode._ready) {
-          SupabaseMode.syncAll().catch(() => {});
-        }
+        // ⚠️ 여기서 SupabaseMode.syncAll()(=Supabase→로컬 pull)을 부르면
+        // 위 push 완료 전에 옛 데이터로 로컬을 덮어써 교정이 사라지는 레이스가 발생.
+        // saveSops 가 이미 push 하므로 pull 은 호출하지 않는다.
       }
     }
 
@@ -3154,8 +3153,21 @@ ${JSON.stringify({ fields: { title: "교정된 제목", title_en: "fixed title",
         .trim();
     }
 
+    // 파일명 → 보기 좋은 제목: 확장자 제거 + 구분자(_,-)를 공백으로 + NFC 정규화 + 공백 정리.
+    // (업로드 파일명에서 공백이 _/- 로 치환돼 'Lý_thuyết...' 처럼 저장되거나, 결합문자가
+    //  깨져 'Lýthuyết...' 로 보이던 문제를 신규 저장 시 최대한 방어한다. 이미 저장된 데이터는
+    //  공백 정보가 소실돼 코드로 복원 불가 — admin 에서 수동 교정 필요.)
+    function _cleanTitleFromFilename(filename) {
+      let s = String(filename || '').replace(/\.[^/.]+$/, ''); // 확장자 제거
+      try { s = s.normalize('NFC'); } catch (e) {}
+      s = s.replace(/[_]+/g, ' ');          // 언더스코어 → 공백
+      s = s.replace(/\s*-\s*/g, ' - ');     // 하이픈 주변 공백 정돈(연결자 보존)
+      s = s.replace(/\s{2,}/g, ' ').trim(); // 다중 공백 정리
+      return s;
+    }
+
     function parseChapterSection(filename) {
-      const name = filename.replace(/\.[^/.]+$/, ''); // 확장자 제거
+      const name = _cleanTitleFromFilename(filename); // 확장자 제거 + 공백 복원 + NFC
       // 패턴 1: Ch02_Sec01_제목... 또는 ch02-sec01-제목...
       const m1 = name.match(/[Cc]h(?:apter)?[_\-\s]*(\d+)[_\-\s]*[Ss]ec(?:tion)?[_\-\s]*(\d+)[_\-\s]*(.*)/);
       if (m1) {
@@ -3207,7 +3219,7 @@ ${JSON.stringify({ fields: { title: "교정된 제목", title_en: "fixed title",
             continue;
           }
 
-          const title = file.name.replace(/\.[^/.]+$/, '');
+          const title = _cleanTitleFromFilename(file.name);
           let rawHtml = '';
           const isDocx = file.name.endsWith('.doc') || file.name.endsWith('.docx');
 
@@ -3496,9 +3508,9 @@ JSON 배열로 응답:
 
       return Object.entries(groups).map(([folder, items]) => ({
         chapter: folder === '일반' ? '교육 자료' : folder,
-        title: items.length === 1 ? items[0].name.replace(/\.[^/.]+$/, '') : `${folder} SOP`,
+        title: items.length === 1 ? _cleanTitleFromFilename(items[0].name) : `${folder} SOP`,
         category: '기타',
-        html: items.map(f => `<h3>${f.name.replace(/\.[^/.]+$/, '')}</h3><p>${f.text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`).join('\n')
+        html: items.map(f => `<h3>${_cleanTitleFromFilename(f.name)}</h3><p>${f.text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`).join('\n')
       }));
     }
 
@@ -3669,7 +3681,7 @@ ${text.slice(0, 3000)}`;
       });
 
       return {
-        title: filename.replace(/\.[^/.]+$/, ''),
+        title: _cleanTitleFromFilename(filename),
         category: '기타',
         html: html || `<p>${text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`
       };
@@ -4159,7 +4171,7 @@ ${text.slice(0, 3000)}`;
 
           let result;
           try {
-            result = await AI.createVideoScript(sop.title, sop.content);
+            result = await AI.createVideoScript(sop.title, sop.content, sop);
           } catch (aiErr) {
             hideLoading();
             // viable=false면 사용자에게 명시적 안내
@@ -7167,9 +7179,12 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
         let empId = 'emp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
         if (SupabaseMode._ready) {
           try {
+            // 관리자 세션 토큰 전달 — 서버가 비-staff role 부여 권한을 검증한다
+            const { data: _sess } = await SupabaseMode.client.auth.getSession();
+            const _tok = _sess?.session?.access_token;
             const res = await fetch('/api/auth', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', ...(_tok ? { Authorization: 'Bearer ' + _tok } : {}) },
               body: JSON.stringify({
                 action: 'register',
                 email, password: '1234', name,
@@ -7230,9 +7245,12 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
       }
       if (SupabaseMode._ready) {
         try {
+          // 관리자 세션 토큰 전달 — 서버가 비-staff role 부여 권한을 검증한다
+          const { data: _sess } = await SupabaseMode.client.auth.getSession();
+          const _tok = _sess?.session?.access_token;
           const res = await fetch('/api/auth', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(_tok ? { Authorization: 'Bearer ' + _tok } : {}) },
             body: JSON.stringify({
               action: 'register',
               email, password: '1234', name, branch, team, role,
@@ -7300,7 +7318,9 @@ function saveInvitation(code) {
   // Supabase에도 저장
   if (SupabaseMode._ready) {
     SupabaseMode.client.from('invitations').insert({
-      code, branch, team, max_uses: maxUses, used_count: 0, expires_at: expiresAt, created_by: user?.id
+      code, branch, team, max_uses: maxUses, used_count: 0, expires_at: expiresAt, created_by: user?.id,
+      // RLS invitations_modify_company WITH CHECK(company_id = auth_company_id()) 통과 + 회사 스코프
+      company_id: window.__activeCompanyId || null
     }).catch(e => console.error('Invitation save error:', e));
   }
 
@@ -7731,7 +7751,7 @@ function saveInvitation(code) {
       localStorage.setItem('sop_deadlines', JSON.stringify(deadlines));
 
       if (SupabaseMode._ready) {
-        SupabaseMode.client.from('deadlines').insert({ sop_id: sopId, branch: branch === 'all' ? '' : branch, deadline_at: date + 'T23:59:59Z' }).catch(e => console.error('Deadline save:', e));
+        SupabaseMode.client.from('deadlines').insert({ sop_id: sopId, branch: branch === 'all' ? '' : branch, deadline_at: date + 'T23:59:59Z', company_id: window.__activeCompanyId || null }).catch(e => console.error('Deadline save:', e));
       }
 
       alert('마감일이 설정되었습니다!');
@@ -9592,7 +9612,8 @@ ${text.slice(0, 3000)}
       const maxOrder = storeAdminItemsCache.reduce((m, it) => Math.max(m, it.display_order || 0), 0);
       const { error } = await SupabaseMode._client.from('store_items').insert({
         name, price_coins: price, icon: '🎁', description: '', active: true,
-        display_order: maxOrder + 1
+        display_order: maxOrder + 1,
+        company_id: window.__activeCompanyId || null
       });
       if (error) { alert('실패: ' + error.message); return; }
       await loadStoreAdminItems();
@@ -9847,6 +9868,7 @@ ${text.slice(0, 3000)}
         sort_order: parseInt(document.getElementById('newTaskSort')?.value) || 0,
         branch: document.getElementById('newTaskBranch')?.value.trim() || '',
         is_active: true,
+        company_id: window.__activeCompanyId || null,
       };
 
       console.log('[성과제 추가] 시도:', payload);
@@ -10643,7 +10665,7 @@ ${text.slice(0, 3000)}
         if (questId) {
           await SupabaseMode._client.from('quests').update(data).eq('id', questId);
         } else {
-          await SupabaseMode._client.from('quests').insert(data);
+          await SupabaseMode._client.from('quests').insert({ ...data, company_id: window.__activeCompanyId || null });
         }
         closeModal();
         _questCurrentTier = data.tier_id;

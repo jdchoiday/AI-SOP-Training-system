@@ -178,7 +178,7 @@
     <!-- ===== 오늘의 퀘스트 (최대 3카드) ===== -->
     <div class="today-quest-section">
       <h3 class="section-title">
-        <span>🎯 오늘의 퀘스트</span>
+        <span id="todayQuestLabel">🎯 오늘의 퀘스트</span>
         <span class="today-date" id="todayDate"></span>
       </h3>
       <div id="todaysQuestList">
@@ -188,7 +188,7 @@
 
     <!-- ===== 모든 학습 보기 ===== -->
     <a href="tasks.html" class="all-learning-link">
-      <span>📚 모든 학습 보기</span>
+      <span id="allLearningLabel">📚 모든 학습 보기</span>
       <span style="color:var(--gray-400);">→</span>
     </a>
 
@@ -297,6 +297,15 @@
         xpRewardsNeeded: (n) => `${n} XP 더 필요`,
         xpRewardsUnlocked: '달성!',
         xpRewardsProgress: (pct) => `${pct}%`,
+        // 홈 화면 (오늘의 퀘스트 미니멀 홈)
+        todayQuestTitle: '🎯 오늘의 퀘스트',
+        allLearningLink: '📚 모든 학습 보기',
+        testerMissionTitleTxt: '테스터 미션',
+        testerMissionDescTxt: '10가지 핵심 기능을 미션처럼 체험하기',
+        homeNextLearning: '다음 학습', homeQuizChallenge: '퀴즈 도전',
+        homeContinueLearning: '이어서 학습', homeDailyGoal: '일일 목표',
+        homeDailyDone: (target) => `오늘 ${target} XP 달성! 내일 또 도전 💪`,
+        homeDailyProgress: (earned, target) => `오늘 ${target} XP 획득 (${earned}/${target})`,
         // 퀘스트
         questTitle: '🎮 신입 모험가 퀘스트',
         questSubtitle: '미션을 클리어하고 EXP를 획득하세요!',
@@ -378,6 +387,15 @@
         xpRewardsNeeded: (n) => `${n} more XP needed`,
         xpRewardsUnlocked: 'Unlocked!',
         xpRewardsProgress: (pct) => `${pct}%`,
+        // Home
+        todayQuestTitle: '🎯 Today\'s Quests',
+        allLearningLink: '📚 View all lessons',
+        testerMissionTitleTxt: 'Tester Mission',
+        testerMissionDescTxt: 'Experience 10 core features like a mission',
+        homeNextLearning: 'Next lesson', homeQuizChallenge: 'Take quiz',
+        homeContinueLearning: 'Continue learning', homeDailyGoal: 'Daily goal',
+        homeDailyDone: (target) => `Reached ${target} XP today! See you tomorrow 💪`,
+        homeDailyProgress: (earned, target) => `Earn ${target} XP today (${earned}/${target})`,
         // Quests
         questTitle: '🎮 Rookie Adventure Quest',
         questSubtitle: 'Complete missions and earn EXP!',
@@ -459,6 +477,15 @@
         xpRewardsNeeded: (n) => `Cần thêm ${n} XP`,
         xpRewardsUnlocked: 'Đã mở!',
         xpRewardsProgress: (pct) => `${pct}%`,
+        // Home
+        todayQuestTitle: '🎯 Nhiệm vụ hôm nay',
+        allLearningLink: '📚 Xem tất cả bài học',
+        testerMissionTitleTxt: 'Nhiệm vụ thử nghiệm',
+        testerMissionDescTxt: 'Trải nghiệm 10 tính năng chính như một nhiệm vụ',
+        homeNextLearning: 'Bài học tiếp theo', homeQuizChallenge: 'Làm bài kiểm tra',
+        homeContinueLearning: 'Tiếp tục học', homeDailyGoal: 'Mục tiêu hằng ngày',
+        homeDailyDone: (target) => `Đã đạt ${target} XP hôm nay! Hẹn gặp lại ngày mai 💪`,
+        homeDailyProgress: (earned, target) => `Nhận ${target} XP hôm nay (${earned}/${target})`,
         // Quests
         questTitle: '🎮 Nhiệm vụ Tân binh',
         questSubtitle: 'Hoàn thành nhiệm vụ và nhận EXP!',
@@ -694,12 +721,18 @@
       const dateEl = document.getElementById('todayDate');
       if (!list) return;
 
-      // 오늘 날짜 표시
+      // 정적 라벨 다국어 주입 (베트남어/영어에서 한국어로 남던 것 수정)
+      const _setTxt = (id, val) => { const el = document.getElementById(id); if (el && val) el.textContent = val; };
+      _setTxt('todayQuestLabel', t.todayQuestTitle);
+      _setTxt('allLearningLabel', t.allLearningLink);
+      _setTxt('testerMissionTitle', t.testerMissionTitleTxt);
+      _setTxt('testerMissionDesc', t.testerMissionDescTxt);
+
+      // 오늘 날짜 표시 (현재 언어 locale 기반)
       if (dateEl) {
         const d = new Date();
-        const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-        const days = ['일','월','화','수','목','금','토'];
-        dateEl.textContent = `${months[d.getMonth()]} ${d.getDate()}일 (${days[d.getDay()]})`;
+        const _locale = lang === 'en' ? 'en-US' : lang === 'vi' ? 'vi-VN' : 'ko-KR';
+        dateEl.textContent = d.toLocaleDateString(_locale, { month: 'long', day: 'numeric', weekday: 'short' });
       }
 
       const quests = [];
@@ -732,7 +765,7 @@
         quests.push({
           priority: 1,
           icon: nextType === 'video' ? '📺' : '🧠',
-          title: nextType === 'video' ? '다음 학습' : '퀴즈 도전',
+          title: nextType === 'video' ? t.homeNextLearning : t.homeQuizChallenge,
           subtitle,
           link,
           rewardXp: nextType === 'video' ? XP_CONFIG.CHAPTER_COMPLETE : XP_CONFIG.QUIZ_PERFECT_BONUS,
@@ -757,7 +790,7 @@
         quests.push({
           priority: 2,
           icon: '▶️',
-          title: '이어서 학습',
+          title: t.homeContinueLearning,
           subtitle: getLocalizedText(inProgressChapter, 'title'),
           link: `chapter.html?id=${inProgressChapter.id}`,
           rewardXp: XP_CONFIG.CHAPTER_COMPLETE,
@@ -773,8 +806,8 @@
       quests.push({
         priority: 3,
         icon: done ? '🏆' : '🔥',
-        title: '일일 목표',
-        subtitle: done ? `오늘 ${target} XP 달성! 내일 또 도전 💪` : `오늘 ${target} XP 획득 (${earned}/${target})`,
+        title: t.homeDailyGoal,
+        subtitle: done ? t.homeDailyDone(target) : t.homeDailyProgress(earned, target),
         link: done ? null : (nextChapter ? `chapter.html?id=${nextChapter.id}` : 'tasks.html'),
         rewardXp: 20,
         progress: pct,

@@ -134,11 +134,11 @@ if (typeof CONFIG !== 'undefined' && CONFIG.AI) {
 
 const AI = {
   // --- 스크립트 생성 ---
-  async generateScript(sopTitle, sopContent) {
+  async generateScript(sopTitle, sopContent, sopObj) {
     const provider = AI_CONFIG.scriptProvider;
 
     if (provider === 'local') {
-      return this._localGenerateScript(sopTitle, sopContent);
+      return this._localGenerateScript(sopTitle, sopContent, sopObj);
     }
 
     try {
@@ -405,7 +405,7 @@ type에 맞지 않는 필드는 생략 가능.
 
       const result = await this._callLLM(provider, prompt);
       const parsed = JSON.parse(result.match(/\[[\s\S]*\]/)?.[0] || '[]');
-      if (parsed.length === 0) return this._localGenerateScript(sopTitle, sopContent);
+      if (parsed.length === 0) return this._localGenerateScript(sopTitle, sopContent, sopObj);
 
       // 씬 타입 정규화 + 폴백 처리
       parsed.forEach((scene, idx) => {
@@ -476,7 +476,7 @@ type에 맞지 않는 필드는 생략 가능.
       return parsed;
     } catch (e) {
       console.warn('AI script generation failed, falling back to local:', e.message);
-      return this._localGenerateScript(sopTitle, sopContent);
+      return this._localGenerateScript(sopTitle, sopContent, sopObj);
     }
   },
 
@@ -617,9 +617,9 @@ Return ONLY a JSON array of ${items.length} translated strings — no markdown, 
   // Pass 1: 구조 설계 (persona/mood/story_arc/scene_count)
   // Pass 2: 씬 상세 작성 (Pass 1 plan 주입, 씬간 persona/mood 지속성 확보)
   // ============================================
-  async createVideoScript(sopTitle, sopContent) {
+  async createVideoScript(sopTitle, sopContent, sopObj) {
     const provider = AI_CONFIG.scriptProvider || 'gemini';
-    if (provider === 'local') return this._localGenerateScript(sopTitle, sopContent);
+    if (provider === 'local') return this._localGenerateScript(sopTitle, sopContent, sopObj);
 
     const plainText = this._htmlToText(sopContent);
 
@@ -1422,38 +1422,70 @@ ${historyText}
     return div.textContent || '';
   },
 
-  _localGenerateScript(sopTitle, sopContent) {
+  // HTML content 에서 h3 섹션 + 하위 li 들을 추출 (언어별 content 파싱 공용)
+  _extractSections(htmlContent) {
     const div = document.createElement('div');
-    div.innerHTML = sopContent;
-    const headings = div.querySelectorAll('h3');
-
-    const script = [
-      { scene: 1, narration: `안녕하세요. "${sopTitle}"에 대해 배우겠습니다.`, visual: `A Korean woman in professional attire standing at a podium, warmly introducing the training topic "${sopTitle}". Bright modern training room with screen.` }
-    ];
-
-    headings.forEach((h, i) => {
-      const section = h.textContent;
+    div.innerHTML = htmlContent || '';
+    return Array.from(div.querySelectorAll('h3')).map(h => {
       const nextEl = h.nextElementSibling;
       let steps = '';
       if (nextEl && (nextEl.tagName === 'OL' || nextEl.tagName === 'UL')) {
         steps = Array.from(nextEl.querySelectorAll('li')).map(li => li.textContent).join('. ');
       }
-      const narration = steps ? `${section}입니다. ${steps}` : `다음은 ${section}에 대해 알아보겠습니다.`;
+      return { section: h.textContent, steps };
+    });
+  },
+
+  // 로컬(무료) 스크립트 생성 — 다국어(ko/en/vi) 나레이션을 함께 만든다.
+  // sopObj 가 주어지면 content_vn/content_en, title_vn/title_en 으로 각 언어 나레이션 생성.
+  // (이전엔 한국어 템플릿만 박아, 베트남어 직원에게 한국어로 노출되던 문제 수정.)
+  _localGenerateScript(sopTitle, sopContent, sopObj) {
+    const TPL = {
+      ko: { intro: t => `안녕하세요. "${t}"에 대해 배우겠습니다.`,
+            sec: (s, st) => st ? `${s}입니다. ${st}` : `다음은 ${s}에 대해 알아보겠습니다.`,
+            outro: t => `"${t}" 교육을 마칩니다. 핵심 내용을 기억해주세요!` },
+      en: { intro: t => `Hello. Let's learn about "${t}".`,
+            sec: (s, st) => st ? `${s}. ${st}` : `Next, let's look at ${s}.`,
+            outro: t => `That concludes the "${t}" training. Please remember the key points!` },
+      vi: { intro: t => `Xin chào. Chúng ta sẽ học về "${t}".`,
+            sec: (s, st) => st ? `${s}. ${st}` : `Tiếp theo, chúng ta tìm hiểu về ${s}.`,
+            outro: t => `Kết thúc khóa học "${t}". Hãy ghi nhớ những nội dung chính nhé!` },
+    };
+    // 언어별 (title, sections) 확보. sopObj 없으면 ko 만 채움(하위호환).
+    const srcs = {
+      ko: { title: (sopObj && sopObj.title) || sopTitle, secs: this._extractSections((sopObj && sopObj.content) || sopContent) },
+      en: sopObj ? { title: sopObj.title_en || sopObj.title || sopTitle, secs: this._extractSections(sopObj.content_en || sopObj.content || sopContent) } : null,
+      vi: sopObj ? { title: sopObj.title_vn || sopObj.title || sopTitle, secs: this._extractSections(sopObj.content_vn || sopObj.content || sopContent) } : null,
+    };
+    const koSecs = srcs.ko.secs;
+    const total = koSecs.length + 2; // intro + sections + outro
+
+    const _narr = (lang, sceneIdx) => {
+      const src = srcs[lang] || srcs.ko;
+      const tp = TPL[lang] || TPL.ko;
+      if (sceneIdx === 0) return tp.intro(src.title);
+      if (sceneIdx === total - 1) return tp.outro(src.title);
+      const sec = src.secs[sceneIdx - 1] || koSecs[sceneIdx - 1] || { section: '', steps: '' };
+      return tp.sec(sec.section, sec.steps);
+    };
+
+    const script = [];
+    for (let i = 0; i < total; i++) {
+      const narration = _narr('ko', i);
+      const section = (i === 0 || i === total - 1) ? '' : (koSecs[i - 1] ? koSecs[i - 1].section : '');
+      const visual = i === 0
+        ? `A Korean woman in professional attire standing at a podium, warmly introducing the training topic "${srcs.ko.title}". Bright modern training room with screen.`
+        : (i === total - 1
+          ? 'A Korean woman standing at an organized reception giving a confident thumbs up. Clean whiteboard behind with summary bullet points. Warm bright lighting.'
+          : (window.ScenePrompts ? window.ScenePrompts.narrationToPrompt(narration, section, { withCamera: false }) : this._narrationToVisual(narration, section)));
       script.push({
-        scene: i + 2,
+        scene: i + 1,
         narration,
-        visual: window.ScenePrompts
-          ? window.ScenePrompts.narrationToPrompt(narration, section, { withCamera: false })
-          : this._narrationToVisual(narration, section)
+        narration_en: _narr('en', i),
+        narration_vn: _narr('vi', i),
+        visual,
       });
-    });
-
-    script.push({
-      scene: script.length + 1,
-      narration: `"${sopTitle}" 교육을 마칩니다. 핵심 내용을 기억해주세요!`,
-      visual: 'A Korean woman standing at an organized reception giving a confident thumbs up. Clean whiteboard behind with summary bullet points. Warm bright lighting.'
-    });
-
+    }
     return script;
   },
 
