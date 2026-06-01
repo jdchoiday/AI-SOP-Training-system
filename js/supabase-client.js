@@ -62,6 +62,21 @@ const SupabaseMode = {
     return this._client;
   },
 
+  // 현재 로그인 직원의 company_id 해석
+  // training_progress / chapter_results RLS(company_isolation)는
+  // WITH CHECK (auth_is_super_admin() OR company_id = auth_company_id()) 라서
+  // company_id 없이 upsert 하면 NULL = <uuid> → 조용히 거부되어 진행률이 저장되지 않는다.
+  // auth_company_id() = 로그인 직원의 employees.company_id 이며, 이는 로그인 시
+  // sop_user.company_id 로 저장되므로 그 값을 그대로 주입해 WITH CHECK 를 통과시킨다.
+  _currentCompanyId() {
+    try {
+      const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+      if (user && user.company_id) return user.company_id;
+    } catch (e) { /* ignore */ }
+    if (typeof window !== 'undefined' && window.__activeCompanyId) return window.__activeCompanyId;
+    return null;
+  },
+
   // ===== 로그인 (Supabase Auth 우선, 실패 시 legacy hash 자동 전환) =====
   async login(email, password) {
     if (!this._ready) return null;
@@ -461,6 +476,8 @@ const SupabaseMode = {
         chapter_id: chapterId,
         completed: true,
         completed_at: new Date().toISOString(),
+        // RLS WITH CHECK(company_id = auth_company_id()) 통과 — 없으면 저장이 조용히 거부됨
+        company_id: this._currentCompanyId(),
       }, { onConflict: 'employee_id,video_id' });
     } catch (e) {
       console.error('[Supabase] 영상 진행 저장 오류:', e);
@@ -476,6 +493,8 @@ const SupabaseMode = {
         score: score,
         passed: passed,
         completed_at: new Date().toISOString(),
+        // RLS WITH CHECK(company_id = auth_company_id()) 통과 — 없으면 저장이 조용히 거부됨
+        company_id: this._currentCompanyId(),
       }, { onConflict: 'employee_id,chapter_id' });
     } catch (e) {
       console.error('[Supabase] 챕터 결과 저장 오류:', e);

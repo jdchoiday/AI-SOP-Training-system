@@ -3,6 +3,9 @@
 //      (branch_teams_modify_company RLS: company_id = auth_company_id() 거부 방지)
 //   2) saveSop — status 가 라이브 CHECK ('draft','published') 밖이면 'draft' 로 클램프
 //      (status='archived'/'generated' 가 upsert 를 통째로 실패시키던 문제 방지)
+//   3) saveVideoProgress / saveChapterResult — 각 행에 로그인 직원 company_id 주입
+//      (training_progress/chapter_results RLS company_isolation:
+//       WITH CHECK company_id = auth_company_id() 거부로 진행률이 조용히 저장 실패하던 문제 방지)
 // supabase-client.js 를 vm 에 올려 진짜 SupabaseMode 메서드를 호출한다.
 const fs = require('fs');
 const vm = require('vm');
@@ -34,13 +37,21 @@ function makeMockClient(log) {
 }
 
 // ---- supabase-client.js 를 sandbox 에 로드하고 SupabaseMode 를 반환 ----
-function loadSupabaseMode(activeCompanyId) {
+// sopUser 를 주면 localStorage['sop_user'] 로 노출 (진행률 저장의 company_id 해석 검증용)
+function loadSupabaseMode(activeCompanyId, sopUser) {
   const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'supabase-client.js'), 'utf8')
     + '\n;globalThis.__exp = { SupabaseMode };';
   const win = { __activeCompanyId: activeCompanyId };
+  const store = {};
+  if (sopUser !== undefined) store['sop_user'] = JSON.stringify(sopUser);
   const sandbox = {
     CONFIG: { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'k' },
     window: win,
+    localStorage: {
+      getItem: (k) => (k in store ? store[k] : null),
+      setItem: (k, v) => { store[k] = String(v); },
+      removeItem: (k) => { delete store[k]; },
+    },
     createClient: () => ({}),
     console: { log: () => {}, warn: () => {}, error: () => {} },
     Date, JSON, Math, Promise, Array, Object, String, Number,
@@ -119,6 +130,50 @@ function loadSupabaseMode(activeCompanyId) {
     const up = log.find(e => e.op === 'upsert' && e.table === 'sop_documents');
     ok('upsert row 에 content_en 키 없음 (라이브 DB 미존재 컬럼)', up && !('content_en' in up.row), up && Object.keys(up.row));
     ok('title_en / content_vn 은 정상 전송 (라이브 DB 존재)', up && up.row.title_en === 'E' && up.row.content_vn === 'v', up && up.row);
+  }
+
+  // ================= TEST 8~9: 진행률/결과 저장 — company_id 주입 (RLS company_isolation) =================
+  // training_progress / chapter_results 의 WITH CHECK(company_id = auth_company_id()) 때문에
+  // company_id 없이 upsert 하면 일반 직원의 진행률이 조용히 저장 실패한다.
+  console.log('\n=== TEST 8: saveVideoProgress — sop_user.company_id 주입 + onConflict ===');
+  {
+    const { SM, log } = loadSupabaseMode(undefined, { id: 'emp-1', company_id: 'company-XYZ' });
+    await SM.saveVideoProgress('emp-1', 'v1', 'ch1');
+    const up = log.find(e => e.op === 'upsert' && e.table === 'training_progress');
+    ok('training_progress upsert 호출됨', !!up, log.map(e => e.op));
+    ok('company_id 가 로그인 직원 회사로 주입됨 (RLS 통과)', up && up.row.company_id === 'company-XYZ', up && up.row);
+    ok('employee_id/video_id/chapter_id/completed 정상', up && up.row.employee_id === 'emp-1' && up.row.video_id === 'v1' && up.row.chapter_id === 'ch1' && up.row.completed === true, up && up.row);
+    ok("onConflict 가 라이브 UNIQUE(employee_id,video_id) 와 일치", up && up.opts && up.opts.onConflict === 'employee_id,video_id', up && up.opts);
+  }
+
+  console.log('\n=== TEST 9: saveChapterResult — sop_user.company_id 주입 + onConflict ===');
+  {
+    const { SM, log } = loadSupabaseMode(undefined, { id: 'emp-2', company_id: 'company-XYZ' });
+    await SM.saveChapterResult('emp-2', 'chapter-1', 90, true);
+    const up = log.find(e => e.op === 'upsert' && e.table === 'chapter_results');
+    ok('chapter_results upsert 호출됨', !!up, log.map(e => e.op));
+    ok('company_id 가 로그인 직원 회사로 주입됨 (RLS 통과)', up && up.row.company_id === 'company-XYZ', up && up.row);
+    ok('employee_id/chapter_id/score/passed 정상', up && up.row.employee_id === 'emp-2' && up.row.chapter_id === 'chapter-1' && up.row.score === 90 && up.row.passed === true, up && up.row);
+    ok("onConflict 가 라이브 UNIQUE(employee_id,chapter_id) 와 일치", up && up.opts && up.opts.onConflict === 'employee_id,chapter_id', up && up.opts);
+  }
+
+  // ================= TEST 10: sop_user.company_id 가 window.__activeCompanyId 보다 우선 =================
+  // 진행률은 "로그인한 본인"이 쓰므로 auth_company_id()=본인 회사여야 한다.
+  console.log('\n=== TEST 10: 진행률 company_id — 직원 회사가 admin 활성회사보다 우선 ===');
+  {
+    const { SM, log } = loadSupabaseMode('admin-active-company', { id: 'emp-3', company_id: 'employee-own-company' });
+    await SM.saveVideoProgress('emp-3', 'v9', 'ch9');
+    const up = log.find(e => e.op === 'upsert' && e.table === 'training_progress');
+    ok('sop_user.company_id 사용 (admin 활성회사 아님)', up && up.row.company_id === 'employee-own-company', up && up.row);
+  }
+
+  // ================= TEST 11: company_id 전혀 없으면 null (크래시 없음) =================
+  console.log('\n=== TEST 11: 진행률 company_id — 회사정보 전무 시 null, 크래시 없음 ===');
+  {
+    const { SM, log } = loadSupabaseMode(undefined, { id: 'emp-4' }); // company_id 없음
+    await SM.saveChapterResult('emp-4', 'chapter-2', 70, false);
+    const up = log.find(e => e.op === 'upsert' && e.table === 'chapter_results');
+    ok('company_id 없으면 null 로 전송 (예외 없이 동작)', up && up.row.company_id === null, up && up.row);
   }
 
   console.log(`\n===== 결과: ${pass} 통과 / ${fail} 실패 =====`);
