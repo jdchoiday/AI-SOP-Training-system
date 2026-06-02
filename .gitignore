@@ -12,3 +12,4 @@ test_tts*.mp3
 *.key
 credentials.json
 service-account.json
+sop-source/**/_b64/
