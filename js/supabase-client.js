@@ -170,7 +170,7 @@ const SupabaseMode = {
         const existingMap = {};
         existing.forEach(s => { existingMap[s.id] = s; });
 
-        const sops = data.map(d => {
+        const dbSops = data.map(d => {
           const local = existingMap[d.id] || {};
           return {
             id: d.id,
@@ -194,22 +194,42 @@ const SupabaseMode = {
             createdAt: d.created_at || new Date().toISOString(),
           };
         });
+        const dbIds = new Set(data.map(d => d.id));
 
-        // Supabase 를 SOP 의 단일 진실원본(source of truth)으로 삼는다.
-        // 과거엔 localStorage 전용 SOP 를 보존했으나, DB 에서 삭제됐거나 한 번도
-        // 올라간 적 없는 SOP(데모·로컬 생성·과거 잔존)가 기기에 영구히 남아
-        // "삭제했는데 한국어 SOP 가 계속 나타나는" 문제를 유발했다.
-        // SOP 는 저장 시 즉시 push 되므로 정상 작성분은 이미 DB 에 존재하고,
-        // 위에서 script/quizzes 등 로컬 보강분은 매칭 ID 에 한해 보존된다.
-        // 따라서 동기화 성공(데이터 수신) 시 DB 에 없는 로컬 전용 SOP 는 제거한다.
-        const droppedLocalOnly = existing.filter(s => !data.find(d => d.id === s.id));
-        if (droppedLocalOnly.length > 0) {
-          console.log(`[Supabase] DB 미존재 로컬 전용 SOP ${droppedLocalOnly.length}개 정리:`,
-            droppedLocalOnly.map(s => s.id).join(', '));
+        // DB 에 없는 로컬 전용 SOP 처리 원칙 (사용자 업로드분 절대 누락 금지):
+        //  - 데모/샘플 시드(아래 고정 ID) 또는 사용자가 삭제한 툼스톤 ID → 제거
+        //    (과거 "삭제했는데 한국어 데모 SOP 가 계속 나타나는" 문제 차단)
+        //  - 그 외(관리자가 직접 업로드한 실제 SOP) → 보존 + DB 로 복구 업로드
+        //    (RLS/세션 문제로 조용히 저장 실패해 로컬에만 남은 SOP 를 잃지 않도록)
+        const DEMO_SEED_IDS = new Set([
+          'sop-open', 'sop-customer', 'sop-hygiene', 'sop-closing', 'sop-emergency', 'sop-fire-detail',
+          'kids-sop-open', 'kids-sop-service', 'kids-sop-safety', 'kids-sop-equipment',
+          'kids-sop-hygiene', 'kids-sop-emergency', 'kids-sop-closing',
+        ]);
+        let tombstones = [];
+        try { tombstones = JSON.parse(localStorage.getItem('sop_deleted_ids') || '[]'); } catch (_) { tombstones = []; }
+        const tombstoneSet = new Set(tombstones);
+
+        const localOnly = existing.filter(s => !dbIds.has(s.id));
+        const removedSeed = localOnly.filter(s => DEMO_SEED_IDS.has(s.id) || tombstoneSet.has(s.id));
+        const userLocalOnly = localOnly.filter(s => !DEMO_SEED_IDS.has(s.id) && !tombstoneSet.has(s.id));
+
+        if (removedSeed.length > 0) {
+          console.log(`[Supabase] 데모/삭제 SOP ${removedSeed.length}개 정리:`, removedSeed.map(s => s.id).join(', '));
         }
 
-        localStorage.setItem('sop_documents', JSON.stringify(sops));
-        console.log(`[Supabase] SOP ${sops.length}개 동기화 완료`);
+        // DB SOP + 로컬 전용 사용자 SOP 를 합쳐 보존한다 (업로드분 누락 금지).
+        const merged = dbSops.concat(userLocalOnly);
+        localStorage.setItem('sop_documents', JSON.stringify(merged));
+        console.log(`[Supabase] SOP 동기화: DB ${dbSops.length} + 로컬전용 ${userLocalOnly.length} = ${merged.length}개`);
+
+        // 로컬에만 있던 사용자 SOP 를 DB 로 복구 업로드(조용한 저장 실패 복구) — 비차단.
+        // 관리자 컨텍스트(__activeCompanyId 존재)에서만 시도해 직원 세션의 RLS 거부/알림을 피한다.
+        if (userLocalOnly.length > 0 && typeof window !== 'undefined' && window.__activeCompanyId) {
+          console.log(`[Supabase] 로컬 전용 사용자 SOP ${userLocalOnly.length}개 → DB 복구 업로드 시도`);
+          Promise.resolve(this.saveAllSops(userLocalOnly))
+            .catch(e => console.warn('[Supabase] 로컬 SOP 복구 업로드 실패:', e && e.message));
+        }
       }
     } catch (e) {
       console.error('[Supabase] SOP 동기화 오류:', e);
@@ -406,6 +426,12 @@ const SupabaseMode = {
   },
 
   async deleteSop(id) {
+    // 툼스톤 기록: syncSops 의 로컬 전용 복구 업로드가 삭제된 SOP 를 되살리지 않도록.
+    // (오프라인이어도 남도록 _ready 검사보다 먼저 기록한다.)
+    try {
+      const t = JSON.parse(localStorage.getItem('sop_deleted_ids') || '[]');
+      if (!t.includes(id)) { t.push(id); localStorage.setItem('sop_deleted_ids', JSON.stringify(t)); }
+    } catch (_) { /* localStorage 불가 환경 무시 */ }
     if (!this._ready) return;
     try {
       await this._client.from('sop_documents').delete().eq('id', id);
