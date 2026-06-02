@@ -195,12 +195,18 @@ const SupabaseMode = {
           };
         });
 
-        // localStorage에만 있는 SOP도 보존 (아직 Supabase에 안 올라간 것)
-        existing.forEach(s => {
-          if (!data.find(d => d.id === s.id)) {
-            sops.push(s);
-          }
-        });
+        // Supabase 를 SOP 의 단일 진실원본(source of truth)으로 삼는다.
+        // 과거엔 localStorage 전용 SOP 를 보존했으나, DB 에서 삭제됐거나 한 번도
+        // 올라간 적 없는 SOP(데모·로컬 생성·과거 잔존)가 기기에 영구히 남아
+        // "삭제했는데 한국어 SOP 가 계속 나타나는" 문제를 유발했다.
+        // SOP 는 저장 시 즉시 push 되므로 정상 작성분은 이미 DB 에 존재하고,
+        // 위에서 script/quizzes 등 로컬 보강분은 매칭 ID 에 한해 보존된다.
+        // 따라서 동기화 성공(데이터 수신) 시 DB 에 없는 로컬 전용 SOP 는 제거한다.
+        const droppedLocalOnly = existing.filter(s => !data.find(d => d.id === s.id));
+        if (droppedLocalOnly.length > 0) {
+          console.log(`[Supabase] DB 미존재 로컬 전용 SOP ${droppedLocalOnly.length}개 정리:`,
+            droppedLocalOnly.map(s => s.id).join(', '));
+        }
 
         localStorage.setItem('sop_documents', JSON.stringify(sops));
         console.log(`[Supabase] SOP ${sops.length}개 동기화 완료`);
