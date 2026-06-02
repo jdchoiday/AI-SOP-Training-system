@@ -1,0 +1,43 @@
+{
+  "id": "kwzsrc-workshop-ops-ssmc",
+  "title": "SOP Vận hành & vệ sinh khu Workshop (SSMC)",
+  "title_en": "Workshop Area Operation & Cleanliness SOP (SSMC)",
+  "category": "Workshop",
+  "order_num": 211,
+  "theme": "#f59e0b",
+  "intro_kicker": "KIWOOZA WORKSHOP · SSMC",
+  "intro_title": "Vận hành khu<br>Workshop (SSMC)",
+  "intro_narration": "Chào mừng bạn đến với khóa đào tạo vận hành và vệ sinh khu Workshop chi nhánh SSMC. Bạn sẽ học cách sắp xếp kệ trưng bày, kệ vật liệu, khu lò nướng và quy trình vệ sinh hằng ngày.",
+  "content_html": "<p><strong>Mục tiêu:</strong> Giữ khu Workshop (SSMC) luôn gọn gàng, đầy đủ và sạch sẽ để phục vụ khách.</p><h3>1. Kệ trưng bày</h3><ul><li>Sản phẩm đặt đúng vị trí, sắp xếp gọn để thu hút khách.</li><li>Sàn, bàn ghế sạch, không rác.</li><li>Kiểm tra số lượng và chất lượng mỗi ngày; thiếu thì bổ sung, cũ thì thay.</li></ul><h3>2. Kệ vật liệu & dụng cụ</h3><ul><li>Sắp xếp theo công dụng, phân loại rõ.</li><li>Dán nhãn tên cho tất cả dụng cụ, vật liệu.</li><li>Lau kệ hằng tuần và gửi báo cáo cho quản lý.</li><li>Không để đồ không liên quan.</li></ul><h3>3. Lò nướng & bàn setup nấu ăn</h3><ul><li>Lò luôn sạch, không mùi; vệ sinh kỹ mỗi thứ Hai.</li><li>Không để đồ cá nhân hoặc vật dễ cháy quanh/trên lò; rút điện khi không dùng.</li><li>Bàn chuẩn bị nguyên liệu luôn sạch, không để đồ cá nhân.</li></ul><h3>4. Vệ sinh</h3><ul><li>Lau bàn, ghế, kệ craft mỗi khi bắt đầu và kết thúc ca.</li><li>Xịt nước lau nếu bàn dính màu nước.</li><li>Góc bàn luôn gọn, không để đồ cá nhân.</li></ul>",
+  "scenes": [
+    {
+      "type": "list", "bg": "#0f172a", "kicker": "KỆ TRƯNG BÀY", "h1": "Display shelves",
+      "narration": "Khu kệ trưng bày: luôn đặt sản phẩm đúng vị trí và sắp xếp gọn gàng để thu hút khách. Sàn và bàn ghế phải sạch, không rác. Kiểm tra số lượng và chất lượng mỗi ngày; nếu thiếu thì bổ sung, nếu sản phẩm cũ thì thay mới.",
+      "rows": [["01", "Đúng vị trí", "Sản phẩm đặt đúng khu, sắp gọn"], ["02", "Sạch sẽ", "Sàn, bàn ghế không rác"], ["03", "Kiểm tra mỗi ngày", "Số lượng & chất lượng"], ["04", "Thiếu thì bổ sung", "Cũ/hỏng thì thay mới"]]
+    },
+    {
+      "type": "list", "bg": "#0f1419", "kicker": "KỆ VẬT LIỆU", "h1": "Vật liệu & dụng cụ",
+      "narration": "Kệ vật liệu và dụng cụ phải được sắp xếp theo công dụng và phân loại; tất cả dụng cụ, vật liệu đều dán nhãn tên rõ ràng. Lau kệ mỗi tuần và gửi báo cáo cho quản lý. Không đặt đồ không liên quan trong khu vực này.",
+      "rows": [["01", "Phân loại theo công dụng", "Sắp xếp khoa học"], ["02", "Dán nhãn tên", "Đầy đủ cho mọi dụng cụ"], ["03", "Lau kệ hằng tuần", "Kèm báo cáo quản lý"], ["04", "Không để đồ lạ", "Chỉ vật dụng liên quan"]]
+    },
+    {
+      "type": "list", "bg": "#1a1410", "kicker": "LÒ NƯỚNG & BÀN SETUP", "h1": "Oven & cooking table",
+      "narration": "Khu lò nướng và bàn setup nấu ăn: lò phải luôn sạch và không có mùi, vệ sinh kỹ vào mỗi thứ Hai. Không đặt đồ cá nhân hay vật liệu dễ cháy quanh lò và rút điện khi không sử dụng. Bàn chuẩn bị nguyên liệu phải luôn sạch.",
+      "rows": [["01", "Lò luôn sạch, không mùi", "Vệ sinh kỹ mỗi thứ Hai"], ["02", "Không đồ dễ cháy", "Rút điện khi không dùng"], ["03", "Không để đồ cá nhân", "Quanh và trên lò"], ["04", "Bàn NL sạch", "Sẵn sàng chế biến"]]
+    },
+    {
+      "type": "list", "bg": "#0f172a", "kicker": "VỆ SINH", "h1": "Vệ sinh hằng ngày",
+      "narration": "Về vệ sinh: dùng khăn lau bàn, ghế và kệ craft mỗi khi bắt đầu và kết thúc ca. Nếu bàn dính màu nước thì xịt nước để lau sạch. Bàn ở góc luôn giữ gọn gàng và không để đồ cá nhân.",
+      "rows": [["01", "Lau đầu & cuối ca", "Bàn, ghế, kệ craft"], ["02", "Xịt nước khi dính màu", "Lau sạch màu nước"], ["03", "Góc bàn luôn gọn", "Không để đồ cá nhân"]]
+    }
+  ],
+  "closing_title": "Cảm ơn bạn!",
+  "closing_sub": "Khu Workshop luôn gọn – sạch – sẵn sàng",
+  "closing_narration": "Bạn đã nắm được tiêu chuẩn vận hành và vệ sinh khu Workshop SSMC. Hãy luôn giữ khu vực gọn gàng, sạch sẽ và sẵn sàng phục vụ khách. Chúc bạn làm việc thật tốt!",
+  "quizzes": [
+    {"correct": 1, "question": "Lò nướng cần được vệ sinh kỹ vào khi nào?", "options": ["Mỗi ngày", "Mỗi thứ Hai (hằng tuần)", "Mỗi tháng", "Khi nào bẩn"], "explanation": "Lò được vệ sinh kỹ vào mỗi thứ Hai; quanh lò không để đồ dễ cháy và rút điện khi không dùng."},
+    {"correct": 0, "question": "Dụng cụ và vật liệu trên kệ phải thế nào?", "options": ["Dán nhãn tên & phân loại theo công dụng", "Để chung không cần nhãn", "Cất hết trong kho", "Bỏ vào thùng"], "explanation": "Tất cả dụng cụ và vật liệu phải dán nhãn tên và sắp theo công dụng; kệ lau hằng tuần kèm báo cáo."},
+    {"correct": 2, "question": "Khi nào lau bàn ghế và kệ craft?", "options": ["Chỉ cuối tuần", "Chỉ khi bẩn", "Đầu và cuối mỗi ca", "Mỗi tháng"], "explanation": "Lau bàn, ghế và kệ craft mỗi khi bắt đầu và kết thúc ca."},
+    {"correct": 1, "question": "Khi sản phẩm trưng bày bị thiếu hoặc quá cũ?", "options": ["Để nguyên", "Bổ sung thêm / thay mới", "Bỏ hết đi", "Báo khách"], "explanation": "Thiếu thì bổ sung cho đủ bán; sản phẩm cũ hoặc hỏng thì thay mới."}
+  ]
+}

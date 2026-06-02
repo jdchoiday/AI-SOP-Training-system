@@ -1,0 +1,44 @@
+{
+  "id": "kwzsrc-workshop-ops-thiso",
+  "title": "SOP Vận hành & vệ sinh khu Workshop (THISO)",
+  "title_en": "Workshop Area Operation & Cleanliness SOP (THISO)",
+  "category": "Workshop",
+  "order_num": 212,
+  "theme": "#f59e0b",
+  "intro_kicker": "KIWOOZA WORKSHOP · THISO",
+  "intro_title": "Vận hành khu<br>Workshop (THISO)",
+  "intro_narration": "Chào mừng bạn đến với khóa đào tạo vận hành và vệ sinh khu Workshop chi nhánh THISO. Bạn sẽ học cách sắp xếp trưng bày, khu slime, khu bàn và tủ, cùng khu cooking class và kho.",
+  "content_html": "<p><strong>Mục tiêu:</strong> Vận hành và vệ sinh khu Workshop (THISO) theo tiêu chuẩn: trưng bày, slime, bàn, kho và cooking class.</p><h3>1. Sắp xếp & trưng bày</h3><ul><li>Vật liệu đúng vị trí, gọn gàng; kiểm tra chất lượng (mốc/hỏng thì bỏ).</li><li>Kệ charm rõ ràng, charm chủ đề ở trên cùng.</li><li>Ngăn không có charm phải trang trí, không để trống.</li><li>Mỗi kệ trưng bày tối đa 100 hũ slime.</li></ul><h3>2. Khu Slime</h3><ul><li>Chai keo luôn sạch; khay lau mỗi ngày; chai màu lau mỗi tuần.</li><li>Khách không tự lấy nguyên liệu; nhân viên giám sát toàn bộ.</li><li>Dán nhãn nguyên liệu rõ để tránh nhầm lẫn.</li></ul><h3>3. Khu bàn & tủ ngoài</h3><ul><li>Bàn ghế lau mỗi ngày (chân ghế, mặt ghế, bàn).</li><li>Standee, flyer, bản đồ chuẩn bị mới mỗi ngày.</li><li>Tủ/locker ngoài sảnh slime sạch, không để nguyên liệu nấu ăn; đồ hết hạn được bỏ.</li></ul><h3>4. Cooking class & kho</h3><ul><li>Giữ không gian setup đúng như mẫu.</li><li>Kiểm kê hằng tuần; thất thoát phải báo quản lý trực tiếp.</li><li>Xe đẩy nguyên liệu gọn, sạch.</li><li>Dụng cụ có mùi: rửa nước ấm, phơi khô trước khi cất.</li></ul>",
+  "scenes": [
+    {
+      "type": "list", "bg": "#0f172a", "kicker": "SẮP XẾP & TRƯNG BÀY", "h1": "Trưng bày & charm",
+      "narration": "Khu trưng bày THISO: sắp xếp vật liệu đúng vị trí và gọn gàng. Kệ charm phải rõ ràng, charm theo chủ đề đặt ở trên cùng; ngăn nào không có charm thì phải trang trí, không để trống. Kiểm tra chất lượng sản phẩm, nếu mốc hay hỏng thì loại bỏ.",
+      "rows": [["01", "Vật liệu đúng vị trí", "Sắp xếp gọn gàng"], ["02", "Kệ charm rõ ràng", "Charm chủ đề ở trên cùng"], ["03", "Ngăn trống phải trang trí", "Không để trống"], ["04", "Kiểm tra chất lượng", "Mốc/hỏng thì bỏ"]]
+    },
+    {
+      "type": "list", "bg": "#0f1419", "kicker": "KHU SLIME", "h1": "Slime area",
+      "narration": "Khu Slime: chai keo luôn sạch, khay lau mỗi ngày, chai màu lau mỗi tuần. Khách không được tự lấy nguyên liệu để tự làm; nhân viên phải giám sát toàn bộ quá trình. Dán nhãn nguyên liệu rõ ràng.",
+      "rows": [["01", "Chai keo luôn sạch", "Kiểm tra thường xuyên"], ["02", "Khay lau mỗi ngày", "Chai màu lau mỗi tuần"], ["03", "NV giám sát", "Khách không tự lấy NL"], ["04", "Dán nhãn nguyên liệu", "Tránh nhầm lẫn"]],
+      "note": ["LƯU Ý", "Mỗi kệ trưng bày tối đa 100 hũ slime."]
+    },
+    {
+      "type": "list", "bg": "#1a1410", "kicker": "BÀN & TỦ NGOÀI", "h1": "Bàn & tủ locker",
+      "narration": "Khu bàn và tủ: bàn ghế lau mỗi ngày, kể cả chân ghế và mặt ghế. Standee, flyer, bản đồ luôn chuẩn bị mới mỗi ngày để gửi khách. Tủ và locker ngoài sảnh slime luôn sạch, không để nguyên liệu nấu ăn; đồ hết hạn được phép bỏ để đảm bảo vệ sinh.",
+      "rows": [["01", "Bàn ghế lau mỗi ngày", "Chân ghế, mặt ghế, bàn"], ["02", "Standee/flyer/map", "Chuẩn bị mới mỗi ngày"], ["03", "Tủ ngoài sạch", "Không để NL nấu ăn"], ["04", "Bỏ đồ hết hạn", "Đảm bảo vệ sinh"]]
+    },
+    {
+      "type": "list", "bg": "#0f172a", "kicker": "COOKING & KHO", "h1": "Cooking class & kho",
+      "narration": "Khu Cooking class và kho: luôn giữ không gian setup đúng như mẫu. Kiểm kê số lượng hằng tuần, nếu thất thoát phải báo quản lý trực tiếp. Xe đẩy nguyên liệu luôn gọn gàng và sạch sẽ. Dụng cụ nấu ăn có mùi phải rửa bằng nước ấm và phơi khô trước khi cất.",
+      "rows": [["01", "Setup đúng như mẫu", "Giữ nguyên không gian"], ["02", "Kiểm kê hằng tuần", "Thất thoát thì báo quản lý"], ["03", "Xe đẩy NL gọn, sạch", "Tránh bụi và rác"], ["04", "Dụng cụ có mùi", "Rửa nước ấm, phơi khô"]]
+    }
+  ],
+  "closing_title": "Cảm ơn bạn!",
+  "closing_sub": "Khu Workshop luôn gọn – sạch – sẵn sàng",
+  "closing_narration": "Bạn đã nắm được tiêu chuẩn vận hành và vệ sinh khu Workshop THISO. Hãy luôn giữ khu vực gọn gàng, đầy đủ và sạch sẽ cho mỗi buổi workshop. Chúc bạn làm việc thật tốt!",
+  "quizzes": [
+    {"correct": 1, "question": "Kệ charm cần sắp xếp thế nào?", "options": ["Để charm lộn xộn", "Charm chủ đề trên cùng, ngăn trống phải trang trí", "Để trống các ngăn", "Cất hết vào kho"], "explanation": "Charm theo chủ đề đặt ở trên cùng; ngăn không có charm phải được trang trí, không để trống."},
+    {"correct": 2, "question": "Chai màu ở khu Slime được lau khi nào?", "options": ["Mỗi ngày", "Mỗi tháng", "Mỗi tuần", "Không cần lau"], "explanation": "Khay lau mỗi ngày, còn chai màu lau mỗi tuần; chai keo luôn giữ sạch."},
+    {"correct": 0, "question": "Khi kiểm kê cooking phát hiện thất thoát thì?", "options": ["Báo quản lý trực tiếp", "Bỏ qua", "Tự mua bù", "Đợi cuối tháng"], "explanation": "Kiểm kê hằng tuần; nếu có thất thoát phải báo quản lý trực tiếp để được hướng dẫn xử lý."},
+    {"correct": 1, "question": "Khách có được tự lấy nguyên liệu slime để tự làm không?", "options": ["Có, thoải mái", "Không — nhân viên phải giám sát", "Chỉ người lớn", "Tùy khách"], "explanation": "Khách không được tự lấy nguyên liệu; nhân viên giám sát toàn bộ quá trình của bộ phận workshop."}
+  ]
+}
