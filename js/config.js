@@ -16,6 +16,12 @@ const CONFIG = {
   CERT_TIER_THRESHOLDS: { bronze: 70, silver: 80, gold: 90 }, // E6 자동 자격증 등급 (챕터 평균 점수 기준)
   VIDEO_COMPLETE_PERCENT: 90, // 시청 완료 인정 비율 (%)
 
+  // === 데모 로그인 ===
+  // admin/manager/staff @test.com / 1234 데모 계정 허용 여부 (프로토타입 편의용).
+  // 프로덕션 정식 오픈 시 false 로 바꾸면 모든 데모 계정이 완전히 차단된다
+  // (실제 Supabase Auth 계정만 로그인 가능 — 데모 백도어 제거).
+  DEMO_MODE: true,
+
   // === API Proxy 설정 ===
   // true = Vercel Edge Functions 경유 (API 키 서버 보관, 프로덕션 권장)
   // false = 브라우저에서 직접 API 호출 (로컬 개발용)
