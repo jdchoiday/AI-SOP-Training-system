@@ -511,7 +511,8 @@
     const t = T[lang] || T.en || T.ko;
 
     // ===== 로그인 확인 — 미래/음수 타임스탬프 방어 (30일 유지) =====
-    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    let user = null;
+    try { user = JSON.parse(localStorage.getItem('sop_user') || 'null'); } catch (e) {}
     const loginTime = parseInt(localStorage.getItem('sop_login_time') || '0');
     const nowTs = Date.now();
     // loginTime이 미래이거나 30일 초과면 세션 무효 (베트남 직원 매장 환경 배려)

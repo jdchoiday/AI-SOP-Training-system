@@ -144,15 +144,18 @@
     document.getElementById('welcomeText').innerHTML = t.welcome;
     document.getElementById('chatInput').placeholder = t.placeholder;
 
-    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    let user = null;
+    try { user = JSON.parse(localStorage.getItem('sop_user') || 'null'); } catch (e) {}
     const loginTime = parseInt(localStorage.getItem('sop_login_time') || '0');
-    if (Date.now() - loginTime > 24 * 60 * 60 * 1000) {
+    // sop_login_time 누락(=0) 시엔 만료로 보지 않음 (0 기준 강제 로그아웃 방지)
+    const sessionExpired = loginTime > 0 && Date.now() - loginTime > 24 * 60 * 60 * 1000;
+    if (!user || sessionExpired) {
       localStorage.removeItem('sop_user');
       localStorage.removeItem('sop_login_time');
       window.location.href = 'index.html';
+    } else {
+      document.getElementById('userAvatar').textContent = (user.name || '?')[0];
     }
-    if (!user) { window.location.href = 'index.html'; }
-    document.getElementById('userAvatar').textContent = (user.name || '?')[0];
 
     const chatMessages = document.getElementById('chatMessages');
     const chatInput = document.getElementById('chatInput');

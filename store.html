@@ -216,7 +216,8 @@
     // 호환성: 기존 STATUS_LABELS 참조는 동적으로 window.STATUS_LABELS 읽음
     const STATUS_LABELS = new Proxy({}, { get: (_, key) => (window.STATUS_LABELS || {})[key] || key });
 
-    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    let user = null;
+    try { user = JSON.parse(localStorage.getItem('sop_user') || 'null'); } catch (e) {}
     if (!user) { location.href = 'index.html'; }
 
     let resolvedEmpId = null;

@@ -372,7 +372,8 @@
   <script src="js/error-tracker.js" defer></script>
   <script>
     // ===== 로그인 확인 =====
-    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    let user = null;
+    try { user = JSON.parse(localStorage.getItem('sop_user') || 'null'); } catch (e) {}
     if (!user) { window.location.href = 'index.html'; }
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
 

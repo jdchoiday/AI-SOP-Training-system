@@ -479,23 +479,26 @@
     const t = T[lang] || T.en || T.ko;
 
     // ===== 로그인 확인 =====
-    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    let user = null;
+    try { user = JSON.parse(localStorage.getItem('sop_user') || 'null'); } catch (e) {}
     const loginTime = parseInt(localStorage.getItem('sop_login_time') || '0');
-    if (Date.now() - loginTime > 24 * 60 * 60 * 1000 || !user) {
+    // sop_login_time 누락(=0) 시엔 만료로 보지 않음 (0 기준 강제 로그아웃 방지)
+    const sessionExpired = loginTime > 0 && Date.now() - loginTime > 24 * 60 * 60 * 1000;
+    if (!user || sessionExpired) {
       localStorage.removeItem('sop_user');
       localStorage.removeItem('sop_login_time');
       window.location.href = 'index.html';
-    }
-
-    // 아바타
-    const avatarEl = document.getElementById('userAvatar');
-    if (user.avatarType === 'photo' && user.avatarData) {
-      avatarEl.innerHTML = `<img src="${user.avatarData}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
-    } else if (user.avatarType === 'emoji' && user.avatarData) {
-      avatarEl.textContent = user.avatarData;
-      avatarEl.style.fontSize = '20px';
     } else {
-      avatarEl.textContent = (user.name || '?')[0];
+      // 아바타
+      const avatarEl = document.getElementById('userAvatar');
+      if (user.avatarType === 'photo' && user.avatarData) {
+        avatarEl.innerHTML = `<img src="${user.avatarData}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+      } else if (user.avatarType === 'emoji' && user.avatarData) {
+        avatarEl.textContent = user.avatarData;
+        avatarEl.style.fontSize = '20px';
+      } else {
+        avatarEl.textContent = (user.name || '?')[0];
+      }
     }
 
     // ===== 상태 변수 =====
