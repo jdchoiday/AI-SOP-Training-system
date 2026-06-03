@@ -149,11 +149,7 @@
     }
 
     // Supabase 초기화
-    SupabaseMode.init().then(connected => {
-      if (connected) {
-        console.log('[Login] Supabase 모드 활성화');
-      }
-    });
+    SupabaseMode.init();
 
     // ===== 다국어 텍스트 =====
     const TEXTS = {

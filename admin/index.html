@@ -1588,7 +1588,6 @@
     // adminRole 필드는 향후 지점장 등 세분화용 예약
     const adminRole = (user.role === 'admin' && !user.adminRole) ? 'superadmin' : (user.adminRole || 'superadmin');
     const adminBranch = user.adminBranch || '';
-    console.log('[Admin] 접속 권한:', { role: user.role, adminRole, adminBranch, name: user.name });
 
     function hasPermission(action) {
       if (adminRole === 'superadmin') return true;

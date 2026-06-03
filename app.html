@@ -549,7 +549,6 @@
           const freshChapters = SopStore.getChapters();
           const freshCount = (freshChapters.chapters?.length || 0) + (freshChapters.orphanSections?.length || 0);
           if (!_hadChapters && freshCount > 0) {
-            console.log('[Init] 첫 로그인 — Supabase 동기화 완료 후 새로고침');
             window.location.reload();
             return;
           }

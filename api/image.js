@@ -53,7 +53,6 @@ module.exports = async (req, res) => {
           : buildFallbackPrompt(narration || visual, sceneIndex);
       }
 
-      console.log(`[Image] ${mode} prompt for scene ${(sceneIndex || 0) + 1}: ${(narration || visual || '').slice(0, 80)}...`);
 
       try {
         const controller = new AbortController();
@@ -97,7 +96,6 @@ module.exports = async (req, res) => {
           }
 
           const dataUrl = `data:${mime};base64,${base64}`;
-          console.log(`[Image] Hybrid OK (${origSize}KB → ${Math.round(base64.length / 1024)}KB)`);
 
           if (action === 'generate-multi') {
             return res.status(200).json({

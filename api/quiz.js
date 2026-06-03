@@ -125,7 +125,6 @@ module.exports = async (req, res) => {
       explanation: q.explanation || '',
     }));
 
-    console.log(`[Quiz] ${mode} mode: generated ${quizzes.length} questions (requested ${count})`);
 
     return res.status(200).json({
       mode,
