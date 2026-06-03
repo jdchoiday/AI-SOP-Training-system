@@ -500,15 +500,6 @@ ${template.example}
     return html;
   }
 
-  // ============================================
-  // (Deprecated) Safe Zone enforcer
-  // 자막이 iframe 밖 별도 블록으로 분리되면서 더 이상 필요 없음.
-  // 기존 노출 API 호환 목적으로 no-op 로 보존 (외부 호출자를 막지 않음).
-  // ============================================
-  function enforceSafeZone(html) {
-    return html;
-  }
-
   function extractJson(raw) {
     const text = extractBlock(raw, 'json');
     try { return JSON.parse(text); }
@@ -635,7 +626,6 @@ ${template.example}
   window.Infographic2Pass = {
     generate: generateInfographic,
     validateOverflow,
-    enforceSafeZone,
     buildPass1Prompt,
     buildPass2Prompt,
     detectLang,    // 'ko' | 'en' | 'vi'
