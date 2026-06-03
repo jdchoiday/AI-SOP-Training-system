@@ -67,7 +67,7 @@ function loadSM(supabaseResult, localSops, opts = {}) {
 (async () => {
   const VN = { id: 'kwzvn-opening-shift', title: 'SOP Mở cửa đầu ca', content_vn: '...', status: 'published', order_num: 2 };
   // 관리자가 직접 업로드한 실제 SOP (타임스탬프 기반 ID) — DB 에는 아직 없음(저장 실패분)
-  const USER_SOP = { id: 'sop-1776743049363-ewyb', title: 'SOP Trang trí tiệc', content_vn: 'nội dung', status: 'published', order_num: 8 };
+  const USER_SOP = { id: 'sop-1776743049363-ewyb', title: 'SOP Trang trí tiệc', content_vn: 'nội dung', status: 'published', order_num: 8, company_id: 'test-co' };
   // 데모/샘플 시드 (고정 ID, 한국어) — 사용자 콘텐츠 아님
   const DEMO_KO = { id: 'sop-open', title: '매장 오픈 절차', content: '한국어 본문', status: 'published', order_num: 1 };
 
@@ -139,6 +139,20 @@ function loadSM(supabaseResult, localSops, opts = {}) {
     ok('삭제한 SOP id 가 툼스톤에 기록됨', readTombstones().includes('sop-1776743049363-ewyb'), readTombstones());
     await SM.deleteSop('sop-1776743049363-ewyb');
     ok('중복 삭제 시 툼스톤 중복 미기록', readTombstones().filter(x => x === 'sop-1776743049363-ewyb').length === 1, readTombstones());
+  }
+
+  // ===== TEST 7: 타 회사/회사 미지정(옛 한국어) 로컬 전용 SOP 정리 (멀티테넌시) =====
+  console.log('\n=== TEST 7: syncSops — 타 회사/미지정(옛 한국어) 로컬 SOP 정리, 현재 회사 SOP 보존 ===');
+  {
+    const KO_LEFTOVER = { id: 'aion-old', title: 'AION의탄생배경과비전', content: '한국어 본문', status: 'published', order_num: 9, company_id: null };
+    const OTHER_CO = { id: 'other-1', title: 'Other company SOP', status: 'published', order_num: 10, company_id: 'other-co' };
+    const { SM, readStore, uploaded } = loadSM({ data: [VN], error: null }, [VN, USER_SOP, KO_LEFTOVER, OTHER_CO]);
+    await SM.syncSops();
+    const ids = readStore().map(s => s.id);
+    ok('회사 미지정(옛 한국어) 로컬 SOP 제거됨', !ids.includes('aion-old'), ids);
+    ok('타 회사 로컬 SOP 제거됨', !ids.includes('other-1'), ids);
+    ok('현재 회사 사용자 SOP 는 보존됨', ids.includes('sop-1776743049363-ewyb'), ids);
+    ok('제거 대상은 DB 로 업로드되지 않음', !uploaded.find(s => s.id === 'aion-old' || s.id === 'other-1'), uploaded.map(s => s.id));
   }
 
   console.log(`\n===== 결과: ${pass} 통과 / ${fail} 실패 =====`);
