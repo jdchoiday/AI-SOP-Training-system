@@ -212,7 +212,20 @@ const SupabaseMode = {
 
         const localOnly = existing.filter(s => !dbIds.has(s.id));
         const removedSeed = localOnly.filter(s => DEMO_SEED_IDS.has(s.id) || tombstoneSet.has(s.id));
-        const userLocalOnly = localOnly.filter(s => !DEMO_SEED_IDS.has(s.id) && !tombstoneSet.has(s.id));
+        let userLocalOnly = localOnly.filter(s => !DEMO_SEED_IDS.has(s.id) && !tombstoneSet.has(s.id));
+
+        // 멀티테넌시 정리: 현재 회사 소속이 아닌(또는 회사 미지정) 로컬 전용 SOP 제거.
+        // 과거 단일테넌트 시절('AION 킨더' 등) 만든 한국어 SOP 가 다른 회사 직원 화면/챗봇에
+        // 계속 노출되던 문제 차단. 정상 관리자 업로드분은 company_id 가 주입돼 있어 보존된다.
+        // 현재 회사 ID 를 알 수 있을 때만 적용해 데이터 손실을 방지한다.
+        const curCompany = this._currentCompanyId();
+        if (curCompany) {
+          const foreign = userLocalOnly.filter(s => s.company_id !== curCompany);
+          if (foreign.length > 0) {
+            console.log(`[Supabase] 타 회사/미지정 로컬 SOP ${foreign.length}개 정리:`, foreign.map(s => `${s.id}(${s.company_id || 'null'})`).join(', '));
+          }
+          userLocalOnly = userLocalOnly.filter(s => s.company_id === curCompany);
+        }
 
         if (removedSeed.length > 0) {
           console.log(`[Supabase] 데모/삭제 SOP ${removedSeed.length}개 정리:`, removedSeed.map(s => s.id).join(', '));

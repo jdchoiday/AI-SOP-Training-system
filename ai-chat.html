@@ -98,6 +98,7 @@
         dailyLimitReached: '오늘의 질문 횟수를 모두 사용했습니다. 내일 다시 이용해주세요.',
         remainingQuestions: (r, m) => `오늘 남은 질문: ${r}/${m}`,
         workOnlyNote: '업무 관련 질문만 가능합니다',
+        quickToday: '오늘 학습할 내용은?', quickSummary: '핵심 내용 요약해줘',
       },
       en: {
         home: 'Home', aiChat: 'AI Q&A', myResults: 'Profile',
@@ -112,6 +113,7 @@
         dailyLimitReached: 'You have used all your questions for today. Please try again tomorrow.',
         remainingQuestions: (r, m) => `Questions remaining today: ${r}/${m}`,
         workOnlyNote: 'Work-related questions only',
+        quickToday: 'What should I learn today?', quickSummary: 'Summarize the key points',
       },
       vi: {
         home: 'Trang chủ', aiChat: 'Hỏi AI', myResults: 'Hồ sơ',
@@ -126,6 +128,7 @@
         dailyLimitReached: 'Bạn đã sử dụng hết số câu hỏi hôm nay. Vui lòng thử lại vào ngày mai.',
         remainingQuestions: (r, m) => `Câu hỏi còn lại hôm nay: ${r}/${m}`,
         workOnlyNote: 'Chỉ câu hỏi liên quan đến công việc',
+        quickToday: 'Hôm nay học gì?', quickSummary: 'Tóm tắt nội dung chính',
       }
     };
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
@@ -273,11 +276,11 @@
         const btn = document.createElement('button');
         btn.className = 'quick-q';
         btn.textContent = shortTitle || sop.title;
-        btn.onclick = () => askQuick(`${shortTitle || sop.title}에 대해 알려줘`);
+        btn.onclick = () => askQuick(t.askProcedure(shortTitle || sop.title));
         quickDiv.appendChild(btn);
       });
       // 일반적인 추천 질문 추가
-      const generalQuestions = ['오늘 학습할 내용은?', '핵심 내용 요약해줘'];
+      const generalQuestions = [t.quickToday, t.quickSummary];
       generalQuestions.forEach(q => {
         const btn = document.createElement('button');
         btn.className = 'quick-q';
