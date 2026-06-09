@@ -4,6 +4,11 @@
 // ============================================
 
 const crypto = require('crypto');
+const { rateLimit } = require('./_ratelimit');
+
+// 인증 엔드포인트 무차별 대입 방어 — verify/migrate-to-supabase 가 비밀번호 오라클이
+// 되지 않도록 IP 당 분당 요청을 제한한다. (정상 로그인/가입은 시도당 1~2 콜)
+const authGate = rateLimit({ key: 'auth', limit: 20, windowMs: 60_000 });
 
 function hashPassword(password, salt) {
   if (!salt) salt = crypto.randomBytes(16).toString('hex');
@@ -81,6 +86,9 @@ async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
+
+  // 무차별 대입 방어 (POST 에만 적용, preflight 제외)
+  if (!authGate(req, res)) return; // 429 자동 응답
 
   // 비-JSON/누락 본문에 대한 가드 (구조분해 전 — 500 raw stack 방지)
   if (!req.body || typeof req.body !== 'object') {
