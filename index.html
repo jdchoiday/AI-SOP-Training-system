@@ -267,6 +267,9 @@
     window.selectBrand = function (id) {
       _selectedBrand = id;
       localStorage.setItem('sop_brand', id);
+      // super_admin 학습앱 헤더에 표시할 브랜드명도 저장 (super_admin 은 company_name 이 없음)
+      const _b = _brandList.find(c => c.id === id);
+      if (_b && _b.name) localStorage.setItem('sop_brand_name', _b.name);
       renderBrandChips();
       updateRegisterLink();
     };

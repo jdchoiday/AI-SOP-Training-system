@@ -535,9 +535,14 @@
         avatarEl.textContent = (user.name || '?')[0];
       }
       document.getElementById('welcomeMsg').textContent = user.name || '히어로';
-      // 브랜드(회사)명 헤더 표시
+      // 브랜드(회사)명 헤더 표시. super_admin 은 company_name 이 없으므로 로그인 시 고른
+      // 브랜드명(sop_brand_name)을 보여 어느 브랜드를 보고 있는지 명확히 한다.
       const _brandEl = document.getElementById('brandName');
-      if (_brandEl && user.company_name) _brandEl.textContent = user.company_name;
+      if (_brandEl) {
+        const _bn = user.company_name
+          || (user.role === 'super_admin' ? (localStorage.getItem('sop_brand_name') || '전체 브랜드') : '');
+        if (_bn) _brandEl.textContent = _bn;
+      }
     }
 
     // Supabase 초기화 (매번 최신 데이터 동기화)

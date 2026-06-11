@@ -68,12 +68,26 @@ const SupabaseMode = {
   // company_id 없이 upsert 하면 NULL = <uuid> → 조용히 거부되어 진행률이 저장되지 않는다.
   // auth_company_id() = 로그인 직원의 employees.company_id 이며, 이는 로그인 시
   // sop_user.company_id 로 저장되므로 그 값을 그대로 주입해 WITH CHECK 를 통과시킨다.
-  _currentCompanyId() {
+  // super_admin 은 본인 회사가 없다(company_id NULL, 전 브랜드 관리). 그대로 두면 학습앱
+  // (app/tasks/chapter)에서 syncSops 가 필터 없이 전 브랜드 콘텐츠를 끌어와 한 브랜드를
+  // 테스트할 때 타 브랜드(예: SLCO) 코스가 섞여 보인다. 회사를 '추정'하지 않고, 로그인 시
+  // 명시적으로 고른 브랜드(sop_brand)만 유효 회사로 사용한다(CLAUDE.md 불변규칙).
+  _superAdminSelectedCompany(user) {
+    if (!user || user.role !== 'super_admin') return null;
     try {
-      const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
-      if (user && user.company_id) return user.company_id;
-    } catch (e) { /* ignore */ }
+      return localStorage.getItem('sop_active_company') || localStorage.getItem('sop_brand') || null;
+    } catch (e) { return null; }
+  },
+
+  _currentCompanyId() {
+    let user = null;
+    try { user = JSON.parse(localStorage.getItem('sop_user') || 'null'); } catch (e) { /* ignore */ }
+    if (user && user.company_id) return user.company_id;
+    // 관리자 페이지에서 명시 선택한 활성 회사 (admin/index.html)
     if (typeof window !== 'undefined' && window.__activeCompanyId) return window.__activeCompanyId;
+    // super_admin 학습앱: 로그인 시 고른 브랜드로 스코프 (없으면 null = 전체)
+    const sel = this._superAdminSelectedCompany(user);
+    if (sel) return sel;
     return null;
   },
 
@@ -82,7 +96,12 @@ const SupabaseMode = {
   // 남아 보이던 교차-브랜드 누출(RC4)을 차단한다. 로그인 직후(syncAll 이전)에 호출할 것.
   applyCompanyScope(user) {
     try {
-      const newCo = (user && user.company_id) || '';
+      // 유효 회사: 일반 직원은 본인 회사, super_admin 은 로그인 시 고른 브랜드(sop_brand).
+      // 이렇게 해야 super_admin 이 브랜드를 바꿔 로그인할 때도 직전 브랜드 캐시가 비워진다.
+      let newCo = (user && user.company_id) || '';
+      if (!newCo && user && user.role === 'super_admin') {
+        newCo = localStorage.getItem('sop_brand') || '';
+      }
       const prevCo = localStorage.getItem('sop_active_company') || '';
       if (newCo && prevCo && newCo !== prevCo) {
         ['sop_documents', 'sop_progress_v2', 'sop_branches', 'sop_branch_teams',

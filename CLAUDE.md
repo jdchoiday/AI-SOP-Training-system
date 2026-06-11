@@ -77,6 +77,10 @@ node test/run.js        # 의존성 없는 러너, test/*.test.js 전부 실행
 
 ## 운영 메모
 
+- **super_admin은 본인 회사가 없다(company_id NULL).** 학습앱(app/tasks/chapter)에서
+  전 브랜드가 섞여 보이지 않도록, **로그인 화면에서 브랜드 칩을 골라야** 그 브랜드로
+  스코프된다(`sop_brand`→`_currentCompanyId`). 미선택 시 전체가 보인다(추정 금지 원칙).
+  일반 직원은 항상 본인 `company_id`가 우선이라 영향 없다. (`super-admin-scope.test.js`)
 - **신규 직원은 브랜드 초대링크로 받는 것을 권장** — 브랜드 오선택 여지가 없다.
 - 새 브랜드 온보딩: `companies` 생성 → `branch_teams` 지점 → 초대장 → 그다음 사람 초대.
 - 데이터 변경 작업 후엔 **브랜드별 전후 개수**를 보고한다.
