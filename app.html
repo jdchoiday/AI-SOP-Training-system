@@ -716,6 +716,9 @@
       nextEl.textContent = tierSpan.toLocaleString();
     }
 
+    // XSS guard: escape dynamic DB/user text before innerHTML interpolation (null-safe)
+    function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
     async function renderTodaysQuest() {
       const list = document.getElementById('todaysQuestList');
       const dateEl = document.getElementById('todayDate');
@@ -831,8 +834,8 @@
         const inner = `
           <div class="quest-icon">${q.icon}</div>
           <div class="quest-body">
-            <div class="quest-title">${q.title}</div>
-            <div class="quest-subtitle">${q.subtitle}</div>
+            <div class="quest-title">${escapeHtml(q.title)}</div>
+            <div class="quest-subtitle">${escapeHtml(q.subtitle)}</div>
             ${q.progress != null ? `<div class="quest-progress"><div class="fill" style="width:${q.progress}%"></div></div>` : ''}
           </div>
           <div class="quest-reward">+${q.rewardXp} XP</div>`;

@@ -857,7 +857,7 @@
             <div class="video-thumb">${completed ? '&#10003;' : (i + 1)}</div>
             <div class="video-info">
               <h4>${t.scene} ${i + 1}${mqBadge}</h4>
-              <p style="color:var(--gray-500); font-size:13px;">${preview}...</p>
+              <p style="color:var(--gray-500); font-size:13px;">${escapeHtml(preview)}...</p>
             </div>
             <span style="color:${completed ? 'var(--success)' : 'var(--gray-300)'}; font-size:18px;">
               ${completed ? '&#9989;' : '&#9654;'}
@@ -973,7 +973,7 @@
           const before = fullText.substring(0, charIdx);
           const word = fullText.substring(charIdx, charIdx + charLen);
           const after = fullText.substring(charIdx + charLen);
-          subBar.innerHTML = `${before}<span style="color:#fbbf24;font-weight:bold;">${word}</span>${after.substring(0, 40)}`;
+          subBar.innerHTML = `${escapeHtml(before)}<span style="color:#fbbf24;font-weight:bold;">${escapeHtml(word)}</span>${escapeHtml(after.substring(0, 40))}`;
         };
         _syncController.onPlayEnd = () => { subBar.textContent = narration; };
         _syncController.play(document.getElementById('syncedVideoContainer'));
@@ -1285,7 +1285,7 @@ ${narration.slice(0, 1500)}
             <h3>${t.mqTitle}</h3>
             <span class="mq-progress">${mqIndex + 1}/${mqQuestions.length}</span>
           </div>
-          <p class="mq-question">${q.question}</p>
+          <p class="mq-question">${escapeHtml(q.question)}</p>
           <div id="mqOptions"></div>
           <div id="mqFeedback"></div>
           <button class="mq-next-btn" id="mqNextBtn">${mqIndex < mqQuestions.length - 1 ? t.mqNext : t.mqFinish}</button>
@@ -1311,6 +1311,9 @@ ${narration.slice(0, 1500)}
       });
     }
 
+    // XSS guard: escape dynamic DB/AI quiz/exam text before innerHTML (null-safe). NOTE: SOP body (sop.content) is intentional rich HTML — do NOT route it through this.
+    function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
     function handleMiniQuizAnswer(selected) {
       const q = mqQuestions[mqIndex];
       const btns = document.querySelectorAll('.mq-option');
@@ -1325,7 +1328,7 @@ ${narration.slice(0, 1500)}
       if (selected === q.correct) {
         fb.innerHTML = `<div class="mq-feedback correct">&#9989; ${t.mqCorrect}</div>`;
       } else {
-        fb.innerHTML = `<div class="mq-feedback wrong">&#10060; ${t.mqWrong} &mdash; ${t.mqCorrectIs(q.options[q.correct].slice(0, 40))}</div>`;
+        fb.innerHTML = `<div class="mq-feedback wrong">&#10060; ${t.mqWrong} &mdash; ${t.mqCorrectIs(escapeHtml(q.options[q.correct].slice(0, 40)))}</div>`;
       }
 
       document.getElementById('mqNextBtn').style.display = 'block';
@@ -1450,11 +1453,11 @@ ${narration.slice(0, 1500)}
       if (selected === correct) {
         explanationDiv.style.background = '#dcfce7';
         explanationDiv.style.color = '#166534';
-        explanationDiv.innerHTML = `✅ <strong>${t.correct}</strong>${q.explanation ? '<br><span style="font-size:13px;color:var(--gray-600);">' + q.explanation + '</span>' : ''}`;
+        explanationDiv.innerHTML = `✅ <strong>${t.correct}</strong>${q.explanation ? '<br><span style="font-size:13px;color:var(--gray-600);">' + escapeHtml(q.explanation) + '</span>' : ''}`;
       } else {
         explanationDiv.style.background = '#fef2f2';
         explanationDiv.style.color = '#991b1b';
-        explanationDiv.innerHTML = `❌ <strong>${t.wrong}</strong><br>${t.correctAnswer}: <strong>${opts[correct]}</strong><br><span style="font-size:13px;color:var(--gray-600);margin-top:4px;display:block;">${q.explanation || t.reviewProcedure}</span>`;
+        explanationDiv.innerHTML = `❌ <strong>${t.wrong}</strong><br>${t.correctAnswer}: <strong>${escapeHtml(opts[correct])}</strong><br><span style="font-size:13px;color:var(--gray-600);margin-top:4px;display:block;">${escapeHtml(q.explanation || t.reviewProcedure)}</span>`;
       }
 
       const nextBtn = document.getElementById('quizNextBtn');
@@ -1545,9 +1548,9 @@ ${narration.slice(0, 1500)}
             <div style="font-weight:700; color:#F59E0B; margin-bottom:10px; text-align:center;">${reviewTitle}</div>
             ${wrongAnswersList.map((w, i) => `
               <div style="margin-bottom:12px; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px;">
-                <div style="font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:6px;">Q${i+1}. ${w.q}</div>
-                <div style="font-size:13px; color:#10B981; margin-bottom:4px;">✓ ${correctAnswerLabel}: <strong>${w.correct}</strong></div>
-                ${w.explanation ? `<div style="font-size:12px; color:var(--gray-400); line-height:1.5;">💬 ${w.explanation}</div>` : ''}
+                <div style="font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:6px;">Q${i+1}. ${escapeHtml(w.q)}</div>
+                <div style="font-size:13px; color:#10B981; margin-bottom:4px;">✓ ${correctAnswerLabel}: <strong>${escapeHtml(w.correct)}</strong></div>
+                ${w.explanation ? `<div style="font-size:12px; color:var(--gray-400); line-height:1.5;">💬 ${escapeHtml(w.explanation)}</div>` : ''}
               </div>
             `).join('')}
           </div>
@@ -1846,8 +1849,8 @@ ${narration.slice(0, 1500)}
       if(wa.length>0){
         var h='<h4 style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--gray-700);">'+t.examWrongTitle+' ('+wa.length+')</h4>';
         wa.forEach(function(a){
-          if(a.type==='mc') h+='<div class="exam-wrong-item"><div class="q-num">Q'+(a.index+1)+' &middot; '+t.examMC+'</div><div class="q-text">'+a.question+'</div><div class="q-yours">'+t.examYourAnswer+': '+(a.userAnswer||t.examNoAnswer)+'</div><div class="q-answer">'+t.examCorrectAnswer+': '+a.correctAnswer+'</div></div>';
-          else h+='<div class="exam-wrong-item"><div class="q-num">Q'+(a.index+1)+' &middot; '+t.examSA+' ('+a.score+'%)</div><div class="q-text">'+a.question+'</div><div class="q-yours">'+t.examYourAnswer+': '+(a.userAnswer||t.examNoAnswer)+'</div><div class="q-answer">'+t.examKeywords+': '+a.keywords.join(', ')+'</div></div>';
+          if(a.type==='mc') h+='<div class="exam-wrong-item"><div class="q-num">Q'+(a.index+1)+' &middot; '+t.examMC+'</div><div class="q-text">'+escapeHtml(a.question)+'</div><div class="q-yours">'+t.examYourAnswer+': '+escapeHtml(a.userAnswer||t.examNoAnswer)+'</div><div class="q-answer">'+t.examCorrectAnswer+': '+escapeHtml(a.correctAnswer)+'</div></div>';
+          else h+='<div class="exam-wrong-item"><div class="q-num">Q'+(a.index+1)+' &middot; '+t.examSA+' ('+a.score+'%)</div><div class="q-text">'+escapeHtml(a.question)+'</div><div class="q-yours">'+t.examYourAnswer+': '+escapeHtml(a.userAnswer||t.examNoAnswer)+'</div><div class="q-answer">'+t.examKeywords+': '+escapeHtml(a.keywords.join(', '))+'</div></div>';
         });
         wd.innerHTML=h;
       } else {

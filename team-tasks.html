@@ -588,7 +588,7 @@
         html += `
           <div class="task-card priority-${task.priority} status-${task.status}" onclick="openTaskDetail('${task.id}')">
             <div class="task-card-header">
-              <div class="task-card-title">${task.title}</div>
+              <div class="task-card-title">${escapeHtml(task.title)}</div>
               <span class="task-card-badge badge-${task.status}">${statusLabels[task.status] || task.status}</span>
             </div>
             <div class="task-card-meta">
@@ -611,6 +611,9 @@
     }
 
     // ===== Achievement feed =====
+    // XSS guard: escape dynamic DB/user text before innerHTML interpolation (null-safe)
+    function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
     function renderAchievementFeed(empMap) {
       const completed = allTasks.filter(t => t.status === 'completed').slice(0, 5);
       if (completed.length === 0) {
@@ -622,16 +625,16 @@
         const creator = empMap[task.creator_id];
         const memberNames = task.members
           .filter(m => (m.status === 'accepted' || m.status === 'completed') && m.employee_id !== task.creator_id)
-          .map(m => empMap[m.employee_id]?.name || '?')
+          .map(m => escapeHtml(empMap[m.employee_id]?.name || '?'))
           .slice(0, 3).join(', ');
         return `
           <div class="achievement-card" onclick="openTaskDetail('${task.id}')">
             <div class="achievement-card-header">
               <span class="achievement-emoji">🏆</span>
-              <span class="achievement-title">${task.title}</span>
+              <span class="achievement-title">${escapeHtml(task.title)}</span>
             </div>
             <div class="achievement-body">
-              ${creator?.name || '?'} ${memberNames ? '+ ' + memberNames : ''} · +${task.xp_reward} XP
+              ${escapeHtml(creator?.name || '?')} ${memberNames ? '+ ' + memberNames : ''} · +${task.xp_reward} XP
             </div>
           </div>`;
       }).join('');
@@ -659,10 +662,10 @@
       } else {
         memberListHtml = colleagues.map(emp => `
           <div class="member-select-item" data-emp-id="${emp.id}" onclick="toggleMemberSelect(this)">
-            <div class="member-select-avatar">${(emp.name || '?')[0]}</div>
+            <div class="member-select-avatar">${escapeHtml((emp.name || '?')[0])}</div>
             <div class="member-select-info">
-              <div class="member-select-name">${emp.name}</div>
-              <div class="member-select-team">${emp.team || emp.branch || ''}</div>
+              <div class="member-select-name">${escapeHtml(emp.name)}</div>
+              <div class="member-select-team">${escapeHtml(emp.team || emp.branch || '')}</div>
             </div>
             <select class="member-role-select" onclick="event.stopPropagation()">
               <option value="member">${t.roleMember} (${t.roleDescMember})</option>
@@ -894,9 +897,9 @@
       // Member list HTML
       let membersHtml = `
         <div class="detail-member">
-          <div class="detail-member-avatar" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:white;">${(creator.name || '?')[0]}</div>
+          <div class="detail-member-avatar" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:white;">${escapeHtml((creator.name || '?')[0])}</div>
           <div class="detail-member-info">
-            <div class="detail-member-name">${creator.name || task.creator_id.slice(0,8)} 👑</div>
+            <div class="detail-member-name">${escapeHtml(creator.name || task.creator_id.slice(0,8))} 👑</div>
             <div class="detail-member-role">${t.roleLeader} · XP x1.5</div>
           </div>
           ${isMember && !isCreator ? `<button class="share-btn" onclick="event.stopPropagation();praiseInTask('${task.id}','${task.creator_id}')">${t.btnPraise}</button>` : ''}
@@ -942,7 +945,7 @@
           <div class="activity-item">
             <div class="activity-icon">${iconMap[a.type] || '📝'}</div>
             <div class="activity-content">
-              <div class="activity-text"><strong>${actor.name || '?'}</strong> ${a.content || ''}</div>
+              <div class="activity-text"><strong>${escapeHtml(actor.name || '?')}</strong> ${escapeHtml(a.content || '')}</div>
               <div class="activity-time">${timeAgo}</div>
             </div>
           </div>`;
@@ -970,10 +973,10 @@
         );
         let reviewerInfo = '';
         if (reviewerMembers.length > 0) {
-          const names = reviewerMembers.map(m => empMap[m.employee_id]?.name || '?').join(', ');
+          const names = reviewerMembers.map(m => escapeHtml(empMap[m.employee_id]?.name || '?')).join(', ');
           reviewerInfo = `<div style="font-weight:600;color:var(--primary);">🔍 ${t.reviewerLabel}: ${names}</div>`;
         } else if (branchManagers.length > 0) {
-          const names = branchManagers.map(m => m.name).join(', ');
+          const names = branchManagers.map(m => escapeHtml(m.name)).join(', ');
           reviewerInfo = `<div style="font-weight:600;color:var(--primary);">🔍 ${t.reviewerLabel}: ${names}</div>`;
         } else {
           reviewerInfo = `<div style="color:var(--gray-500);">${t.noManager}</div>`;
@@ -995,8 +998,8 @@
             <span class="task-card-badge badge-${task.status}" style="font-size:13px;padding:4px 12px;">${statusLabels[task.status]}</span>
             ${dl.text ? `<span class="task-deadline ${dl.cls}" style="font-size:13px;">📅 ${dl.text}</span>` : ''}
           </div>
-          <div class="detail-title">${task.title}</div>
-          ${task.description ? `<div class="detail-desc">${task.description}</div>` : ''}
+          <div class="detail-title">${escapeHtml(task.title)}</div>
+          ${task.description ? `<div class="detail-desc">${escapeHtml(task.description)}</div>` : ''}
           <div class="detail-stats" style="grid-template-columns:repeat(${task.estimated_hours ? 4 : 3},1fr);">
             <div class="detail-stat">
               <div class="detail-stat-value">${acceptedMembers.length + 1}</div>
@@ -1019,19 +1022,19 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
             ${task.photo_before_url ? `<div style="text-align:center;">
               <div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">${t.beforePhoto}</div>
-              <img src="${task.photo_before_url}" style="width:100%;border-radius:8px;border:1px solid var(--bg-card-border);">
+              <img src="${escapeHtml(task.photo_before_url)}" style="width:100%;border-radius:8px;border:1px solid var(--bg-card-border);">
             </div>` : '<div></div>'}
             ${task.photo_after_url ? `<div style="text-align:center;">
               <div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">${t.afterPhoto}</div>
-              <img src="${task.photo_after_url}" style="width:100%;border-radius:8px;border:1px solid var(--bg-card-border);">
+              <img src="${escapeHtml(task.photo_after_url)}" style="width:100%;border-radius:8px;border:1px solid var(--bg-card-border);">
             </div>` : '<div></div>'}
           </div>` : ''}
           ${task.review_score ? `<div style="padding:12px;border-radius:10px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);margin-bottom:16px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
               <div style="font-size:12px;color:var(--text-secondary);">${t.enterScore}: ${'⭐'.repeat(task.review_score)}${'☆'.repeat(5-task.review_score)}</div>
-              ${task.reviewer_id && empMap[task.reviewer_id] ? `<div style="font-size:11px;color:var(--primary);font-weight:600;">✅ ${t.reviewedBy}: ${empMap[task.reviewer_id].name}</div>` : ''}
+              ${task.reviewer_id && empMap[task.reviewer_id] ? `<div style="font-size:11px;color:var(--primary);font-weight:600;">✅ ${t.reviewedBy}: ${escapeHtml(empMap[task.reviewer_id].name)}</div>` : ''}
             </div>
-            ${task.review_notes ? `<div style="font-size:13px;color:var(--text-primary);">${task.review_notes}</div>` : ''}
+            ${task.review_notes ? `<div style="font-size:13px;color:var(--text-primary);">${escapeHtml(task.review_notes)}</div>` : ''}
           </div>` : ''}
         </div>
 
