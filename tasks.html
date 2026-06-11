@@ -806,6 +806,9 @@
     }
 
     // ===== 학습 미션 렌더링 =====
+    // XSS guard: escape dynamic DB/user text before innerHTML interpolation (null-safe)
+    function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
     function renderStudyMissions() {
       const container = document.getElementById('studyList');
       if (typeof SopStore === 'undefined' || typeof Progress === 'undefined') {
@@ -870,7 +873,7 @@
               ${passed ? '✅' : !unlocked ? '🔒' : '📖'}
             </div>
             <div class="study-info">
-              <div class="study-title">${index + 1}. ${title}</div>
+              <div class="study-title">${index + 1}. ${escapeHtml(title)}</div>
               <div class="study-sub">${t.studyScenes(videos.length)} · ${t.studyReward}</div>
               ${progressBar}
             </div>
@@ -935,7 +938,7 @@
         container.innerHTML = myTasks.slice(0, 5).map(tk => `
           <a class="team-task-mini" href="team-tasks.html" style="text-decoration:none;">
             <div class="team-task-mini-status ${tk.status}"></div>
-            <div class="team-task-mini-title">${tk.title}</div>
+            <div class="team-task-mini-title">${escapeHtml(tk.title)}</div>
             <span class="team-task-mini-badge" style="background:${teamStatusColors[tk.status]}22;color:${teamStatusColors[tk.status]};">${statusLbl[tk.status] || tk.status}</span>
             <span style="font-size:11px;color:var(--gray-500);">+${tk.xp_reward} XP</span>
           </a>`).join('');

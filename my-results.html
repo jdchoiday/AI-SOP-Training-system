@@ -891,6 +891,9 @@
     }
 
     // ===== 3. Results Tab =====
+    // XSS guard: escape dynamic DB/user text before innerHTML interpolation (null-safe)
+    function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
     function renderResults() {
       const _chRes = SopStore.getChapters();
       const chapters = Array.isArray(_chRes) ? _chRes : [...(_chRes.chapters || []), ...(_chRes.orphanSections || [])];
@@ -954,7 +957,7 @@
         container.innerHTML += `
           <div class="chapter-result" ${!unlocked ? 'style="opacity:0.5;"' : ''}>
             <div class="chapter-result-header">
-              <h4>${index + 1}. ${getLocalizedText(ch, 'title')}</h4>
+              <h4>${index + 1}. ${escapeHtml(getLocalizedText(ch, 'title'))}</h4>
               <div>${badge}${gradeBadge}</div>
             </div>
             <div class="video-dots">${dotsHTML}</div>

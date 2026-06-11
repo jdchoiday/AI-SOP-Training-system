@@ -309,7 +309,7 @@
           : (it.stock !== null ? `<div class="stock">${t.stockLeft(it.stock)}</div>` : '');
         return `
           <div class="item-card ${canAfford ? 'affordable' : 'locked'}" data-id="${it.id}">
-            <span class="emoji">${it.icon || '🎁'}</span>
+            <span class="emoji">${escapeHtml(it.icon || '🎁')}</span>
             <div class="name">${escapeHtml(it.name)}</div>
             <div class="desc">${escapeHtml(it.description || '')}</div>
             <div class="price">${fmt(it.price_coins)} 🪙</div>
@@ -364,7 +364,7 @@
         const label = STATUS_LABELS[r.status] || r.status;
         return `
           <div class="redeem-row">
-            <div class="ico">${r.item_icon_snapshot || '🎁'}</div>
+            <div class="ico">${escapeHtml(r.item_icon_snapshot || '🎁')}</div>
             <div class="body">
               <div class="name">${escapeHtml(r.item_name_snapshot)}</div>
               <div class="meta">${ymd} · ${fmt(r.cost_coins)} 🪙</div>
