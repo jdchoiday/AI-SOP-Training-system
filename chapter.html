@@ -416,6 +416,7 @@
   <script src="js/error-tracker.js" defer></script>
   <script src="js/scene-normalizer.js"></script>
   <script src="js/slide-player.js?v=20260423e"></script>
+  <script src="js/purify.min.js?v=3.4.9"></script>
   <script>
     // ===== 다국어 텍스트 =====
     const T = {
@@ -797,7 +798,7 @@
             </div>
             <div style="padding:18px; background:var(--white,#fff); border:1px solid var(--gray-200,#e5e7eb); border-radius:12px;">
               <h3 style="margin:0 0 12px; font-size:16px; color:var(--primary,#10B981);">${t.readingTitle}</h3>
-              <div class="sop-reading-body" style="font-size:14px; line-height:1.7; color:var(--gray-700,#374151);">${_bodyHtml}</div>
+              <div class="sop-reading-body" style="font-size:14px; line-height:1.7; color:var(--gray-700,#374151);">${window.DOMPurify ? DOMPurify.sanitize(_bodyHtml) : _bodyHtml}</div>
             </div>
           `;
         } else {
