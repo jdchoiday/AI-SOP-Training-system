@@ -71,6 +71,12 @@
       <h1>SOP Training</h1>
       <p class="subtitle">직원 교육 시스템에 로그인하세요</p>
 
+      <!-- 브랜드 선택 (멀티브랜드) — 회사가 2개 이상일 때만 노출 -->
+      <div id="brandPicker" style="display:none; margin:16px 0 4px;">
+        <p style="font-size:12px;color:var(--gray-500);margin-bottom:8px;" id="brandPickerLabel">브랜드 선택</p>
+        <div id="brandChips" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"></div>
+      </div>
+
       <!-- 에러 메시지 (숨겨져 있다가 에러시 표시) -->
       <div id="errorMsg" class="alert alert-error" style="display:none;"></div>
 
@@ -148,8 +154,8 @@
       localStorage.removeItem('sop_login_time');
     }
 
-    // Supabase 초기화
-    SupabaseMode.init();
+    // Supabase 초기화 → 브랜드 선택 칩 로드
+    SupabaseMode.init().then(() => { try { loadBrandPicker(); } catch (e) { console.warn('[Login] brandPicker:', e.message); } });
 
     // ===== 다국어 텍스트 =====
     const TEXTS = {
@@ -167,6 +173,7 @@
         resetTitle: '비밀번호 재설정',
         resetDesc: '관리자에게 문의하여 비밀번호를 초기화하세요',
         admin: '관리자', staff: '직원',
+        brandPicker: '브랜드 선택',
         registerLink: '계정이 없나요? 회원가입',
       },
       en: {
@@ -183,6 +190,7 @@
         resetTitle: 'Reset Password',
         resetDesc: 'Contact your administrator to reset your password',
         admin: 'Admin', staff: 'Staff',
+        brandPicker: 'Select brand',
         registerLink: "Don't have an account? Register",
       },
       vi: {
@@ -199,6 +207,7 @@
         resetTitle: 'Đặt lại mật khẩu',
         resetDesc: 'Liên hệ quản trị viên để đặt lại mật khẩu',
         admin: 'Quản trị viên', staff: 'Nhân viên',
+        brandPicker: 'Chọn thương hiệu',
         registerLink: 'Chưa có tài khoản? Đăng ký',
       }
     };
@@ -243,6 +252,45 @@
       document.getElementById('resetTitle').textContent = t.resetTitle;
       document.getElementById('resetDesc').textContent = t.resetDesc;
       document.getElementById('registerLink').textContent = t.registerLink;
+      const bpl = document.getElementById('brandPickerLabel');
+      if (bpl) bpl.textContent = t.brandPicker;
+      if (typeof updateRegisterLink === 'function') updateRegisterLink();
+    }
+
+    // ===== 브랜드 선택 (멀티브랜드) =====
+    function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+    let _selectedBrand = localStorage.getItem('sop_brand') || '';
+    function updateRegisterLink() {
+      const link = document.getElementById('registerLink');
+      if (link) link.href = _selectedBrand ? ('register.html?brand=' + encodeURIComponent(_selectedBrand)) : 'register.html';
+    }
+    window.selectBrand = function (id) {
+      _selectedBrand = id;
+      localStorage.setItem('sop_brand', id);
+      renderBrandChips();
+      updateRegisterLink();
+    };
+    let _brandList = [];
+    function renderBrandChips() {
+      const chips = document.getElementById('brandChips');
+      if (!chips) return;
+      chips.innerHTML = _brandList.map(c => {
+        const on = (c.id === _selectedBrand || c.slug === _selectedBrand);
+        const color = c.brand_color || '#10B981';
+        return `<button type="button" onclick="selectBrand('${c.id}')" style="padding:8px 16px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid ${on?color:'rgba(148,163,184,0.35)'};background:${on?color:'transparent'};color:${on?'#fff':'var(--gray-400)'};transition:all .15s;">${escapeHtml(c.name)}</button>`;
+      }).join('');
+    }
+    async function loadBrandPicker() {
+      try {
+        if (!SupabaseMode._ready || !SupabaseMode._client) return;
+        const { data, error } = await SupabaseMode._client
+          .from('companies').select('id, name, slug, brand_color').order('name');
+        if (error || !data || data.length < 2) return; // 브랜드 1개뿐이면 선택 UI 숨김
+        _brandList = data;
+        document.getElementById('brandPicker').style.display = 'block';
+        renderBrandChips();
+        updateRegisterLink();
+      } catch (e) { console.warn('[Login] 브랜드 로드 실패:', e.message); }
     }
 
     // 페이지 로드시 언어 적용
@@ -321,6 +369,9 @@
         // 로그인 성공 → 세션 저장
         localStorage.setItem('sop_user', JSON.stringify(user));
         localStorage.setItem('sop_login_time', Date.now().toString());
+
+        // 브랜드(회사)가 직전 로그인과 다르면 이전 브랜드 캐시 제거 — 교차-브랜드 누출 방지 (RC4)
+        SupabaseMode.applyCompanyScope(user);
 
         // Supabase에서 데이터 동기화
         if (SupabaseMode._ready) {

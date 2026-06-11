@@ -142,7 +142,7 @@
 
     <!-- ===== 상단 헤더 ===== -->
     <div class="app-header">
-      <h2>SOP Training</h2>
+      <h2 style="display:flex; flex-direction:column; line-height:1.15;">SOP Training<span id="brandName" style="font-size:11px; font-weight:700; color:var(--gray-500); letter-spacing:.3px;"></span></h2>
       <div style="display:flex; align-items:center; gap:8px;">
         <button id="notifBell" onclick="toggleNotifications()" title=""
           style="background:none; border:none; font-size:20px; cursor:pointer; position:relative; padding:4px;">
@@ -535,6 +535,9 @@
         avatarEl.textContent = (user.name || '?')[0];
       }
       document.getElementById('welcomeMsg').textContent = user.name || '히어로';
+      // 브랜드(회사)명 헤더 표시
+      const _brandEl = document.getElementById('brandName');
+      if (_brandEl && user.company_name) _brandEl.textContent = user.company_name;
     }
 
     // Supabase 초기화 (매번 최신 데이터 동기화)
@@ -563,6 +566,8 @@
             if (freshUser?.name) {
               document.getElementById('welcomeMsg').textContent = freshUser.name;
             }
+            const _be = document.getElementById('brandName');
+            if (_be && freshUser?.company_name) _be.textContent = freshUser.company_name;
           } catch(e) {}
         });
       } else {

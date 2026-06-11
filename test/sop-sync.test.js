@@ -53,10 +53,16 @@ function loadSM(supabaseResult, localSops, opts = {}) {
   SM.saveAllSops = async (sops) => { (sops || []).forEach(s => uploaded.push(s)); };
   SM._client = {
     from() {
-      return {
-        select() { return { order() { return Promise.resolve(supabaseResult); } }; },
+      // 실제 supabase-js 처럼 완전 체이너블 — select/eq/order 어떤 조합이든
+      // await 하면 supabaseResult 로 resolve (syncSops 의 회사 필터 .eq() 포함).
+      const chain = {
+        select() { return chain; },
+        eq() { return chain; },
+        order() { return chain; },
+        then(res, rej) { return Promise.resolve(supabaseResult).then(res, rej); },
         delete() { return { eq() { return Promise.resolve({ error: null }); } }; },
       };
+      return chain;
     },
   };
   const readStore = () => JSON.parse(store.sop_documents || '[]');

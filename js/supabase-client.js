@@ -77,6 +77,23 @@ const SupabaseMode = {
     return null;
   },
 
+  // 로그인 직원의 회사(브랜드)가 직전 세션과 다르면 회사-스코프 localStorage 캐시를 비운다.
+  // 한 기기에서 Kiwooza→SLCO 로 바꿔 로그인했을 때 이전 브랜드의 SOP/진행률/지점/학습경로가
+  // 남아 보이던 교차-브랜드 누출(RC4)을 차단한다. 로그인 직후(syncAll 이전)에 호출할 것.
+  applyCompanyScope(user) {
+    try {
+      const newCo = (user && user.company_id) || '';
+      const prevCo = localStorage.getItem('sop_active_company') || '';
+      if (newCo && prevCo && newCo !== prevCo) {
+        ['sop_documents', 'sop_progress_v2', 'sop_branches', 'sop_branch_teams',
+         'sop_learning_paths', 'sop_deadlines', 'sop_employees', 'sop_deleted_ids',
+         'sop_pending_notifications'].forEach(k => localStorage.removeItem(k));
+        console.log('[Supabase] 브랜드 변경 감지 — 회사-스코프 캐시 초기화:', prevCo, '→', newCo);
+      }
+      if (newCo) localStorage.setItem('sop_active_company', newCo);
+    } catch (e) { /* localStorage 불가 환경 무시 */ }
+  },
+
   // ===== 로그인 (Supabase Auth 우선, 실패 시 legacy hash 자동 전환) =====
   async login(email, password) {
     if (!this._ready) return null;
@@ -115,10 +132,10 @@ const SupabaseMode = {
         }
       }
 
-      // employees 테이블에서 프로필 조회 (auth_user_id 기반)
+      // employees 테이블에서 프로필 조회 (auth_user_id 기반) + 회사(브랜드) 정보 조인
       const authUserId = authData.user.id;
       const { data: emp, error: empErr } = await this._retry(() =>
-        this._client.from('employees').select('*').eq('auth_user_id', authUserId).single()
+        this._client.from('employees').select('*, companies(id, name, slug, brand_color)').eq('auth_user_id', authUserId).single()
       );
       if (empErr || !emp) {
         console.warn('[Auth] employees 프로필 없음:', authUserId);
@@ -134,6 +151,10 @@ const SupabaseMode = {
         role: emp.role,
         branch: emp.branch,
         company_id: emp.company_id || null,
+        // 브랜드 표시/스코프용 (헤더·로그인 화면에서 사용)
+        company_name: emp.companies?.name || null,
+        company_slug: emp.companies?.slug || null,
+        brand_color: emp.companies?.brand_color || null,
         authUserId,
       };
     } catch (e) {
@@ -161,9 +182,15 @@ const SupabaseMode = {
   async syncSops() {
     if (!this._ready) return;
     try {
-      const { data, error } = await this._retry(() =>
-        this._client.from('sop_documents').select('*').order('order_num')
-      );
+      // 회사(브랜드) 명시적 필터 — RLS company_isolation 에 더해 클라이언트에서도 한 번 더
+      // 회사 스코프를 강제한다(방어선 이중화). 직원/회사관리자는 자기 회사만, super_admin 이
+      // 회사 미선택(=전체) 일 때만 companyId 가 null 이라 필터 없이 RLS 판단에 맡긴다.
+      const _companyId = this._currentCompanyId();
+      const { data, error } = await this._retry(() => {
+        let q = this._client.from('sop_documents').select('*');
+        if (_companyId) q = q.eq('company_id', _companyId);
+        return q.order('order_num');
+      });
       if (!error && data && data.length > 0) {
         // 기존 localStorage 데이터와 머지 (Supabase 실패 시 데이터 보존)
         const existing = JSON.parse(localStorage.getItem('sop_documents') || '[]');
