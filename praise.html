@@ -437,17 +437,20 @@
       }
     }
 
+    // XSS guard: escape dynamic DB/user text before innerHTML interpolation (null-safe)
+    function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
     function renderEmpItem(e, isMyTeam) {
       const border = isMyTeam ? 'border-left:3px solid var(--primary);' : '';
       const teamBadge = e.team
-        ? `<span style="font-size:10px; background:${isMyTeam ? 'var(--primary-light)' : 'var(--gray-100)'}; color:${isMyTeam ? 'var(--primary)' : 'var(--gray-500)'}; padding:2px 8px; border-radius:10px; font-weight:600;">${e.team}</span>`
+        ? `<span style="font-size:10px; background:${isMyTeam ? 'var(--primary-light)' : 'var(--gray-100)'}; color:${isMyTeam ? 'var(--primary)' : 'var(--gray-500)'}; padding:2px 8px; border-radius:10px; font-weight:600;">${escapeHtml(e.team)}</span>`
         : '';
       return `
         <div class="emp-select-item" style="${border}" onclick="selectEmployee('${e.id}', this)">
-          <div class="emp-avatar" onclick="event.stopPropagation(); showProfileModal('${e.id}')" style="cursor:pointer; transition:transform 0.2s;" onmouseenter="this.style.transform='scale(1.15)'" onmouseleave="this.style.transform='scale(1)'">${(e.name || '?')[0]}</div>
+          <div class="emp-avatar" onclick="event.stopPropagation(); showProfileModal('${e.id}')" style="cursor:pointer; transition:transform 0.2s;" onmouseenter="this.style.transform='scale(1.15)'" onmouseleave="this.style.transform='scale(1)'">${escapeHtml((e.name || '?')[0])}</div>
           <div style="flex:1; cursor:pointer;" onclick="event.stopPropagation(); showProfileModal('${e.id}')">
-            <div style="font-weight:600; font-size:14px;">${e.name}</div>
-            <div style="font-size:12px; color:var(--gray-500);">${e.team || e.branch || ''}</div>
+            <div style="font-weight:600; font-size:14px;">${escapeHtml(e.name)}</div>
+            <div style="font-size:12px; color:var(--gray-500);">${escapeHtml(e.team || e.branch || '')}</div>
           </div>
           ${teamBadge}
         </div>`;
@@ -612,7 +615,7 @@
         const d = new Date(h.created_at);
         const ago = getTimeAgo(d);
         const reasonHtml = h.reason
-          ? `<div style="font-size:13px; color:var(--gray-600); margin-top:4px; padding:6px 10px; background:var(--gray-50); border-radius:8px; font-style:italic;">"${h.reason}"</div>`
+          ? `<div style="font-size:13px; color:var(--gray-600); margin-top:4px; padding:6px 10px; background:var(--gray-50); border-radius:8px; font-style:italic;">"${escapeHtml(h.reason)}"</div>`
           : '';
         return `
           <div class="praise-history-item" style="flex-wrap:wrap;">
@@ -729,7 +732,7 @@
 
       // Update avatar from profile
       if (profile?.avatarType === 'photo' && profile.avatar) {
-        avatarEl.innerHTML = `<img src="${profile.avatar}" alt="">`;
+        avatarEl.innerHTML = `<img src="${escapeHtml(profile.avatar)}" alt="">`;
       } else if (profile?.avatarType === 'emoji' && profile.avatar) {
         avatarEl.textContent = profile.avatar;
         avatarEl.style.fontSize = '32px';
@@ -772,26 +775,26 @@
       } else {
         // Motto
         if (profile.motto) {
-          bodyHtml += `<div class="pm-section"><div class="pm-motto">"${profile.motto}"</div></div>`;
+          bodyHtml += `<div class="pm-section"><div class="pm-motto">"${escapeHtml(profile.motto)}"</div></div>`;
         }
 
         // Bio
         if (profile.bio) {
           bodyHtml += `<div class="pm-section"><div class="pm-section-title">📝 ${lang === 'en' ? 'About' : lang === 'vi' ? 'Giới thiệu' : '소개'}</div>
-            <p style="font-size:13px; color:#CBD5E1; line-height:1.6; margin:0;">${profile.bio}</p></div>`;
+            <p style="font-size:13px; color:#CBD5E1; line-height:1.6; margin:0;">${escapeHtml(profile.bio)}</p></div>`;
         }
 
         // MBTI, Hobbies, Likes
         if (profile.mbti || profile.hobbies?.length || profile.likes?.length) {
           bodyHtml += `<div class="pm-section"><div class="pm-section-title">🎨 ${lang === 'en' ? 'About Me' : lang === 'vi' ? 'Về tôi' : '나에 대해'}</div>`;
-          if (profile.mbti) bodyHtml += `<div class="pm-info-row"><span class="pm-info-label">MBTI</span><span class="pm-info-value">${profile.mbti}</span></div>`;
+          if (profile.mbti) bodyHtml += `<div class="pm-info-row"><span class="pm-info-label">MBTI</span><span class="pm-info-value">${escapeHtml(profile.mbti)}</span></div>`;
           if (profile.hobbies?.length) {
             bodyHtml += `<div style="margin-top:8px;"><span style="font-size:11px;color:#64748B;">${lang === 'en' ? 'Hobbies' : lang === 'vi' ? 'Sở thích' : '취미'}</span>
-              <div class="pm-tags" style="margin-top:4px;">${profile.hobbies.map(h => `<span class="pm-tag">${h}</span>`).join('')}</div></div>`;
+              <div class="pm-tags" style="margin-top:4px;">${profile.hobbies.map(h => `<span class="pm-tag">${escapeHtml(h)}</span>`).join('')}</div></div>`;
           }
           if (profile.likes?.length) {
             bodyHtml += `<div style="margin-top:8px;"><span style="font-size:11px;color:#64748B;">${lang === 'en' ? 'Likes' : lang === 'vi' ? 'Yêu thích' : '좋아하는 것'}</span>
-              <div class="pm-tags" style="margin-top:4px;">${profile.likes.map(l => `<span class="pm-tag">${l}</span>`).join('')}</div></div>`;
+              <div class="pm-tags" style="margin-top:4px;">${profile.likes.map(l => `<span class="pm-tag">${escapeHtml(l)}</span>`).join('')}</div></div>`;
           }
           bodyHtml += `</div>`;
         }
@@ -799,8 +802,8 @@
         // Strengths / Weaknesses
         if (profile.strengths?.length || profile.weaknesses?.length) {
           bodyHtml += `<div class="pm-section"><div class="pm-section-title">💪 ${lang === 'en' ? 'Strengths & Growth' : lang === 'vi' ? 'Điểm mạnh' : '장점 & 개선점'}</div>`;
-          if (profile.strengths?.length) bodyHtml += `<div class="pm-tags">${profile.strengths.map(s => `<span class="pm-tag">${s}</span>`).join('')}</div>`;
-          if (profile.weaknesses?.length) bodyHtml += `<div class="pm-tags" style="margin-top:6px;">${profile.weaknesses.map(w => `<span class="pm-tag warn">${w}</span>`).join('')}</div>`;
+          if (profile.strengths?.length) bodyHtml += `<div class="pm-tags">${profile.strengths.map(s => `<span class="pm-tag">${escapeHtml(s)}</span>`).join('')}</div>`;
+          if (profile.weaknesses?.length) bodyHtml += `<div class="pm-tags" style="margin-top:6px;">${profile.weaknesses.map(w => `<span class="pm-tag warn">${escapeHtml(w)}</span>`).join('')}</div>`;
           bodyHtml += `</div>`;
         }
 
@@ -812,7 +815,7 @@
         if (extras.length) {
           bodyHtml += `<div class="pm-section"><div class="pm-section-title">✨ ${lang === 'en' ? 'Extra' : lang === 'vi' ? 'Thêm' : '추가 정보'}</div>`;
           extras.forEach(([label, value]) => {
-            bodyHtml += `<div class="pm-info-row"><span class="pm-info-label">${label}</span><span class="pm-info-value">${value}</span></div>`;
+            bodyHtml += `<div class="pm-info-row"><span class="pm-info-label">${label}</span><span class="pm-info-value">${escapeHtml(value)}</span></div>`;
           });
           bodyHtml += `</div>`;
         }
