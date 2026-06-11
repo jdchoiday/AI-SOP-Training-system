@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiwooza VN SOP 일괄 적재</title>
+  <style>
+    body { font-family: -apple-system, 'Pretendard', 'Noto Sans KR', sans-serif; background:#0f172a; color:#e2e8f0; margin:0; padding:24px; }
+    .wrap { max-width: 860px; margin: 0 auto; }
+    h1 { font-size: 22px; margin: 0 0 6px; }
+    .sub { color:#94a3b8; font-size:13px; margin-bottom:18px; }
+    .card { background:#1e293b; border:1px solid #334155; border-radius:12px; padding:16px 18px; margin-bottom:14px; }
+    .status { font-size:14px; }
+    .ok { color:#34d399; } .warn { color:#fbbf24; } .err { color:#f87171; }
+    button { background:#6366f1; color:#fff; border:0; border-radius:8px; padding:12px 20px; font-size:15px; font-weight:700; cursor:pointer; }
+    button:disabled { background:#475569; cursor:not-allowed; }
+    table { width:100%; border-collapse:collapse; font-size:12.5px; }
+    th, td { text-align:left; padding:6px 8px; border-bottom:1px solid #283449; }
+    th { color:#94a3b8; font-weight:600; }
+    .pill { font-size:11px; padding:2px 7px; border-radius:99px; background:#334155; }
+    .pill.thin { background:#7c2d12; color:#fed7aa; }
+    #log { font-family: ui-monospace, monospace; font-size:12px; white-space:pre-wrap; max-height:260px; overflow:auto; background:#0b1220; border-radius:8px; padding:10px; }
+    .bar { height:8px; background:#334155; border-radius:99px; overflow:hidden; margin:10px 0; }
+    .bar > div { height:100%; width:0; background:linear-gradient(90deg,#6366f1,#34d399); transition:width .2s; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>📚 Kiwooza Vietnam SOP 일괄 적재</h1>
+    <div class="sub">content/키즈카페/_PUBLISH-ME 전문(全文)을 앱 DB(sop_documents)에 적재합니다 · 이미 있는 것은 건너뜁니다 · 요약/생략 없음</div>
+
+    <div class="card status" id="statusCard">⏳ Supabase 연결 확인 중…</div>
+
+    <div class="card">
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <button id="importBtn" disabled>가져오기 시작</button>
+        <button id="refreshBtn" style="background:#334155;">상태 새로고침</button>
+        <span id="summary" class="sub" style="margin:0;"></span>
+      </div>
+      <div class="bar"><div id="barFill"></div></div>
+      <div id="log">대기 중…</div>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead><tr><th>#</th><th>제목</th><th>분류</th><th>씬</th><th>본문(자)</th><th>상태</th></tr></thead>
+        <tbody id="seedTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/supabase-client.js"></script>
+  <script src="vn-sop-seed.js"></script>
+  <script>
+    const KIWOOZA = (window.VN_SOP_SEED && window.VN_SOP_SEED[0] && window.VN_SOP_SEED[0].company_id) || 'dae1afc8-55cb-476e-8099-07ef41e4452d';
+    const seed = window.VN_SOP_SEED || [];
+    const $ = id => document.getElementById(id);
+    const plain = h => (h || '').replace(/<[^>]+>/g, '').trim();
+    function log(msg, cls) { const el = $('log'); el.innerHTML += `\n${cls ? `<span class="${cls}">${msg}</span>` : msg}`; el.scrollTop = el.scrollHeight; }
+
+    // 시드 목록 렌더
+    (function renderSeed() {
+      const rows = seed.map((s, i) => {
+        const len = plain(s.content).length;
+        const thin = len < 600;
+        return `<tr><td>${i + 1}</td><td>${s.title}</td><td><span class="pill">${s.category}</span></td>
+          <td>${(s.script || []).length}</td><td>${len}</td>
+          <td>${thin ? '<span class="pill thin">얇음(원본 짧음)</span>' : '<span class="pill">정상</span>'}</td></tr>`;
+      }).join('');
+      $('seedTable').innerHTML = rows;
+    })();
+
+    let existingIds = new Set();
+    async function refreshStatus() {
+      $('importBtn').disabled = true;
+      const sc = $('statusCard');
+      if (!window.SupabaseMode) { sc.innerHTML = '<span class="err">❌ supabase-client.js 로드 실패</span>'; return; }
+      await SupabaseMode.init();
+      if (!SupabaseMode._ready) { sc.innerHTML = '<span class="err">❌ Supabase 연결 실패 — 라이브 사이트에서 열어주세요</span>'; return; }
+      let user = null; try { user = JSON.parse(localStorage.getItem('sop_user') || 'null'); } catch (e) {}
+      const role = user && (user.adminRole || user.role) || '(미로그인)';
+      // 세션/권한 확인 + 기존 적재 현황
+      const { data, error } = await SupabaseMode._client.from('sop_documents').select('id').eq('company_id', KIWOOZA);
+      if (error) { sc.innerHTML = `<span class="err">❌ 조회 실패: ${error.message}</span><br><span class="sub">로그인 세션이 없을 수 있습니다. 메인 사이트에 super_admin 으로 로그인 후 다시 여세요.</span>`; return; }
+      existingIds = new Set((data || []).map(r => r.id));
+      const missing = seed.filter(s => !existingIds.has(s.id));
+      const isSuper = role === 'super_admin' || role === 'superadmin';
+      sc.innerHTML = `${SupabaseMode._ready ? '<span class="ok">✅ Supabase 연결됨</span>' : ''} · 로그인: <b>${role}</b> ${isSuper ? '<span class="ok">(쓰기 가능)</span>' : '<span class="warn">(super_admin 아님 — 쓰기 거부될 수 있음)</span>'}`;
+      $('summary').textContent = `DB 현재 ${existingIds.size}개 · 시드 ${seed.length}개 · 적재 대상(미존재) ${missing.length}개`;
+      $('importBtn').disabled = missing.length === 0;
+      $('importBtn').textContent = missing.length ? `${missing.length}개 가져오기 (published)` : '모두 적재됨 ✓';
+      log(`현황 갱신: DB ${existingIds.size} / 적재 대상 ${missing.length}`, 'ok');
+    }
+
+    async function runImport() {
+      const missing = seed.filter(s => !existingIds.has(s.id));
+      if (!missing.length) return;
+      if (!confirm(`${missing.length}개 SOP 를 직원에게 즉시 공개(published) 상태로 적재합니다. 진행할까요?`)) return;
+      $('importBtn').disabled = true; $('refreshBtn').disabled = true;
+      let ok = 0, fail = 0;
+      const now = new Date().toISOString();
+      for (let i = 0; i < missing.length; i++) {
+        const s = missing[i];
+        const row = { ...s, created_at: now, updated_at: now };
+        try {
+          const { error } = await SupabaseMode._client.from('sop_documents').upsert(row, { onConflict: 'id' });
+          if (error) { fail++; log(`  ❌ ${s.id}: ${error.message}`, 'err'); }
+          else { ok++; log(`  ✅ ${s.title}`, 'ok'); }
+        } catch (e) { fail++; log(`  ❌ ${s.id}: ${e.message}`, 'err'); }
+        $('barFill').style.width = Math.round(((i + 1) / missing.length) * 100) + '%';
+      }
+      log(`\n완료: 성공 ${ok} · 실패 ${fail}`, fail ? 'warn' : 'ok');
+      await refreshStatus();
+      $('refreshBtn').disabled = false;
+      if (ok) log('➡️ 메인 앱을 새로고침하면 직원 화면에 반영됩니다.', 'ok');
+    }
+
+    $('importBtn').onclick = runImport;
+    $('refreshBtn').onclick = refreshStatus;
+    refreshStatus();
+  </script>
+</body>
+</html>

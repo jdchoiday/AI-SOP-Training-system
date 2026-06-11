@@ -4,6 +4,11 @@
 // ============================================
 
 const crypto = require('crypto');
+const { rateLimit } = require('./_ratelimit');
+
+// 인증 엔드포인트 무차별 대입 방어 — verify/migrate-to-supabase 가 비밀번호 오라클이
+// 되지 않도록 IP 당 분당 요청을 제한한다. (정상 로그인/가입은 시도당 1~2 콜)
+const authGate = rateLimit({ key: 'auth', limit: 20, windowMs: 60_000 });
 
 function hashPassword(password, salt) {
   if (!salt) salt = crypto.randomBytes(16).toString('hex');
@@ -66,13 +71,29 @@ async function verifyCaller(req, supabaseUrl, serviceKey) {
 }
 
 async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // CORS: 프론트엔드와 API 가 같은 Vercel 배포(동일 출처)라 * 불필요.
+  // 서비스 롤 키를 쓰는 핸들러이므로 교차 출처는 허용 목록만 반영한다.
+  // (추가 도메인은 환경변수 ALLOWED_ORIGINS 에 콤마로 구분해 지정)
+  const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://ai-sop-training-system.vercel.app')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  const reqOrigin = req.headers.origin || '';
+  if (ALLOWED_ORIGINS.includes(reqOrigin) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(reqOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', reqOrigin);
+    res.setHeader('Vary', 'Origin');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
+  // 무차별 대입 방어 (POST 에만 적용, preflight 제외)
+  if (!authGate(req, res)) return; // 429 자동 응답
+
+  // 비-JSON/누락 본문에 대한 가드 (구조분해 전 — 500 raw stack 방지)
+  if (!req.body || typeof req.body !== 'object') {
+    return res.status(400).json({ error: 'invalid or missing JSON body' });
+  }
   const { action, password, storedHash, email } = req.body;
 
   if (action === 'hash') {
@@ -101,8 +122,11 @@ async function handler(req, res) {
     if (!regEmail || !regPassword || !name) {
       return res.status(400).json({ error: 'email, password, name required' });
     }
-    if (regPassword.length < 4) {
-      return res.status(400).json({ error: 'password too short' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail)) {
+      return res.status(400).json({ error: 'invalid email format' });
+    }
+    if (regPassword.length < 8) {
+      return res.status(400).json({ error: 'password too short (min 8)' });
     }
 
     const supabaseUrl = process.env.SUPABASE_URL || 'https://xbcdzkrhtjgxdwfqqugc.supabase.co';
@@ -289,8 +313,8 @@ async function handler(req, res) {
   // 클라이언트에서 access token을 Authorization 헤더로 전달
   if (action === 'update-password') {
     const { newPassword } = req.body;
-    if (!newPassword || newPassword.length < 4) {
-      return res.status(400).json({ error: 'newPassword too short' });
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({ error: 'newPassword too short (min 8)' });
     }
     const authHeader = req.headers.authorization || '';
     const accessToken = authHeader.replace(/^Bearer\s+/i, '');

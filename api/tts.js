@@ -110,7 +110,6 @@ async function generateVbeeTTS(inputText, lang, gender) {
   const audioRes = await fetch(audioLink);
   if (!audioRes.ok) throw new Error(`Vbee audio download ${audioRes.status}`);
   const arrayBuf = await audioRes.arrayBuffer();
-  console.log(`[Vbee TTS] ✅ voice=${voiceCode} ${Math.round(arrayBuf.byteLength / 1024)}KB`);
   return { buffer: Buffer.from(arrayBuf), contentType: 'audio/mpeg' };
 }
 
@@ -189,7 +188,6 @@ async function generateGeminiTTS(coachText, lang, gender) {
     const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
 
     const wavBuffer = pcmToWav(pcmBuffer, sampleRate);
-    console.log(`[Gemini TTS] ✅ voice=${voiceName} PCM ${Math.round(pcmBuffer.length / 1024)}KB → WAV ${Math.round(wavBuffer.length / 1024)}KB`);
     return { buffer: wavBuffer, contentType: 'audio/wav' };
   } finally {
     clearTimeout(timeout);
@@ -311,7 +309,6 @@ function buildCoachingText(text) {
 
   // 맥락에서 핵심 키워드 추출
   const storyKeywords = extractStoryKeywords(processed);
-  console.log(`[Coach] 핵심 키워드: [${storyKeywords.join(', ')}]`);
 
   // 문장 분리
   const sentences = processed.match(/[^.!?。]+[.!?。]?\s*/g) || [processed];
@@ -455,9 +452,6 @@ module.exports = async (req, res) => {
       effectiveEngine = 'vbee';
     }
 
-    console.log(`[TTS Coach] engine=${ttsEngine}→${effectiveEngine} voice=${voiceName} rate=${prosodyRate} pitch=${prosodyPitch}`);
-    console.log(`[TTS Coach] original: ${text.slice(0, 60)}...`);
-    console.log(`[TTS Coach] coached:  ${coachText.slice(0, 80)}...`);
 
     // ================================
     // engine=vbee: Vbee(베트남어 남부 여성 등) 사용. 실패 시 Edge 로 폴백.

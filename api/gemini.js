@@ -88,6 +88,8 @@ module.exports = async function handler(req, res) {
         details: data.error,
       });
     }
+    // 안전망: 루프가 반환 없이 종료되는 경우(예: 로직 변경) 클라이언트 무한 대기 방지
+    return res.status(502).json({ error: 'Gemini unreachable after retries', details: lastError });
   } catch (err) {
     console.error('Gemini proxy error:', err);
     return res.status(500).json({ error: 'Internal server error', message: err.message });

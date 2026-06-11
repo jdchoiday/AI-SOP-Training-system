@@ -1463,8 +1463,15 @@
   <script src="../js/scene-normalizer.js"></script>
   <script src="../js/slide-player.js?v=20260423e"></script>
   <script>
+    // localStorage 등 JSON 파싱 안전 래퍼: 값이 없거나 손상돼도 예외 없이 fallback 반환
+    // (손상된 키 하나가 JSON.parse 예외로 admin 전체를 백지화하는 것을 방지)
+    function safeParse(raw, fallback) {
+      if (raw == null) return fallback;
+      try { const v = JSON.parse(raw); return v == null ? fallback : v; }
+      catch (e) { console.warn('[safeParse] 손상된 JSON 무시:', e && e.message); return fallback; }
+    }
     // ===== 관리자 확인 =====
-    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    const user = safeParse(localStorage.getItem('sop_user'), null);
     if (!user || !['admin', 'super_admin'].includes(user.role)) { window.location.href = '../index.html'; }
 
     // ===== 멀티 테넌시: 활성 회사 ID =====
@@ -1521,6 +1528,7 @@
       el.innerHTML = `
         <label style="font-size:12px;color:#94a3b8;margin-right:6px;">🏢 회사:</label>
         <select id="companySwitcherSelect" onchange="onCompanyChange(this.value)" style="padding:4px 8px;font-size:13px;background:#1E293B;color:#F1F5F9;border:1px solid rgba(148,163,184,0.3);border-radius:6px;">${opts}</select>
+        <button onclick="openModal('addCompany')" title="새 브랜드(회사) 추가" style="margin-left:8px;padding:4px 10px;font-size:13px;background:#10B981;color:#fff;border:none;border-radius:6px;cursor:pointer;">➕ 새 브랜드</button>
       `;
     }
     function onCompanyChange(newId) {
@@ -1581,7 +1589,6 @@
     // adminRole 필드는 향후 지점장 등 세분화용 예약
     const adminRole = (user.role === 'admin' && !user.adminRole) ? 'superadmin' : (user.adminRole || 'superadmin');
     const adminBranch = user.adminBranch || '';
-    console.log('[Admin] 접속 권한:', { role: user.role, adminRole, adminBranch, name: user.name });
 
     function hasPermission(action) {
       if (adminRole === 'superadmin') return true;
@@ -1591,7 +1598,7 @@
 
     function getAdminList() {
       const defaults = [{ id:'demo-admin', name:'관리자', email:'admin@test.com', role:'superadmin', branch:'' }];
-      return JSON.parse(localStorage.getItem('sop_admin_list') || JSON.stringify(defaults));
+      return safeParse(localStorage.getItem('sop_admin_list'), defaults);
     }
     function saveAdminList(list) { localStorage.setItem('sop_admin_list', JSON.stringify(list)); }
 
@@ -1831,7 +1838,7 @@
 
     // 멀티 테넌시: 활성 회사로 필터링 (super_admin이 다른 회사 옷 입었을 때 그 회사 SOP만)
     function getSops() {
-      let sops = JSON.parse(localStorage.getItem('sop_documents') || '[]');
+      let sops = safeParse(localStorage.getItem('sop_documents'), []);
       const activeCo = (typeof getActiveCompanyId === 'function') ? getActiveCompanyId() : null;
       if (activeCo) {
         sops = sops.filter(s => s.company_id === activeCo);
@@ -1851,8 +1858,8 @@
           }
         }
         // 챕터 이름 자동 보정: "Ch01" 같은 코드명 → "챕터 1" 로 변환
-        if (sop.doc_type === 'chapter' && /^[Cc]h\d+$/.test(sop.title.trim())) {
-          const num = parseInt(sop.title.replace(/[^0-9]/g, ''));
+        if (sop.doc_type === 'chapter' && /^[Cc]h\d+$/.test((sop.title || '').trim())) {
+          const num = parseInt((sop.title || '').replace(/[^0-9]/g, ''));
           if (num) sop.title = `챕터 ${num}`;
         }
         if (sop.script) sop.script.forEach((sc, idx) => {
@@ -1886,8 +1893,20 @@
         }
       });
 
+      // 멀티테넌시 데이터 보존: getSops()가 활성 회사로 필터링하므로, 필터된
+      // 부분집합을 그대로 전체 키에 덮어쓰면 다른 회사 SOP가 삭제된다(데이터 손실).
+      // 활성 회사가 있으면 다른 회사 레코드를 보존한 채 병합해서 저장한다.
+      const _activeCo = (typeof getActiveCompanyId === 'function') ? getActiveCompanyId() : null;
+      function mergeScoped(scoped) {
+        if (!_activeCo) return scoped;
+        let allStored = [];
+        try { allStored = safeParse(localStorage.getItem('sop_documents'), []); } catch(e) { allStored = []; }
+        if (!Array.isArray(allStored)) allStored = [];
+        return allStored.filter(s => s && s.company_id !== _activeCo).concat(scoped);
+      }
+
       try {
-        localStorage.setItem('sop_documents', JSON.stringify(toSave));
+        localStorage.setItem('sop_documents', JSON.stringify(mergeScoped(toSave)));
       } catch(e) {
         if (e.name === 'QuotaExceededError') {
           console.warn('localStorage 용량 초과 — 이미지 포인터도 제거 후 재시도');
@@ -1895,7 +1914,7 @@
             if (s.script) s.script.forEach(sc => { sc.imageUrl = null; });
           });
           try {
-            localStorage.setItem('sop_documents', JSON.stringify(toSave));
+            localStorage.setItem('sop_documents', JSON.stringify(mergeScoped(toSave)));
             alert('⚠️ 저장 공간 부족으로 일부 이미지가 제거되었습니다.');
           } catch(e2) {
             alert('저장 공간이 부족합니다. 불필요한 SOP를 삭제해주세요.');
@@ -1918,7 +1937,7 @@
         SupabaseMode.saveAllSops(forSync).then(() => {
           // Storage URL이 sops에 반영됐으므로 localStorage도 업데이트
           // (saveSop이 sop.script[i].imageUrl을 Storage URL로 교체함)
-          try { localStorage.setItem('sop_documents', JSON.stringify(sops.map(s => {
+          try { localStorage.setItem('sop_documents', JSON.stringify(mergeScoped(sops.map(s => {
             const copy = {...s};
             if (copy.script) copy.script = copy.script.map((sc, idx) => {
               const c = {...sc};
@@ -1930,7 +1949,7 @@
               return c;
             });
             return copy;
-          }))); } catch(e) {}
+          })))); } catch(e) {}
         }).catch(e => console.error('Admin SOP sync:', e));
       }
     }
@@ -2281,7 +2300,7 @@
     function cleanupProgressData(deletedSopIds) {
       // 삭제된 SOP 관련 진행률 정리
       try {
-        const progressData = JSON.parse(localStorage.getItem('sop_progress_v2') || '{}');
+        const progressData = safeParse(localStorage.getItem('sop_progress_v2'), {});
         for (const empId of Object.keys(progressData)) {
           const emp = progressData[empId];
           // 삭제된 SOP의 비디오 완료 기록 제거
@@ -3062,12 +3081,12 @@ ${JSON.stringify({ fields: { title: "교정된 제목", title_en: "fixed title",
         const generatedSections = childSections.filter(s => s.script && s.script.length > 0).length;
 
         // 챕터 번호 추출
-        const chNumMatch = ch.title.match(/(\d+)/);
+        const chNumMatch = (ch.title || '').match(/(\d+)/);
         const chNum = chNumMatch ? parseInt(chNumMatch[1]) : '';
 
         // 챕터 표시명: 제목이 코드명이면 섹션들에서 주제 요약 자동 생성
-        let chDisplayTitle = ch.title;
-        const isGenericTitle = /^(Ch\s*\d+|챕터\s*\d+|새\s*챕터|chapter\s*\d+)$/i.test(ch.title.trim());
+        let chDisplayTitle = ch.title || '';
+        const isGenericTitle = /^(Ch\s*\d+|챕터\s*\d+|새\s*챕터|chapter\s*\d+)$/i.test((ch.title || '').trim());
         // 섹션 주제 미리보기 (항상 표시)
         const topicPreview = childSections.slice(0, 4).map((s, i) => `${i + 1}. ${s.title}`).join('  ');
         const topicExtra = childSections.length > 4 ? ` 외 ${childSections.length - 4}개` : '';
@@ -3199,7 +3218,7 @@ ${JSON.stringify({ fields: { title: "교정된 제목", title_en: "fixed title",
       // 기존 대챕터 수집 (중복 방지)
       sops.filter(s => s.doc_type === 'chapter').forEach(ch => {
         // Ch02 형태의 키 추출 시도
-        const m = ch.title.match(/[Cc]h(?:apter)?[_\-.\s]*(\d+)/);
+        const m = (ch.title || '').match(/[Cc]h(?:apter)?[_\-.\s]*(\d+)/);
         if (m) chapterMap[`ch${String(parseInt(m[1])).padStart(2,'0')}`] = ch.id;
       });
 
@@ -3887,7 +3906,7 @@ ${text.slice(0, 3000)}`;
     function openSopEditor(sopId) {
       currentSopId = sopId;
       // 이미지 프리로드 (IndexedDB → 캐시)
-      const _sops = JSON.parse(localStorage.getItem('sop_documents') || '[]');
+      const _sops = safeParse(localStorage.getItem('sop_documents'), []);
       const _s = _sops.find(s => s.id === sopId);
       if (_s?.script?.length) preloadSceneImages(sopId, _s.script.length);
 
@@ -5191,38 +5210,6 @@ Output ONLY the prompt, nothing else.`;
       return out;
     }
 
-    // 레거시 스크립트: 나레이션/비주얼 텍스트 → Pexels 영어 검색어 매핑 (한/영/베 지원)
-    function _legacyKeywords(text) {
-      const t = (text || '').toLowerCase();
-      const map = [
-        { kw: ['체온', '열', '발열', '온도', 'temperature', 'fever', 'nhiệt độ', 'sốt'], en: ['child temperature check', 'kindergarten health check', 'thermometer kid'] },
-        { kw: ['손 씻', '손씻', '비누', '위생', 'hand wash', 'soap', 'hygiene', 'rửa tay', 'xà phòng'], en: ['child washing hands', 'kid soap hands', 'kindergarten hygiene'] },
-        { kw: ['식사', '급식', '먹', '점심', 'meal', 'lunch', 'eating', 'bữa ăn', 'bữa trưa', 'ăn'], en: ['kindergarten lunch', 'children eating meal', 'kids dining'] },
-        { kw: ['놀이', '장난감', '활동', 'play', 'toy', 'activity', 'chơi', 'đồ chơi', 'hoạt động'], en: ['kindergarten play', 'children playing', 'preschool activity'] },
-        { kw: ['낮잠', '수면', 'nap', 'sleep', 'ngủ', 'giấc ngủ'], en: ['kindergarten nap time', 'children sleeping', 'preschool rest'] },
-        { kw: ['청소', '소독', '방역', 'clean', 'disinfect', 'sanitize', 'vệ sinh', 'khử trùng'], en: ['cleaning classroom', 'kindergarten sanitize'] },
-        { kw: ['부모', '학부모', '소통', 'parent', 'communication', 'phụ huynh', 'giao tiếp'], en: ['parent teacher meeting', 'communication parents'] },
-        { kw: ['안전', '응급', '사고', 'safety', 'emergency', 'an toàn', 'khẩn cấp'], en: ['child safety kindergarten', 'emergency preschool'] },
-        { kw: ['인사', '등원', '하원', 'arrival', 'greeting', 'chào', 'đón'], en: ['kindergarten arrival', 'greeting children', 'preschool morning'] },
-        { kw: ['수업', '학습', '교육', 'class', 'learn', 'education', 'teach', 'học', 'giáo dục', 'dạy'], en: ['kindergarten class', 'preschool teacher', 'learning children'] },
-        { kw: ['유치원', 'kinder', 'kindergarten', 'preschool', 'mầm non', 'mẫu giáo'], en: ['vietnamese kindergarten', 'preschool children asia', 'kinder academy'] },
-        { kw: ['선생', 'teacher', 'giáo viên'], en: ['kindergarten teacher', 'preschool teacher asian'] },
-        { kw: ['아이', '어린이', 'child', 'children', 'kid', 'trẻ em', 'trẻ'], en: ['asian children kindergarten', 'vietnamese kids preschool'] },
-        { kw: ['비전', '철학', 'vision', 'philosophy', 'mission', 'tầm nhìn', 'triết lý', 'sứ mệnh'], en: ['inspiring education vision', 'children future bright', 'hopeful classroom'] },
-        { kw: ['역사', '설립', 'history', 'founded', 'establish', 'lịch sử', 'thành lập'], en: ['kindergarten building exterior', 'school history archive', 'education milestone'] },
-        { kw: ['베트남', 'vietnam', 'việt nam'], en: ['vietnam kindergarten', 'vietnamese children school', 'hanoi education'] },
-        { kw: ['고기', '서빙', '주문', '레스토랑', 'restaurant', 'bbq', 'grill', 'nhà hàng', 'thịt nướng'], en: ['korean bbq restaurant', 'waiter serving', 'grilling meat'] },
-        { kw: ['카페', '키즈', 'cafe', 'playground', 'quán'], en: ['kids cafe play', 'indoor playground children'] },
-      ];
-      const hits = [];
-      for (const m of map) {
-        if (m.kw.some(k => t.includes(k))) hits.push(...m.en);
-        if (hits.length >= 3) break;
-      }
-      if (hits.length === 0) hits.push('kindergarten teacher children', 'preschool classroom', 'early childhood education');
-      return hits.slice(0, 3);
-    }
-
     // Pexels 검색 헬퍼 (여러 검색어 중 첫 매치 반환)
     // Phase 2: context 파라미터 받아 지역 prefix를 자동 앞에 붙임
     async function _searchPexels(queries, context = null, usedUrls = null) {
@@ -5279,257 +5266,6 @@ Output ONLY the prompt, nothing else.`;
         console.warn('AI fallback image failed:', e.message);
         return null;
       }
-    }
-
-    // ===== 레거시: 기존 이미지 생성 (하위 호환용) =====
-    window._generateAllImages = async function() {
-      if (_isGeneratingImages) {
-        alert('이미지 생성이 이미 진행 중입니다. 완료될 때까지 기다려주세요.');
-        return;
-      }
-      _isGeneratingImages = true;
-      try {
-      const sops = getSops();
-      const idx = sops.findIndex(s => s.id === currentSopId);
-      if (idx === -1) { _isGeneratingImages = false; return; }
-      const sop = sops[idx];
-
-      if (!sop.script || sop.script.length === 0) {
-        alert('스크립트가 없습니다. 먼저 스크립트를 저장하세요.');
-        return;
-      }
-
-      // 확정된 이미지 또는 Word에서 추출된 이미지는 건너뛰기
-      const needGen = sop.script.filter(s => !s.imageConfirmed && !s.imageSource);
-      if (needGen.length === 0) {
-        const wordImgs = sop.script.filter(s => s.imageSource === 'word-extract').length;
-        const confirmedImgs = sop.script.filter(s => s.imageConfirmed).length;
-        alert(`모든 씬에 이미지가 있습니다.\n✅ 확정: ${confirmedImgs}개\n📄 Word 원본: ${wordImgs}개`);
-        return;
-      }
-
-      const total = needGen.length;
-      if (!confirm(`${total}개 씬의 이미지를 생성합니다.\n예상 비용: ~$${(total * 0.02).toFixed(2)}\n예상 시간: ~${Math.ceil(total * 8)}초 (1개씩 순차 + 재시도)\n\n진행하시겠습니까?`)) return;
-
-      // 프로그레스 바 표시 (화면 상단 고정)
-      const progressId = 'imgGenProgress';
-      const existingProgress = document.getElementById(progressId);
-      if (existingProgress) existingProgress.remove();
-
-      const progressOverlay = document.createElement('div');
-      progressOverlay.id = progressId;
-      progressOverlay.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:9999; background:linear-gradient(135deg,#0F172A,#1E293B); border-bottom:2px solid #6366f1; padding:16px 24px; box-shadow:0 4px 20px rgba(0,0,0,0.5);';
-      progressOverlay.innerHTML = `
-        <div style="max-width:600px; margin:0 auto;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <strong style="color:#E2E8F0; font-size:15px;">🎨 이미지 생성 중</strong>
-            <span id="imgGenCount" style="color:#94A3B8; font-size:14px; font-weight:600;">0 / ${total}</span>
-          </div>
-          <div style="background:rgba(148,163,184,0.2); border-radius:8px; height:10px; overflow:hidden;">
-            <div id="imgGenBar" style="background:linear-gradient(90deg,#6366f1,#8b5cf6); height:100%; width:0%; transition:width 0.3s; border-radius:8px;"></div>
-          </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-            <div id="imgGenStatus" style="font-size:12px; color:#94A3B8;">씬 이미지 생성 준비 중...</div>
-            <div id="imgGenTime" style="font-size:12px; color:#64748B;">예상 ~${Math.ceil(total * 10)}초</div>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(progressOverlay);
-
-      // 씬 인덱스 목록 (확정 안 된 것 + Word 이미지 없는 것만)
-      const sceneJobs = [];
-      for (let i = 0; i < sop.script.length; i++) {
-        if (!sop.script[i].imageConfirmed && !sop.script[i].imageSource) sceneJobs.push(i);
-      }
-
-      let done = 0;
-      let failed = 0;
-      const BATCH_SIZE = 1; // 1개씩 순차 (Gemini 안정성 최우선)
-      const _genStartTime = Date.now();
-      const _genTimer = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - _genStartTime) / 1000);
-        const min = Math.floor(elapsed / 60);
-        const sec = elapsed % 60;
-        const timeEl = document.getElementById('imgGenTime');
-        if (timeEl) timeEl.textContent = `경과: ${min > 0 ? min + '분 ' : ''}${sec}초`;
-      }, 1000);
-      const FETCH_TIMEOUT = 55000; // 55초 (Vercel 60초 제한보다 약간 짧게)
-      const RETRY_MAX = 2; // 실패 시 2회 재시도
-
-      // 타임아웃 포함 fetch 헬퍼
-      async function fetchWithTimeout(url, options, timeoutMs) {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), timeoutMs);
-        try {
-          const res = await fetch(url, { ...options, signal: controller.signal });
-          clearTimeout(timer);
-          return res;
-        } catch (e) {
-          clearTimeout(timer);
-          throw e;
-        }
-      }
-
-      // 단일 씬 이미지 생성 (퀴즈는 별도 순차 처리)
-      async function generateOneImage(scene, sceneIdx, retry = 0) {
-        try {
-          // 이미지만 먼저 생성 (퀴즈는 모든 이미지 완료 후 순차 생성)
-          const imgRes = await fetchWithTimeout('/api/image', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'generate-multi', visual: scene.visual || '', narration: scene.narration, sceneIndex: sceneIdx, totalScenes: sop.script.length })
-          }, FETCH_TIMEOUT);
-
-          // 이미지 처리
-          if (!imgRes.ok) {
-            const errText = await imgRes.text().catch(() => '');
-            throw new Error(`HTTP ${imgRes.status}: ${errText.slice(0, 100)}`);
-          }
-          const imgData = await imgRes.json();
-          if (imgData.images?.[0]?.imageUrl) {
-            scene.imageUrl = imgData.images[0].imageUrl;
-          } else {
-            throw new Error(imgData.error || 'No image in response');
-          }
-
-          // 퀴즈는 별도로 처리 (하위 호환 — quizRes 파싱 코드 스킵)
-          const quizRes = null;
-
-          // 퀴즈 처리 (실패해도 이미지 생성은 성공)
-          if (quizRes && quizRes.ok) {
-            try {
-              const quizData = await quizRes.json();
-              if (quizData.quizzes && quizData.quizzes.length > 0) {
-                scene.quizzes = quizData.quizzes;
-                console.log(`[Quiz] 씬 ${scene.scene}: ${quizData.quizzes.length}개 퀴즈 생성됨`);
-              }
-            } catch (qe) { console.warn(`씬 ${scene.scene} 퀴즈 파싱 실패:`, qe.message); }
-          }
-
-          return true;
-        } catch (e) {
-          if (retry < RETRY_MAX) {
-            const waitSec = 5 + retry * 5;
-            console.warn(`씬 ${scene.scene} 재시도 (${retry + 1}/${RETRY_MAX}), ${waitSec}초 대기:`, e.message);
-            const statusEl = document.getElementById('imgGenStatus');
-            if (statusEl) statusEl.textContent = `씬 ${scene.scene} 실패 — ${waitSec}초 후 재시도 (${retry + 1}/${RETRY_MAX})...`;
-            await new Promise(r => setTimeout(r, waitSec * 1000));
-            return generateOneImage(scene, sceneIdx, retry + 1);
-          }
-          console.error(`씬 ${scene.scene} 최종 실패:`, e.message);
-          return false;
-        }
-      }
-
-      for (let b = 0; b < sceneJobs.length; b += BATCH_SIZE) {
-        const batch = sceneJobs.slice(b, b + BATCH_SIZE);
-        const statusEl = document.getElementById('imgGenStatus');
-        if (statusEl) statusEl.textContent = `씬 ${batch.map(i => sop.script[i].scene).join(', ')} 생성 중... (실패: ${failed})`;
-
-        // 배치 내 병렬 처리
-        const results = await Promise.all(batch.map(async (i) => {
-          const ok = await generateOneImage(sop.script[i], i);
-          done++;
-          if (!ok) failed++;
-          const countEl = document.getElementById('imgGenCount');
-          const barEl = document.getElementById('imgGenBar');
-          if (countEl) countEl.textContent = `${done} / ${total}` + (failed > 0 ? ` (❌${failed})` : '');
-          if (barEl) barEl.style.width = (done / total * 100) + '%';
-          return ok;
-        }));
-
-        // 배치마다 중간 저장 (alert 방지: try/catch)
-        try { saveSops(sops); } catch(e) { console.warn('[Save] 중간 저장 실패:', e.message); }
-
-        // 씬 간 딜레이 (레이트 리밋 방지, 점점 늘림)
-        if (b + BATCH_SIZE < sceneJobs.length) {
-          const delay = 3000 + Math.floor(b / BATCH_SIZE) * 1000; // 3초~점진 증가 (최대 8초)
-          const statusEl = document.getElementById('imgGenStatus');
-          if (statusEl) statusEl.textContent = `다음 씬 준비 중... (${Math.round(delay/1000)}초 대기)`;
-          await new Promise(r => setTimeout(r, Math.min(delay, 8000)));
-        }
-      }
-
-      // 실패한 씬들 마지막 재시도 (한 번 더)
-      if (failed > 0) {
-        const failedJobs = sceneJobs.filter(i => !sop.script[i].imageUrl);
-        if (failedJobs.length > 0) {
-          const statusEl = document.getElementById('imgGenStatus');
-          if (statusEl) statusEl.textContent = `❌ ${failedJobs.length}개 실패 씬 최종 재시도 중... (10초 대기)`;
-          await new Promise(r => setTimeout(r, 10000)); // 10초 충분히 대기
-
-          for (const i of failedJobs) {
-            if (statusEl) statusEl.textContent = `🔄 씬 ${sop.script[i].scene} 최종 재시도...`;
-            const ok = await generateOneImage(sop.script[i], i, 0);
-            if (ok) {
-              failed--;
-              const countEl = document.getElementById('imgGenCount');
-              if (countEl) countEl.textContent = `${done} / ${total}` + (failed > 0 ? ` (❌${failed})` : ' ✅');
-            }
-            await new Promise(r => setTimeout(r, 5000)); // 씬 간 5초 대기
-          }
-        }
-      }
-
-      // 이미지 완료 후 씬별 퀴즈 순차 생성 (rate limit 방지)
-      {
-        const statusEl = document.getElementById('imgGenStatus');
-        if (statusEl) statusEl.textContent = '📝 씬별 퀴즈 순차 생성 중...';
-        let quizDone = 0;
-        for (let i = 0; i < sop.script.length; i++) {
-          const sc = sop.script[i];
-          if (!sc.narration) continue;
-          try {
-            const qRes = await fetch('/api/quiz', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ narration: sc.narration, count: 3, mode: 'scene', sceneIndex: i })
-            });
-            if (qRes.ok) {
-              const qData = await qRes.json();
-              if (qData.quizzes?.length > 0) {
-                sc.quizzes = qData.quizzes;
-                quizDone += qData.quizzes.length;
-              }
-            }
-          } catch (e) { console.warn(`[Quiz] 씬 ${i} 퀴즈 실패:`, e.message); }
-          // 씬 간 1.5초 대기 (rate limit 방지)
-          if (i < sop.script.length - 1) await new Promise(r => setTimeout(r, 1500));
-          if (statusEl) statusEl.textContent = `📝 퀴즈 생성 ${i+1}/${sop.script.length} (${quizDone}개)`;
-        }
-        console.log(`[GenAll] 이미지 ${done - failed}/${total} 성공, 퀴즈 총 ${quizDone}개 생성`);
-      }
-
-      // 섹션 퀴즈 3개 자동 생성 (전체 나레이션 기반)
-      try {
-        const statusEl = document.getElementById('imgGenStatus');
-        if (statusEl) statusEl.textContent = '📝 섹션 종합 퀴즈 생성 중...';
-        const allNarration = sop.script.map(sc => sc.narration).join('\n');
-        const secQuizRes = await fetch('/api/quiz', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ narration: allNarration.slice(0, 3000), count: 3, mode: 'section' })
-        });
-        if (secQuizRes.ok) {
-          const secData = await secQuizRes.json();
-          if (secData.quizzes?.length > 0) {
-            sop.quizzes = secData.quizzes;
-            console.log(`[Quiz] 섹션 종합 퀴즈 ${secData.quizzes.length}개 생성됨`);
-          }
-        }
-      } catch (e) { console.warn('[Quiz] 섹션 퀴즈 생성 실패:', e.message); }
-
-      // 최종 저장
-      try { saveSops(sops); } catch(e) { console.warn('[Save] 최종 저장 실패:', e.message); }
-
-      // 타이머 정리 + 프로그레스 제거 후 리뷰 패널 열기
-      clearInterval(_genTimer);
-      const progressEl = document.getElementById(progressId);
-      if (progressEl) progressEl.remove();
-
-      renderAiResults(sop);
-      _openSceneWizard(0); // 첫 씬부터 순차 리뷰 시작
-    } finally { _isGeneratingImages = false; }
     }
 
     // ===== 이미지 리뷰 패널 (전체 씬 한눈에) =====
@@ -7084,7 +6820,7 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
   const baseUrl = window.location.origin || 'https://your-domain.vercel.app';
   const link = baseUrl + '/register.html?code=' + code;
   // 지점별 팀 목록 (관리자가 설정한 것 사용)
-  const branchTeams = JSON.parse(localStorage.getItem('sop_branch_teams') || '{}');
+  const branchTeams = safeParse(localStorage.getItem('sop_branch_teams'), {});
   m.innerHTML=`<h3>🔗 직원 초대 링크 생성</h3>
     <p style="font-size:14px;color:var(--gray-500);margin-bottom:16px;">이 링크를 직원에게 공유하면 자동으로 지점/팀에 배정됩니다</p>
     <div class="form-group"><label>지점 지정</label>
@@ -7111,6 +6847,22 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
     </div>`;
   updateInviteTeams();
 }
+      else if (type==='addCompany') {
+        m.innerHTML = `<h3>🏢 새 브랜드(회사) 추가</h3>
+          <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px;">회사 + 첫 관리자 계정 + 직원 초대링크를 한 번에 생성합니다. (super_admin 전용)</p>
+          <div class="form-group"><label>브랜드 이름 *</label><input id="ncName" placeholder="예: SLCO 카페"></div>
+          <div class="form-group"><label>슬러그 (영문 식별자, 비우면 자동)</label><input id="ncSlug" placeholder="예: slco"></div>
+          <div class="form-group"><label>브랜드 색상</label><input id="ncColor" type="color" value="#6366f1" style="width:64px;height:38px;padding:2px;"></div>
+          <hr style="border:none;border-top:1px solid var(--gray-200);margin:14px 0;">
+          <p style="font-weight:700;font-size:14px;margin-bottom:8px;">첫 관리자 계정</p>
+          <div class="form-group"><label>관리자 이름 *</label><input id="ncAdminName" placeholder="관리자 이름"></div>
+          <div class="form-group"><label>관리자 이메일 *</label><input id="ncAdminEmail" type="email" placeholder="admin@brand.com"></div>
+          <div class="form-group"><label>관리자 비밀번호 * (8자 이상)</label><input id="ncAdminPw" type="password" placeholder="초기 비밀번호"></div>
+          <div style="display:flex;gap:8px;margin-top:20px;">
+            <button class="btn btn-primary" id="ncSubmit" style="flex:1;" onclick="createCompanyWithAdmin()">브랜드 생성</button>
+            <button class="btn btn-outline" onclick="closeModal()">취소</button>
+          </div>`;
+      }
       else if (type==='sendNotification') {
         const emps = EmployeeStore.getAll();
         const empOptions = emps.map(e => `<option value="${e.email}">${e.name} (${e.email})</option>`).join('');
@@ -7298,7 +7050,7 @@ function copyInviteLink() {
 // 초대 모달 팀 드롭다운 업데이트
 function updateInviteTeams() {
   const branch = document.getElementById('inviteBranch').value;
-  const branchTeams = JSON.parse(localStorage.getItem('sop_branch_teams') || '{}');
+  const branchTeams = safeParse(localStorage.getItem('sop_branch_teams'), {});
   const teams = branchTeams[branch] || [];
   const sel = document.getElementById('inviteTeam');
   sel.innerHTML = '<option value="">팀 미지정 (가입 시 선택)</option>' +
@@ -7311,7 +7063,7 @@ function saveInvitation(code) {
   const maxUses = parseInt(document.getElementById('inviteMax').value);
   const expiryInput = document.getElementById('inviteExpiry').value;
   const expiresAt = expiryInput ? new Date(expiryInput + 'T23:59:59').toISOString() : new Date(Date.now() + 7*24*60*60*1000).toISOString();
-  const invites = JSON.parse(localStorage.getItem('sop_invitations') || '[]');
+  const invites = safeParse(localStorage.getItem('sop_invitations'), []);
   invites.push({ code, branch, team, maxUses, usedCount: 0, expiresAt, createdAt: new Date().toISOString() });
   localStorage.setItem('sop_invitations', JSON.stringify(invites));
 
@@ -7328,6 +7080,62 @@ function saveInvitation(code) {
   alert('초대 링크가 활성화되었습니다!' + teamMsg + '\n직원에게 링크를 공유하세요.');
   closeModal();
 }
+
+    // super_admin: 새 브랜드(회사) + 첫 관리자 + 직원 초대링크를 한 번에 생성
+    async function createCompanyWithAdmin() {
+      const name = (document.getElementById('ncName').value || '').trim();
+      const slugRaw = (document.getElementById('ncSlug').value || '').trim();
+      const slug = (slugRaw || name.toLowerCase().replace(/[^a-z0-9]+/g, '-')).replace(/(^-|-$)/g, '');
+      const color = document.getElementById('ncColor').value || '#6366f1';
+      const adminName = (document.getElementById('ncAdminName').value || '').trim();
+      const adminEmail = (document.getElementById('ncAdminEmail').value || '').trim();
+      const adminPw = document.getElementById('ncAdminPw').value || '';
+      if (!name || !adminName || !adminEmail || !adminPw) { alert('브랜드 이름과 관리자 이름/이메일/비밀번호를 입력하세요'); return; }
+      if (adminPw.length < 8) { alert('관리자 비밀번호는 8자 이상이어야 합니다'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) { alert('관리자 이메일 형식이 올바르지 않습니다'); return; }
+      if (typeof SupabaseMode === 'undefined' || !SupabaseMode._ready) { alert('Supabase 연결이 준비되지 않았습니다'); return; }
+      const btn = document.getElementById('ncSubmit');
+      if (btn) { btn.disabled = true; btn.textContent = '생성 중…'; }
+      try {
+        // 1) 회사 생성 (companies RLS: super_admin 만 INSERT 허용)
+        const payload = { name: name, slug: slug, brand_color: color, active_modules: ['growup'] };
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) payload.id = crypto.randomUUID();
+        const { data: co, error: coErr } = await SupabaseMode.client
+          .from('companies').insert(payload).select('id,name,slug,brand_color').single();
+        if (coErr || !co) throw new Error('회사 생성 실패: ' + (coErr ? coErr.message : '권한 또는 슬러그 중복 확인'));
+
+        // 2) 첫 관리자 계정 — super_admin 세션 토큰으로 서버가 admin role 부여를 검증
+        const { data: _sess } = await SupabaseMode.client.auth.getSession();
+        const _tok = _sess && _sess.session ? _sess.session.access_token : null;
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(_tok ? { Authorization: 'Bearer ' + _tok } : {}) },
+          body: JSON.stringify({ action: 'register', email: adminEmail, password: adminPw, name: adminName, branch: '본사', team: '', role: 'admin', company_id: co.id })
+        });
+        const reg = await res.json().catch(() => ({}));
+        if (!res.ok || !reg.registered) throw new Error('관리자 계정 생성 실패: ' + (reg.error || ('HTTP ' + res.status)));
+
+        // 3) 직원 초대링크 + 기본 지점
+        const code = 'INV-' + (slug || 'CO').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) + '-' + Math.random().toString(36).substr(2, 4).toUpperCase();
+        const expiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
+        await SupabaseMode.client.from('invitations').insert({
+          code: code, branch: '본사', team: '', max_uses: 50, used_count: 0,
+          expires_at: expiresAt, created_by: (typeof user !== 'undefined' && user ? user.id : null), company_id: co.id
+        });
+        await SupabaseMode.client.from('branch_teams').insert({ branch: '본사', team: null, company_id: co.id });
+
+        const link = (window.location.origin || '') + '/register.html?code=' + code;
+        closeModal();
+        await loadCompaniesList();
+        renderCompanySwitcher();
+        alert('✅ 새 브랜드 "' + name + '" 생성 완료!\n\n■ 관리자 로그인 이메일: ' + adminEmail + '\n■ 직원 초대링크:\n' + link + '\n\n이 링크를 ' + name + ' 직원에게 공유하세요. 해당 관리자로 로그인하면 이 브랜드 데이터만 보입니다.');
+      } catch (e) {
+        alert('오류: ' + (e && e.message ? e.message : e));
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '브랜드 생성'; }
+      }
+    }
+    window.createCompanyWithAdmin = createCompanyWithAdmin;
 
     function onEmpFilterChange() {
       const branch = document.getElementById('empFilterBranch').value;
@@ -7386,7 +7194,7 @@ function saveInvitation(code) {
     const BRANCHES_KEY = 'sop_branches';
 
     function getBranches() {
-      const saved = JSON.parse(localStorage.getItem(BRANCHES_KEY) || 'null');
+      const saved = safeParse(localStorage.getItem(BRANCHES_KEY), null);
       return saved || ['서울 강남점', '서울 홍대점', '부산 해운대점', '호치민 1호점', '하노이 1호점'];
     }
     function saveBranches(list) {
@@ -7396,7 +7204,7 @@ function saveInvitation(code) {
       SupabaseMode.saveBranchTeamsToSupabase(list, bt);
     }
 
-    function getBranchTeams() { return JSON.parse(localStorage.getItem(BRANCH_TEAMS_KEY) || '{}'); }
+    function getBranchTeams() { return safeParse(localStorage.getItem(BRANCH_TEAMS_KEY), {}); }
     function saveBranchTeams(obj) {
       localStorage.setItem(BRANCH_TEAMS_KEY, JSON.stringify(obj));
       // Supabase 동기화
@@ -7745,7 +7553,7 @@ function saveInvitation(code) {
       const date = document.getElementById('deadlineDate').value;
       if (!sopId || !date) { alert('SOP와 마감일을 선택하세요'); return; }
 
-      const deadlines = JSON.parse(localStorage.getItem('sop_deadlines') || '[]');
+      const deadlines = safeParse(localStorage.getItem('sop_deadlines'), []);
       const sop = getSops().find(s => s.id === sopId);
       deadlines.push({ id: 'dl-'+Date.now(), sopId, sopTitle: sop?.title || '', branch, deadlineAt: date, createdAt: new Date().toISOString() });
       localStorage.setItem('sop_deadlines', JSON.stringify(deadlines));
@@ -7761,7 +7569,7 @@ function saveInvitation(code) {
     function renderExistingDeadlines() {
       const container = document.getElementById('existingDeadlines');
       if (!container) return;
-      const deadlines = JSON.parse(localStorage.getItem('sop_deadlines') || '[]');
+      const deadlines = safeParse(localStorage.getItem('sop_deadlines'), []);
       if (deadlines.length === 0) { container.innerHTML = '<p style="font-size:13px;color:var(--gray-500);">설정된 마감일이 없습니다</p>'; return; }
       container.innerHTML = '<h4 style="font-size:14px;margin-bottom:8px;">설정된 마감일</h4>' + deadlines.map(d => {
         const daysLeft = Math.ceil((new Date(d.deadlineAt) - new Date()) / (1000*60*60*24));
@@ -7774,7 +7582,7 @@ function saveInvitation(code) {
     }
 
     function checkDeadlineAlerts() {
-      const deadlines = JSON.parse(localStorage.getItem('sop_deadlines') || '[]');
+      const deadlines = safeParse(localStorage.getItem('sop_deadlines'), []);
       const upcoming = deadlines.filter(d => {
         const days = Math.ceil((new Date(d.deadlineAt) - new Date()) / (1000*60*60*24));
         return days > 0 && days <= 7;
@@ -7975,7 +7783,7 @@ Requirements:
       document.getElementById('setVideo').value = AI_CONFIG.videoProvider;
 
       // 저장된 키 반영 (마스킹)
-      const saved = JSON.parse(localStorage.getItem('sop_ai_keys') || '{}');
+      const saved = safeParse(localStorage.getItem('sop_ai_keys'), {});
       ['gemini','groq','openai','siliconflow'].forEach(k => {
         const input = document.getElementById('key' + k.charAt(0).toUpperCase() + k.slice(1));
         if (input && saved[k]) input.value = saved[k];
@@ -8192,7 +8000,7 @@ Requirements:
     }
 
     function _restoreTtsSettings() {
-      const saved = JSON.parse(localStorage.getItem('sop_tts_settings') || 'null');
+      const saved = safeParse(localStorage.getItem('sop_tts_settings'), null);
       if (!saved) return;
       const rateEl = document.getElementById('ttsRate');
       const pitchEl = document.getElementById('ttsPitch');
@@ -8214,11 +8022,11 @@ Requirements:
 
     // 저장된 AI 설정 복원
     (function restoreAiConfig() {
-      const saved = JSON.parse(localStorage.getItem('sop_ai_config') || 'null');
+      const saved = safeParse(localStorage.getItem('sop_ai_config'), null);
       if (saved) {
         Object.assign(AI_CONFIG, saved);
       }
-      const keys = JSON.parse(localStorage.getItem('sop_ai_keys') || 'null');
+      const keys = safeParse(localStorage.getItem('sop_ai_keys'), null);
       if (keys) {
         Object.assign(AI_CONFIG.keys, keys);
       }
@@ -8226,7 +8034,7 @@ Requirements:
 
     // ===== SOP 버전 이력 =====
     function getVersions(sopId) {
-      return JSON.parse(localStorage.getItem('sop_versions_' + sopId) || '[]');
+      return safeParse(localStorage.getItem('sop_versions_' + sopId), []);
     }
 
     function saveVersionSnapshot(sopId, data) {
@@ -8386,7 +8194,7 @@ Requirements:
 
     // ===== 학습 경로 관리 =====
     function getLearningPaths() {
-      return JSON.parse(localStorage.getItem('sop_learning_paths') || '{}');
+      return safeParse(localStorage.getItem('sop_learning_paths'), {});
     }
 
     function saveLearningPaths(paths) {
@@ -8635,7 +8443,7 @@ Requirements:
 
     // ===== AI 대화 로그 =====
     function renderChatLogs() {
-      const allLogs = JSON.parse(localStorage.getItem('sop_chat_logs') || '[]');
+      const allLogs = safeParse(localStorage.getItem('sop_chat_logs'), []);
       const logs = getFilteredChatLogs(allLogs);
       const searchQ = (document.getElementById('chatLogSearch')?.value || '').toLowerCase();
 
@@ -8752,12 +8560,12 @@ Requirements:
       };
 
       // 대기 중 알림에 추가 (직원 앱에서 읽음)
-      const pending = JSON.parse(localStorage.getItem('sop_pending_notifications') || '[]');
+      const pending = safeParse(localStorage.getItem('sop_pending_notifications'), []);
       pending.push(notif);
       localStorage.setItem('sop_pending_notifications', JSON.stringify(pending));
 
       // 이력에 추가
-      const history = JSON.parse(localStorage.getItem('sop_notification_history') || '[]');
+      const history = safeParse(localStorage.getItem('sop_notification_history'), []);
       history.push(notif);
       localStorage.setItem('sop_notification_history', JSON.stringify(history));
 
@@ -8767,7 +8575,7 @@ Requirements:
     }
 
     function renderNotifHistory() {
-      const history = JSON.parse(localStorage.getItem('sop_notification_history') || '[]');
+      const history = safeParse(localStorage.getItem('sop_notification_history'), []);
       const tbody = document.getElementById('notifHistoryBody');
       if (!tbody) return;
 
@@ -8794,7 +8602,7 @@ Requirements:
 
     // ===== 용어 사전 =====
     const GLOSSARY_KEY = 'sop_glossary';
-    function getGlossary() { return JSON.parse(localStorage.getItem(GLOSSARY_KEY) || '[]'); }
+    function getGlossary() { return safeParse(localStorage.getItem(GLOSSARY_KEY), []); }
     function saveGlossary(terms) { localStorage.setItem(GLOSSARY_KEY, JSON.stringify(terms)); }
 
     function renderGlossary() {
@@ -9102,7 +8910,7 @@ ${text.slice(0, 3000)}
               else expiryBadge = '<span class="badge" style="background:#D1FAE5;color:#059669;padding:2px 8px;border-radius:4px;font-size:11px;">정상</span>';
             }
 
-            const versions = JSON.parse(localStorage.getItem('sop_versions_' + sop.id) || '[]');
+            const versions = safeParse(localStorage.getItem('sop_versions_' + sop.id), []);
             const statusBadge = sop.status === 'published' ? '🟢' : sop.status === 'draft' ? '🟡' : '⚪';
 
             return `<div class="card" style="cursor:pointer;transition:box-shadow 0.2s;" onclick="openVersionDetail('${sop.id}')" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow=''">
@@ -9165,7 +8973,7 @@ ${text.slice(0, 3000)}
       const sop = sops.find(s => s.id === sopId);
       if (!sop) return;
 
-      const versions = JSON.parse(localStorage.getItem('sop_versions_' + sopId) || '[]');
+      const versions = safeParse(localStorage.getItem('sop_versions_' + sopId), []);
       const detail = document.getElementById('versionDetail');
       detail.style.display = 'block';
 
@@ -9233,7 +9041,7 @@ ${text.slice(0, 3000)}
     }
 
     function showVersionDiff(sopId, versionIdx) {
-      const versions = JSON.parse(localStorage.getItem('sop_versions_' + sopId) || '[]');
+      const versions = safeParse(localStorage.getItem('sop_versions_' + sopId), []);
       const ver = versions[versionIdx];
       if (!ver) return;
 
@@ -9272,7 +9080,7 @@ ${text.slice(0, 3000)}
     }
 
     function restoreFromVersion(sopId, versionIdx) {
-      const versions = JSON.parse(localStorage.getItem('sop_versions_' + sopId) || '[]');
+      const versions = safeParse(localStorage.getItem('sop_versions_' + sopId), []);
       const ver = versions[versionIdx];
       if (!ver) return;
       if (!confirm(`v${ver.version || (versionIdx+1)}.0 버전으로 복원하시겠습니까?\n현재 내용이 교체됩니다.`)) return;
@@ -9307,7 +9115,7 @@ ${text.slice(0, 3000)}
         }
       } catch(e) {}
       // localStorage 폴백
-      try { xpRewardsList = JSON.parse(localStorage.getItem('sop_xp_rewards') || '[]'); } catch(e) { xpRewardsList = []; }
+      try { xpRewardsList = safeParse(localStorage.getItem('sop_xp_rewards'), []); } catch(e) { xpRewardsList = []; }
       renderXpRewardsAdmin();
     }
 
@@ -9553,7 +9361,7 @@ ${text.slice(0, 3000)}
       const update = { status: newStatus };
       if (newStatus === 'approved' || newStatus === 'delivered') {
         update.approved_at = new Date().toISOString();
-        const currentAdmin = JSON.parse(localStorage.getItem('sop_user') || '{}');
+        const currentAdmin = safeParse(localStorage.getItem('sop_user'), {});
         update.approver_id = currentAdmin.id || null;
       }
       const { error } = await SupabaseMode._client.from('store_redemptions').update(update).eq('id', id);
@@ -10131,12 +9939,12 @@ ${text.slice(0, 3000)}
       MAX_ENTRIES: 500,
 
       _getAdmin() {
-        const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+        const user = safeParse(localStorage.getItem('sop_user'), null);
         return user ? user.name || user.email || 'Unknown' : 'System';
       },
 
       add(type, action, detail = '') {
-        const logs = JSON.parse(localStorage.getItem(this.KEY) || '[]');
+        const logs = safeParse(localStorage.getItem(this.KEY), []);
         logs.unshift({
           id: Date.now() + '-' + Math.random().toString(36).slice(2, 6),
           timestamp: new Date().toISOString(),
@@ -10151,7 +9959,7 @@ ${text.slice(0, 3000)}
       },
 
       getAll() {
-        return JSON.parse(localStorage.getItem(this.KEY) || '[]');
+        return safeParse(localStorage.getItem(this.KEY), []);
       },
 
       getFiltered(type) {

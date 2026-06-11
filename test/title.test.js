@@ -1,6 +1,30 @@
 // 실전 검증: 파일명→제목 복원(_cleanTitleFromFilename) + 챕터/섹션 파싱(parseChapterSection)
-// admin/index.html 에서 추출한 진짜 함수(/tmp/title_fns.js)를 호출한다.
-const { _cleanTitle, _cleanTitleFromFilename, parseChapterSection } = require('/tmp/title_fns.js');
+// admin/index.html 에 정의된 진짜 함수를 소스에서 직접 추출해 검증한다.
+// (이식성: 과거의 /tmp/title_fns.js 외부 의존을 제거 — 깨끗한 체크아웃/CI 에서도 동작)
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+
+function _extractTitleFns(startName, endName) {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'admin', 'index.html'), 'utf8');
+  const start = src.indexOf('function ' + startName + '(');
+  const endDecl = src.indexOf('function ' + endName + '(', start);
+  if (start === -1 || endDecl === -1) throw new Error('admin/index.html 에서 함수 추출 실패');
+  // endName 함수의 닫는 중괄호까지 균형 카운트로 블록 끝을 찾는다
+  let depth = 0, end = -1;
+  for (let j = src.indexOf('{', endDecl); j < src.length; j++) {
+    if (src[j] === '{') depth++;
+    else if (src[j] === '}' && --depth === 0) { end = j + 1; break; }
+  }
+  const block = src.slice(start, end);
+  const sandbox = { console: { log() {}, warn() {}, error() {} }, JSON, Math, parseInt, String, Date };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(block + '\nglobalThis.__t = { _cleanTitle, _cleanTitleFromFilename, parseChapterSection };',
+    sandbox, { filename: 'admin:title_fns' });
+  return sandbox.__t;
+}
+const { _cleanTitle, _cleanTitleFromFilename, parseChapterSection } = _extractTitleFns('_cleanTitle', 'parseChapterSection');
 
 let pass = 0, fail = 0;
 function eq(name, got, want) {

@@ -149,11 +149,7 @@
     }
 
     // Supabase 초기화
-    SupabaseMode.init().then(connected => {
-      if (connected) {
-        console.log('[Login] Supabase 모드 활성화');
-      }
-    });
+    SupabaseMode.init();
 
     // ===== 다국어 텍스트 =====
     const TEXTS = {
@@ -290,12 +286,15 @@
             // 관리자는 반드시 Supabase Auth 통과해야 함. 폴백 금지.
             throw new Error('admin_auth_required');
           }
-          if (email === 'admin@test.com' && password === '1234') {
-            user = { id: 'demo-admin', email, role: 'admin', name: '관리자', adminRole: 'superadmin' };
-          } else if (email === 'manager@test.com' && password === '1234') {
-            user = { id: 'demo-manager', email, role: 'admin', name: '강남점장', adminRole: 'branch_manager', adminBranch: '서울 강남점' };
-          } else if (email === 'staff@test.com' && password === '1234') {
-            user = { id: 'demo-staff', email, role: 'staff', name: '직원1' };
+          // 데모 계정: CONFIG.DEMO_MODE 가 true 일 때만 허용 (프로덕션 false → 완전 차단)
+          if (CONFIG.DEMO_MODE) {
+            if (email === 'admin@test.com' && password === '1234') {
+              user = { id: 'demo-admin', email, role: 'admin', name: '관리자', adminRole: 'superadmin' };
+            } else if (email === 'manager@test.com' && password === '1234') {
+              user = { id: 'demo-manager', email, role: 'admin', name: '강남점장', adminRole: 'branch_manager', adminBranch: '서울 강남점' };
+            } else if (email === 'staff@test.com' && password === '1234') {
+              user = { id: 'demo-staff', email, role: 'staff', name: '직원1' };
+            }
           }
           // 데모 로그인이라도 Supabase에 해당 이메일의 직원이 있으면 실제 ID 사용
           if (user && user.role !== 'admin' && SupabaseMode._ready) {

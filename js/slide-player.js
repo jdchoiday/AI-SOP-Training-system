@@ -615,8 +615,9 @@ const SlidePlayer = (() => {
   // Render current slide
   // =========================================
   function _renderSlide() {
-    // 다국어: 현재 언어로 정규화 (narration_vn → narration 등)
-    const scene = _localizeScene(scenes[currentIndex]);
+    // 다국어: 현재 언어로 정규화 (narration_vn → narration 등) + 텍스트 필드 XSS 이스케이프
+    if (!scenes[currentIndex]) return;
+    const scene = _escapeSceneText(_localizeScene(scenes[currentIndex]));
     if (!scene) return;
 
     const container = document.getElementById('spSlideContainer');
@@ -1122,6 +1123,34 @@ const SlidePlayer = (() => {
     const d = document.createElement('div');
     d.textContent = str || '';
     return d.innerHTML;
+  }
+
+  // XSS 방어: 씬의 텍스트 필드는 vis.innerHTML 로 raw 삽입되므로, 렌더 직전 한 곳에서
+  // 이스케이프한 "복사본"을 만든다(원본 scenes 불변). narration 은 _renderSlide 에서 별도
+  // 이스케이프하므로 제외(이중 이스케이프/TTS 원문 훼손 방지). URL/숫자(values)/_htmlContent 등
+  // 비텍스트 필드는 건드리지 않는다.
+  const _SCENE_TEXT_FIELDS = [
+    'title_main', 'title_sub', 'kicker', 'caption', 'context', 'tag', 'unit', 'number',
+    'left_text', 'right_text', 'left_label', 'right_label', 'header_title', 'header_tag',
+    'term', 'definition', 'badge', 'quote_text', 'author', 'author_role',
+    'highlight_text', 'subtext', 'icon', 'left_icon', 'right_icon',
+  ];
+  function _escObjStrings(o) {
+    if (!o || typeof o !== 'object') return o;
+    const c = Array.isArray(o) ? o.slice() : Object.assign({}, o);
+    Object.keys(c).forEach(k => { if (typeof c[k] === 'string') c[k] = _escHtml(c[k]); });
+    return c;
+  }
+  function _escapeSceneText(scene) {
+    if (!scene || typeof scene !== 'object') return scene;
+    const out = Object.assign({}, scene);
+    _SCENE_TEXT_FIELDS.forEach(f => { if (typeof out[f] === 'string') out[f] = _escHtml(out[f]); });
+    if (Array.isArray(out.steps))      out.steps      = out.steps.map(s => typeof s === 'string' ? _escHtml(s) : s);
+    if (Array.isArray(out.step_icons)) out.step_icons = out.step_icons.map(s => typeof s === 'string' ? _escHtml(s) : s);
+    if (Array.isArray(out.labels))     out.labels     = out.labels.map(s => typeof s === 'string' ? _escHtml(s) : s);
+    if (Array.isArray(out.cards))      out.cards      = out.cards.map(_escObjStrings);
+    if (Array.isArray(out.tiles))      out.tiles      = out.tiles.map(_escObjStrings);
+    return out;
   }
 
   // =========================================
