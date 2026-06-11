@@ -359,11 +359,14 @@
 
     function askQuick(q) { chatInput.value = q; sendMessage(); }
 
+    // XSS guard: escape dynamic AI/DB text before innerHTML interpolation (null-safe)
+    function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
     function addBubble(text, type) {
       const bubble = document.createElement('div');
       bubble.className = 'chat-bubble ' + type;
       if (type === 'ai') {
-        let html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+        let html = escapeHtml(text).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
         bubble.innerHTML = `<div class="ai-label">${t.aiLabel}</div>` + html;
       } else {
         bubble.textContent = text;
