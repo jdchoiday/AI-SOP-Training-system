@@ -38,3 +38,10 @@ WHERE e.company_id='dae1afc8-55cb-476e-8099-07ef41e4452d'
   );
 
 -- 결과(적용 후): Kiwooza 14명 / SLCO 4명 · branch_teams 가 회사별로 분리(본사가 회사별 별도 행).
+
+-- ── 3) 재발 방지 가드: super_admin 외 직원은 company_id 필수 (DB 백스톱) ──
+--    가입 단계 회사 누락/오배정의 DB 차원 차단. 적용 전 위반 0건 검증.
+--    (apply_migration: employees_company_required_check 로도 기록됨)
+ALTER TABLE employees
+  ADD CONSTRAINT employees_company_required
+  CHECK (company_id IS NOT NULL OR COALESCE(role,'') = 'super_admin');
