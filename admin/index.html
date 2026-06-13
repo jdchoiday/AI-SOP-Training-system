@@ -6824,7 +6824,8 @@ Bao gồm TẤT CẢ nội dung gốc không bỏ sót. KHÔNG tóm tắt. Chỉ
   m.innerHTML=`<h3>🔗 직원 초대 링크 생성</h3>
     <p style="font-size:14px;color:var(--gray-500);margin-bottom:16px;">이 링크를 직원에게 공유하면 자동으로 지점/팀에 배정됩니다</p>
     <div class="form-group"><label>지점 지정</label>
-      <select id="inviteBranch" onchange="updateInviteTeams()" ${adminRole==='branch_manager'?'disabled':''}>${adminRole==='branch_manager'?'<option>'+adminBranch+'</option>':getBranches().map(b=>'<option value="'+b+'">'+b+'</option>').join('')}</select></div>
+      <select id="inviteBranch" onchange="updateInviteTeams()" ${adminRole==='branch_manager'?'disabled':''}>${adminRole==='branch_manager'?'<option>'+adminBranch+'</option>':'<option value="">지점 미지정 (직원이 가입 시 선택) — 브랜드 공용 링크</option>'+getBranches().map(b=>'<option value="'+b+'">'+b+'</option>').join('')}</select>
+      <span style="font-size:11px;color:var(--gray-400);">미지정 = 브랜드 공용 초대(직원이 지점을 직접 선택). 회사(브랜드)는 항상 이 초대로 고정됩니다.</span></div>
     <div class="form-group"><label>팀 지정</label>
       <select id="inviteTeam"><option value="">팀 미지정 (가입 시 선택)</option></select>
       <span style="font-size:11px;color:var(--gray-400);">미지정 시 직원이 가입할 때 직접 선택</span></div>
@@ -7076,7 +7077,8 @@ function saveInvitation(code) {
     }).catch(e => console.error('Invitation save error:', e));
   }
 
-  const teamMsg = team ? `\n지점: ${branch} / 팀: ${team}` : `\n지점: ${branch}`;
+  const branchMsg = branch ? branch : '직원이 가입 시 선택 (브랜드 공용 링크)';
+  const teamMsg = team ? `\n지점: ${branchMsg} / 팀: ${team}` : `\n지점: ${branchMsg}`;
   alert('초대 링크가 활성화되었습니다!' + teamMsg + '\n직원에게 링크를 공유하세요.');
   closeModal();
 }

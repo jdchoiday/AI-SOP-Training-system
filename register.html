@@ -120,6 +120,9 @@
         branch: '지점', selectBranch: '지점을 선택하세요', submit: '가입하기',
         invalidInvite: '유효하지 않은 초대 링크입니다',
         invalidDesc: '관리자에게 새 초대 링크를 요청하세요',
+        needInviteTitle: '초대 링크로만 가입할 수 있어요',
+        needInviteDesc: '관리자에게 우리 브랜드 초대 링크를 요청하세요',
+        serverError: '서버 설정 오류입니다. 관리자에게 문의하세요.',
         goLogin: '로그인 페이지로',
         successTitle: '가입이 완료되었습니다!',
         successDesc: '로그인하여 교육을 시작하세요',
@@ -145,6 +148,9 @@
         selectTeamRequired: 'Please select a team',
         selectBranchRequired: 'Please select a branch',
         invalidDesc: 'Please request a new invitation link from your admin',
+        needInviteTitle: 'Registration is by invitation only',
+        needInviteDesc: 'Please ask your admin for your brand’s invitation link',
+        serverError: 'Server configuration error. Please contact your admin.',
         goLogin: 'Go to Login',
         successTitle: 'Registration complete!',
         successDesc: 'Log in to start your training',
@@ -167,6 +173,9 @@
         selectTeamRequired: 'Vui lòng chọn nhóm',
         selectBranchRequired: 'Vui lòng chọn chi nhánh',
         invalidDesc: 'Vui lòng yêu cầu quản trị viên gửi liên kết mời mới',
+        needInviteTitle: 'Chỉ đăng ký bằng liên kết mời',
+        needInviteDesc: 'Vui lòng hỏi quản trị viên liên kết mời của thương hiệu bạn',
+        serverError: 'Lỗi cấu hình máy chủ. Vui lòng liên hệ quản trị viên.',
         goLogin: 'Đến trang đăng nhập',
         successTitle: 'Đăng ký thành công!',
         successDesc: 'Đăng nhập để bắt đầu đào tạo',
@@ -199,6 +208,9 @@
     document.getElementById('loginBtn').textContent = t.loginBtn;
     document.getElementById('alreadyHaveAccount').textContent = t.alreadyHaveAccount;
 
+    // 초대 전용 온보딩 — 브랜드(회사)는 항상 초대장에서 결정된다(자유 브랜드선택 가입 비활성).
+    // 브랜드 오배정을 원천 차단하는 핵심 스위치. (서버 api/auth.js 도 자가가입에 초대를 강제한다.)
+    const INVITE_ONLY = true;
     const urlParams = new URLSearchParams(window.location.search);
     const inviteCode = urlParams.get('code');
     let currentInvite = null;
@@ -244,13 +256,19 @@
     async function init() {
       await SupabaseMode.init();
 
-      // 초대 코드가 있으면 초대 플로우 (브랜드/지점 고정)
+      // 초대 코드가 있으면 초대 플로우 (브랜드는 초대장에서 결정)
       if (inviteCode) {
         await initWithInvite();
         return;
       }
 
-      // ===== 자유 가입 모드: 브랜드 → 지점 → 팀 순 선택 =====
+      // 초대 전용: 코드 없이 들어오면 가입 불가 — 브랜드 추정/자유선택을 막는다.
+      if (INVITE_ONLY) {
+        showNeedInvite();
+        return;
+      }
+
+      // ===== (비활성) 자유 가입 모드: 브랜드 → 지점 → 팀 순 선택 =====
       freeMode = true;
       document.getElementById('inviteInfo').textContent = t.freeRegistration;
 
@@ -404,27 +422,32 @@
         document.getElementById('regBrandReadonly').value = invite.company_name;
       }
 
-      document.getElementById('branchGroupReadonly').style.display = 'block';
-      document.getElementById('regBranch').value = invite.branch;
-
-      // 팀 처리
+      // 지점/팀 — 지점-고정 초대면 readonly, 브랜드-레벨(지점 미지정) 초대면 사용자가 선택
       const teamGroup = document.getElementById('teamGroup');
       const teamSelect = document.getElementById('regTeam');
       document.getElementById('labelTeam').textContent = t.team;
 
-      if (invite.team) {
-        teamGroup.style.display = 'block';
-        teamSelect.innerHTML = `<option value="${invite.team}">${invite.team}</option>`;
-        teamSelect.disabled = true;
-        teamSelect.style.background = 'var(--gray-50)';
-      } else {
-        const branchTeams = JSON.parse(localStorage.getItem('sop_branch_teams') || '{}');
-        const teams = branchTeams[invite.branch] || [];
-        if (teams.length > 0) {
+      if (invite.branch) {
+        document.getElementById('branchGroupReadonly').style.display = 'block';
+        document.getElementById('regBranch').value = invite.branch;
+
+        if (invite.team) {
           teamGroup.style.display = 'block';
-          teamSelect.innerHTML = `<option value="">${t.selectTeam}</option>` +
-            teams.map(tm => `<option value="${tm}">${tm}</option>`).join('');
+          teamSelect.innerHTML = `<option value="${escapeHtml(invite.team)}">${escapeHtml(invite.team)}</option>`;
+          teamSelect.disabled = true;
+          teamSelect.style.background = 'var(--gray-50)';
+        } else {
+          const branchTeams = JSON.parse(localStorage.getItem('sop_branch_teams') || '{}');
+          const teams = branchTeams[invite.branch] || [];
+          if (teams.length > 0) {
+            teamGroup.style.display = 'block';
+            teamSelect.innerHTML = `<option value="">${t.selectTeam}</option>` +
+              teams.map(tm => `<option value="${escapeHtml(tm)}">${escapeHtml(tm)}</option>`).join('');
+          }
         }
+      } else {
+        // 브랜드-레벨 초대: 회사(브랜드)는 고정, 지점/팀만 사용자가 회사 범위에서 선택
+        await initInviteBranchPicker(invite.company_id);
       }
 
       document.getElementById('registerForm').style.display = 'block';
@@ -433,6 +456,36 @@
     function showInvalid() {
       document.getElementById('inviteInfo').style.display = 'none';
       document.getElementById('invalidMsg').style.display = 'block';
+    }
+
+    // 초대 전용 안내 — 코드 없이 들어온 경우. invalidMsg 박스를 재사용하되 문구만 바꾼다.
+    function showNeedInvite() {
+      document.getElementById('inviteInfo').style.display = 'none';
+      document.getElementById('registerForm').style.display = 'none';
+      document.getElementById('invalidTitle').textContent = t.needInviteTitle;
+      document.getElementById('invalidDesc').textContent = t.needInviteDesc;
+      document.getElementById('invalidMsg').style.display = 'block';
+    }
+
+    // 브랜드-레벨 초대(지점 미지정): 초대장의 회사 범위 안에서 지점/팀을 사용자가 선택.
+    // 회사(브랜드)는 초대장이 고정하므로 격리는 유지되고, 지점만 자기 것을 고른다.
+    async function initInviteBranchPicker(companyId) {
+      _btByCompany = await fetchBranchTeamsByCompany();
+      const branchesObj = _btByCompany[companyId] || {};
+      const branches = Object.keys(branchesObj);
+      const branchSelectGroup = document.getElementById('branchGroupSelect');
+      if (branches.length > 0) {
+        branchSelectGroup.style.display = 'block';
+        document.getElementById('labelBranchSelect').textContent = t.branch;
+        const branchSelect = document.getElementById('regBranchSelect');
+        branchSelect.innerHTML = `<option value="">${t.selectBranch}</option>` +
+          branches.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
+        branchSelect.onchange = () => onBranchChange(branchesObj);
+        if (branches.length === 1) { branchSelect.value = branches[0]; onBranchChange(branchesObj); }
+      } else {
+        // 등록된 지점이 없으면 직접 입력
+        showBranchFreeText();
+      }
     }
 
     function showExpired() {
@@ -469,23 +522,22 @@
       }
 
       // 지점 결정
+      //  · 지점-고정 초대: 초대장의 지점
+      //  · 자유/브랜드-레벨 초대(지점 미지정): 사용자가 드롭다운/직접입력에서 선택
       let branch = '';
-      if (freeMode) {
-        const branchSelect = document.getElementById('regBranchSelect');
-        const branchInput = document.getElementById('regBranch');
-        // 드롭다운이 보이면 드롭다운에서, 아니면 직접 입력에서
+      if (!freeMode && currentInvite && currentInvite.branch) {
+        branch = currentInvite.branch;
+      } else {
         if (document.getElementById('branchGroupSelect').style.display !== 'none') {
-          branch = branchSelect.value;
+          branch = document.getElementById('regBranchSelect').value;
         } else {
-          branch = branchInput.value.trim();
+          branch = document.getElementById('regBranch').value.trim();
         }
         if (!branch) {
           document.getElementById('errorMsg').textContent = t.selectBranchRequired;
           document.getElementById('errorMsg').style.display = 'block';
           return;
         }
-      } else {
-        branch = currentInvite.branch;
       }
 
       // 팀 선택 체크
@@ -558,7 +610,9 @@
             body: JSON.stringify({
               action: 'register',
               email, password, name, branch, team, role: 'staff',
-              company_id: targetCompanyId
+              // 서버는 자가가입에서 company_id 를 신뢰하지 않고 invite_code 로 회사를 검증·결정한다.
+              company_id: targetCompanyId,
+              invite_code: currentInvite ? currentInvite.code : undefined
             })
           });
           const regData = await regRes.json();
@@ -574,12 +628,8 @@
             EmployeeStore.save(emps);
           }
 
-          // 초대 모드일 때만 사용 횟수 증가
-          if (currentInvite) {
-            await SupabaseMode.client.from('invitations')
-              .update({ used_count: currentInvite.usedCount + 1 })
-              .eq('code', currentInvite.code);
-          }
+          // 초대 사용횟수 증가는 서버(api/auth.js)가 service key 로 처리한다.
+          // (anon 은 invitations UPDATE 가 RLS 로 막혀 클라이언트 증가가 조용히 실패했었음.)
         } catch(e) {
           console.error('Supabase register error:', e);
           const emps = EmployeeStore.getAll();
