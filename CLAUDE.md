@@ -17,8 +17,12 @@
 2. **회사를 "추정"하지 말 것.** 과거 "가장 먼저 생성된 회사로 자동배정" 같은 폴백이
    모든 직원을 한 브랜드(Kiwooza)로 쏠리게 해 타 브랜드 직원에게 남의 자료를 보여준
    핵심 사고였다. 회사는 **명시적으로** 정해진다:
-   - 자유가입: 사용자가 **브랜드를 직접 선택**(`register.html`).
-   - 초대가입: **초대장의 `company_id`**를 사용(브랜드가 링크에 박혀 있음).
+   - **가입은 초대 전용**(`register.html`의 `INVITE_ONLY`). 회사는 **초대장의 `company_id`**에서만
+     온다(브랜드가 링크에 박혀 있음). 코드 없이 들어오면 가입 불가(자유 브랜드선택 비활성).
+   - **서버가 강제한다**(`api/auth.js`): 자가가입은 **유효한 `invite_code`를 요구**하고, 회사를
+     **초대장에서 서버측으로 조회·결정**한다. 클라이언트가 보낸 `company_id`는 자가가입에서 **무시**한다.
+   - 관리자 직접추가(인증된 Bearer 세션)는 초대 없이 가능 — 회사는 관리자 본인 회사(super_admin은
+     지정 회사)로 강제. 브랜드-레벨 초대(지점 미지정)는 회사만 고정하고 지점/팀은 사용자가 고른다.
 3. **읽기에도 회사 필터를 건다(이중 방어).** RLS(`company_isolation`)가 1차 방어선이지만,
    클라이언트도 SOP 조회 등에 `company_id`를 명시적으로 건다(`supabase-client.js`의
    `syncSops`). RLS 단독에 의존하지 않는다.
@@ -66,11 +70,11 @@ node test/run.js        # 의존성 없는 러너, test/*.test.js 전부 실행
 | 파일 | 역할 |
 |------|------|
 | `index.html` | 로그인 + 브랜드 선택 칩. 로그인 시 `applyCompanyScope` 호출 |
-| `register.html` | 가입 — 브랜드→지점→팀. 초대장 `company_id` 사용, 회사 추정 폴백 없음 |
+| `register.html` | 가입 — **초대 전용**(`INVITE_ONLY`). 브랜드는 초대장에서 고정, 지점/팀만 사용자 선택 |
 | `app.html` | 직원 학습 화면. 헤더에 브랜드명 표시 |
-| `admin/index.html` | 관리자 — 활성 회사(`__activeCompanyId`)로 스코프 |
+| `admin/index.html` | 관리자 — 활성 회사(`__activeCompanyId`)로 스코프. 초대생성 시 "지점 미지정=브랜드 공용 링크" |
 | `js/supabase-client.js` | Auth/동기화. `syncSops` 회사필터, `applyCompanyScope` 캐시purge |
-| `api/auth.js` | 서버측 가입(Auth + employees 원자적 생성), `company_id` 전달 |
+| `api/auth.js` | 서버측 가입 — 자가가입은 **초대코드 검증 후 초대장 `company_id`로 배정**(클라 값 무시), 관리자추가는 Bearer 검증 |
 | `docs/migrations/` | 라이브 DB에 적용한 변경 기록 |
 
 ---
@@ -81,7 +85,8 @@ node test/run.js        # 의존성 없는 러너, test/*.test.js 전부 실행
   전 브랜드가 섞여 보이지 않도록, **로그인 화면에서 브랜드 칩을 골라야** 그 브랜드로
   스코프된다(`sop_brand`→`_currentCompanyId`). 미선택 시 전체가 보인다(추정 금지 원칙).
   일반 직원은 항상 본인 `company_id`가 우선이라 영향 없다. (`super-admin-scope.test.js`)
-- **신규 직원은 브랜드 초대링크로 받는 것을 권장** — 브랜드 오선택 여지가 없다.
-- 새 브랜드 온보딩: `companies` 생성 → `branch_teams` 지점 → 초대장 → 그다음 사람 초대.
+- **신규 직원은 브랜드 초대링크로만 가입한다(`INVITE_ONLY`)** — 브랜드 오선택 여지가 원천적으로 없다.
+  브랜드별 "공용 초대링크"(지점 미지정, 장기·다회용)를 하나씩 만들어 직원에게 배포하면 된다.
+- 새 브랜드 온보딩: `companies` 생성 → `branch_teams` 지점 → **브랜드 공용 초대링크** → 직원 배포.
 - 데이터 변경 작업 후엔 **브랜드별 전후 개수**를 보고한다.
 - 모델 식별자/내부 식별값을 커밋·PR·코드 주석에 넣지 않는다(채팅 답변에서만).
