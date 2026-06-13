@@ -68,13 +68,49 @@ const SupabaseMode = {
   // company_id 없이 upsert 하면 NULL = <uuid> → 조용히 거부되어 진행률이 저장되지 않는다.
   // auth_company_id() = 로그인 직원의 employees.company_id 이며, 이는 로그인 시
   // sop_user.company_id 로 저장되므로 그 값을 그대로 주입해 WITH CHECK 를 통과시킨다.
-  _currentCompanyId() {
+  // super_admin 은 본인 회사가 없다(company_id NULL, 전 브랜드 관리). 그대로 두면 학습앱
+  // (app/tasks/chapter)에서 syncSops 가 필터 없이 전 브랜드 콘텐츠를 끌어와 한 브랜드를
+  // 테스트할 때 타 브랜드(예: SLCO) 코스가 섞여 보인다. 회사를 '추정'하지 않고, 로그인 시
+  // 명시적으로 고른 브랜드(sop_brand)만 유효 회사로 사용한다(CLAUDE.md 불변규칙).
+  _superAdminSelectedCompany(user) {
+    if (!user || user.role !== 'super_admin') return null;
     try {
-      const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
-      if (user && user.company_id) return user.company_id;
-    } catch (e) { /* ignore */ }
+      return localStorage.getItem('sop_active_company') || localStorage.getItem('sop_brand') || null;
+    } catch (e) { return null; }
+  },
+
+  _currentCompanyId() {
+    let user = null;
+    try { user = JSON.parse(localStorage.getItem('sop_user') || 'null'); } catch (e) { /* ignore */ }
+    if (user && user.company_id) return user.company_id;
+    // 관리자 페이지에서 명시 선택한 활성 회사 (admin/index.html)
     if (typeof window !== 'undefined' && window.__activeCompanyId) return window.__activeCompanyId;
+    // super_admin 학습앱: 로그인 시 고른 브랜드로 스코프 (없으면 null = 전체)
+    const sel = this._superAdminSelectedCompany(user);
+    if (sel) return sel;
     return null;
+  },
+
+  // 로그인 직원의 회사(브랜드)가 직전 세션과 다르면 회사-스코프 localStorage 캐시를 비운다.
+  // 한 기기에서 Kiwooza→SLCO 로 바꿔 로그인했을 때 이전 브랜드의 SOP/진행률/지점/학습경로가
+  // 남아 보이던 교차-브랜드 누출(RC4)을 차단한다. 로그인 직후(syncAll 이전)에 호출할 것.
+  applyCompanyScope(user) {
+    try {
+      // 유효 회사: 일반 직원은 본인 회사, super_admin 은 로그인 시 고른 브랜드(sop_brand).
+      // 이렇게 해야 super_admin 이 브랜드를 바꿔 로그인할 때도 직전 브랜드 캐시가 비워진다.
+      let newCo = (user && user.company_id) || '';
+      if (!newCo && user && user.role === 'super_admin') {
+        newCo = localStorage.getItem('sop_brand') || '';
+      }
+      const prevCo = localStorage.getItem('sop_active_company') || '';
+      if (newCo && prevCo && newCo !== prevCo) {
+        ['sop_documents', 'sop_progress_v2', 'sop_branches', 'sop_branch_teams',
+         'sop_learning_paths', 'sop_deadlines', 'sop_employees', 'sop_deleted_ids',
+         'sop_pending_notifications'].forEach(k => localStorage.removeItem(k));
+        console.log('[Supabase] 브랜드 변경 감지 — 회사-스코프 캐시 초기화:', prevCo, '→', newCo);
+      }
+      if (newCo) localStorage.setItem('sop_active_company', newCo);
+    } catch (e) { /* localStorage 불가 환경 무시 */ }
   },
 
   // ===== 로그인 (Supabase Auth 우선, 실패 시 legacy hash 자동 전환) =====
@@ -115,10 +151,10 @@ const SupabaseMode = {
         }
       }
 
-      // employees 테이블에서 프로필 조회 (auth_user_id 기반)
+      // employees 테이블에서 프로필 조회 (auth_user_id 기반) + 회사(브랜드) 정보 조인
       const authUserId = authData.user.id;
       const { data: emp, error: empErr } = await this._retry(() =>
-        this._client.from('employees').select('*').eq('auth_user_id', authUserId).single()
+        this._client.from('employees').select('*, companies(id, name, slug, brand_color)').eq('auth_user_id', authUserId).single()
       );
       if (empErr || !emp) {
         console.warn('[Auth] employees 프로필 없음:', authUserId);
@@ -134,6 +170,10 @@ const SupabaseMode = {
         role: emp.role,
         branch: emp.branch,
         company_id: emp.company_id || null,
+        // 브랜드 표시/스코프용 (헤더·로그인 화면에서 사용)
+        company_name: emp.companies?.name || null,
+        company_slug: emp.companies?.slug || null,
+        brand_color: emp.companies?.brand_color || null,
         authUserId,
       };
     } catch (e) {
@@ -161,9 +201,15 @@ const SupabaseMode = {
   async syncSops() {
     if (!this._ready) return;
     try {
-      const { data, error } = await this._retry(() =>
-        this._client.from('sop_documents').select('*').order('order_num')
-      );
+      // 회사(브랜드) 명시적 필터 — RLS company_isolation 에 더해 클라이언트에서도 한 번 더
+      // 회사 스코프를 강제한다(방어선 이중화). 직원/회사관리자는 자기 회사만, super_admin 이
+      // 회사 미선택(=전체) 일 때만 companyId 가 null 이라 필터 없이 RLS 판단에 맡긴다.
+      const _companyId = this._currentCompanyId();
+      const { data, error } = await this._retry(() => {
+        let q = this._client.from('sop_documents').select('*');
+        if (_companyId) q = q.eq('company_id', _companyId);
+        return q.order('order_num');
+      });
       if (!error && data && data.length > 0) {
         // 기존 localStorage 데이터와 머지 (Supabase 실패 시 데이터 보존)
         const existing = JSON.parse(localStorage.getItem('sop_documents') || '[]');

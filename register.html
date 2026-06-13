@@ -32,6 +32,19 @@
           <input type="password" id="regPassword" placeholder="" required minlength="8">
         </div>
 
+        <!-- 브랜드(회사) 선택 — 자유가입: 드롭다운 (회사별 데이터 격리의 핵심) -->
+        <div class="form-group" id="brandGroupSelect" style="display:none;">
+          <label id="labelBrandSelect">브랜드</label>
+          <select id="regBrandSelect" style="padding:10px;border:1px solid rgba(148,163,184,0.12);border-radius:8px;font-size:14px;width:100%;background:rgba(30,41,59,0.85);color:#F1F5F9;">
+          </select>
+        </div>
+
+        <!-- 브랜드 — 초대 모드: 고정 표시 -->
+        <div class="form-group" id="brandGroupReadonly" style="display:none;">
+          <label id="labelBrandReadonly">브랜드</label>
+          <input type="text" id="regBrandReadonly" readonly style="background:var(--gray-50);color:var(--gray-700);">
+        </div>
+
         <!-- 초대 모드: readonly 지점 -->
         <div class="form-group" id="branchGroupReadonly" style="display:none;">
           <label id="labelBranch">지점</label>
@@ -103,6 +116,7 @@
         staffRegistration: (branch) => `${branch} 직원 가입`,
         name: '이름', namePlaceholder: '홍길동',
         email: '이메일', password: '비밀번호', passwordPlaceholder: '8자리 이상',
+        brand: '브랜드', selectBrand: '브랜드를 선택하세요', selectBrandRequired: '브랜드를 선택해주세요',
         branch: '지점', selectBranch: '지점을 선택하세요', submit: '가입하기',
         invalidInvite: '유효하지 않은 초대 링크입니다',
         invalidDesc: '관리자에게 새 초대 링크를 요청하세요',
@@ -125,6 +139,7 @@
         staffRegistration: (branch) => `${branch} — Staff Registration`,
         name: 'Name', namePlaceholder: 'John Doe',
         email: 'Email', password: 'Password', passwordPlaceholder: 'At least 8 characters',
+        brand: 'Brand', selectBrand: 'Select your brand', selectBrandRequired: 'Please select a brand',
         branch: 'Branch', selectBranch: 'Select your branch', team: 'Team', selectTeam: 'Select your team', submit: 'Register',
         invalidInvite: 'Invalid invitation link',
         selectTeamRequired: 'Please select a team',
@@ -146,6 +161,7 @@
         staffRegistration: (branch) => `Đăng ký nhân viên ${branch}`,
         name: 'Họ tên', namePlaceholder: 'Nguyễn Văn A',
         email: 'Email', password: 'Mật khẩu', passwordPlaceholder: 'Ít nhất 8 ký tự',
+        brand: 'Thương hiệu', selectBrand: 'Chọn thương hiệu', selectBrandRequired: 'Vui lòng chọn thương hiệu',
         branch: 'Chi nhánh', selectBranch: 'Chọn chi nhánh', team: 'Nhóm', selectTeam: 'Chọn nhóm của bạn', submit: 'Đăng ký',
         invalidInvite: 'Liên kết mời không hợp lệ',
         selectTeamRequired: 'Vui lòng chọn nhóm',
@@ -187,125 +203,146 @@
     const inviteCode = urlParams.get('code');
     let currentInvite = null;
     let freeMode = false;
-    let _branchTeams = {}; // 전역 보관용
+    let _companies = [];          // [{id,name,slug,brand_color}]
+    let _btByCompany = {};        // { companyId: { branch: [teams] } }
+    let selectedCompanyId = null; // 가입 대상 브랜드(회사) — RLS 회사 격리의 기준
 
-    // ===== Supabase에서 지점/팀 데이터 직접 가져오기 =====
-    async function fetchBranchTeamsFromDB() {
-      const result = {};
+    function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
-      if (!SupabaseMode._ready) return result;
-
-      // 1) branch_teams 테이블
+    // ===== 회사(브랜드) 목록 — companies_read_all RLS(USING true)라 anon 도 읽힘 =====
+    async function loadCompanies() {
+      if (!SupabaseMode._ready) return [];
       try {
         const { data, error } = await SupabaseMode.client
-          .from('branch_teams')
-          .select('*')
-          .order('created_at');
-        if (error) console.warn('[Register] branch_teams 에러:', error.message);
-        if (data && data.length > 0) {
-          data.forEach(row => {
-            if (!result[row.branch]) result[row.branch] = [];
-            if (row.team && !result[row.branch].includes(row.team)) {
-              result[row.branch].push(row.team);
-            }
-          });
-          return result;
-        }
-      } catch(e) { console.log('[Register] branch_teams 에러:', e.message); }
+          .from('companies').select('id, name, slug, brand_color').order('name');
+        if (error) { console.warn('[Register] companies 에러:', error.message); return []; }
+        return data || [];
+      } catch(e) { console.warn('[Register] companies 예외:', e.message); return []; }
+    }
 
-      // 2) branch_teams가 비어있으면 → employees에서 고유 지점/팀 추출
+    // ===== 지점/팀 — 회사별로 그룹핑 (anon 은 branch_teams 만 읽힘, employees 는 RLS 차단) =====
+    async function fetchBranchTeamsByCompany() {
+      const byCo = {};
+      if (!SupabaseMode._ready) return byCo;
       try {
-        const { data: emps, error } = await SupabaseMode.client
-          .from('employees')
-          .select('branch, team');
-        if (error) console.warn('[Register] employees 에러:', error.message);
-        if (emps && emps.length > 0) {
-          emps.forEach(emp => {
-            if (emp.branch) {
-              if (!result[emp.branch]) result[emp.branch] = [];
-              if (emp.team && !result[emp.branch].includes(emp.team)) {
-                result[emp.branch].push(emp.team);
-              }
-            }
-          });
-        }
-      } catch(e) { console.log('[Register] employees 에러:', e.message); }
-
-      return result;
+        const { data, error } = await SupabaseMode.client
+          .from('branch_teams').select('branch, team, company_id').order('created_at');
+        if (error) console.warn('[Register] branch_teams 에러:', error.message);
+        (data || []).forEach(r => {
+          if (!r.company_id || !r.branch) return;
+          byCo[r.company_id] = byCo[r.company_id] || {};
+          byCo[r.company_id][r.branch] = byCo[r.company_id][r.branch] || [];
+          if (r.team && !byCo[r.company_id][r.branch].includes(r.team)) {
+            byCo[r.company_id][r.branch].push(r.team);
+          }
+        });
+      } catch(e) { console.warn('[Register] branch_teams 예외:', e.message); }
+      return byCo;
     }
 
     // ===== 메인 초기화 =====
     async function init() {
-      // Supabase 초기화
       await SupabaseMode.init();
 
-      // 초대 코드가 있으면 기존 초대 플로우
+      // 초대 코드가 있으면 초대 플로우 (브랜드/지점 고정)
       if (inviteCode) {
         await initWithInvite();
         return;
       }
 
-      // ===== 자유 가입 모드 =====
+      // ===== 자유 가입 모드: 브랜드 → 지점 → 팀 순 선택 =====
       freeMode = true;
       document.getElementById('inviteInfo').textContent = t.freeRegistration;
 
-      // Supabase에서 지점/팀 직접 가져오기
-      _branchTeams = await fetchBranchTeamsFromDB();
+      _companies = await loadCompanies();
+      _btByCompany = await fetchBranchTeamsByCompany();
 
-      // DB에서 못 가져왔으면 localStorage 체크
-      if (Object.keys(_branchTeams).length === 0) {
-        _branchTeams = JSON.parse(localStorage.getItem('sop_branch_teams') || '{}');
-      }
+      const brandGroup = document.getElementById('brandGroupSelect');
+      const brandSelect = document.getElementById('regBrandSelect');
 
-      const branches = Object.keys(_branchTeams);
+      if (_companies.length > 0) {
+        brandGroup.style.display = 'block';
+        document.getElementById('labelBrandSelect').textContent = t.brand;
 
-      // 지점이 있으면 드롭다운 표시
-      if (branches.length > 0) {
-        document.getElementById('branchGroupReadonly').style.display = 'none';
-        document.getElementById('branchGroupSelect').style.display = 'block';
-        document.getElementById('labelBranchSelect').textContent = t.branch;
+        // ?brand= 또는 로그인 화면에서 고른 브랜드(sop_brand) 사전 선택
+        const preBrand = urlParams.get('brand') || localStorage.getItem('sop_brand') || '';
+        brandSelect.innerHTML = `<option value="">${t.selectBrand}</option>` +
+          _companies.map(c => `<option value="${c.id}"${(c.id===preBrand||c.slug===preBrand)?' selected':''}>${escapeHtml(c.name)}</option>`).join('');
+        brandSelect.addEventListener('change', onBrandChange);
 
-        const branchSelect = document.getElementById('regBranchSelect');
-        branchSelect.innerHTML = `<option value="">${t.selectBranch}</option>` +
-          branches.map(b => `<option value="${b}">${b}</option>`).join('');
-
-        // 지점 선택 시 팀 자동 로드
-        branchSelect.addEventListener('change', function() {
-          const sel = this.value;
-          const teamGroup = document.getElementById('teamGroup');
-          const teamSelect = document.getElementById('regTeam');
-          document.getElementById('labelTeam').textContent = t.team;
-
-          if (!sel) { teamGroup.style.display = 'none'; return; }
-
-          const teams = _branchTeams[sel] || [];
-          if (teams.length > 0) {
-            teamGroup.style.display = 'block';
-            teamSelect.disabled = false;
-            teamSelect.style.background = 'rgba(30,41,59,0.85)';
-            teamSelect.innerHTML = `<option value="">${t.selectTeam}</option>` +
-              teams.map(tm => `<option value="${tm}">${tm}</option>`).join('');
-          } else {
-            teamGroup.style.display = 'none';
-          }
-        });
-
-        // 지점이 1개뿐이면 자동 선택
-        if (branches.length === 1) {
-          document.getElementById('regBranchSelect').value = branches[0];
-          document.getElementById('regBranchSelect').dispatchEvent(new Event('change'));
-        }
+        if (brandSelect.value) onBrandChange();
+        else if (_companies.length === 1) { brandSelect.value = _companies[0].id; onBrandChange(); }
       } else {
-        // 지점 데이터가 아예 없으면 → 직접 입력 모드
-        document.getElementById('branchGroupReadonly').style.display = 'block';
-        document.getElementById('branchGroupSelect').style.display = 'none';
-        const branchInput = document.getElementById('regBranch');
-        branchInput.readOnly = false;
-        branchInput.style.background = 'rgba(30,41,59,0.85)';
-        branchInput.placeholder = t.branch;
+        // companies 를 못 읽은 최후 폴백 — 브랜드 없이 지점 직접 입력
+        brandGroup.style.display = 'none';
+        showBranchFreeText();
       }
 
       document.getElementById('registerForm').style.display = 'block';
+    }
+
+    // 브랜드 선택 → 해당 회사 지점만 노출 (회사별 격리)
+    function onBrandChange() {
+      const brandSelect = document.getElementById('regBrandSelect');
+      selectedCompanyId = brandSelect.value || null;
+      if (selectedCompanyId) localStorage.setItem('sop_brand', selectedCompanyId);
+
+      const branchSelectGroup = document.getElementById('branchGroupSelect');
+      const branchReadonlyGroup = document.getElementById('branchGroupReadonly');
+      document.getElementById('teamGroup').style.display = 'none';
+
+      if (!selectedCompanyId) {
+        branchSelectGroup.style.display = 'none';
+        branchReadonlyGroup.style.display = 'none';
+        return;
+      }
+
+      const branchesObj = _btByCompany[selectedCompanyId] || {};
+      const branches = Object.keys(branchesObj);
+
+      if (branches.length > 0) {
+        branchReadonlyGroup.style.display = 'none';
+        branchSelectGroup.style.display = 'block';
+        document.getElementById('labelBranchSelect').textContent = t.branch;
+        const branchSelect = document.getElementById('regBranchSelect');
+        branchSelect.innerHTML = `<option value="">${t.selectBranch}</option>` +
+          branches.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
+        branchSelect.onchange = () => onBranchChange(branchesObj);
+        if (branches.length === 1) { branchSelect.value = branches[0]; onBranchChange(branchesObj); }
+      } else {
+        // 이 브랜드에 등록된 지점이 없으면 직접 입력
+        branchSelectGroup.style.display = 'none';
+        showBranchFreeText();
+      }
+    }
+
+    function onBranchChange(branchesObj) {
+      const sel = document.getElementById('regBranchSelect').value;
+      const teamGroup = document.getElementById('teamGroup');
+      const teamSelect = document.getElementById('regTeam');
+      document.getElementById('labelTeam').textContent = t.team;
+      if (!sel) { teamGroup.style.display = 'none'; return; }
+      const teams = branchesObj[sel] || [];
+      if (teams.length > 0) {
+        teamGroup.style.display = 'block';
+        teamSelect.disabled = false;
+        teamSelect.style.background = 'rgba(30,41,59,0.85)';
+        teamSelect.innerHTML = `<option value="">${t.selectTeam}</option>` +
+          teams.map(tm => `<option value="${escapeHtml(tm)}">${escapeHtml(tm)}</option>`).join('');
+      } else {
+        teamGroup.style.display = 'none';
+      }
+    }
+
+    function showBranchFreeText() {
+      document.getElementById('branchGroupReadonly').style.display = 'block';
+      document.getElementById('branchGroupSelect').style.display = 'none';
+      const branchInput = document.getElementById('regBranch');
+      branchInput.readOnly = false;
+      branchInput.value = '';
+      branchInput.style.background = 'rgba(30,41,59,0.85)';
+      branchInput.style.color = '#F1F5F9';
+      branchInput.placeholder = t.branch;
     }
 
     // ===== 초대 코드 모드 =====
@@ -322,7 +359,7 @@
         try {
           const { data } = await SupabaseMode.client
             .from('invitations')
-            .select('*')
+            .select('*, companies(id, name, slug)')
             .eq('code', inviteCode)
             .single();
           if (data && data.used_count < data.max_uses) {
@@ -332,7 +369,10 @@
             invite = {
               code: data.code, branch: data.branch,
               maxUses: data.max_uses, usedCount: data.used_count,
-              expiresAt: data.expires_at
+              expiresAt: data.expires_at,
+              // 초대장이 박아둔 회사(브랜드) — 가입자를 올바른 브랜드로 배정 (RC2 수정)
+              company_id: data.company_id || null,
+              company_name: data.companies?.name || null,
             };
           }
         } catch(e) { console.log('Supabase invite check:', e); }
@@ -353,7 +393,17 @@
       if (!invite) { showInvalid(); return; }
 
       currentInvite = invite;
+      selectedCompanyId = invite.company_id || null;
       document.getElementById('inviteInfo').textContent = t.staffRegistration(invite.branch);
+
+      // 브랜드(회사) 고정 표시 — 초대장이 지정한 브랜드로만 가입됨
+      if (invite.company_name) {
+        const brandReadonly = document.getElementById('brandGroupReadonly');
+        brandReadonly.style.display = 'block';
+        document.getElementById('labelBrandReadonly').textContent = t.brand;
+        document.getElementById('regBrandReadonly').value = invite.company_name;
+      }
+
       document.getElementById('branchGroupReadonly').style.display = 'block';
       document.getElementById('regBranch').value = invite.branch;
 
@@ -406,6 +456,16 @@
         document.getElementById('errorMsg').textContent = t.fillAllFields;
         document.getElementById('errorMsg').style.display = 'block';
         return;
+      }
+
+      // 브랜드 결정 검증 — 자유가입에서 브랜드 드롭다운이 보이면 필수 (회사 격리)
+      if (freeMode) {
+        const brandVisible = document.getElementById('brandGroupSelect').style.display !== 'none';
+        if (brandVisible && !selectedCompanyId) {
+          document.getElementById('errorMsg').textContent = t.selectBrandRequired;
+          document.getElementById('errorMsg').style.display = 'block';
+          return;
+        }
       }
 
       // 지점 결정
@@ -485,14 +545,12 @@
       EmployeeStore.save(existing);
 
       // Supabase Auth + employees 원자적 생성 (서버 API)
-      // company_id 결정: 초대 모드면 초대장 회사, 자유가입은 기본 회사 (첫 번째)
-      let targetCompanyId = currentInvite?.company_id || null;
-      if (!targetCompanyId && SupabaseMode._ready) {
-        try {
-          const { data } = await SupabaseMode.client.from('companies').select('id').order('created_at').limit(1);
-          targetCompanyId = data?.[0]?.id || null;
-        } catch {}
-      }
+      // company_id(브랜드) 결정 — 회사별 데이터 격리의 기준.
+      //  · 자유가입: 사용자가 고른 브랜드(selectedCompanyId)
+      //  · 초대가입: 초대장이 지정한 회사(currentInvite.company_id)
+      // ❌ 과거 "첫 번째 회사 자동배정" 폴백 제거 — 모든 직원이 한 브랜드(Kiwooza)로
+      //    쏠려 타 브랜드(SLCO) 직원이 남의 교육자료를 보던 핵심 버그(RC1)였음.
+      const targetCompanyId = freeMode ? selectedCompanyId : (currentInvite?.company_id || null);
       if (SupabaseMode._ready) {
         try {
           const regRes = await fetch('/api/auth', {

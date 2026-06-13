@@ -29,7 +29,9 @@ const SopStore = {
           }
         }
         // 유효하지 않은 imageUrl 정리 (data: base64 제외한 비-URL 문자열)
-        if (sc.imageUrl && !sc.imageUrl.startsWith('http') && !sc.imageUrl.startsWith('data:')) {
+        // '/' 시작 = 같은 출처 정적 자산(repo 커밋 이미지, 예: /content/slco/…)은 유효
+        if (sc.imageUrl && !sc.imageUrl.startsWith('http') && !sc.imageUrl.startsWith('data:')
+            && !sc.imageUrl.startsWith('/')) {
           sc.imageUrl = null;
         }
       });
@@ -180,6 +182,7 @@ const SopStore = {
       title_full_en: scene.narration_en || scene.narration,
       title_full_vn: scene.narration_vn || scene.narration,
       visual: scene.visual,
+      imageUrl: scene.imageUrl || null, // 씬 사진(매뉴얼 원본 등) — 목록 뷰에서도 표시
       video_url: '', // AI 영상 생성 후 URL 연결
       duration: 45 + Math.floor((narrKo || '').length / 3), // 나레이션 길이 기반 예상
       order_num: i + 1,
