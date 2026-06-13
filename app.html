@@ -673,21 +673,24 @@
     let notifInterval = null;
 
     // ===== 온보딩 튜토리얼 =====
+    // 웰컴은 접속한 브랜드(회사)명으로 — 하드코딩된 '키우자 히어로즈' 노출 방지(브랜드 격리).
+    // 일반 직원은 본인 회사명(company_name), super_admin 은 로그인 시 고른 브랜드(sop_brand_name).
+    const _brand = (user && user.company_name) || localStorage.getItem('sop_brand_name') || '';
     const _onboardSteps = {
       ko: [
-        { icon: '🎓', title: '키우자 히어로즈에 오신 걸 환영해요!', desc: '이 앱은 교육을 게임처럼 즐기면서 성장하는 플랫폼이에요.\nXP를 모아 티어를 올리고, 동료와 함께 성장해보세요!' },
+        { icon: '🎓', title: `${_brand || '키우자 히어로즈'}에 오신 걸 환영해요!`, desc: '이 앱은 교육을 게임처럼 즐기면서 성장하는 플랫폼이에요.\nXP를 모아 티어를 올리고, 동료와 함께 성장해보세요!' },
         { icon: '📺', title: '챕터를 깨봐요', desc: '각 챕터는 짧은 슬라이드와 퀴즈로 구성되어 있어요.\n퀴즈를 통과하면 XP를 받고, 만점이면 보너스까지!' },
         { icon: '🙌', title: '동료에게 부스트를!', desc: '멋진 동료에게 부스트를 보내보세요.\n보내는 사람도 받는 사람도 XP를 획득합니다!' },
         { icon: '🔥', title: '매일 접속하면 스트릭!', desc: '연속 접속하면 🔥 스트릭이 쌓여요.\n매일 조금씩, 꾸준히 성장하는 게 핵심!' },
       ],
       en: [
-        { icon: '🎓', title: 'Welcome to Kiwooza Heroes!', desc: 'This app makes training fun like a game.\nEarn XP, level up your tier, and grow with your team!' },
+        { icon: '🎓', title: `Welcome to ${_brand || 'Kiwooza Heroes'}!`, desc: 'This app makes training fun like a game.\nEarn XP, level up your tier, and grow with your team!' },
         { icon: '📺', title: 'Crush some chapters', desc: 'Each chapter has short slides and quizzes.\nPass quizzes for XP, perfect score for bonus!' },
         { icon: '🙌', title: 'Boost your colleagues!', desc: 'Send boosts to awesome teammates.\nBoth sender and receiver earn XP!' },
         { icon: '🔥', title: 'Daily streak!', desc: 'Log in daily to build your 🔥 streak.\nConsistency is the key to growth!' },
       ],
       vi: [
-        { icon: '🎓', title: 'Chào mừng đến Kiwooza Heroes!', desc: 'Ứng dụng biến đào tạo thành trò chơi.\nKiếm XP, nâng cấp, và phát triển cùng đội!' },
+        { icon: '🎓', title: `Chào mừng đến ${_brand || 'Kiwooza Heroes'}!`, desc: 'Ứng dụng biến đào tạo thành trò chơi.\nKiếm XP, nâng cấp, và phát triển cùng đội!' },
         { icon: '📺', title: 'Chinh phục các chương', desc: 'Mỗi chương có slide ngắn và quiz.\nĐạt điểm tuyệt đối để nhận thưởng bonus!' },
         { icon: '🙌', title: 'Boost đồng nghiệp!', desc: 'Gửi boost cho đồng nghiệp xuất sắc.\nCả người gửi và nhận đều được XP!' },
         { icon: '🔥', title: 'Streak hàng ngày!', desc: 'Đăng nhập mỗi ngày để xây streak 🔥.\nKiên trì là chìa khóa tăng trưởng!' },

@@ -787,6 +787,63 @@
       const container = document.getElementById('videoList');
       container.innerHTML = '';
 
+      // ===== 대챕터(2단 구조): 자기 스크립트는 비고 콘텐츠는 하위 섹션에 있다 =====
+      // 섹션 차례(목차)를 그려 각 섹션 슬라이드로 진입시킨다. (대챕터를 빈 SOP 로
+      // 그려 "슬라이드 없음" 이 뜨고 섹션·사진에 닿지 못하던 문제 수정)
+      if (sop.doc_type === 'chapter') {
+        const _sections = SopStore.getSections(chapterId);
+        if (_sections.length > 0) {
+          let _done = 0, _html = '';
+          const _intro = (getLocalizedText(sop, 'content') || sop.content || '').trim();
+          if (_intro) {
+            _html += `<div style="padding:14px 16px; margin-bottom:14px; background:var(--white,#fff); border:1px solid var(--gray-200,#e5e7eb); border-radius:12px;">
+              <div class="sop-reading-body" style="font-size:13.5px; line-height:1.7; color:var(--gray-600,#4b5563);">${window.DOMPurify ? DOMPurify.sanitize(_intro) : _intro}</div>
+            </div>`;
+          }
+          _sections.forEach((sec, i) => {
+            const secScenes = SopStore.getVideos(sec.id).length;
+            const secPassed = Progress.isChapterPassed(sec.id);
+            if (secPassed) _done++;
+            const secTitle = getLocalizedText(sec, 'title') || sec.title || '';
+            _html += `<a class="video-item ${secPassed ? 'completed' : ''}" href="chapter.html?id=${encodeURIComponent(sec.id)}" style="text-decoration:none; color:inherit;">
+              <div class="video-thumb">${secPassed ? '&#10003;' : (i + 1)}</div>
+              <div class="video-info">
+                <h4>${escapeHtml(secTitle)}</h4>
+                <p style="color:var(--gray-500); font-size:13px;">${secScenes} ${t.scene}${secPassed ? ' · ' + t.completed : ''}</p>
+              </div>
+              <span style="color:${secPassed ? 'var(--success)' : 'var(--gray-300)'}; font-size:18px;">${secPassed ? '&#9989;' : '&#9654;'}</span>
+            </a>`;
+          });
+          container.innerHTML = _html;
+          const _lbl = document.getElementById('videoProgressLabel');
+          if (_lbl) _lbl.textContent = (lang === 'en' ? 'Section progress' : lang === 'vi' ? 'Tiến độ phần' : '섹션 진행률');
+          const pct = Math.round((_done / _sections.length) * 100);
+          document.getElementById('videoProgressText').textContent = `${_done}/${_sections.length} ${t.completed}`;
+          document.getElementById('videoProgressBar').style.width = pct + '%';
+          if (pct >= 100) document.getElementById('videoProgressBar').classList.add('success');
+          // 챕터 종합시험(대챕터 exam_quizzes) — 섹션 차례 아래에 노출
+          const _examArea = document.getElementById('chapterTestArea');
+          if (_examArea) {
+            const _exQ = SopStore.getExamQuizzes(chapterId);
+            if (_exQ.length > 0) {
+              const _exRes = getExamResult(chapterId);
+              const _gradeHtml = (_exRes && _exRes.grade)
+                ? `<span class="exam-grade-inline grade-${_exRes.grade}" style="padding:4px 12px; margin-left:8px;">${_exRes.grade} · ${_exRes.score}%</span>`
+                : '';
+              _examArea.innerHTML = `<div class="chapter-test-banner" style="margin-top:20px;">
+                <h3>📋 ${_done >= _sections.length ? (t.allVideosWatched || '모든 섹션 완료!') : (t.readyForTest || '챕터 종합시험')}</h3>
+                <p>${t.passInfo(CONFIG.CHAPTER_PASS_SCORE).replace('\n','<br>')}</p>
+                <a href="chapter.html?id=${encodeURIComponent(chapterId)}&exam=true" class="exam-start-btn" style="display:inline-block; margin-top:12px; text-decoration:none;">${t.examStartBtn || '종합시험 보기'}</a>
+                ${_gradeHtml}
+              </div>`;
+            } else {
+              _examArea.innerHTML = '';
+            }
+          }
+          return;
+        }
+      }
+
       // ===== Fallback: script(영상/슬라이드) 미생성 SOP =====
       // videos 가 비면 화면에 아무 파트도 안 떠서 "열리지 않는" 것처럼 보인다.
       // 이 경우 SOP 본문(content)을 읽기 카드로 표시해 최소한의 학습이 가능하게 한다.
