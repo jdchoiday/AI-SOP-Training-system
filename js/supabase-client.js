@@ -113,14 +113,35 @@ const SupabaseMode = {
     } catch (e) { /* localStorage 불가 환경 무시 */ }
   },
 
+  // 자격증명 오류(400/401/403/422) 와 네트워크·서버 도달 실패를 구분.
+  // → 네트워크 실패를 "비번 틀림"으로 오인하지 않게 한다.
+  _isNetErr(err) {
+    if (!err) return false;
+    const s = err.status;
+    if (s === 400 || s === 401 || s === 403 || s === 422) return false;
+    if (s == null || s === 0 || s >= 500) return true;
+    return /fetch|network|timeout|Failed to fetch|ECONN|ENOTFOUND/i.test((err.message || '') + ' ' + (err.name || ''));
+  },
+
+  // 직전 로그인 실패 사유: null=자격증명, 'network'=도달실패, 'noprofile'=프로필없음
+  _lastLoginError: null,
+
   // ===== 로그인 (Supabase Auth 우선, 실패 시 legacy hash 자동 전환) =====
   async login(email, password) {
     if (!this._ready) return null;
     try {
+      this._lastLoginError = null;
       // 1차 시도: Supabase Auth로 직접 로그인
       let { data: authData, error: authError } = await this._client.auth.signInWithPassword({
         email, password
       });
+
+      // 네트워크/서버 도달 실패는 자격증명 오류와 구분 (마이그레이션 재시도해도 무의미)
+      if (authError && this._isNetErr(authError)) {
+        console.warn('[Auth] 네트워크/서버 도달 실패:', authError.status, authError.message);
+        this._lastLoginError = 'network';
+        return null;
+      }
 
       // 실패 → legacy hash 검증 + Supabase Auth 비번 재설정 후 재시도
       if (authError || !authData?.user) {
@@ -147,6 +168,7 @@ const SupabaseMode = {
           authData = retry.data;
         } catch (e) {
           console.error('[Auth] 마이그레이션 예외:', e.message);
+          this._lastLoginError = 'network'; // 마이그레이션 통신 실패 → 네트워크로 취급
           return null;
         }
       }
@@ -157,9 +179,10 @@ const SupabaseMode = {
         this._client.from('employees').select('*, companies(id, name, slug, brand_color)').eq('auth_user_id', authUserId).single()
       );
       if (empErr || !emp) {
-        console.warn('[Auth] employees 프로필 없음:', authUserId);
-        // 프로필 없으면 로그아웃
-        await this._client.auth.signOut();
+        console.warn('[Auth] employees 프로필 조회 실패/없음:', authUserId, empErr?.message || '');
+        // 인증은 됐으나 프로필 조회 실패: 네트워크/RLS 면 network, 진짜 없으면 noprofile
+        this._lastLoginError = (empErr && this._isNetErr(empErr)) ? 'network' : 'noprofile';
+        try { await this._client.auth.signOut(); } catch (_) {}
         return null;
       }
 
@@ -178,6 +201,7 @@ const SupabaseMode = {
       };
     } catch (e) {
       console.error('[Supabase] 로그인 오류:', e);
+      this._lastLoginError = 'network';
       return null;
     }
   },
