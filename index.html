@@ -285,6 +285,12 @@
     // ===== 브랜드 선택 (멀티브랜드) =====
     function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
     let _selectedBrand = localStorage.getItem('sop_brand') || '';
+    // 초대링크에서 "이미 계정 있음"으로 넘어오면 그 브랜드(?brand=)를 그대로 사전선택한다
+    // (회사 재선택 불필요). 일반 직원은 로그인 후 본인 company_id 가 우선이라 격리엔 영향 없음.
+    try {
+      const _qsBrand = new URLSearchParams(location.search).get('brand');
+      if (_qsBrand) { _selectedBrand = _qsBrand; localStorage.setItem('sop_brand', _qsBrand); }
+    } catch (_) {}
     function updateRegisterLink() {
       // 초대 전용: 가입은 초대 링크(?code=)로만 가능하므로 ?brand= 사전선택은 무의미.
       // 링크는 register.html 의 "초대 링크가 필요합니다" 안내(관리자 문의)로 연결한다.
@@ -317,6 +323,9 @@
           .from('companies').select('id, name, slug, brand_color').order('name');
         if (error || !data || data.length < 2) return; // 브랜드 1개뿐이면 선택 UI 숨김
         _brandList = data;
+        // ?brand= 또는 sop_brand 로 사전선택된 브랜드명을 저장(super_admin 헤더 표시용)
+        const _selB = _brandList.find(c => c.id === _selectedBrand || c.slug === _selectedBrand);
+        if (_selB && _selB.name) localStorage.setItem('sop_brand_name', _selB.name);
         document.getElementById('brandPicker').style.display = 'block';
         renderBrandChips();
         updateRegisterLink();
