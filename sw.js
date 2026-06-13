@@ -1,6 +1,6 @@
 // Service Worker — 오프라인 캐싱 + 자동 업데이트 전략
 // CACHE_NAME은 배포마다 변경되어야 함 (Vercel 배포 시 타임스탬프 주입 권장)
-const CACHE_VERSION = 'v25-20260611-sop-sanitize';
+const CACHE_VERSION = 'v26-20260613-auth-resilience';
 const CACHE_NAME = `sop-training-${CACHE_VERSION}`;
 const HTML_CACHE = `sop-html-${CACHE_VERSION}`;
 
@@ -105,7 +105,24 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // 정적 자산 (JS/CSS/이미지): 캐시 우선, 백그라운드에서 업데이트
+  // JS/CSS: 네트워크 우선(+캐시 폴백) — 배포 후 옛 코드가 캐시로 계속 서빙되어
+  // 수정이 기기에 닿지 않던 문제를 근본 차단. (CACHE_VERSION 갱신을 잊어도 즉시 최신 반영)
+  if (url.endsWith('.js') || url.endsWith('.css')) {
+    e.respondWith(
+      fetch(e.request)
+        .then(res => {
+          if (res && res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // 그 외 정적 자산 (이미지 등): 캐시 우선, 백그라운드에서 업데이트
   e.respondWith(
     caches.match(e.request).then(cached => {
       const fetchPromise = fetch(e.request).then(res => {
