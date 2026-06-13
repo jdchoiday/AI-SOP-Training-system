@@ -2,7 +2,7 @@
 // ----------------------------------------------------------------------------
 // 사고: super_admin(company_id NULL)이 직원 학습앱(app/tasks/chapter)에 로그인하면
 //   _currentCompanyId()=null → syncSops 가 회사 필터 없이 전 브랜드 SOP 를 끌어와,
-//   한 브랜드(예: Kiwooza)를 테스트할 때 타 브랜드(SLCO) 코스가 목록에 섞여 보였다.
+//   한 브랜드(예: Kiwooza)를 테스트할 때 타 브랜드(SLKO) 코스가 목록에 섞여 보였다.
 // 규칙: 회사를 추정하지 말 것. super_admin 은 로그인 시 명시적으로 고른 브랜드(sop_brand)
 //   만 유효 회사로 사용한다. 일반 직원은 항상 본인 company_id 가 우선한다.
 // 이 테스트는 실제 SupabaseMode 를 vm 으로 로드해 _currentCompanyId / applyCompanyScope
@@ -19,7 +19,7 @@ function ok(name, cond, extra) {
 }
 
 const KIWOOZA = 'dae1afc8-55cb-476e-8099-07ef41e4452d';
-const SLCO = 'f7b86b4d-9a43-486d-8d07-6ba812cd4ef7';
+const SLKO = 'f7b86b4d-9a43-486d-8d07-6ba812cd4ef7';
 
 // --- 가짜 localStorage ---
 function makeLS(initial) {
@@ -65,23 +65,23 @@ console.log('=== _currentCompanyId(): super_admin 브랜드 스코프 ===');
   ok('super_admin + 브랜드 미선택 → null', SM._currentCompanyId() === null, SM._currentCompanyId());
 }
 
-// 3) 🔒 실제 직원은 본인 회사가 우선 — sop_brand(SLCO) 가 있어도 무시
+// 3) 🔒 실제 직원은 본인 회사가 우선 — sop_brand(SLKO) 가 있어도 무시
 {
-  const ls = makeLS({ sop_user: JSON.stringify({ role: 'staff', company_id: KIWOOZA }), sop_brand: SLCO });
+  const ls = makeLS({ sop_user: JSON.stringify({ role: 'staff', company_id: KIWOOZA }), sop_brand: SLKO });
   const SM = loadSM(ls);
-  ok('🔒 Kiwooza 직원은 sop_brand(SLCO) 무시하고 Kiwooza', SM._currentCompanyId() === KIWOOZA, SM._currentCompanyId());
+  ok('🔒 Kiwooza 직원은 sop_brand(SLKO) 무시하고 Kiwooza', SM._currentCompanyId() === KIWOOZA, SM._currentCompanyId());
 }
 
 // 4) sop_active_company 가 sop_brand 보다 우선(applyCompanyScope 가 확정한 값)
 {
-  const ls = makeLS({ sop_user: JSON.stringify({ role: 'super_admin', company_id: null }), sop_active_company: SLCO, sop_brand: KIWOOZA });
+  const ls = makeLS({ sop_user: JSON.stringify({ role: 'super_admin', company_id: null }), sop_active_company: SLKO, sop_brand: KIWOOZA });
   const SM = loadSM(ls);
-  ok('super_admin: sop_active_company(SLCO) 우선', SM._currentCompanyId() === SLCO, SM._currentCompanyId());
+  ok('super_admin: sop_active_company(SLKO) 우선', SM._currentCompanyId() === SLKO, SM._currentCompanyId());
 }
 
 // 5) 🔒 super_admin 이 아닌 계정엔 sop_brand 스코프가 새지 않음(방어적)
 {
-  const ls = makeLS({ sop_user: JSON.stringify({ role: 'staff', company_id: null }), sop_brand: SLCO });
+  const ls = makeLS({ sop_user: JSON.stringify({ role: 'staff', company_id: null }), sop_brand: SLKO });
   const SM = loadSM(ls);
   ok('🔒 비-super_admin + null company 는 sop_brand 무시', SM._currentCompanyId() === null, SM._currentCompanyId());
 }
@@ -89,15 +89,15 @@ console.log('=== _currentCompanyId(): super_admin 브랜드 스코프 ===');
 // 6) 관리자 페이지: window.__activeCompanyId 가 super_admin 선택보다 우선
 {
   const ls = makeLS({ sop_user: JSON.stringify({ role: 'super_admin', company_id: null }), sop_brand: KIWOOZA });
-  const SM = loadSM(ls, { __activeCompanyId: SLCO });
-  ok('admin 컨텍스트: __activeCompanyId(SLCO) 우선', SM._currentCompanyId() === SLCO, SM._currentCompanyId());
+  const SM = loadSM(ls, { __activeCompanyId: SLKO });
+  ok('admin 컨텍스트: __activeCompanyId(SLKO) 우선', SM._currentCompanyId() === SLKO, SM._currentCompanyId());
 }
 
 console.log('\n=== applyCompanyScope(): super_admin 브랜드 전환 시 캐시 purge ===');
 
-// 7) super_admin 이 SLCO→Kiwooza 로 바꾸면 회사-스코프 캐시 비움 + active 갱신
+// 7) super_admin 이 SLKO→Kiwooza 로 바꾸면 회사-스코프 캐시 비움 + active 갱신
 {
-  const ls = makeLS({ sop_active_company: SLCO, sop_brand: KIWOOZA, sop_documents: '[{"id":"slco-picnic"}]', sop_progress_v2: '{"x":1}' });
+  const ls = makeLS({ sop_active_company: SLKO, sop_brand: KIWOOZA, sop_documents: '[{"id":"slko-picnic"}]', sop_progress_v2: '{"x":1}' });
   const SM = loadSM(ls);
   SM.applyCompanyScope({ role: 'super_admin', company_id: null });
   ok('브랜드 전환 → sop_documents 캐시 purge', ls.getItem('sop_documents') === null, ls._dump());
@@ -112,12 +112,12 @@ console.log('\n=== applyCompanyScope(): super_admin 브랜드 전환 시 캐시 
   ok('동일 브랜드 → 캐시 보존', ls.getItem('sop_documents') === '[{"id":"keep"}]', ls.getItem('sop_documents'));
 }
 
-// 9) 🔒 일반 직원 브랜드 전환(Kiwooza→SLCO)도 여전히 purge (기존 RC4 보호 유지)
+// 9) 🔒 일반 직원 브랜드 전환(Kiwooza→SLKO)도 여전히 purge (기존 RC4 보호 유지)
 {
   const ls = makeLS({ sop_active_company: KIWOOZA, sop_documents: '[{"id":"kw"}]' });
   const SM = loadSM(ls);
-  SM.applyCompanyScope({ role: 'staff', company_id: SLCO });
-  ok('🔒 직원 브랜드 전환 → purge 유지', ls.getItem('sop_documents') === null && ls.getItem('sop_active_company') === SLCO, ls._dump());
+  SM.applyCompanyScope({ role: 'staff', company_id: SLKO });
+  ok('🔒 직원 브랜드 전환 → purge 유지', ls.getItem('sop_documents') === null && ls.getItem('sop_active_company') === SLKO, ls._dump());
 }
 
 console.log(`\n===== 결과: ${pass} 통과 / ${fail} 실패 =====`);

@@ -536,7 +536,7 @@ Rules:
 - Preserve the original meaning, tone, and pedagogical intent
 - Use natural, fluent ${langNames[targetLang]} as a native speaker would write
 - For technical/SOP terminology, use the most common term in ${langNames[targetLang]} business context
-- Keep brand names (AION, Kiwooza, SLCO, KBBQ) untranslated
+- Keep brand names (AION, Kiwooza, SLKO, KBBQ) untranslated
 - Keep HTML tags (e.g. <span class='accent'>) intact and translate only the text inside
 - Maintain the same array length and order as input
 - Each output must be a complete translation of the corresponding input

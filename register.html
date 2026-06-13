@@ -549,7 +549,7 @@
       //  · 자유가입: 사용자가 고른 브랜드(selectedCompanyId)
       //  · 초대가입: 초대장이 지정한 회사(currentInvite.company_id)
       // ❌ 과거 "첫 번째 회사 자동배정" 폴백 제거 — 모든 직원이 한 브랜드(Kiwooza)로
-      //    쏠려 타 브랜드(SLCO) 직원이 남의 교육자료를 보던 핵심 버그(RC1)였음.
+      //    쏠려 타 브랜드(SLKO) 직원이 남의 교육자료를 보던 핵심 버그(RC1)였음.
       const targetCompanyId = freeMode ? selectedCompanyId : (currentInvite?.company_id || null);
       if (SupabaseMode._ready) {
         try {

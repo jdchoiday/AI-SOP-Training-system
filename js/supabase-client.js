@@ -70,7 +70,7 @@ const SupabaseMode = {
   // sop_user.company_id 로 저장되므로 그 값을 그대로 주입해 WITH CHECK 를 통과시킨다.
   // super_admin 은 본인 회사가 없다(company_id NULL, 전 브랜드 관리). 그대로 두면 학습앱
   // (app/tasks/chapter)에서 syncSops 가 필터 없이 전 브랜드 콘텐츠를 끌어와 한 브랜드를
-  // 테스트할 때 타 브랜드(예: SLCO) 코스가 섞여 보인다. 회사를 '추정'하지 않고, 로그인 시
+  // 테스트할 때 타 브랜드(예: SLKO) 코스가 섞여 보인다. 회사를 '추정'하지 않고, 로그인 시
   // 명시적으로 고른 브랜드(sop_brand)만 유효 회사로 사용한다(CLAUDE.md 불변규칙).
   _superAdminSelectedCompany(user) {
     if (!user || user.role !== 'super_admin') return null;
@@ -92,7 +92,7 @@ const SupabaseMode = {
   },
 
   // 로그인 직원의 회사(브랜드)가 직전 세션과 다르면 회사-스코프 localStorage 캐시를 비운다.
-  // 한 기기에서 Kiwooza→SLCO 로 바꿔 로그인했을 때 이전 브랜드의 SOP/진행률/지점/학습경로가
+  // 한 기기에서 Kiwooza→SLKO 로 바꿔 로그인했을 때 이전 브랜드의 SOP/진행률/지점/학습경로가
   // 남아 보이던 교차-브랜드 누출(RC4)을 차단한다. 로그인 직후(syncAll 이전)에 호출할 것.
   applyCompanyScope(user) {
     try {
