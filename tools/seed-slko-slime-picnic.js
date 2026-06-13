@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 // ============================================================
-// SLCO 슬라임 피크닉 팝업 교육매뉴얼 — 코스 시드
+// SLKO 슬라임 피크닉 팝업 교육매뉴얼 — 코스 시드
 // ============================================================
 // 원본: 슬라임 피크닉 교육매뉴얼.pptx (17 슬라이드, 2026.04 · 스타필드마켓 죽전 1F)
 // 원칙: 슬라이드의 텍스트·사진을 생략 없이 모두 수록 (나레이션 = 원문 그대로,
-//       사진 16장 = /content/slco/slime-picnic/*.webp — 원본 18장 중 브랜드
+//       사진 16장 = /content/slko/slime-picnic/*.webp — 원본 18장 중 브랜드
 //       그래픽 3장은 1장으로 합성, 템플릿 장식 아이콘 18개는 사진이 아니므로 제외)
-// 실행: node tools/seed-slco-slime-picnic.js  → stdout 으로 업서트 SQL 출력
+// 실행: node tools/seed-slko-slime-picnic.js  → stdout 으로 업서트 SQL 출력
 //       (Supabase SQL Editor 또는 MCP execute_sql 로 실행)
 // ============================================================
 
-const SLCO = 'f7b86b4d-9a43-486d-8d07-6ba812cd4ef7'; // SLCO company_id
-const IMG = '/content/slco/slime-picnic';
-const CH = 'slco-picnic'; // 대챕터 id
+const SLKO = 'f7b86b4d-9a43-486d-8d07-6ba812cd4ef7'; // SLKO company_id
+const IMG = '/content/slko/slime-picnic';
+const CH = 'slko-picnic'; // 대챕터 id
 
 // ---------- 대챕터 ----------
 const chapter = {
@@ -435,10 +435,10 @@ const rows = [
   })),
 ];
 
-let sql = '-- SLCO 슬라임 피크닉 코스 시드 (재실행 안전: upsert)\n';
+let sql = '-- SLKO 슬라임 피크닉 코스 시드 (재실행 안전: upsert)\n';
 for (const r of rows) {
   sql += `INSERT INTO sop_documents (id, title, category, content, status, order_num, script, quizzes, exam_quizzes, doc_type, parent_id, company_id, updated_at)
-VALUES (${lit(r.id)}, ${lit(r.title)}, ${lit(r.category)}, ${lit(r.content)}, ${lit(r.status)}, ${r.order_num}, ${jlit(r.script)}, ${jlit(r.quizzes)}, ${jlit(r.exam_quizzes)}, ${lit(r.doc_type)}, ${lit(r.parent_id)}, '${SLCO}'::uuid, now())
+VALUES (${lit(r.id)}, ${lit(r.title)}, ${lit(r.category)}, ${lit(r.content)}, ${lit(r.status)}, ${r.order_num}, ${jlit(r.script)}, ${jlit(r.quizzes)}, ${jlit(r.exam_quizzes)}, ${lit(r.doc_type)}, ${lit(r.parent_id)}, '${SLKO}'::uuid, now())
 ON CONFLICT (id) DO UPDATE SET
   title=EXCLUDED.title, category=EXCLUDED.category, content=EXCLUDED.content,
   status=EXCLUDED.status, order_num=EXCLUDED.order_num, script=EXCLUDED.script,

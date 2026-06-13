@@ -30,7 +30,7 @@
 
 ### 회사(브랜드) ID (이 프로젝트 고정값 · project `xbcdzkrhtjgxdwfqqugc`)
 - **Kiwooza Vietnam** = `dae1afc8-55cb-476e-8099-07ef41e4452d`
-- **SLCO** = `f7b86b4d-9a43-486d-8d07-6ba812cd4ef7`
+- **SLKO** = `f7b86b4d-9a43-486d-8d07-6ba812cd4ef7`
 
 > 참고: "본사"는 브랜드가 아니라 **브랜드 안의 지점(branch)**이다. 가입은 브랜드 → 지점 →
 > 팀 순으로 고른다. 지점 목록은 `branch_teams`(회사별)에서 오며, 가입 페이지(anon)는

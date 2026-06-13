@@ -29,7 +29,7 @@ const SopStore = {
           }
         }
         // 유효하지 않은 imageUrl 정리 (data: base64 제외한 비-URL 문자열)
-        // '/' 시작 = 같은 출처 정적 자산(repo 커밋 이미지, 예: /content/slco/…)은 유효
+        // '/' 시작 = 같은 출처 정적 자산(repo 커밋 이미지, 예: /content/slko/…)은 유효
         if (sc.imageUrl && !sc.imageUrl.startsWith('http') && !sc.imageUrl.startsWith('data:')
             && !sc.imageUrl.startsWith('/')) {
           sc.imageUrl = null;
