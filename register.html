@@ -584,7 +584,13 @@
           console.error('Supabase register error:', e);
           const emps = EmployeeStore.getAll();
           EmployeeStore.save(emps.filter(emp => emp.id !== newEmp.id));
-          const msg = /already exists/i.test(e.message) ? t.emailExists : t.networkError;
+          // 서버 설정/500 오류를 "네트워크 오류"로 묻지 않고 실제 사유를 노출 (디버깅·관리자 안내).
+          // 예: SUPABASE_SERVICE_ROLE_KEY 미설정 시 가입은 500을 반환하는데, 종전엔 "네트워크 오류"로만 보였음.
+          const raw = e.message || '';
+          let msg;
+          if (/already exists/i.test(raw)) msg = t.emailExists;
+          else if (/not configured|creation failed|Profile creation|Auth user|500/i.test(raw)) msg = (t.serverError || '서버 설정 오류입니다. 관리자에게 문의하세요.') + ' [' + raw + ']';
+          else msg = t.networkError + (raw ? ' [' + raw + ']' : '');
           document.getElementById('errorMsg').textContent = msg;
           document.getElementById('errorMsg').style.display = 'block';
           submitBtn.disabled = false;
