@@ -221,6 +221,16 @@
 
     function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
+    // 로그인 링크(이미 계정 있음 / 로그인 페이지 / 가입완료 후 로그인)에 브랜드를 실어 보낸다.
+    // index.html 이 ?brand= 를 읽어 해당 브랜드 칩을 사전선택 → 로그인 시 회사 재선택 불필요.
+    function setLoginLinksBrand(companyId) {
+      const href = companyId ? ('index.html?brand=' + encodeURIComponent(companyId)) : 'index.html';
+      ['goLoginBtn', 'loginBtn', 'alreadyHaveAccount'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.setAttribute('href', href);
+      });
+    }
+
     // ===== 회사(브랜드) 목록 — companies_read_all RLS(USING true)라 anon 도 읽힘 =====
     async function loadCompanies() {
       if (!SupabaseMode._ready) return [];
@@ -413,6 +423,17 @@
       currentInvite = invite;
       selectedCompanyId = invite.company_id || null;
       document.getElementById('inviteInfo').textContent = t.staffRegistration(invite.branch);
+
+      // 초대장의 브랜드를 로그인 화면까지 잇는다: "이미 계정 있음"으로 넘어가도 같은
+      // 브랜드로 로그인되도록(회사 재선택 불필요). 격리는 그대로 — 일반 직원은 로그인 후
+      // 본인 company_id 가 우선이고, 이건 로그인 화면의 브랜드 칩 사전선택일 뿐이다.
+      if (selectedCompanyId) {
+        try {
+          localStorage.setItem('sop_brand', selectedCompanyId);
+          if (invite.company_name) localStorage.setItem('sop_brand_name', invite.company_name);
+        } catch (_) {}
+      }
+      setLoginLinksBrand(selectedCompanyId);
 
       // 브랜드(회사) 고정 표시 — 초대장이 지정한 브랜드로만 가입됨
       if (invite.company_name) {
