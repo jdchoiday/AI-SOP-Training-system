@@ -168,7 +168,9 @@
         emailPlaceholder: 'name@company.com',
         passwordPlaceholder: '비밀번호 입력',
         errorInvalid: '이메일 또는 비밀번호가 올바르지 않습니다.',
-        errorNetwork: '네트워크 오류가 발생했습니다. 다시 시도해주세요.',
+        errorNetwork: '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        errorStorage: '브라우저 저장소를 사용할 수 없습니다. 시크릿/프라이빗 모드를 끄거나 브라우저 데이터를 삭제한 뒤 다시 시도해주세요.',
+        errorNoProfile: '직원 프로필을 찾을 수 없습니다. 관리자에게 문의해주세요.',
         forgotPassword: '비밀번호를 잊으셨나요?',
         resetTitle: '비밀번호 재설정',
         resetDesc: '관리자에게 문의하여 비밀번호를 초기화하세요',
@@ -185,7 +187,9 @@
         emailPlaceholder: 'name@company.com',
         passwordPlaceholder: 'Enter password',
         errorInvalid: 'Invalid email or password.',
-        errorNetwork: 'Network error. Please try again.',
+        errorNetwork: 'Network error. Please try again in a moment.',
+        errorStorage: 'Browser storage is unavailable. Turn off private mode or clear site data, then try again.',
+        errorNoProfile: 'Employee profile not found. Please contact your administrator.',
         forgotPassword: 'Forgot your password?',
         resetTitle: 'Reset Password',
         resetDesc: 'Contact your administrator to reset your password',
@@ -202,7 +206,9 @@
         emailPlaceholder: 'name@company.com',
         passwordPlaceholder: 'Nhập mật khẩu',
         errorInvalid: 'Email hoặc mật khẩu không đúng.',
-        errorNetwork: 'Lỗi mạng. Vui lòng thử lại.',
+        errorNetwork: 'Lỗi mạng. Vui lòng thử lại sau giây lát.',
+        errorStorage: 'Trình duyệt không thể lưu dữ liệu. Hãy tắt chế độ ẩn danh hoặc xóa dữ liệu trang web rồi thử lại.',
+        errorNoProfile: 'Không tìm thấy hồ sơ nhân viên. Vui lòng liên hệ quản trị viên.',
         forgotPassword: 'Quên mật khẩu?',
         resetTitle: 'Đặt lại mật khẩu',
         resetDesc: 'Liên hệ quản trị viên để đặt lại mật khẩu',
@@ -211,6 +217,25 @@
         registerLink: 'Chưa có tài khoản? Đăng ký',
       }
     };
+
+    // ── 저장소 견고화 헬퍼: 시크릿/용량초과/차단 환경에서도 로그인이 잘못된 오류로 죽지 않게 ──
+    function _storageWritable() {
+      try { const k = '__probe_' + Date.now(); localStorage.setItem(k, '1'); localStorage.removeItem(k); return true; }
+      catch (_) { return false; }
+    }
+    function _persistUser(user) {
+      // 필수 저장(sop_user). 용량초과면 큰 캐시를 비우고 1회 재시도, 그래도 실패면 'storage'.
+      const payload = JSON.stringify(user);
+      try { localStorage.setItem('sop_user', payload); return; }
+      catch (e1) {
+        try {
+          ['sop_documents','sop_progress_v2','sop_branches','sop_branch_teams',
+           'sop_learning_paths','sop_deadlines','sop_employees','sop_deleted_ids',
+           'sop_pending_notifications'].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+          localStorage.setItem('sop_user', payload); return;
+        } catch (e2) { throw new Error('storage'); }
+      }
+    }
 
     let currentLang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
 
@@ -320,6 +345,9 @@
       errorDiv.style.display = 'none';
 
       try {
+        // 0) 저장소 사전 점검 — 시크릿/용량초과/차단 즉시 감지 (잘못된 "네트워크 오류" 방지)
+        if (!_storageWritable()) throw new Error('storage');
+
         let user = null;
         let supabaseAuthOk = false;
 
@@ -327,6 +355,8 @@
         if (SupabaseMode._ready) {
           user = await SupabaseMode.login(email, password);
           if (user) supabaseAuthOk = true;
+          else if (SupabaseMode._lastLoginError === 'network') throw new Error('network');
+          else if (SupabaseMode._lastLoginError === 'noprofile') throw new Error('noprofile');
         }
 
         // 2차 폴백: Supabase Auth 실패 시에만 데모 로그인 (세션 없음 → RLS 쓰기 실패)
@@ -369,16 +399,16 @@
           throw new Error('admin_auth_required');
         }
 
-        // 로그인 성공 → 세션 저장
-        localStorage.setItem('sop_user', JSON.stringify(user));
-        localStorage.setItem('sop_login_time', Date.now().toString());
+        // 로그인 성공 → 세션 저장 (필수: sop_user. 용량초과 시 큰 캐시 비우고 재시도)
+        _persistUser(user);
+        try { localStorage.setItem('sop_login_time', Date.now().toString()); } catch (_) {}
 
         // 브랜드(회사)가 직전 로그인과 다르면 이전 브랜드 캐시 제거 — 교차-브랜드 누출 방지 (RC4)
-        SupabaseMode.applyCompanyScope(user);
+        try { SupabaseMode.applyCompanyScope(user); } catch (_) {}
 
-        // Supabase에서 데이터 동기화
+        // 데이터 동기화는 베스트에포트 — 실패/지연이 로그인 진행을 막지 않음 (app.html 에서 재동기화)
         if (SupabaseMode._ready) {
-          await SupabaseMode.syncAll();
+          try { await SupabaseMode.syncAll(); } catch (_) {}
         }
 
         // 역할별 페이지 이동
@@ -395,6 +425,10 @@
           msg = t.errorInvalid;
         } else if (err.message === 'admin_auth_required') {
           msg = '관리자 계정은 Supabase Auth 로그인이 필요합니다. 비밀번호를 확인하거나 관리자에게 문의하세요.';
+        } else if (err.message === 'storage') {
+          msg = t.errorStorage;
+        } else if (err.message === 'noprofile') {
+          msg = t.errorNoProfile;
         } else {
           msg = t.errorNetwork;
         }
