@@ -123,7 +123,7 @@
 
       <!-- 회원가입 링크 -->
       <p style="text-align:center; margin-top:16px;">
-        <a href="register.html" style="color:var(--primary); font-size:13px; text-decoration:none; font-weight:600;" id="registerLink">계정이 없나요? 회원가입</a>
+        <a href="register.html" style="color:var(--primary); font-size:13px; text-decoration:none; font-weight:600;" id="registerLink">가입은 초대 링크로 — 관리자에게 문의</a>
       </p>
 
       <!-- 언어 전환 -->
@@ -176,7 +176,7 @@
         resetDesc: '관리자에게 문의하여 비밀번호를 초기화하세요',
         admin: '관리자', staff: '직원',
         brandPicker: '브랜드 선택',
-        registerLink: '계정이 없나요? 회원가입',
+        registerLink: '가입은 초대 링크로 — 관리자에게 문의',
       },
       en: {
         title: 'SOP Training',
@@ -195,7 +195,7 @@
         resetDesc: 'Contact your administrator to reset your password',
         admin: 'Admin', staff: 'Staff',
         brandPicker: 'Select brand',
-        registerLink: "Don't have an account? Register",
+        registerLink: "Registration is by invitation — ask your admin",
       },
       vi: {
         title: 'SOP Training',
@@ -214,7 +214,7 @@
         resetDesc: 'Liên hệ quản trị viên để đặt lại mật khẩu',
         admin: 'Quản trị viên', staff: 'Nhân viên',
         brandPicker: 'Chọn thương hiệu',
-        registerLink: 'Chưa có tài khoản? Đăng ký',
+        registerLink: 'Đăng ký bằng liên kết mời — hỏi quản trị viên',
       }
     };
 
@@ -286,8 +286,10 @@
     function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
     let _selectedBrand = localStorage.getItem('sop_brand') || '';
     function updateRegisterLink() {
+      // 초대 전용: 가입은 초대 링크(?code=)로만 가능하므로 ?brand= 사전선택은 무의미.
+      // 링크는 register.html 의 "초대 링크가 필요합니다" 안내(관리자 문의)로 연결한다.
       const link = document.getElementById('registerLink');
-      if (link) link.href = _selectedBrand ? ('register.html?brand=' + encodeURIComponent(_selectedBrand)) : 'register.html';
+      if (link) link.href = 'register.html';
     }
     window.selectBrand = function (id) {
       _selectedBrand = id;
