@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="640" viewBox="0 0 700 640" font-family="-apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif">
+  <defs>
+    <radialGradient id="card" cx="50%" cy="42%" r="75%">
+      <stop offset="0%" stop-color="#1E293B"/>
+      <stop offset="70%" stop-color="#0A0A0A"/>
+    </radialGradient>
+    <linearGradient id="num" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#64748B"/>
+    </linearGradient>
+    <clipPath id="clipA"><rect x="40" y="92" width="280" height="430" rx="22"/></clipPath>
+    <clipPath id="clipB"><rect x="380" y="92" width="280" height="430" rx="22"/></clipPath>
+  </defs>
+
+  <rect width="700" height="640" fill="#0b1220"/>
+  <text x="350" y="44" fill="#e5e7eb" font-size="22" font-weight="800" text-anchor="middle">stat 카드 — 숫자 표시 정확도 수정</text>
+
+  <!-- ===== BEFORE ===== -->
+  <rect x="40" y="92" width="280" height="430" rx="22" fill="url(#card)" stroke="#1f2937"/>
+  <text x="300" y="150" font-size="120" opacity="0.10" text-anchor="end">🍧</text>
+  <g clip-path="url(#clipA)">
+    <text x="180" y="330" fill="url(#num)" font-size="128" font-weight="900"
+          text-anchor="middle" textLength="470" lengthAdjust="spacingAndGlyphs">18,000</text>
+  </g>
+  <text x="180" y="372" fill="#FBBF24" font-size="20" font-weight="800" text-anchor="middle">원 · 1인 / 1시간</text>
+  <text x="180" y="412" fill="rgba(255,255,255,0.8)" font-size="13" text-anchor="middle">슬라임 빙수 + 아이스크림 슬라임</text>
+  <text x="180" y="430" fill="rgba(255,255,255,0.8)" font-size="13" text-anchor="middle">+ 게임 1종 포함</text>
+  <text x="180" y="556" fill="#FCA5A5" font-size="15" font-weight="800" text-anchor="middle">❌ 수정 전 (140px 고정)</text>
+  <text x="180" y="580" fill="#94a3b8" font-size="12.5" text-anchor="middle">"18,000"이 카드 폭을 넘쳐 좌우가 잘림</text>
+  <text x="180" y="600" fill="#94a3b8" font-size="12.5" text-anchor="middle">→ 가운데만 보여 "8.000"처럼 읽힘</text>
+
+  <!-- ===== AFTER ===== -->
+  <rect x="380" y="92" width="280" height="430" rx="22" fill="url(#card)" stroke="#1f2937"/>
+  <text x="640" y="150" font-size="120" opacity="0.10" text-anchor="end">🍧</text>
+  <g clip-path="url(#clipB)">
+    <text x="520" y="318" fill="url(#num)" font-size="86" font-weight="900"
+          text-anchor="middle" textLength="236" lengthAdjust="spacingAndGlyphs">18,000</text>
+  </g>
+  <text x="520" y="362" fill="#FBBF24" font-size="20" font-weight="800" text-anchor="middle">원 · 1인 / 1시간</text>
+  <text x="520" y="402" fill="rgba(255,255,255,0.8)" font-size="13" text-anchor="middle">슬라임 빙수 + 아이스크림 슬라임</text>
+  <text x="520" y="420" fill="rgba(255,255,255,0.8)" font-size="13" text-anchor="middle">+ 게임 1종 포함</text>
+  <text x="520" y="556" fill="#6EE7B7" font-size="15" font-weight="800" text-anchor="middle">✅ 수정 후 (폭 적응)</text>
+  <text x="520" y="580" fill="#94a3b8" font-size="12.5" text-anchor="middle">자릿수+컨테이너쿼리로 카드 안에</text>
+  <text x="520" y="600" fill="#94a3b8" font-size="12.5" text-anchor="middle">"18,000" 전체가 또렷하게 표시</text>
+</svg>
