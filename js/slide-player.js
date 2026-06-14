@@ -30,6 +30,14 @@ const SlidePlayer = (() => {
   let _pendingCrossfade = null; // { iframe, refImg, mySession, showingRef } — 현재 씬 전환 상태
   const CROSSFADE_INTERVAL_MS = 10000; // ★ 씬 시작 후 10초 뒤 단 1번 인포→사진 전환 (재귀 없음) ★
 
+  // stat '거대 숫자'가 카드 폭을 넘쳐 잘리는 것 방지(예: "18,000"이 좌우 잘려 "8.000"처럼 보이던 버그).
+  // 자릿수 기반 상한(px) + 컨테이너쿼리(cqw)로 좁은 화면에선 폭에 맞춰 축소. 부모에 container-type:inline-size 필요.
+  function _statNumberFont(num) {
+    const n = String(num == null ? '' : num).replace(/\s+/g, '').length || 1;
+    const px = n <= 3 ? 132 : n <= 4 ? 116 : n <= 5 ? 100 : n <= 6 ? 86 : n <= 7 ? 74 : 62;
+    return `min(${px}px, 26cqw)`;
+  }
+
   // --- Audio state ---
   let currentAudio = null;       // HTMLAudioElement currently playing
   const audioCache = new Map();  // narration text hash → blob URL
@@ -762,7 +770,7 @@ const SlidePlayer = (() => {
         const overlayHtml = scene.type === 'stat'
           ? `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;z-index:5;padding:24px;">
               ${scene.tag ? `<div style="font-size:11px;font-weight:800;letter-spacing:4px;color:#10B981;margin-bottom:18px;text-transform:uppercase;">${scene.tag}</div>` : ''}
-              <div style="font-size:120px;font-weight:900;line-height:0.85;background:linear-gradient(180deg,#fff,#777);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.04em;">${scene.number || ''}</div>
+              <div style="font-size:${_statNumberFont(scene.number)};font-weight:900;line-height:0.85;white-space:nowrap;background:linear-gradient(180deg,#fff,#777);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.04em;">${scene.number || ''}</div>
               ${scene.unit ? `<div style="font-size:22px;font-weight:700;color:#FBBF24;margin-top:6px;">${scene.unit}</div>` : ''}
               <div style="font-size:16px;font-weight:500;color:rgba(255,255,255,0.85);margin-top:18px;max-width:340px;line-height:1.5;">${scene.context || ''}</div>
             </div>`
@@ -770,7 +778,7 @@ const SlidePlayer = (() => {
               ${scene.tag ? `<div style="display:inline-block;font-size:10px;font-weight:800;letter-spacing:2.5px;color:#10B981;padding:5px 12px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);border-radius:4px;margin-bottom:12px;">${scene.tag}</div><br>` : ''}
               <div style="display:inline-block;font-size:18px;font-weight:700;line-height:1.45;padding:14px 20px;background:rgba(0,0,0,0.7);border-radius:14px;backdrop-filter:blur(14px);max-width:100%;">${scene.caption}</div>
             </div>` : '');
-        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;overflow:hidden;background:#000;">
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;overflow:hidden;background:#000;container-type:inline-size;">
           <img src="${scene.imageUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;${scene.type === 'stat' ? 'filter:blur(3px);opacity:0.45;' : ''}" alt="ai-fallback">
           <div style="position:absolute;inset:0;${dimGrad}pointer-events:none;"></div>
           <div style="position:absolute;top:10px;right:10px;font-size:9px;font-weight:700;letter-spacing:1px;padding:3px 7px;background:rgba(16,185,129,0.25);color:#10B981;border:1px solid rgba(16,185,129,0.5);border-radius:3px;backdrop-filter:blur(6px);">AI</div>
@@ -786,7 +794,7 @@ const SlidePlayer = (() => {
         const overlayHtml = scene.type === 'stat'
           ? `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;z-index:5;padding:24px;">
               ${scene.tag ? `<div style="font-size:11px;font-weight:800;letter-spacing:4px;color:#10B981;margin-bottom:18px;text-transform:uppercase;">${scene.tag}</div>` : ''}
-              <div style="font-size:120px;font-weight:900;line-height:0.85;background:linear-gradient(180deg,#fff,#777);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.04em;">${scene.number || ''}</div>
+              <div style="font-size:${_statNumberFont(scene.number)};font-weight:900;line-height:0.85;white-space:nowrap;background:linear-gradient(180deg,#fff,#777);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.04em;">${scene.number || ''}</div>
               ${scene.unit ? `<div style="font-size:22px;font-weight:700;color:#FBBF24;margin-top:6px;">${scene.unit}</div>` : ''}
               <div style="font-size:16px;font-weight:500;color:rgba(255,255,255,0.85);margin-top:18px;max-width:340px;line-height:1.5;">${scene.context || ''}</div>
             </div>`
@@ -799,7 +807,7 @@ const SlidePlayer = (() => {
         const bgImg = scene.videoThumbnail
           ? `background-image:url('${scene.videoThumbnail}');background-size:cover;background-position:center;`
           : 'background:linear-gradient(135deg,#1E293B,#0F172A);';
-        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;overflow:hidden;${bgImg}">
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;overflow:hidden;container-type:inline-size;${bgImg}">
           <video src="${scene.videoUrl}"${posterAttr} autoplay muted playsinline loop preload="auto"
             data-sp-video="1"
             style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;${scene.type === 'stat' ? 'filter:blur(2px);opacity:0.3;' : ''}"></video>
@@ -870,11 +878,11 @@ const SlidePlayer = (() => {
       // 4b) stat — 비디오/이미지 없을 때 순수 CSS (거대 숫자 + 그라디언트 + 배경 아이콘)
       else if (scene.type === 'stat') {
         const bgIcon = scene.icon || '📊';
-        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;background:radial-gradient(ellipse at center,#1E293B 0%,#0A0A0A 70%);overflow:hidden;">
+        vis.innerHTML = `<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;background:radial-gradient(ellipse at center,#1E293B 0%,#0A0A0A 70%);overflow:hidden;container-type:inline-size;">
           <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(16,185,129,0.08) 0%,transparent 50%,rgba(59,130,246,0.06) 100%);pointer-events:none;"></div>
           <div style="position:absolute;top:-40px;right:-40px;font-size:260px;opacity:0.07;line-height:1;pointer-events:none;animation:fadeIn 0.8s 0.2s both;">${bgIcon}</div>
           ${scene.tag ? `<div style="font-size:11px;font-weight:800;letter-spacing:4px;color:#10B981;margin-bottom:18px;text-transform:uppercase;animation:fadeIn 0.5s 0.3s both;position:relative;z-index:1;">${scene.tag}</div>` : ''}
-          <div style="font-size:140px;font-weight:900;line-height:0.85;background:linear-gradient(180deg,#fff,#64748B);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.04em;animation:popIn 0.8s 0.5s both;position:relative;z-index:1;">${scene.number || ''}</div>
+          <div style="font-size:${_statNumberFont(scene.number)};font-weight:900;line-height:0.85;white-space:nowrap;background:linear-gradient(180deg,#fff,#64748B);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.04em;animation:popIn 0.8s 0.5s both;position:relative;z-index:1;">${scene.number || ''}</div>
           ${scene.unit ? `<div style="font-size:24px;font-weight:700;color:#FBBF24;margin-top:8px;animation:fadeIn 0.5s 1.0s both;position:relative;z-index:1;">${scene.unit}</div>` : ''}
           <div style="font-size:16px;font-weight:500;color:rgba(255,255,255,0.75);margin-top:22px;max-width:360px;line-height:1.5;animation:fadeIn 0.5s 1.3s both;position:relative;z-index:1;">${scene.context || ''}</div>
           <style>
