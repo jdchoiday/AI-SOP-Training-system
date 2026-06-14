@@ -84,6 +84,8 @@ console.log('\n=== register.html 결선 가드 ===');
   ok('서버에 invite_code 전달', /invite_code:\s*currentInvite\s*\?\s*currentInvite\.code/.test(reg));
   ok('🔒 클라이언트측 used_count 증가 제거됨(서버가 처리)', !/used_count:\s*currentInvite\.usedCount/.test(reg));
   ok('브랜드-레벨 초대 지점 선택기 존재(initInviteBranchPicker)', /initInviteBranchPicker/.test(reg));
+  ok('코드 없는 "초대 필요" 화면에선 "다시 시도"(새로고침) 버튼 숨김',
+     /function showNeedInvite\(\)[\s\S]{0,900}getElementById\(['"]retryBtn['"]\)[\s\S]{0,120}display\s*=\s*['"]none['"]/.test(reg));
 }
 
 console.log(`\n===== 결과: ${pass} 통과 / ${fail} 실패 =====`);
