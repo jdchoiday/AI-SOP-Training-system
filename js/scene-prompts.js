@@ -490,18 +490,8 @@ function buildSmartVisualPrompt(narration, sceneIndex, totalScenes) {
   const isEnglish = !hasVietnamese && /^[\x00-\x7F\s.,!?;:'"()\-\d\n]+$/.test((narration || '').slice(0, 200));
 
   let lang = 'Korean';
-  let langExamples = '"핵심 개념", "1단계", "비교", "원인 → 결과"';
-  if (hasVietnamese) {
-    lang = 'Vietnamese';
-    langExamples = '"Khái niệm", "Bước 1", "So sánh", "Nguyên nhân → Kết quả"';
-  } else if (isEnglish) {
-    lang = 'English';
-    langExamples = '"Key Concept", "Step 1", "Compare", "Cause → Effect"';
-  }
-
-  // 시각 타입 순환 (같은 타입 반복 방지)
-  const typeIndex = (sceneIndex || 0) % VISUAL_TYPES.length;
-  const suggestedType = VISUAL_TYPES[typeIndex];
+  if (hasVietnamese) lang = 'Vietnamese';
+  else if (isEnglish) lang = 'English';
 
   return `You are an educational scene reconstruction AI for vertical digital textbooks.
 
@@ -511,70 +501,53 @@ Generate a VERTICAL portrait image (9:16 aspect ratio, taller than wide, like a 
 "${narration}"
 Scene ${sceneNum} of ${total}
 
-=== INSTRUCTIONS ===
-Analyze the narration above and create a structured educational infographic that helps a first-time learner understand the core concept.
+=== LITERAL CONTENT ACCURACY (most important) ===
+Analyze the narration and depict its SPECIFIC content — not generic decoration.
+- Identify the concrete, nameable things in the narration (objects, actions, steps, counts, comparisons) and depict EXACTLY those, recognizably.
+  Example: narration naming three games "ice fishing / giant floor balloon / slime throwing" -> draw three distinct recognizable icons (a fishing rod over ice, a large balloon on the floor, slime being thrown), not generic shapes.
+- If the narration states a count ("5 steps", "3 games"), show that EXACT number of items.
+- Do NOT invent facts, quantities, prices, brand names, logos, or items that are not in the narration. When unsure, show fewer correct elements rather than more invented ones.
 
-Your goal is NOT to decorate. Your goal is to improve comprehension.
+=== LAYOUT (bottom reserved for subtitles) ===
+The infographic occupies the TOP 80% of the screen. The BOTTOM 20% is reserved by the app for narration subtitles — do NOT draw anything there. Leave it blank or a plain dark strip.
 
-=== LAYOUT (2-zone structure — bottom is reserved for subtitles) ===
-The image occupies only the TOP 80% of the screen. The BOTTOM 20% is reserved by the app for narration subtitles — do NOT draw anything there. Leave it blank or use a plain dark strip.
+CENTER ZONE (main area) — choose the structure that fits the narration:
+- process / sequence  -> ordered items linked by arrows (a small numeral 1-5 badge per step if needed)
+- comparison          -> two side-by-side blocks (check vs cross, or before / after)
+- grouping / list     -> a small grid of distinct icons, one per named item
+- cause -> effect      -> connected blocks joined by an arrow
+- single concept      -> one large central symbolic icon
+Communicate meaning through ICONS, POSITION, ARROWS and COLOR-CODING. Make the structure graspable within 3 seconds.
 
-TOP ZONE:
-- Short bold title (1 line) summarizing the core learning point
-- Text in ${lang}, large and readable
-
-CENTER ZONE (main area):
-- Main educational diagram/infographic
-- Choose the best visual type for this content:
-  * concept explanation → labeled diagram with icons and arrows
-  * process flow → numbered steps with flow arrows
-  * comparison → side-by-side blocks (O vs X, before/after)
-  * structure diagram → hierarchy or tree with labeled boxes
-  * cause-effect → connected blocks showing relationships
-  * checklist → numbered items with icons
-  * workflow → step-by-step practical guide
-- Suggested type for this scene: ${suggestedType}
-- Use diagrams, arrows, icons, labeled boxes, comparison blocks, charts
-- Make the concept understandable within 3 seconds
-
-IMPORTANT: Do NOT write any percentage numbers (15%, 65%, 20%) on the image.
-Do NOT create a bottom keyword section. The bottom area is reserved for subtitle overlay by the app.
+=== NO-TEXT RULE (critical for accuracy) ===
+- Do NOT render ANY words, letters, labels, captions, or sentences on the image — in ${lang} or any language.
+  Image models garble text (especially Korean), stamping FALSE words onto educational material. The app already supplies every word via audio narration + subtitle overlay, and every exact number via separate data cards.
+- The ONLY characters allowed are simple Arabic numerals 1-5 used as small step badges, plus basic symbols (arrow, check, cross, plus).
+- NEVER write percentages, prices, or any multi-digit numbers on the image.
+- Communicate ALL meaning through icons, position, arrows, and color-coding — never through written words.
 
 === STYLE RULES (NON-NEGOTIABLE) ===
 - Clean flat 2D infographic, modern educational publishing style
 - Background: plain white or very light solid color
-- NO realistic photos, NO cinematic style, NO poster style
-- NO emotional character illustrations with detailed faces
-- Use only simple flat icons, stick figures, or labeled shapes if people needed
-- All text in ${lang}, large and readable
-- Clean spacing, clear visual hierarchy
-- Professional, calm, structured textbook design
-- High legibility on mobile screens
-
-=== TEXT RULES ===
-- Use only short ${lang} keywords (2-6 characters each)
-- NO full sentences on screen
-- NO paragraph text
-- Labels on diagrams must be short and readable
-- The screen supports voice narration — do NOT duplicate narration text in the image
-- NEVER write percentage numbers like "15%" or "65%" on the image
+- NO realistic photos, NO cinematic style, NO poster/advertising style
+- NO emotional character illustrations with detailed faces — use simple flat icons or stick figures if people are needed
+- Clean spacing, clear visual hierarchy, high legibility on small mobile screens
+- Professional, calm, structured, trustworthy textbook design
 
 === MUST AVOID ===
-- Decorative clutter or ornamental backgrounds
-- Poster style, advertising style, magazine style
-- Cinematic mood, dramatic lighting, lens effects
-- Emotional character focus or detailed face illustrations
-- Crowded background with furniture/rooms/scenery
-- Long text blocks or explanatory sentences
-- Fantasy elements, vague symbolism
+- ANY readable text, words, labels, signs, or multi-digit numbers on the image
+- Invented facts, items, brands, logos, or quantities not stated in the narration
+- Decorative clutter, ornamental or scenic backgrounds, furniture/rooms
+- Poster / advertising / magazine style, cinematic mood, dramatic lighting, lens effects
+- Emotional character focus or detailed human faces
+- Fantasy elements or vague symbolism
 - Realistic photo style
 - 16:9 landscape format (MUST be 9:16 portrait)
-- Percentage labels or zone markers on the image
 
 === EDUCATIONAL PRINCIPLE ===
-- A learner should understand the main point even with audio off
-- The image structures the content, the narration explains it
-- Prioritize clarity, sequence, and educational usefulness over beauty`;
+- The image STRUCTURES the content (what, how many, in what order); the narration + subtitles supply the WORDS.
+- Prioritize factual accuracy, clarity, and sequence over beauty.
+- A learner should grasp the structure even with audio off — and never see a single incorrect or garbled word.`;
 }
 
 /**
@@ -628,6 +601,7 @@ This photo pairs with an educational infographic — your job is to ground the a
 
 === MUST AVOID ===
 - Any readable text, numbers, signs, book titles, subtitles
+- Objects, brands, signage, or props not implied by the narration (do NOT invent specifics)
 - Multiple faces in focus
 - Stylized or cartoon-like rendering
 - Dramatic movie-poster composition
