@@ -17,6 +17,7 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const { rateLimit } = require('./_ratelimit');
+const { segmentByLang } = require('./_lang-segment');
 
 // 소프트런칭 보호 — IP 당 분당 60 요청 (1초당 1회 이상 허용)
 const ttsGate = rateLimit({ key: 'tts', limit: 60, windowMs: 60_000 });
@@ -405,6 +406,51 @@ function enqueueTTS(fn) {
   return ttsQueue;
 }
 
+// 언어별 전처리:
+//   한국어 → 코칭 리듬 + 발음치환(PRONUNCIATION_DICT). "Service"→"서비스" 같은 한글 치환은
+//            한국어 음성으로 읽을 때만 의미 있다.
+//   영어/베트남어 → 기호 정리만(buildPlainText). 영어에 코칭 전처리를 적용하면 "Service"가
+//            한글 "서비스"로 바뀌어 영어 음성이 깨지므로 절대 적용하지 않는다.
+function _processForLang(text, lang) {
+  return (lang === 'ko-KR') ? buildCoachingText(text) : buildPlainText(text);
+}
+
+// 한 구간(단일 언어) Edge 합성 → MP3 Buffer 반환. 혼재언어 경로에서 구간별로 호출한다.
+// 모든 구간이 같은 Edge 포맷(24kHz/96k/mono mp3)이라 버퍼를 그대로 이어붙여도 재생된다.
+async function generateEdgeTTS(coachText, voiceName, lang, prosodyRate, prosodyPitch) {
+  const tmpFile = path.join(os.tmpdir(), `tts_${crypto.randomBytes(8).toString('hex')}.mp3`);
+  const MAX_RETRY = 2; // 혼재 경로는 구간이 여러 개라 재시도를 보수적으로(함수 25s 한도 고려)
+  let lastErr = null;
+  for (let attempt = 1; attempt <= MAX_RETRY; attempt++) {
+    try {
+      await enqueueTTS(async () => {
+        const tts = new EdgeTTS({
+          voice: voiceName,
+          lang: lang,
+          outputFormat: 'audio-24khz-96kbitrate-mono-mp3',
+          rate: prosodyRate,
+          pitch: prosodyPitch,
+          volume: '+10%',
+          timeout: 20000,
+        });
+        await tts.ttsPromise(coachText, tmpFile);
+      });
+      if (fs.existsSync(tmpFile) && fs.statSync(tmpFile).size > 100) {
+        const buf = fs.readFileSync(tmpFile);
+        try { fs.unlinkSync(tmpFile); } catch (e) {}
+        return buf;
+      }
+      lastErr = new Error('Empty or missing output file');
+    } catch (e) {
+      lastErr = e;
+      console.warn(`[TTS Multi] ${lang} 시도 ${attempt}/${MAX_RETRY} 실패:`, e.message);
+    }
+    if (attempt < MAX_RETRY) await new Promise(r => setTimeout(r, attempt * 600));
+  }
+  try { if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile); } catch (e) {}
+  throw lastErr || new Error('Edge TTS failed');
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -429,24 +475,60 @@ module.exports = async (req, res) => {
     // 기본값을 'edge'로 설정 — 씬마다 목소리 변경을 방지 (이전 'auto'는 실패 씬만 Gemini 전환되어 일관성 깨짐)
     const ttsEngine = ['edge', 'gemini', 'auto', 'vbee'].includes(engine) ? engine : 'edge';
 
-    const langVoices = VOICES[lang] || VOICES['ko-KR'];
-    const voiceName = langVoices[gender] || langVoices.female;
-
     // 코칭 톤: 살짝 느리게 + 따뜻한 피치
     let prosodyRate = rate || '-5%';
     if (prosodyRate === 'default' || prosodyRate === '+0%') prosodyRate = '-5%';
     let prosodyPitch = pitch || '+3Hz';
     if (prosodyPitch === 'default' || prosodyPitch === '+0Hz') prosodyPitch = '+3Hz';
 
+    // ===== 혼재 언어 분할 =====
+    // 한 나레이션에 영어 구간과 베트남어 구간이 섞여 있으면(예: 영어 SOP 본문 + 베트남어
+    // 인트로·아웃트로) 각 구간을 해당 언어 음성으로 읽어야 한다. 단일 언어면 기존 경로 그대로.
+    const segments = segmentByLang(text, lang);
+    const isMultiLang = segments.length > 1;
+    // 서버측 재감지로 실제 언어를 보정한다(클라가 보낸 lang 이 틀려도 — 예: em-dash 로 영어
+    // 감지가 실패해 앱 언어로 폴백된 경우 → 여기서 영어로 교정).
+    const effectiveLang = segments.length >= 1 ? segments[0].lang : lang;
+
+    // ===== 혼재 언어 경로: 구간별 Edge 합성 → MP3 이어붙여 단일 오디오 반환 =====
+    // 모든 구간이 같은 Edge 포맷이라 안전하게 연결된다. 클라이언트의 자막/진행바/일시정지/
+    // 캐시 로직은 단일 오디오를 받으므로 그대로 동작(무회귀).
+    if (isMultiLang) {
+      try {
+        const buffers = [];
+        for (const seg of segments) {
+          const sv = VOICES[seg.lang] || VOICES['ko-KR'];
+          const segVoice = sv[gender] || sv.female;
+          const segText = _processForLang(seg.text, seg.lang);
+          if (!segText) continue;
+          buffers.push(await generateEdgeTTS(segText, segVoice, seg.lang, prosodyRate, prosodyPitch));
+        }
+        if (!buffers.length) throw new Error('no audio produced');
+        const merged = Buffer.concat(buffers);
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Content-Length', merged.length);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('X-TTS-Engine', 'edge-multi');
+        res.setHeader('X-TTS-Langs', segments.map(s => s.lang).join(','));
+        return res.status(200).send(merged);
+      } catch (multiErr) {
+        console.warn(`[TTS] 혼재언어 합성 실패 (${multiErr.message}) → 단일언어(${effectiveLang}) 폴백`);
+        // 아래 단일언어 경로가 effectiveLang 로 처리. 완전 실패 시 클라 Web Speech 가 구간별 폴백.
+      }
+    }
+
+    const langVoices = VOICES[effectiveLang] || VOICES['ko-KR'];
+    const voiceName = langVoices[gender] || langVoices.female;
+
     // 베트남어 등 비-한국어는 한국어 전용 전처리(발음치환/코칭리듬)를 건너뛴다.
-    // (안 그러면 "Service"→"서비스"처럼 베트남어에 한글이 섞임)
-    const _isVietnamese = (lang || '').toLowerCase().startsWith('vi');
-    const coachText = _isVietnamese ? buildPlainText(text) : buildCoachingText(text);
+    // (안 그러면 "Service"→"서비스"처럼 비한국어에 한글이 섞임)
+    const _isVietnamese = (effectiveLang || '').toLowerCase().startsWith('vi');
+    const coachText = _processForLang(text, effectiveLang);
 
     // 베트남어는 Vbee(남부 여성) 우선 — VBEE 자격증명+voice_code 설정 시 자동 사용(클라이언트 변경 불필요).
     // 미설정 시 effectiveEngine 은 그대로 → 기존 Edge 동작 유지(무회귀).
     const _vbeeReady = !!(process.env.VBEE_TOKEN && process.env.VBEE_APP_ID &&
-      VBEE_VOICES[lang] && (VBEE_VOICES[lang][gender] || VBEE_VOICES[lang].female));
+      VBEE_VOICES[effectiveLang] && (VBEE_VOICES[effectiveLang][gender] || VBEE_VOICES[effectiveLang].female));
     let effectiveEngine = ttsEngine;
     if (_isVietnamese && _vbeeReady && (ttsEngine === 'edge' || ttsEngine === 'auto')) {
       effectiveEngine = 'vbee';
@@ -458,7 +540,7 @@ module.exports = async (req, res) => {
     // ================================
     if (effectiveEngine === 'vbee') {
       try {
-        const { buffer: vbeeBuf, contentType } = await generateVbeeTTS(coachText, lang, gender);
+        const { buffer: vbeeBuf, contentType } = await generateVbeeTTS(coachText, effectiveLang, gender);
         res.setHeader('Content-Type', contentType);
         res.setHeader('Content-Length', vbeeBuf.length);
         res.setHeader('Cache-Control', 'public, max-age=86400');
@@ -475,7 +557,7 @@ module.exports = async (req, res) => {
     // ================================
     if (effectiveEngine === 'gemini') {
       try {
-        const { buffer: wavBuffer, contentType } = await generateGeminiTTS(coachText, lang, gender);
+        const { buffer: wavBuffer, contentType } = await generateGeminiTTS(coachText, effectiveLang, gender);
         res.setHeader('Content-Type', contentType);
         res.setHeader('Content-Length', wavBuffer.length);
         res.setHeader('Cache-Control', 'public, max-age=86400');
@@ -504,7 +586,7 @@ module.exports = async (req, res) => {
         await enqueueTTS(async () => {
           const tts = new EdgeTTS({
             voice: voiceName,
-            lang: lang,
+            lang: effectiveLang,
             outputFormat: 'audio-24khz-96kbitrate-mono-mp3',
             rate: prosodyRate,
             pitch: prosodyPitch,
@@ -544,7 +626,7 @@ module.exports = async (req, res) => {
       console.warn(`[TTS] Edge TTS 재시도 모두 실패 (${lastErr?.message}) → Gemini 폴백 시도 (engine=auto)`);
       try { if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile); } catch (e) {}
       try {
-        const { buffer: wavBuffer, contentType } = await generateGeminiTTS(coachText, lang, gender);
+        const { buffer: wavBuffer, contentType } = await generateGeminiTTS(coachText, effectiveLang, gender);
         res.setHeader('Content-Type', contentType);
         res.setHeader('Content-Length', wavBuffer.length);
         res.setHeader('Cache-Control', 'public, max-age=86400');

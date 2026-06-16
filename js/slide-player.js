@@ -135,6 +135,63 @@ const SlidePlayer = (() => {
     return 'ko-KR';
   }
 
+  // 혼재 언어(영어/베트남어/한국어) 나레이션을 언어 구간으로 분할한다.
+  // 서버(api/_lang-segment.js)와 동일 규칙. 주 경로는 서버가 합성하지만, 서버 TTS 가
+  // 완전히 실패해 Web Speech 폴백으로 갈 때 각 구간을 해당 언어 음성으로 읽기 위함.
+  function _segmentByLang(text) {
+    const VI = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
+    const KO = /[가-힯ㄱ-ㆎᄀ-ᇿ]/;
+    const LATIN = /[A-Za-z]/;
+    const unitLang = (s) => KO.test(s) ? 'ko-KR' : (VI.test(s) ? 'vi-VN' : (LATIN.test(s) ? 'en-US' : null));
+    const str = String(text == null ? '' : text);
+    // 문장/줄 단위 분리(룩비하인드 미사용 — 구형 브라우저 호환)
+    const units = [];
+    let buf = '';
+    for (let i = 0; i < str.length; i++) {
+      const ch = str[i];
+      buf += ch;
+      if (ch === '\n') { const t0 = buf.trim(); if (t0) units.push(t0); buf = ''; continue; }
+      if ('.!?…。！？'.indexOf(ch) !== -1) {
+        const next = str[i + 1];
+        if (next === undefined || /\s/.test(next)) { const t0 = buf.trim(); if (t0) units.push(t0); buf = ''; }
+      }
+    }
+    { const t0 = buf.trim(); if (t0) units.push(t0); }
+    const arr = units.map(tt => ({ t: tt, lang: unitLang(tt) }));
+    const def = _ttsLang(text);
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i].lang) continue;
+      let j = i - 1; while (j >= 0 && !arr[j].lang) j--;
+      let k = i + 1; while (k < arr.length && !arr[k].lang) k++;
+      arr[i].lang = j >= 0 ? arr[j].lang : (k < arr.length ? arr[k].lang : def);
+    }
+    const segs = [];
+    for (const u of arr) {
+      const last = segs[segs.length - 1];
+      if (last && last.lang === u.lang) last.text += ' ' + u.t;
+      else segs.push({ lang: u.lang, text: u.t });
+    }
+    return segs.map(s => ({ lang: s.lang, text: s.text.replace(/\s{2,}/g, ' ').trim() })).filter(s => s.text);
+  }
+
+  // Web Speech 음성 선택(언어별 1회 고정 캐시 — null 도 캐시해 재조회 방지).
+  function _pickVoice(lang) {
+    if (!window.speechSynthesis) return null;
+    if (!SlidePlayer._fixedVoices) SlidePlayer._fixedVoices = {};
+    if (lang in SlidePlayer._fixedVoices) return SlidePlayer._fixedVoices[lang];
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v =>
+      v.lang === lang && (v.name.includes('Online') || v.name.includes('Neural') || v.name.includes('Natural'))
+    );
+    const fallback = voices.find(v => v.lang === lang) ||
+                     voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+    SlidePlayer._fixedVoices[lang] = preferred || fallback || null;
+    if (SlidePlayer._fixedVoices[lang]) {
+      console.log(`[TTS] 고정 음성: ${SlidePlayer._fixedVoices[lang].name} (${lang})`);
+    }
+    return SlidePlayer._fixedVoices[lang];
+  }
+
   function _estimateDuration(narration) {
     if (!narration) return 5;
     const l = _lang();
@@ -1683,42 +1740,34 @@ const SlidePlayer = (() => {
   }
 
   // Web Speech API fallback (if Edge TTS unavailable)
+  // 혼재 언어는 구간별로 해당 언어 음성으로 순차 발화한다(영어→영어, 베트남어→베트남어).
   function _playWebSpeechFallback(text) {
     return new Promise((resolve) => {
       if (!window.speechSynthesis || !text) return resolve();
-
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = _ttsLang(text);
-      utterance.rate = 0.95;
-      utterance.pitch = 1.0;
-      utterance.volume = 1;
 
-      // 한 번 선택한 음성을 고정 (씬마다 같은 목소리)
-      const lang = _ttsLang(text);
-      if (!SlidePlayer._fixedVoices) SlidePlayer._fixedVoices = {};
-      if (!SlidePlayer._fixedVoices[lang]) {
-        const voices = window.speechSynthesis.getVoices();
-        const preferred = voices.find(v =>
-          v.lang === lang && (v.name.includes('Online') || v.name.includes('Neural') || v.name.includes('Natural'))
-        );
-        const fallback = voices.find(v => v.lang === lang) ||
-                          voices.find(v => v.lang.startsWith(lang.split('-')[0]));
-        SlidePlayer._fixedVoices[lang] = preferred || fallback || null;
-        if (SlidePlayer._fixedVoices[lang]) {
-          console.log(`[TTS] 고정 음성: ${SlidePlayer._fixedVoices[lang].name} (${lang})`);
-        }
-      }
-      utterance.voice = SlidePlayer._fixedVoices[lang];
+      const segments = _segmentByLang(text);
+      if (!segments.length) return resolve();
 
-      utterance.onend = () => { _stopSubtitles(); resolve(); };
-      utterance.onerror = () => { _stopSubtitles(); resolve(); };
+      // 자막: 전체 텍스트를 총 추정시간에 맞춰 한 번만 표시(구간별 재시작 없이 단순·안정).
+      _startSubtitles(text, text.length / 4.5);
 
-      // Web Speech용 자막 (대략적 시간 추정: 한국어 ~4.5자/초)
-      const estimatedSec = text.length / 4.5;
-      _startSubtitles(text, estimatedSec);
-
-      window.speechSynthesis.speak(utterance);
+      let idx = 0;
+      const speakNext = () => {
+        if (idx >= segments.length) { _stopSubtitles(); return resolve(); }
+        const seg = segments[idx++];
+        const u = new SpeechSynthesisUtterance(seg.text);
+        u.lang = seg.lang;
+        u.rate = 0.95;
+        u.pitch = 1.0;
+        u.volume = 1;
+        const v = _pickVoice(seg.lang);
+        if (v) u.voice = v;
+        u.onend = speakNext;
+        u.onerror = speakNext; // 한 구간 실패해도 다음 구간 계속
+        window.speechSynthesis.speak(u);
+      };
+      speakNext();
     });
   }
 
