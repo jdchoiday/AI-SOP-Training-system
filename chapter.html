@@ -1395,6 +1395,8 @@ ${narration.slice(0, 1500)}
       const fb = document.getElementById('mqFeedback');
       if (selected === q.correct) {
         fb.innerHTML = `<div class="mq-feedback correct">&#9989; ${t.mqCorrect}</div>`;
+        // 정답 축하 — 매 정답마다 즉시 도파민 (작은 콘페티 + 띠링)
+        try { showConfetti(1200, 18); SFX.xp(); } catch(e) {}
       } else {
         fb.innerHTML = `<div class="mq-feedback wrong">&#10060; ${t.mqWrong} &mdash; ${t.mqCorrectIs(escapeHtml(q.options[q.correct].slice(0, 40)))}</div>`;
       }
@@ -1435,7 +1437,7 @@ ${narration.slice(0, 1500)}
         const empId = user?.id;
         if (empId) {
           const xpResult = await XpService.addXp(empId, XP_CONFIG.CHAPTER_COMPLETE, 'chapter', chapterId);
-          if (xpResult) { showXpToast(XP_CONFIG.CHAPTER_COMPLETE); showConfetti(); }
+          if (xpResult) { showXpToast(xpResult.amount || XP_CONFIG.CHAPTER_COMPLETE); showConfetti(); }
           if (xpResult?.leveledUp) showLevelUpCelebration(xpResult.oldTier, xpResult.newTier, lang);
         }
         renderVideoList();
@@ -1522,6 +1524,8 @@ ${narration.slice(0, 1500)}
         explanationDiv.style.background = '#dcfce7';
         explanationDiv.style.color = '#166534';
         explanationDiv.innerHTML = `✅ <strong>${t.correct}</strong>${q.explanation ? '<br><span style="font-size:13px;color:var(--gray-600);">' + escapeHtml(q.explanation) + '</span>' : ''}`;
+        // 정답 축하 — 작은 콘페티 + 띠링
+        try { showConfetti(1200, 18); SFX.xp(); } catch(e) {}
       } else {
         explanationDiv.style.background = '#fef2f2';
         explanationDiv.style.color = '#991b1b';
@@ -1564,18 +1568,18 @@ ${narration.slice(0, 1500)}
           if (isChapterTest) {
             // 챕터 완료 +50 XP
             const xpResult = await XpService.addXp(empId, XP_CONFIG.CHAPTER_COMPLETE, 'chapter', chapterId);
-            if (xpResult) { showXpToast(XP_CONFIG.CHAPTER_COMPLETE); showConfetti(); }
+            if (xpResult) { showXpToast(xpResult.amount || XP_CONFIG.CHAPTER_COMPLETE); showConfetti(); }
             if (xpResult?.leveledUp) showLevelUpCelebration(xpResult.oldTier, xpResult.newTier, lang);
           } else {
             // 퀴즈 정답 +10 XP × 정답 수
             if (quizCorrect > 0) {
               const xpResult = await XpService.addXp(empId, quizCorrect * XP_CONFIG.QUIZ_CORRECT, 'quiz', currentVideoId);
-              if (xpResult) showXpToast(quizCorrect * XP_CONFIG.QUIZ_CORRECT);
+              if (xpResult) showXpToast(xpResult.amount || quizCorrect * XP_CONFIG.QUIZ_CORRECT);
             }
             // 전부 정답 +30 XP 보너스
             if (quizCorrect === currentQuiz.length) {
               const bonusResult = await XpService.addXp(empId, XP_CONFIG.QUIZ_PERFECT_BONUS, 'quiz_perfect', currentVideoId);
-              if (bonusResult) { showXpToast(XP_CONFIG.QUIZ_PERFECT_BONUS, true); showConfetti(3000, 50); }
+              if (bonusResult) { showXpToast(bonusResult.amount || XP_CONFIG.QUIZ_PERFECT_BONUS, true); showConfetti(3000, 50); }
               if (bonusResult?.leveledUp) showLevelUpCelebration(bonusResult.oldTier, bonusResult.newTier, lang);
             }
           }

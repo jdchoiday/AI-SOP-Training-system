@@ -262,6 +262,9 @@
     if (!user) { location.href = 'index.html'; }
     const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
 
+    // 칭찬 확인 시각 기록 — 홈(app.html)의 "칭찬 도착" 배지가 이 시각 이후 것만 카운트
+    try { if (user?.id) localStorage.setItem('sop_praise_seen_at_' + user.id, new Date().toISOString()); } catch(e) {}
+
     // ===== i18n TEXTS =====
     const T = {
       ko: {
@@ -512,6 +515,7 @@
       btn.textContent = t.sending;
 
       const reason = (document.getElementById('praiseReason')?.value || '').trim();
+      const _praiseTargetId = selectedEmpId; // 리셋 전에 보관 (푸시 알림용)
       const result = await PraiseService.sendPraise(user.id, selectedEmpId, selectedCategory, reason);
 
       if (result?.success) {
@@ -522,6 +526,15 @@
           // 스택 전환 시 더 화려한 축하
           showConfetti(3000, 60);
         }
+
+        // 받는 사람에게 즉시 푸시 알림 (구독자만 수신 — 실패해도 무시)
+        try {
+          fetch('/api/push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'push-notify', type: 'praise', to: _praiseTargetId, fromName: user.name || '' }),
+          }).catch(() => {});
+        } catch(e) {}
 
         // 리셋
         selectedEmpId = null;

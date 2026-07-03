@@ -19,7 +19,21 @@ const XP_CONFIG = {
   PRAISE_STACK_COUNT: 2,        // 몇 개 모여야 XP 전환?
   PRAISE_DAILY_LIMIT: 5,        // 하루 보내기 제한 (전체)
   PRAISE_SAME_PERSON_DAILY: 1,  // 같은 사람 하루 최대
+  // 스트릭 XP 배수 — 연속 출석 N일 이상이면 모든 적립 XP 에 곱해짐 (admin 지급 제외)
+  STREAK_MULTIPLIERS: [
+    { days: 30, mult: 2.0 },
+    { days: 14, mult: 1.5 },
+    { days: 7,  mult: 1.2 },
+  ],
 };
+
+/** 현재 스트릭에 해당하는 XP 배수 (없으면 1) */
+function getStreakMultiplier(currentStreak) {
+  for (const s of XP_CONFIG.STREAK_MULTIPLIERS) {
+    if (currentStreak >= s.days) return s.mult;
+  }
+  return 1;
+}
 
 // 관리자가 저장한 칭찬 설정 오버라이드
 (function loadPraiseConfig() {
@@ -32,7 +46,7 @@ const XP_CONFIG = {
 // LOL 티어 패러디 — 9단계, 각 티어 IV~I 서브레벨
 const TIERS = [
   { id: 'iron',         xp: 0,     emoji: '🌱', color: '#8B8B8B',  ko: '새싹',      en: 'Sprout',     vn: 'Mầm Non' },
-  { id: 'bronze',       xp: 500,   emoji: '🥉', color: '#CD7F32',  ko: '성장',      en: 'Growing',    vn: 'Đang Lớn' },
+  { id: 'bronze',       xp: 350,   emoji: '🥉', color: '#CD7F32',  ko: '성장',      en: 'Growing',    vn: 'Đang Lớn' },
   { id: 'silver',       xp: 1500,  emoji: '⭐', color: '#C0C0C0',  ko: '빛나는',    en: 'Shining',    vn: 'Tỏa Sáng' },
   { id: 'gold',         xp: 3500,  emoji: '🌟', color: '#FFD700',  ko: '황금별',    en: 'Gold Star',  vn: 'Ngôi Sao Vàng' },
   { id: 'platinum',     xp: 7000,  emoji: '💎', color: '#00CED1',  ko: '정예',      en: 'Elite',      vn: 'Tinh Nhuệ' },
@@ -126,6 +140,20 @@ const XpService = {
         return null;
       }
 
+      // 스트릭 XP 배수 (7일 1.2x / 14일 1.5x / 30일 2x) — 관리자 수동 지급은 제외
+      let finalAmount = amount;
+      let streakMult = 1;
+      try {
+        if (source !== 'admin_special' && typeof StreakService !== 'undefined') {
+          const stk = StreakService._get(empId);
+          streakMult = getStreakMultiplier(stk.current || 0);
+          if (streakMult > 1) {
+            finalAmount = Math.round(amount * streakMult);
+            reason = (reason ? reason + ' ' : '') + `(🔥${stk.current}일 스트릭 x${streakMult})`;
+          }
+        }
+      } catch (e) {}
+
       // 2) 현재 XP 조회 (이전 티어)
       const oldTotal = await this.getTotal(empId);
       const oldTier = calculateTier(oldTotal);
@@ -135,7 +163,7 @@ const XpService = {
         .from('xp_transactions')
         .insert({
           employee_id: empId,
-          amount,
+          amount: finalAmount,
           source,
           source_id: sourceId,
           reason,
@@ -154,7 +182,7 @@ const XpService = {
       }
 
       // 4) 캐시 업데이트
-      const newTotal = oldTotal + amount;
+      const newTotal = oldTotal + finalAmount;
       const newTier = calculateTier(newTotal);
 
       await SupabaseMode._client
@@ -171,9 +199,9 @@ const XpService = {
       // 5) 레벨업 감지
       const leveledUp = newTier.tierIndex > oldTier.tierIndex;
 
-      console.log(`[XP] +${amount} (${source}) → 총 ${newTotal} XP | ${newTier.tierId} ${newTier.subLabel}`);
+      console.log(`[XP] +${finalAmount}${streakMult > 1 ? ` (기본 ${amount} x${streakMult})` : ''} (${source}) → 총 ${newTotal} XP | ${newTier.tierId} ${newTier.subLabel}`);
 
-      return { newTotal, oldTier, newTier, leveledUp };
+      return { newTotal, oldTier, newTier, leveledUp, amount: finalAmount, baseAmount: amount, streakMult };
 
     } catch (e) {
       console.error('[XP] addXp 오류:', e);

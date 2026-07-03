@@ -148,7 +148,7 @@
           style="background:none; border:none; font-size:20px; cursor:pointer; position:relative; padding:4px;">
           &#128276;<span id="notifDot" style="display:none; position:absolute; top:2px; right:2px; width:8px; height:8px; background:var(--danger); border-radius:50%;"></span>
         </button>
-        <a href="praise.html" title="부스트" style="text-decoration:none; font-size:18px; line-height:1; padding:4px;">&#128588;</a>
+        <a href="praise.html" id="praiseLink" title="부스트" style="text-decoration:none; font-size:18px; line-height:1; padding:4px; position:relative;">&#128588;<span id="praiseDot" style="display:none; position:absolute; top:0; right:-2px; min-width:16px; height:16px; padding:0 4px; background:var(--danger); color:white; border-radius:8px; font-size:10px; font-weight:700; line-height:16px; text-align:center;"></span></a>
         <a href="guide.html" title="사용 가이드" style="text-decoration:none; font-size:18px; line-height:1; padding:4px;">&#10068;</a>
         <a href="change-password.html" title="설정" style="text-decoration:none; font-size:20px; line-height:1; padding:4px;">&#9881;</a>
         <a href="profile.html" class="user-avatar" id="userAvatar" title="내 프로필" style="text-decoration:none; overflow:hidden;">?</a>
@@ -174,6 +174,13 @@
         </div>
       </div>
     </div>
+
+    <!-- ===== 오늘의 1등 (리더보드 미리보기) ===== -->
+    <a href="leaderboard.html" id="topTodayBar" style="display:none; align-items:center; gap:8px; padding:10px 14px; margin-bottom:14px; background:linear-gradient(135deg, rgba(245,158,11,0.12), rgba(239,68,68,0.08)); border:1px solid rgba(245,158,11,0.25); border-radius:12px; text-decoration:none; color:inherit; font-size:13px;">
+      <span style="font-size:16px;">🏆</span>
+      <span id="topTodayText" style="flex:1; font-weight:600; color:var(--text-primary,#F1F5F9);"></span>
+      <span id="topTodayMore" style="color:var(--gray-400); font-size:12px;">랭킹 →</span>
+    </a>
 
     <!-- ===== 오늘의 퀘스트 (최대 3카드) ===== -->
     <div class="today-quest-section">
@@ -231,6 +238,7 @@
   <script src="js/xp-ui.js"></script>
   <script src="js/pwa-install.js" defer></script>
   <script src="js/error-tracker.js" defer></script>
+  <script src="js/push-client.js" defer></script>
   <script>
     // ===== 다국어 텍스트 =====
     const T = {
@@ -778,10 +786,16 @@
         const subtitle = nextType === 'video'
           ? `${title} · ${t.scenePrefix} ${nextVideo.order_num}`
           : t.quizChallenge(title);
+        // 7일 이내 배포된 새 챕터 → ⭐NEW 배지
+        let isNew = false;
+        try {
+          const c = new Date(nextChapter.createdAt || nextChapter.created_at || 0);
+          isNew = !isNaN(c) && (Date.now() - c.getTime()) < 7 * 86400000;
+        } catch(e) {}
         quests.push({
           priority: 1,
           icon: nextType === 'video' ? '📺' : '🧠',
-          title: nextType === 'video' ? t.homeNextLearning : t.homeQuizChallenge,
+          title: (isNew ? '⭐NEW · ' : '') + (nextType === 'video' ? t.homeNextLearning : t.homeQuizChallenge),
           subtitle,
           link,
           rewardXp: nextType === 'video' ? XP_CONFIG.CHAPTER_COMPLETE : XP_CONFIG.QUIZ_PERFECT_BONUS,
@@ -933,6 +947,108 @@
       } catch(e) { console.warn('[XP] 완주 XP 오류:', e.message); }
     })();
 
+    // ===== 웰컴 보너스 (첫 로그인 1회, +50 XP) + 일일 출석 보너스 (+30 XP) =====
+    // addXp 가 source+source_id UNIQUE 로 중복을 막으므로 기기가 바뀌어도 1회만 지급됨
+    function showWelcomeCelebration() {
+      const title = lang === 'en' ? 'Welcome aboard! 🎉' : lang === 'vi' ? 'Chào mừng bạn! 🎉' : '환영합니다! 🎉';
+      const sub = lang === 'en' ? 'First login bonus +50 XP' : lang === 'vi' ? 'Thưởng đăng nhập đầu tiên +50 XP' : '첫 로그인 보너스 +50 XP';
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9990;display:flex;align-items:center;justify-content:center;padding:20px;';
+      overlay.innerHTML = `
+        <div style="background:linear-gradient(135deg,#10B981,#3B82F6);border-radius:24px;padding:36px 28px;max-width:340px;width:100%;text-align:center;color:white;box-shadow:0 24px 80px rgba(16,185,129,0.4);">
+          <div style="font-size:64px;line-height:1;margin-bottom:12px;">🎁</div>
+          <div style="font-size:22px;font-weight:800;margin-bottom:6px;">${title}</div>
+          <div style="font-size:14px;opacity:0.95;margin-bottom:20px;">${sub}</div>
+          <button style="width:100%;padding:13px;border:none;border-radius:12px;background:rgba(255,255,255,0.95);color:#059669;font-size:15px;font-weight:800;cursor:pointer;">
+            ${lang === 'en' ? "Let's go!" : lang === 'vi' ? 'Bắt đầu!' : '시작하기!'}
+          </button>
+        </div>`;
+      overlay.addEventListener('click', () => overlay.remove());
+      document.body.appendChild(overlay);
+      setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 6000);
+    }
+
+    (async () => {
+      try {
+        const empId = await getEmployeeId();
+        if (!empId || typeof XpService === 'undefined') return;
+
+        // 1) 웰컴 보너스 — 평생 1회
+        const welcome = await XpService.addXp(empId, 50, 'welcome_bonus', 'welcome_' + empId, '첫 로그인 웰컴 보너스');
+        if (welcome) {
+          showConfetti(3500, 70);
+          showWelcomeCelebration();
+        }
+
+        // 2) 일일 출석 보너스 — 하루 1회 (로컬 날짜 기준)
+        const today = new Date().toLocaleDateString('en-CA');
+        const daily = await XpService.addXp(empId, 30, 'daily_login', 'login_' + empId + '_' + today, '일일 출석 보너스');
+        if (daily && !welcome) {
+          showXpToast(daily.amount || 30);
+          const msg = lang === 'en' ? '📅 Daily check-in +30 XP!' : lang === 'vi' ? '📅 Điểm danh hôm nay +30 XP!' : '📅 오늘 출석 보너스 +30 XP!';
+          if (typeof showToast === 'function') showToast(msg);
+        }
+        if (daily?.leveledUp) showLevelUpCelebration(daily.oldTier, daily.newTier, lang);
+
+        // 보너스 반영된 헤더 다시 그리기
+        try { renderLvXpHeader(); } catch(e) {}
+      } catch(e) { console.warn('[XP] 보너스 오류:', e.message); }
+    })();
+
+    // ===== 오늘의 1등 (리더보드 미리보기 바) =====
+    (async () => {
+      try {
+        if (!SupabaseMode._ready) return;
+        const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+        const { data: tx } = await SupabaseMode._client
+          .from('xp_transactions')
+          .select('employee_id, amount')
+          .gte('created_at', dayStart.toISOString());
+        if (!tx || tx.length === 0) return;
+        const sums = {};
+        tx.forEach(r => { sums[r.employee_id] = (sums[r.employee_id] || 0) + r.amount; });
+        const top = Object.entries(sums).sort((a, b) => b[1] - a[1])[0];
+        if (!top || top[1] <= 0) return;
+        const { data: emp } = await SupabaseMode._client
+          .from('employees').select('name').eq('id', top[0]).maybeSingle();
+        const name = emp?.name || '?';
+        const bar = document.getElementById('topTodayBar');
+        const txt = document.getElementById('topTodayText');
+        const more = document.getElementById('topTodayMore');
+        if (!bar || !txt) return;
+        txt.textContent = lang === 'en' ? `Today's #1: ${name} (+${top[1]} XP)`
+          : lang === 'vi' ? `Hạng 1 hôm nay: ${name} (+${top[1]} XP)`
+          : `오늘의 1등: ${name} (+${top[1]} XP)`;
+        if (more) more.textContent = (lang === 'en' ? 'Ranking' : lang === 'vi' ? 'Xếp hạng' : '랭킹') + ' →';
+        bar.style.display = 'flex';
+      } catch(e) { console.warn('[TopToday] 오류:', e.message); }
+    })();
+
+    // ===== 칭찬 도착 알림 (마지막 확인 이후 새 칭찬 → 배지 + 토스트) =====
+    (async () => {
+      try {
+        const empId = await getEmployeeId();
+        if (!empId || !SupabaseMode._ready) return;
+        const seenKey = 'sop_praise_seen_at_' + empId;
+        const lastSeen = localStorage.getItem(seenKey) || new Date(Date.now() - 7 * 86400000).toISOString();
+        const { data: newPraise } = await SupabaseMode._client
+          .from('praise_logs')
+          .select('id')
+          .eq('to_employee_id', empId)
+          .gt('created_at', lastSeen);
+        const count = (newPraise || []).length;
+        if (count > 0) {
+          const dot = document.getElementById('praiseDot');
+          if (dot) { dot.style.display = 'inline-block'; dot.textContent = count > 9 ? '9+' : String(count); }
+          const msg = lang === 'en' ? `🙌 You received ${count} boost${count > 1 ? 's' : ''}!`
+            : lang === 'vi' ? `🙌 Bạn nhận được ${count} lời khen!`
+            : `🙌 칭찬 ${count}개가 도착했어요!`;
+          if (typeof showToast === 'function') showToast(msg);
+          try { SFX.pop(); } catch(e) {}
+        }
+      } catch(e) { console.warn('[Praise] 알림 확인 오류:', e.message); }
+    })();
+
     function updateNotifUI() {
       const bell = document.getElementById('notifBell');
       bell.title = notifEnabled ? t.notifOn : t.notifOff;
@@ -961,6 +1077,8 @@
         updateNotifUI();
         showToast(t.notifOn);
         startNotifChecks();
+        // Web Push 구독 (앱 꺼져 있어도 아침 리마인드·칭찬 알림 수신)
+        try { if (window.PushClient) PushClient.subscribeAndSave(); } catch(e) {}
       } else {
         showToast(t.notifOff);
       }

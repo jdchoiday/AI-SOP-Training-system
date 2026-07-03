@@ -7,6 +7,9 @@ const CONFIG = {
   SUPABASE_URL: 'https://xbcdzkrhtjgxdwfqqugc.supabase.co',
   SUPABASE_ANON_KEY: 'sb_publishable__vL6h25o1qwCs9UWBi54Sw_Zsq4uFw8',
 
+  // === Web Push (공개키 — 비밀키는 Vercel env VAPID_PRIVATE_KEY 에만 보관) ===
+  VAPID_PUBLIC_KEY: 'BNAAbbgHcZKGAwmrNRZDBcJTXqHm4JhcDyf8xWtBbL5KdNMAkPPLmCPuGVgc-e-MGOdQV7wICfwC4UV2pbX2UfU',
+
   // === 시스템 설정 ===
   APP_NAME: 'SOP Training System',
   DEFAULT_LANG: 'ko',        // 'ko' | 'en' | 'vi'

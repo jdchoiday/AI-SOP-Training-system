@@ -406,6 +406,8 @@
         }
 
         const empId = await resolveEmpId();
+        // 300 코인 이하 소액 아이템은 자동 승인 (커피·간식 등 — 결재 대기 없이 바로 사용 가능)
+        const autoApprove = item.price_coins <= 300;
         const { error } = await sb().from('store_redemptions').insert({
           employee_id: empId,
           // RLS store_redemptions_company WITH CHECK(company_id = auth_company_id()) 통과 — 없으면 교환이 조용히 거부됨
@@ -414,7 +416,7 @@
           item_name_snapshot: item.name,
           item_icon_snapshot: item.icon || '🎁',
           cost_coins: item.price_coins,
-          status: 'pending'
+          status: autoApprove ? 'approved' : 'pending'
         });
         if (error) throw error;
 

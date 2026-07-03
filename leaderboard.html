@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>랭킹 — 키우자 히어로즈</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0F172A">
+  <link rel="icon" href="assets/icon-192.svg">
+  <style>
+    .lb-container { max-width: 480px; margin: 0 auto; padding: 16px 16px 100px; }
+    .lb-header {
+      background: linear-gradient(135deg, #F59E0B 0%, #EF4444 100%);
+      border-radius: 20px;
+      padding: 24px 20px;
+      margin-bottom: 16px;
+      color: white;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .lb-header::before {
+      content: '';
+      position: absolute; top: -40%; right: -15%;
+      width: 180px; height: 180px;
+      background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .lb-header > * { position: relative; }
+    .lb-title { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+    .lb-sub { font-size: 12px; opacity: 0.9; }
+
+    .lb-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+    .lb-tab {
+      flex: 1; padding: 10px; border-radius: 10px;
+      background: var(--bg-card); color: var(--gray-500);
+      font-size: 13px; font-weight: 700; text-align: center;
+      cursor: pointer; border: 1px solid rgba(255,255,255,0.06);
+      transition: all 0.15s;
+    }
+    .lb-tab.active {
+      background: rgba(245,158,11,0.15); color: #F59E0B;
+      border-color: rgba(245,158,11,0.4);
+    }
+
+    .lb-list { margin-top: 14px; }
+    .lb-row {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--bg-card);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+    }
+    .lb-row.me {
+      background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(59,130,246,0.08));
+      border-color: rgba(16,185,129,0.4);
+    }
+    .lb-row.top1 { border-color: rgba(255,215,0,0.5); box-shadow: 0 2px 14px rgba(255,215,0,0.12); }
+    .lb-rank {
+      width: 34px; text-align: center;
+      font-size: 16px; font-weight: 800; color: var(--gray-500);
+      flex-shrink: 0;
+    }
+    .lb-rank.medal { font-size: 22px; }
+    .lb-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: rgba(16,185,129,0.15); color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 800; flex-shrink: 0;
+    }
+    .lb-info { flex: 1; min-width: 0; }
+    .lb-name { font-size: 14px; font-weight: 700; color: var(--text-primary, #F1F5F9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lb-branch { font-size: 11px; color: var(--gray-500); }
+    .lb-xp { font-size: 14px; font-weight: 800; color: #F59E0B; white-space: nowrap; }
+
+    .lb-empty { text-align: center; padding: 40px 20px; color: var(--gray-500); font-size: 14px; }
+    .lb-empty .emoji { font-size: 40px; margin-bottom: 10px; }
+
+    .lb-myrank {
+      position: sticky; bottom: 76px;
+      margin-top: 14px;
+    }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--gray-500); text-decoration: none; font-size: 14px;
+      padding: 8px 0; margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bottom-nav">
+    <a href="app.html"><span class="nav-icon">&#127968;</span> <span class="nav-label-home">홈</span></a>
+    <a href="tasks.html"><span class="nav-icon">&#128218;</span> <span class="nav-label-learn">학습</span></a>
+    <a href="my-results.html"><span class="nav-icon">&#128202;</span> <span class="nav-label-results">성과</span></a>
+    <a href="store.html"><span class="nav-icon">&#128722;</span> <span class="nav-label-store">스토어</span></a>
+  </div>
+
+  <div class="lb-container">
+    <a href="app.html" class="back-btn" id="backBtn">&#8592; 홈으로</a>
+
+    <div class="lb-header">
+      <div class="lb-title" id="lbTitle">🏆 랭킹</div>
+      <div class="lb-sub" id="lbSub">이번 주 열심히 배운 히어로들</div>
+    </div>
+
+    <div class="lb-tabs" id="periodTabs">
+      <div class="lb-tab active" data-period="week" id="tabWeek">이번 주</div>
+      <div class="lb-tab" data-period="month" id="tabMonth">이번 달</div>
+    </div>
+    <div class="lb-tabs" id="scopeTabs">
+      <div class="lb-tab active" data-scope="branch" id="tabBranch">우리 지점</div>
+      <div class="lb-tab" data-scope="all" id="tabAll">전체</div>
+    </div>
+
+    <div class="lb-list" id="lbList">
+      <div class="lb-empty"><div class="emoji">⏳</div><span id="loadingText">불러오는 중...</span></div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script src="js/i18n-helper.js"></script>
+  <script src="js/pwa-install.js" defer></script>
+  <script src="js/error-tracker.js" defer></script>
+  <script>
+    // ===== Auth =====
+    const user = JSON.parse(localStorage.getItem('sop_user') || 'null');
+    if (!user) { window.location.href = 'index.html'; }
+    const lang = localStorage.getItem('sop_lang') || CONFIG.DEFAULT_LANG;
+
+    // ===== i18n =====
+    const T = {
+      ko: {
+        title: '🏆 랭킹', sub: '열심히 배운 히어로들',
+        week: '이번 주', month: '이번 달', branch: '우리 지점', all: '전체',
+        home: '홈', learn: '학습', stats: '성과', store: '스토어', back: '← 홈으로',
+        loading: '불러오는 중...',
+        empty: '아직 활동한 사람이 없어요.\n첫 번째 히어로가 되어보세요!',
+        myRankFmt: (r) => `내 순위: #${r}`,
+        xpUnit: 'XP',
+      },
+      en: {
+        title: '🏆 Ranking', sub: 'Heroes who learned hard',
+        week: 'This Week', month: 'This Month', branch: 'My Branch', all: 'All',
+        home: 'Home', learn: 'Learn', stats: 'Stats', store: 'Store', back: '← Home',
+        loading: 'Loading...',
+        empty: 'No activity yet.\nBe the first hero!',
+        myRankFmt: (r) => `My rank: #${r}`,
+        xpUnit: 'XP',
+      },
+      vi: {
+        title: '🏆 Xếp hạng', sub: 'Những hero học chăm chỉ',
+        week: 'Tuần này', month: 'Tháng này', branch: 'Chi nhánh', all: 'Tất cả',
+        home: 'Trang chủ', learn: 'Học', stats: 'Thành tích', store: 'Cửa hàng', back: '← Trang chủ',
+        loading: 'Đang tải...',
+        empty: 'Chưa có hoạt động.\nHãy là hero đầu tiên!',
+        myRankFmt: (r) => `Hạng của tôi: #${r}`,
+        xpUnit: 'XP',
+      },
+    };
+    const t = T[lang] || T.ko;
+
+    // Apply i18n
+    document.title = t.title.replace('🏆 ', '') + ' — Kiwooza';
+    document.getElementById('lbTitle').textContent = t.title;
+    document.getElementById('lbSub').textContent = t.sub;
+    document.getElementById('tabWeek').textContent = t.week;
+    document.getElementById('tabMonth').textContent = t.month;
+    document.getElementById('tabBranch').textContent = t.branch;
+    document.getElementById('tabAll').textContent = t.all;
+    document.getElementById('backBtn').textContent = t.back;
+    document.getElementById('loadingText').textContent = t.loading;
+    document.querySelector('.nav-label-home').textContent = t.home;
+    document.querySelector('.nav-label-learn').textContent = t.learn;
+    document.querySelector('.nav-label-results').textContent = t.stats;
+    document.querySelector('.nav-label-store').textContent = t.store;
+
+    // ===== State =====
+    let period = 'week';   // 'week' | 'month'
+    let scope = 'branch';  // 'branch' | 'all'
+    let _cache = { employees: null };
+
+    function periodStart() {
+      const now = new Date();
+      if (period === 'month') {
+        return new Date(now.getFullYear(), now.getMonth(), 1);
+      }
+      // 이번 주 월요일 00:00 (한국 관습: 월요일 시작)
+      const day = now.getDay(); // 0=일
+      const diff = (day === 0 ? 6 : day - 1);
+      const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff);
+      return monday;
+    }
+
+    // ===== Tabs =====
+    document.getElementById('periodTabs').addEventListener('click', (e) => {
+      const tab = e.target.closest('.lb-tab'); if (!tab) return;
+      period = tab.dataset.period;
+      document.querySelectorAll('#periodTabs .lb-tab').forEach(x => x.classList.toggle('active', x === tab));
+      loadLeaderboard();
+    });
+    document.getElementById('scopeTabs').addEventListener('click', (e) => {
+      const tab = e.target.closest('.lb-tab'); if (!tab) return;
+      scope = tab.dataset.scope;
+      document.querySelectorAll('#scopeTabs .lb-tab').forEach(x => x.classList.toggle('active', x === tab));
+      loadLeaderboard();
+    });
+
+    // ===== Load & Render =====
+    async function loadLeaderboard() {
+      const list = document.getElementById('lbList');
+      list.innerHTML = `<div class="lb-empty"><div class="emoji">⏳</div>${t.loading}</div>`;
+
+      try {
+        if (typeof SupabaseMode === 'undefined' || !SupabaseMode._ready) {
+          list.innerHTML = `<div class="lb-empty"><div class="emoji">📡</div>${t.empty.replace('\n', '<br>')}</div>`;
+          return;
+        }
+
+        // 직원 목록 (회사 격리는 RLS 가 처리)
+        if (!_cache.employees) {
+          const { data: emps } = await SupabaseMode._client
+            .from('employees').select('id, name, branch');
+          _cache.employees = emps || [];
+        }
+        const empMap = {};
+        _cache.employees.forEach(e => { empMap[e.id] = e; });
+
+        // 기간 내 XP 트랜잭션
+        const { data: tx } = await SupabaseMode._client
+          .from('xp_transactions')
+          .select('employee_id, amount')
+          .gte('created_at', periodStart().toISOString());
+
+        const sums = {};
+        (tx || []).forEach(r => {
+          sums[r.employee_id] = (sums[r.employee_id] || 0) + r.amount;
+        });
+
+        // 지점 필터
+        const myBranch = user.branch || empMap[user.id]?.branch || '';
+        let rows = Object.entries(sums)
+          .map(([id, xp]) => ({ id, xp, name: empMap[id]?.name || '?', branch: empMap[id]?.branch || '' }))
+          .filter(r => r.xp > 0);
+        if (scope === 'branch' && myBranch) {
+          rows = rows.filter(r => r.branch === myBranch);
+        }
+        rows.sort((a, b) => b.xp - a.xp);
+
+        if (rows.length === 0) {
+          list.innerHTML = `<div class="lb-empty"><div class="emoji">🌱</div>${t.empty.replace('\n', '<br>')}</div>`;
+          return;
+        }
+
+        const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
+        const myIdx = rows.findIndex(r => r.id === user.id);
+
+        list.innerHTML = rows.slice(0, 20).map((r, i) => {
+          const rank = i + 1;
+          const isMe = r.id === user.id;
+          const initial = (r.name || '?').charAt(0);
+          return `
+            <div class="lb-row${isMe ? ' me' : ''}${rank === 1 ? ' top1' : ''}">
+              <div class="lb-rank${medals[rank] ? ' medal' : ''}">${medals[rank] || rank}</div>
+              <div class="lb-avatar">${initial}</div>
+              <div class="lb-info">
+                <div class="lb-name">${r.name}${isMe ? ' ⭐' : ''}</div>
+                <div class="lb-branch">${r.branch || ''}</div>
+              </div>
+              <div class="lb-xp">+${r.xp.toLocaleString()} ${t.xpUnit}</div>
+            </div>`;
+        }).join('');
+
+        // 내가 20위 밖이면 하단에 내 순위 고정 표시
+        if (myIdx >= 20) {
+          const me = rows[myIdx];
+          list.innerHTML += `
+            <div class="lb-row me lb-myrank">
+              <div class="lb-rank">${myIdx + 1}</div>
+              <div class="lb-avatar">${(me.name || '?').charAt(0)}</div>
+              <div class="lb-info">
+                <div class="lb-name">${me.name} ⭐</div>
+                <div class="lb-branch">${t.myRankFmt(myIdx + 1)}</div>
+              </div>
+              <div class="lb-xp">+${me.xp.toLocaleString()} ${t.xpUnit}</div>
+            </div>`;
+        }
+      } catch (e) {
+        console.warn('[Leaderboard] 로드 오류:', e);
+        list.innerHTML = `<div class="lb-empty"><div class="emoji">⚠️</div>${t.empty.replace('\n', '<br>')}</div>`;
+      }
+    }
+
+    // Supabase 준비를 기다렸다가 로드 (최대 5초)
+    (async () => {
+      for (let i = 0; i < 25; i++) {
+        if (typeof SupabaseMode !== 'undefined' && SupabaseMode._ready) break;
+        await new Promise(r => setTimeout(r, 200));
+      }
+      loadLeaderboard();
+    })();
+  </script>
+</body>
+</html>

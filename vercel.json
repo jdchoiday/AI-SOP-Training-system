@@ -13,7 +13,8 @@
     { "source": "/api/health", "destination": "/api/health" },
     { "source": "/api/cron-health", "destination": "/api/cron-health" },
     { "source": "/api/feedback", "destination": "/api/feedback" },
-    { "source": "/api/error-report", "destination": "/api/error-report" }
+    { "source": "/api/error-report", "destination": "/api/error-report" },
+    { "source": "/api/push", "destination": "/api/cron-health" }
   ],
   "functions": {
     "api/image.js": {
@@ -35,7 +36,7 @@
       "maxDuration": 15
     },
     "api/cron-health.js": {
-      "maxDuration": 20
+      "maxDuration": 30
     },
     "api/feedback.js": {
       "maxDuration": 10

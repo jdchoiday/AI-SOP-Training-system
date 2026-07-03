@@ -199,6 +199,13 @@ const SlidePlayer = (() => {
     return Math.max(5, Math.ceil(narration.length / charsPerSec));
   }
 
+  // 재생 속도 (1x/1.25x/1.5x/2x) — localStorage 유지, 세션 간 기억
+  const PLAY_SPEEDS = [1, 1.25, 1.5, 2];
+  function _playSpeed() {
+    const v = parseFloat(localStorage.getItem('sop_player_speed') || '1');
+    return PLAY_SPEEDS.includes(v) ? v : 1;
+  }
+
   function _totalDuration() {
     return scenes.reduce((sum, s) => sum + _estimateDuration(s.narration), 0);
   }
@@ -664,6 +671,7 @@ const SlidePlayer = (() => {
           </div>
           <div class="sp-btn-group">
             <span class="sp-voice-status" id="spVoiceStatus" style="display:none;"></span>
+            <button class="sp-autoplay-toggle" id="spSpeedBtn" title="재생 속도" style="min-width:48px;justify-content:center;font-weight:700;">${_playSpeed()}x</button>
             <button class="sp-autoplay-toggle" id="spAutoToggle">
               <span class="sp-autoplay-dot active" id="spAutoDot"></span>
               ${t().autoPlay}
@@ -1694,7 +1702,7 @@ const SlidePlayer = (() => {
       _stopCurrentAudio();
 
       currentAudio = new Audio(url);
-      currentAudio.playbackRate = 1.0;
+      currentAudio.playbackRate = _playSpeed();
 
       // 프로그레스 바 — requestAnimationFrame (60fps 제한, DOM 쿼리 캐시)
       // 동시에 오디오 50% 지점에서 크로스페이드 트리거 (인포그래픽 → 참고사진 1:1)
@@ -1750,7 +1758,8 @@ const SlidePlayer = (() => {
       if (!segments.length) return resolve();
 
       // 자막: 전체 텍스트를 총 추정시간에 맞춰 한 번만 표시(구간별 재시작 없이 단순·안정).
-      _startSubtitles(text, text.length / 4.5);
+      // 재생 속도 반영 (배속이면 자막도 빨리 끝남)
+      _startSubtitles(text, text.length / 4.5 / _playSpeed());
 
       let idx = 0;
       const speakNext = () => {
@@ -1758,7 +1767,7 @@ const SlidePlayer = (() => {
         const seg = segments[idx++];
         const u = new SpeechSynthesisUtterance(seg.text);
         u.lang = seg.lang;
-        u.rate = 0.95;
+        u.rate = Math.min(2, 0.95 * _playSpeed()); // 사용자 배속 반영
         u.pitch = 1.0;
         u.volume = 1;
         const v = _pickVoice(seg.lang);
@@ -2086,6 +2095,17 @@ const SlidePlayer = (() => {
       const dot = document.getElementById('spAutoDot');
       if (dot) dot.classList.toggle('active', autoPlay);
     });
+
+    // 재생 속도 토글: 1x → 1.25x → 1.5x → 2x → 1x
+    const speedBtn = document.getElementById('spSpeedBtn');
+    if (speedBtn) {
+      speedBtn.addEventListener('click', () => {
+        const next = PLAY_SPEEDS[(PLAY_SPEEDS.indexOf(_playSpeed()) + 1) % PLAY_SPEEDS.length];
+        localStorage.setItem('sop_player_speed', String(next));
+        speedBtn.textContent = next + 'x';
+        if (currentAudio) currentAudio.playbackRate = next; // 재생 중에도 즉시 반영
+      });
+    }
 
     // Keyboard
     overlay._keyHandler = (e) => {
