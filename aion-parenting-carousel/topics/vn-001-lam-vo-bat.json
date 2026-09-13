@@ -1,0 +1,73 @@
+{
+  "id": "vn-001-lam-vo-bat",
+  "lang": "vi",
+  "brand": "AION Kinder",
+  "series": "NUÔI DẠY CON TÍCH CỰC",
+  "topic_kr_note": "아이가 그릇을 떨어뜨렸을 때 올바른 반응 (팀 내부 참고용 메모)",
+  "status": "draft",
+
+  "cover": {
+    "hook": "Con làm vỡ bát.\nBạn nói gì đầu tiên?",
+    "sub": "Câu nói đầu tiên quyết định điều con học được",
+    "badge": "3 phút đọc"
+  },
+
+  "situation": {
+    "title": "Chuyện xảy ra mỗi ngày",
+    "lines": [
+      "Bữa tối. Chiếc bát tuột khỏi tay con.",
+      "CHOANG!",
+      "Cả nhà im lặng. Con đứng yên, mắt nhìn bạn — chờ xem chuyện gì sẽ đến."
+    ]
+  },
+
+  "dont": {
+    "title": "Phản ứng quen thuộc",
+    "subtitle": "Hầu hết cha mẹ nói ngay câu này",
+    "items": [
+      "“Đã bảo cẩn thận rồi mà!”",
+      "“Sao con hậu đậu thế!”",
+      "“Tránh ra, để đấy mẹ làm!”"
+    ]
+  },
+
+  "why": {
+    "title": "Vì sao không nên?",
+    "lead": "Quát mắng không dạy con cẩn thận hơn.",
+    "points": [
+      "Con không học được kỹ năng — chỉ học được cảm giác sợ.",
+      "Con ghi nhớ: “Mình là đứa vụng về.”",
+      "Lần sau làm sai, con sẽ giấu thay vì nói với bạn."
+    ]
+  },
+
+  "do": {
+    "title": "Hãy thử 3 bước này",
+    "steps": [
+      { "n": "1", "t": "Hỏi về con trước", "d": "“Con có sao không? Có đứt tay chỗ nào không?”" },
+      { "n": "2", "t": "Dọn cùng nhau", "d": "“Mình dọn chung nhé. Con cầm chổi giúp mẹ.”" },
+      { "n": "3", "t": "Dạy cách làm đúng", "d": "“Lần sau con bê bằng hai tay, đi chậm thôi nhé.”" }
+    ]
+  },
+
+  "script": {
+    "title": "Nói đúng từng câu",
+    "quote": "Con có sao không?\nKhông sao đâu, bát vỡ thì mình dọn.\nLần sau mình bê bằng hai tay nhé.",
+    "note": "Chỉ 3 câu. Con vẫn học được bài học — mà không mất đi sự tự tin."
+  },
+
+  "summary": {
+    "title": "Ghi nhớ",
+    "points": [
+      "An toàn của con trước, chiếc bát sau.",
+      "Dọn cùng con — đó là lúc con học trách nhiệm.",
+      "Dạy cách làm đúng, đừng chỉ trích con người."
+    ]
+  },
+
+  "cta": {
+    "headline": "Lưu lại để dùng\nkhi cần nhé",
+    "sub": "Mỗi tuần một tình huống nuôi dạy con,\ncùng AION Kinder.",
+    "handle": "@aionkinder"
+  }
+}
