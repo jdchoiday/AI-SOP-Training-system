@@ -26,8 +26,9 @@ aion-parenting-carousel/
 ├── topics/          ← 주제 파일 (글만 들어있음) ★ 여기만 건드리면 됨
 │   └── vn-001-lam-vo-bat.json
 ├── build.mjs        ← 슬라이드 생성기 (디자인을 결정하는 코드)
+├── upload.sh        ← 구글드라이브 업로드
 ├── fonts/           ← Be Vietnam Pro (베트남어 성조 전용 폰트)
-└── out/             ← 결과물이 여기 나옴
+└── out/             ← 결과물이 여기 나옴 (저장소에는 안 올라감)
     └── vn-001-lam-vo-bat/
         ├── slide-01.png ~ slide-08.png   ← 발행용 (인스타 업로드)
         └── vn-001-...-review.pdf         ← 팀 검토용 (8장 한 파일)
@@ -116,10 +117,80 @@ node build.mjs topics/vn-002-<주제이름>.json
 - **규격:** 1080×1350 (4:5). 인스타 피드 점유율이 가장 큰 비율입니다.
 - **검토 PDF:** 글자가 이미지가 아니라 **벡터**로 들어가 용량이 작고 확대해도 선명합니다.
 
-### 드라이브 업로드 자동화 (다음 단계)
-현재는 파일을 하나씩 올립니다. 주제가 많아지면 `rclone`(구글 계정 1회 인증)을 붙여
-`node build.mjs` 뒤에 업로드까지 한 번에 끝내도록 만들 수 있습니다.
-→ 필요해지면 요청해주세요.
+---
+
+## 자동화 — 주제 파일만 올리면 끝
+
+`.github/workflows/carousel.yml` 이 자동으로 처리합니다.
+
+```
+topics/vn-002-xxx.json 을 main 에 올림
+        ↓
+GitHub 가 슬라이드 8장 + 검토용 PDF 생성
+        ↓
+구글드라이브에 업로드  (설정돼 있으면)
+        ↓
+팀이 드라이브에서 검토
+```
+
+`build.mjs`(디자인)를 고치면 **모든 주제를 자동으로 다시 생성**합니다.
+직접 돌리고 싶을 땐 GitHub → Actions → "캐러셀 생성·업로드" → Run workflow.
+
+> 드라이브 설정을 아직 안 했어도 괜찮습니다. 생성은 되고, 결과물은
+> Actions 실행 화면 맨 아래 **Artifacts** 에서 내려받을 수 있습니다.
+
+### 🔑 1회 설정 — 드라이브 연결 (약 5분)
+
+딱 한 번만 하면 그 뒤로는 영원히 자동입니다.
+
+**1단계 · 내 컴퓨터에 rclone 설치**
+- Mac: 터미널에 `brew install rclone`
+- Windows: https://rclone.org/downloads/ 에서 받아 설치
+
+**2단계 · 구글 계정 인증**
+터미널(명령 프롬프트)에 입력:
+```bash
+rclone authorize "drive"
+```
+→ 브라우저가 열립니다 → 구글 로그인 → **허용** 클릭
+→ 터미널에 `{"access_token":"...","refresh_token":"..."}` 같은 **JSON 한 덩어리**가 나옵니다.
+→ 그 **중괄호 `{` 부터 `}` 까지 전부** 복사하세요.
+
+**3단계 · 드라이브 폴더 ID 복사**
+구글드라이브에서 `AION Kinder — 부모교육 콘텐츠 (VN)` 폴더를 엽니다.
+주소창이 이렇게 생겼을 겁니다:
+```
+https://drive.google.com/drive/folders/1AbC...XyZ
+                                        ^^^^^^^^^ 이 부분이 폴더 ID
+```
+
+**4단계 · GitHub에 등록**
+저장소 → **Settings** → **Secrets and variables** → **Actions**
+
+`Secrets` 탭에서 **New repository secret** 2개:
+
+| 이름 | 값 |
+|---|---|
+| `RCLONE_DRIVE_TOKEN` | 2단계에서 복사한 JSON 전체 |
+| `DRIVE_PARENT_FOLDER_ID` | 3단계에서 복사한 폴더 ID |
+
+`Variables` 탭에서 **New repository variable** 1개:
+
+| 이름 | 값 |
+|---|---|
+| `DRIVE_UPLOAD_ENABLED` | `true` |
+
+끝입니다. 이제 주제 파일을 올릴 때마다 드라이브에 자동으로 쌓입니다.
+
+> 🔒 토큰은 GitHub Secrets에만 저장되고 코드에는 절대 남지 않습니다.
+> 나중에 연결을 끊고 싶으면 `DRIVE_UPLOAD_ENABLED` 를 `false` 로 바꾸세요.
+
+### 내 컴퓨터에서 직접 올리고 싶다면
+```bash
+export RCLONE_CONFIG_GDRIVE_TOKEN='{"access_token":...}'
+export DRIVE_PARENT_FOLDER_ID='1AbC...XyZ'
+./upload.sh vn-001-lam-vo-bat
+```
 
 ---
 

@@ -15,7 +15,39 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
-const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+
+// Chromium 위치는 환경마다 다르다(내 PC / 작업 컨테이너 / GitHub Actions).
+// CHROME_PATH 를 주면 그걸 쓰고, 없으면 흔한 위치를 차례로 찾는다.
+function findChrome() {
+  if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
+
+  // 고정 경로 후보
+  const fixed = [
+    '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome',
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', // macOS
+  ];
+  for (const p of fixed) if (fs.existsSync(p)) return p;
+
+  // Playwright 가 받아둔 chromium (작업 컨테이너 / GitHub Actions)
+  const pools = [
+    process.env.PLAYWRIGHT_BROWSERS_PATH || '/opt/pw-browsers',
+    path.join(process.env.HOME || '/root', '.cache/ms-playwright'),
+  ];
+  for (const pool of pools) {
+    let names = [];
+    try { names = fs.readdirSync(pool); } catch { continue; }
+    for (const n of names.filter((n) => n.startsWith('chromium-')).sort().reverse()) {
+      for (const rel of ['chrome-linux/chrome', 'chrome-mac/Chromium.app/Contents/MacOS/Chromium']) {
+        const p = path.join(pool, n, rel);
+        if (fs.existsSync(p)) return p;
+      }
+    }
+  }
+  throw new Error(
+    'Chromium을 찾지 못했습니다. CHROME_PATH 환경변수로 경로를 알려주세요.\n' +
+    '  예) CHROME_PATH=/usr/bin/chromium node build.mjs topics/xxx.json');
+}
+const CHROME = findChrome();
 const W = 1080, H = 1350;            // 인스타그램 캐러셀 4:5 (피드 점유율 최대)
 
 // ── 브랜드 디자인 토큰 ─────────────────────────────────────────────
