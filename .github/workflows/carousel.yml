@@ -1,0 +1,99 @@
+# 부모교육 캐러셀 — 자동 생성 및 드라이브 업로드
+#
+# 주제 파일(aion-parenting-carousel/topics/*.json)을 올리면
+# 슬라이드 8장 + 검토용 PDF를 만들어 구글드라이브에 올린다.
+#
+# 드라이브 업로드는 Secrets 2개가 있을 때만 동작한다(없으면 건너뛰고 생성만 함):
+#   RCLONE_DRIVE_TOKEN      — rclone authorize "drive" 결과 JSON
+#   DRIVE_PARENT_FOLDER_ID  — 업로드할 상위 폴더 ID
+# 설정 방법은 aion-parenting-carousel/README.md 참고.
+
+name: 캐러셀 생성·업로드
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'aion-parenting-carousel/topics/**.json'
+      - 'aion-parenting-carousel/build.mjs'
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: '주제 ID (예: vn-001-lam-vo-bat). 비우면 전체 주제를 생성합니다.'
+        required: false
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: aion-parenting-carousel
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2        # 변경된 주제 파일을 찾으려면 직전 커밋이 필요
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Chromium 설치
+        run: |
+          npx --yes playwright@1.48.0 install --with-deps chromium
+          echo "CHROME_PATH=$(ls -d ~/.cache/ms-playwright/chromium-*/chrome-linux/chrome | head -1)" >> "$GITHUB_ENV"
+
+      - name: 생성할 주제 결정
+        id: pick
+        run: |
+          if [ -n "${{ inputs.topic }}" ]; then
+            LIST="topics/${{ inputs.topic }}.json"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            LIST=$(ls topics/*.json)
+          else
+            # push 이벤트 — 이번 커밋에서 바뀐 주제 파일만
+            LIST=$(git diff --name-only HEAD^ HEAD -- 'aion-parenting-carousel/topics/*.json' \
+                   | sed 's|aion-parenting-carousel/||' || true)
+            # build.mjs(디자인)가 바뀌었으면 전체를 다시 생성
+            if git diff --name-only HEAD^ HEAD | grep -q 'aion-parenting-carousel/build.mjs'; then
+              LIST=$(ls topics/*.json)
+            fi
+          fi
+          if [ -z "$LIST" ]; then
+            echo "생성할 주제가 없습니다."; echo "list=" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "대상:"; echo "$LIST"
+          echo "list<<EOF" >> "$GITHUB_OUTPUT"; echo "$LIST" >> "$GITHUB_OUTPUT"; echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: 슬라이드 생성
+        if: steps.pick.outputs.list != ''
+        run: |
+          echo "${{ steps.pick.outputs.list }}" | while read -r f; do
+            [ -z "$f" ] && continue
+            echo "── $f"
+            node build.mjs "$f"
+          done
+
+      - name: 결과물 보관 (드라이브 설정 전에도 여기서 내려받을 수 있음)
+        if: steps.pick.outputs.list != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: carousel-slides
+          path: aion-parenting-carousel/out/
+          retention-days: 30
+
+      - name: 구글드라이브 업로드
+        # Secrets 가 설정돼 있을 때만 실행된다. 없으면 조용히 건너뛴다.
+        if: steps.pick.outputs.list != '' && vars.DRIVE_UPLOAD_ENABLED == 'true'
+        env:
+          RCLONE_CONFIG_GDRIVE_TOKEN: ${{ secrets.RCLONE_DRIVE_TOKEN }}
+          DRIVE_PARENT_FOLDER_ID: ${{ secrets.DRIVE_PARENT_FOLDER_ID }}
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq rclone
+          chmod +x upload.sh
+          echo "${{ steps.pick.outputs.list }}" | while read -r f; do
+            [ -z "$f" ] && continue
+            ID=$(basename "$f" .json)
+            ./upload.sh "$ID"
+          done
